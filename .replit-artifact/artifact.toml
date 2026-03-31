@@ -1,0 +1,27 @@
+kind = "mobile"
+previewPath = "/"
+title = "نظام إدارة الفواتير"
+version = "1.0.0"
+id = "artifacts/invoice-app"
+router = "expo-domain"
+
+[[integratedSkills]]
+name = "expo"
+version = "1.0.0"
+
+[[services]]
+ensurePreviewReachable = "/status"
+name = "expo"
+paths = [ "/" ]
+localPort = 18920
+
+[services.development]
+run = "pnpm --filter @workspace/invoice-app run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/invoice-app", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/invoice-app", "run", "serve" ]
+
+[services.env]
+PORT = "18920"
+BASE_PATH = "/"
