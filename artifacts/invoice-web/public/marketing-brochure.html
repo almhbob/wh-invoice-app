@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>فوترة | FAWTARA — الكتيّب التسويقي الرسمي 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy:   #1a2744;
+    --navy2:  #243259;
+    --navy3:  #0f1a33;
+    --gold:   #c9a84c;
+    --gold2:  #e6c96a;
+    --gold3:  #a07c30;
+    --white:  #ffffff;
+    --offwhite: #f8f6f0;
+    --light:  #eef1f8;
+    --muted:  #6b7280;
+    --text:   #1f2937;
+    --halwa:  #8b5cf6;
+    --mawali: #f59e0b;
+    --choco:  #92400e;
+    --cake:   #ec4899;
+    --pack:   #14b8a6;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Cairo', 'Segoe UI', Arial, sans-serif;
+    background: #d0d0d0;
+    color: var(--text);
+    direction: rtl;
+  }
+
+  /* ─── Print bar ─── */
+  .print-bar {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 999;
+    background: var(--navy); padding: 10px 24px;
+    display: flex; align-items: center; justify-content: space-between;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+  }
+  .print-bar span { color: var(--gold); font-weight: 700; font-size: 14px; }
+  .print-bar button {
+    background: var(--gold); color: var(--navy); border: none; padding: 8px 22px;
+    border-radius: 8px; font-family: inherit; font-weight: 800; font-size: 13px;
+    cursor: pointer; transition: opacity 0.2s;
+  }
+  .print-bar button:hover { opacity: 0.85; }
+
+  /* ─── Page wrapper ─── */
+  .pages { padding: 60px 20px 40px; }
+
+  .page {
+    width: 794px;
+    min-height: 1123px;
+    background: var(--white);
+    margin: 0 auto 32px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    page-break-after: always;
+  }
+
+  /* ═══ PAGE 1 — COVER ═══ */
+  .cover {
+    background: linear-gradient(160deg, var(--navy3) 0%, var(--navy) 55%, var(--navy2) 100%);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 64px 60px;
+    min-height: 1123px;
+    position: relative;
+  }
+  .cover::before {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(circle at 80% 20%, rgba(201,168,76,0.14) 0%, transparent 50%),
+      radial-gradient(circle at 20% 80%, rgba(201,168,76,0.09) 0%, transparent 45%);
+    pointer-events: none;
+  }
+  .cover-top-line {
+    position: absolute; top: 0; left: 0; right: 0; height: 5px;
+    background: linear-gradient(90deg, var(--gold3), var(--gold2), var(--gold), var(--gold2), var(--gold3));
+  }
+  .cover-badge {
+    background: rgba(201,168,76,0.15);
+    border: 1.5px solid rgba(201,168,76,0.4);
+    color: var(--gold2); padding: 6px 24px; border-radius: 30px;
+    font-size: 12px; font-weight: 700; letter-spacing: 1.5px;
+    text-transform: uppercase; margin-bottom: 36px;
+  }
+  .cover-logo-wrap {
+    display: flex; flex-direction: column; align-items: center; margin-bottom: 20px;
+  }
+  .cover-brand-name {
+    font-size: 56px; font-weight: 900; color: var(--white);
+    letter-spacing: -1px; line-height: 1;
+  }
+  .cover-brand-name span { color: var(--gold); }
+  .cover-brand-ar {
+    font-size: 28px; font-weight: 800; color: var(--gold);
+    letter-spacing: 4px; margin-top: 6px;
+  }
+  .cover-brand-sub {
+    font-size: 13px; color: rgba(255,255,255,0.45); margin-top: 8px;
+    letter-spacing: 2px;
+  }
+  .cover-divider {
+    width: 100px; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    margin: 28px 0;
+  }
+  .cover-title {
+    font-size: 28px; font-weight: 800; color: var(--white); text-align: center;
+    line-height: 1.5; margin-bottom: 18px; max-width: 560px;
+  }
+  .cover-title span { color: var(--gold); }
+  .cover-subtitle {
+    font-size: 14px; color: rgba(255,255,255,0.6); text-align: center;
+    max-width: 520px; line-height: 1.9; margin-bottom: 44px;
+  }
+  .cover-features {
+    display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
+    margin-bottom: 44px;
+  }
+  .cover-pill {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(201,168,76,0.28);
+    color: rgba(255,255,255,0.85);
+    padding: 7px 16px; border-radius: 30px; font-size: 12px; font-weight: 600;
+    display: flex; align-items: center; gap: 7px;
+  }
+  .cover-pill .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); }
+  .cover-stats {
+    display: flex; gap: 1px;
+    background: rgba(201,168,76,0.2);
+    border-radius: 16px; overflow: hidden;
+    border: 1px solid rgba(201,168,76,0.2);
+    margin-bottom: 52px;
+  }
+  .cover-stat { flex: 1; padding: 18px 22px; text-align: center; background: rgba(255,255,255,0.04); }
+  .cover-stat + .cover-stat { border-right: 1px solid rgba(201,168,76,0.2); }
+  .cover-stat .num { font-size: 30px; font-weight: 900; color: var(--gold); line-height: 1; }
+  .cover-stat .lbl { font-size: 10.5px; color: rgba(255,255,255,0.5); margin-top: 5px; font-weight: 600; }
+  .cover-footer {
+    position: absolute; bottom: 36px; left: 0; right: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 56px;
+  }
+  .cover-footer-brand { color: rgba(255,255,255,0.3); font-size: 11px; font-weight: 600; }
+  .cover-footer-year { color: var(--gold3); font-size: 11px; font-weight: 700; }
+
+  /* ═══ SHARED ═══ */
+  .page-header {
+    background: linear-gradient(135deg, var(--navy) 0%, var(--navy2) 100%);
+    padding: 30px 48px 26px; position: relative; overflow: hidden;
+  }
+  .page-header::after {
+    content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, var(--gold3), var(--gold2), var(--gold));
+  }
+  .page-header-badge {
+    font-size: 10px; font-weight: 800; letter-spacing: 2px;
+    color: var(--gold); opacity: 0.8; text-transform: uppercase; margin-bottom: 7px;
+  }
+  .page-header h2 { font-size: 24px; font-weight: 900; color: var(--white); margin-bottom: 7px; }
+  .page-header p { font-size: 12.5px; color: rgba(255,255,255,0.6); font-weight: 500; max-width: 500px; }
+  .page-header-icon {
+    position: absolute; left: 48px; top: 50%; transform: translateY(-50%);
+    font-size: 60px; opacity: 0.07; line-height: 1;
+  }
+  .page-body { padding: 32px 48px; }
+  .page-body-sm { padding: 28px 48px; }
+
+  .section-heading { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+  .section-heading .bar {
+    width: 4px; height: 22px; border-radius: 2px;
+    background: linear-gradient(180deg, var(--gold), var(--gold3)); flex-shrink: 0;
+  }
+  .section-heading h3 { font-size: 15px; font-weight: 800; color: var(--navy); }
+
+  /* Feature grid 2-col */
+  .feature-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+  .feature-card {
+    background: var(--offwhite); border: 1px solid #e5e0d5;
+    border-radius: 12px; padding: 16px 18px;
+    position: relative; overflow: hidden;
+  }
+  .feature-card::before {
+    content: ''; position: absolute; top: 0; right: 0;
+    width: 3px; height: 100%;
+    background: linear-gradient(180deg, var(--gold2), var(--gold3));
+    border-radius: 0 12px 12px 0;
+  }
+  .feature-card .fc-icon { font-size: 20px; margin-bottom: 8px; }
+  .feature-card .fc-title { font-size: 13px; font-weight: 800; color: var(--navy); margin-bottom: 5px; }
+  .feature-card .fc-desc { font-size: 11px; color: var(--muted); line-height: 1.7; }
+
+  /* Wide card (navy) */
+  .card-wide {
+    background: linear-gradient(135deg, var(--navy) 0%, var(--navy2) 100%);
+    border-radius: 12px; padding: 18px 22px;
+    display: flex; align-items: center; gap: 18px; margin-bottom: 12px;
+  }
+  .card-wide .fw-icon { font-size: 32px; flex-shrink: 0; }
+  .card-wide .fw-title { font-size: 13px; font-weight: 800; color: var(--gold); margin-bottom: 4px; }
+  .card-wide .fw-desc { font-size: 11.5px; color: rgba(255,255,255,0.65); line-height: 1.7; }
+
+  /* Dept chips */
+  .dept-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+  .dept-chip {
+    padding: 7px 14px; border-radius: 30px;
+    font-size: 11.5px; font-weight: 700;
+    display: flex; align-items: center; gap: 7px;
+  }
+
+  /* Stats highlight row */
+  .highlight-row { display: flex; gap: 10px; margin-bottom: 20px; }
+  .hl-card {
+    flex: 1; background: var(--navy); border-radius: 12px; padding: 14px;
+    text-align: center;
+  }
+  .hl-icon { font-size: 22px; margin-bottom: 6px; }
+  .hl-num { font-size: 24px; font-weight: 900; color: var(--gold); line-height: 1; }
+  .hl-label { font-size: 10px; color: rgba(255,255,255,0.55); margin-top: 4px; }
+
+  /* Screens grid */
+  .screens-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+  .screen-card {
+    border-radius: 10px; padding: 14px 13px;
+    border: 1.5px solid #e5e0d5; background: var(--offwhite);
+  }
+  .screen-card .sc-icon { font-size: 22px; margin-bottom: 7px; }
+  .screen-card .sc-title { font-size: 12px; font-weight: 800; color: var(--navy); margin-bottom: 5px; }
+  .screen-card .sc-desc { font-size: 10.5px; color: var(--muted); line-height: 1.6; }
+  .screen-card.accent { border-color: var(--gold); background: linear-gradient(135deg, #fffbf0, #fff8e3); }
+
+  /* Language chips */
+  .lang-row { display: flex; gap: 8px; margin-bottom: 18px; }
+  .lang-chip { flex: 1; background: var(--navy); color: var(--white); border-radius: 10px; padding: 12px 8px; text-align: center; }
+  .lang-chip .lc-flag { font-size: 20px; margin-bottom: 5px; }
+  .lang-chip .lc-name { font-size: 12px; font-weight: 700; }
+  .lang-chip .lc-sub { font-size: 10px; color: rgba(255,255,255,0.5); margin-top: 2px; }
+
+  /* Tech table */
+  .tech-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+  .tech-table th {
+    background: var(--navy); color: var(--gold); font-size: 11px; font-weight: 800;
+    padding: 10px 14px; text-align: right;
+  }
+  .tech-table td { padding: 9px 14px; font-size: 11.5px; border-bottom: 1px solid #f0ebe0; }
+  .tech-table tr:nth-child(even) td { background: var(--offwhite); }
+  .tech-table .td-val { font-weight: 700; color: var(--navy); }
+  .badge-pill {
+    display: inline-block; padding: 2px 10px; border-radius: 20px;
+    font-size: 10px; font-weight: 700; background: var(--gold); color: var(--navy);
+  }
+
+  /* Admin sub-tabs */
+  .admin-tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+  .admin-tab {
+    padding: 8px 16px; border-radius: 30px; font-size: 12px; font-weight: 700;
+    background: var(--light); color: var(--navy); border: 1.5px solid #dde4f0;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .admin-tab.active { background: var(--navy); color: var(--gold); border-color: var(--navy); }
+
+  /* Workflow steps */
+  .workflow { display: flex; flex-direction: column; gap: 0; position: relative; margin-bottom: 20px; }
+  .workflow::before {
+    content: ''; position: absolute; right: 21px; top: 24px; bottom: 24px; width: 2px;
+    background: linear-gradient(180deg, var(--gold), rgba(201,168,76,0.2));
+  }
+  .wf-step { display: flex; align-items: flex-start; gap: 14px; padding: 12px 0; }
+  .wf-num {
+    width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--gold3), var(--gold2));
+    color: var(--navy); font-weight: 900; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 3px 10px rgba(201,168,76,0.3); z-index: 1;
+  }
+  .wf-content { flex: 1; padding-top: 3px; }
+  .wf-title { font-size: 12.5px; font-weight: 800; color: var(--navy); margin-bottom: 2px; }
+  .wf-desc { font-size: 11px; color: var(--muted); line-height: 1.6; }
+
+  /* Info box */
+  .info-box {
+    background: var(--light); border-right: 4px solid var(--gold);
+    border-radius: 0 10px 10px 0; padding: 13px 16px; margin-bottom: 14px;
+    font-size: 12px; color: var(--navy); font-weight: 600; line-height: 1.7;
+  }
+
+  /* Plans */
+  .plans-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 18px; }
+  .plan-card {
+    border-radius: 14px; padding: 20px 16px;
+    border: 2px solid #e5e0d5;
+    display: flex; flex-direction: column; position: relative; overflow: hidden;
+  }
+  .plan-card.pro { border-color: var(--gold); background: linear-gradient(160deg, #fffbf0, #fff8e0); }
+  .plan-card.pro::before {
+    content: '★ الأكثر طلباً';
+    position: absolute; top: 12px; left: 12px;
+    background: var(--gold); color: var(--navy);
+    padding: 3px 9px; border-radius: 10px; font-size: 9.5px; font-weight: 800;
+  }
+  .plan-badge { font-size: 10px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 8px; }
+  .plan-name { font-size: 17px; font-weight: 900; color: var(--navy); margin-bottom: 4px; }
+  .plan-price { font-size: 24px; font-weight: 900; color: var(--gold); margin-bottom: 4px; line-height: 1; }
+  .plan-price span { font-size: 12px; font-weight: 600; color: var(--muted); }
+  .plan-divider { height: 1px; background: #e5e0d5; margin: 12px 0; }
+  .plan-features { list-style: none; flex: 1; }
+  .plan-features li {
+    font-size: 11px; padding: 3px 0;
+    display: flex; align-items: flex-start; gap: 7px;
+    color: var(--text); line-height: 1.5;
+  }
+  .plan-features li::before { content: '✓'; color: var(--gold); font-weight: 900; flex-shrink: 0; margin-top: 1px; }
+  .plan-features li.no::before { content: '—'; color: #ccc; }
+  .plan-features li.no { color: var(--muted); }
+
+  /* Why us */
+  .why-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+  .why-card { background: var(--light); border-radius: 12px; padding: 14px 16px; display: flex; gap: 12px; align-items: flex-start; }
+  .why-icon { font-size: 24px; flex-shrink: 0; margin-top: 2px; }
+  .why-title { font-size: 12.5px; font-weight: 800; color: var(--navy); margin-bottom: 4px; }
+  .why-desc { font-size: 11px; color: var(--muted); line-height: 1.7; }
+
+  /* CTA page */
+  .cta-page {
+    background: linear-gradient(160deg, var(--navy3) 0%, var(--navy) 60%, var(--navy2) 100%);
+    min-height: 1123px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; padding: 60px;
+    position: relative; overflow: hidden;
+  }
+  .cta-page::before {
+    content: ''; position: absolute; inset: 0;
+    background:
+      radial-gradient(circle at 15% 85%, rgba(201,168,76,0.1) 0%, transparent 45%),
+      radial-gradient(circle at 85% 15%, rgba(201,168,76,0.08) 0%, transparent 45%);
+  }
+  .cta-top-line {
+    position: absolute; top: 0; left: 0; right: 0; height: 5px;
+    background: linear-gradient(90deg, var(--gold3), var(--gold2), var(--gold));
+  }
+  .cta-icon { font-size: 68px; margin-bottom: 22px; z-index: 1; }
+  .cta-title {
+    font-size: 32px; font-weight: 900; color: var(--white);
+    text-align: center; margin-bottom: 14px; z-index: 1; line-height: 1.3;
+  }
+  .cta-title span { color: var(--gold); }
+  .cta-subtitle {
+    font-size: 14px; color: rgba(255,255,255,0.6);
+    text-align: center; max-width: 500px; line-height: 1.9;
+    margin-bottom: 44px; z-index: 1;
+  }
+  .contact-cards { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; width: 100%; max-width: 620px; z-index: 1; margin-bottom: 44px; }
+  .contact-card {
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(201,168,76,0.25);
+    border-radius: 14px; padding: 20px 14px; text-align: center;
+  }
+  .contact-card .cc-icon { font-size: 28px; margin-bottom: 10px; }
+  .contact-card .cc-label { font-size: 10px; color: var(--gold); font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
+  .contact-card .cc-value { font-size: 12px; color: rgba(255,255,255,0.8); font-weight: 600; line-height: 1.5; }
+  .cta-guarantee { display: flex; gap: 28px; z-index: 1; flex-wrap: wrap; justify-content: center; }
+  .cta-g-item { display: flex; align-items: center; gap: 8px; color: rgba(255,255,255,0.5); font-size: 11px; font-weight: 600; }
+  .cta-g-item span { font-size: 16px; }
+  .cta-footer {
+    position: absolute; bottom: 32px; left: 0; right: 0; text-align: center;
+    color: rgba(255,255,255,0.2); font-size: 11px; font-weight: 600;
+  }
+
+  /* Page footer */
+  .page-foot {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    padding: 10px 48px; display: flex; align-items: center; justify-content: space-between;
+    border-top: 1px solid #f0ebe0;
+  }
+  .page-foot-brand { font-size: 10px; font-weight: 700; color: var(--gold3); }
+  .page-foot-page { font-size: 10px; color: #ccc; }
+
+  /* Nav preview card */
+  .nav-preview {
+    background: var(--navy); border-radius: 16px; padding: 16px 20px;
+    display: flex; justify-content: space-around; align-items: center;
+    margin-bottom: 16px;
+  }
+  .nav-item { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+  .nav-item .ni-icon { font-size: 22px; }
+  .nav-item .ni-label { font-size: 9.5px; color: rgba(255,255,255,0.5); font-weight: 600; }
+  .nav-item.active .ni-label { color: var(--gold); }
+  .nav-item .ni-pip {
+    width: 28px; height: 3px; border-radius: 2px;
+    background: var(--gold); position: absolute; top: -6px;
+  }
+
+  /* Firebase cols */
+  .firebase-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+  .fb-card {
+    background: var(--offwhite); border: 1px solid #e5e0d5; border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .fb-card .fb-col { font-size: 12px; font-weight: 800; color: var(--navy); margin-bottom: 6px; display: flex; align-items: center; gap: 7px; }
+  .fb-card .fb-desc { font-size: 11px; color: var(--muted); line-height: 1.6; }
+
+  /* Print */
+  @media print {
+    body { background: white; }
+    .print-bar { display: none !important; }
+    .pages { padding: 0; }
+    .page { margin: 0; box-shadow: none; width: 100%; page-break-after: always; }
+    .cover, .cta-page { min-height: 100vh; }
+  }
+  @page { size: A4; margin: 0; }
+</style>
+</head>
+<body>
+
+<div class="print-bar">
+  <span>📋 فوترة | FAWTARA — الكتيّب التسويقي الرسمي 2026</span>
+  <button onclick="window.print()">⬇️ تحميل PDF</button>
+</div>
+
+<div class="pages">
+
+<!-- ═══ الصفحة 1 — الغلاف ═══ -->
+<div class="page">
+  <div class="cover">
+    <div class="cover-top-line"></div>
+    <div class="cover-badge">الكتيّب التسويقي الرسمي · 2026</div>
+    <div class="cover-logo-wrap">
+      <div class="cover-brand-ar">فوترة</div>
+      <div class="cover-brand-name">FAWT<span>A</span>RA</div>
+      <div class="cover-brand-sub">Invoice & Order Management Platform</div>
+    </div>
+    <div class="cover-divider"></div>
+    <div class="cover-title">
+      نظام إدارة الفواتير والطلبات<br>
+      <span>الذكي المتكامل</span>
+    </div>
+    <div class="cover-subtitle">
+      منصة SaaS متكاملة — تطبيق جوال احترافي + لوحة تحكم للحاسوب<br>
+      مُصمَّمة خصيصاً لمنشآت صناعة الكيك والشوكولاتة الاحترافية
+    </div>
+    <div class="cover-features">
+      <div class="cover-pill"><div class="dot"></div>تطبيق جوال (iOS & Android)</div>
+      <div class="cover-pill"><div class="dot"></div>لوحة تحكم ويب</div>
+      <div class="cover-pill"><div class="dot"></div>4 لغات — عربي · إنجليزي · أردو · هندي</div>
+      <div class="cover-pill"><div class="dot"></div>مزامنة Firebase لحظية</div>
+      <div class="cover-pill"><div class="dot"></div>12 شاشة متكاملة</div>
+      <div class="cover-pill"><div class="dot"></div>إدارة أدوار متعددة المستويات</div>
+    </div>
+    <div class="cover-stats">
+      <div class="cover-stat"><div class="num">+100</div><div class="lbl">منتج بقاعدة البيانات</div></div>
+      <div class="cover-stat"><div class="num">12</div><div class="lbl">شاشة وظيفية</div></div>
+      <div class="cover-stat"><div class="num">5</div><div class="lbl">أقسام إنتاجية</div></div>
+      <div class="cover-stat"><div class="num">4</div><div class="lbl">لغات مدعومة</div></div>
+    </div>
+    <div class="cover-footer">
+      <span class="cover-footer-brand">W&H Cake & Chocolate · نظام إدارة الفواتير</span>
+      <span class="cover-footer-year">© 2026 · سري وخاص</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ الصفحة 2 — نظرة عامة + مكونات النظام ═══ -->
+<div class="page">
+  <div class="page-header">
+    <div class="page-header-badge">§ 01 · نظرة عامة</div>
+    <h2>ما الذي يقدمه النظام؟</h2>
+    <p>منصة متكاملة تُرقمن كامل دورة الطلب — من الكاشير حتى التسليم للعميل</p>
+    <div class="page-header-icon">⚙️</div>
+  </div>
+  <div class="page-body">
+
+    <div class="info-box">
+      نظام <strong>فوترة / FAWTARA</strong> هو حل رقمي شامل مُصمَّم لمؤسسات الكيك والشوكولاتة، يُتيح تتبع الطلبات من لحظة إدخالها في الكاشير حتى تسليمها للعميل، مع رؤية كاملة لأداء كل قسم إنتاجي — سواء من الهاتف أو الحاسوب.
+    </div>
+
+    <div class="section-heading"><div class="bar"></div><h3>مكونات المنصة</h3></div>
+
+    <div class="card-wide">
+      <div class="fw-icon">📱</div>
+      <div>
+        <div class="fw-title">تطبيق الجوال — Expo React Native (iOS & Android)</div>
+        <div class="fw-desc">تطبيق احترافي بقائمة تحتية ذكية تضم 5 عناصر رئيسية + قوائم منسدلة للوصول إلى 12 شاشة كاملة. يعمل بدون إنترنت مؤقتاً ويتزامن تلقائياً عند الاتصال.</div>
+      </div>
+    </div>
+
+    <div class="card-wide">
+      <div class="fw-icon">🖥️</div>
+      <div>
+        <div class="fw-title">لوحة تحكم الويب — React + Vite (Desktop)</div>
+        <div class="fw-desc">واجهة احترافية للحاسوب للموظفين، تتيح إدخال الفواتير، تتبع الطلبات، عرض التقارير، وإدارة المنتجات والموظفين — نفس Firebase، رؤية واحدة لحظية.</div>
+      </div>
+    </div>
+
+    <div class="section-heading" style="margin-top:4px"><div class="bar"></div><h3>الأقسام الإنتاجية المتكاملة</h3></div>
+    <div class="dept-row">
+      <div class="dept-chip" style="background:#8b5cf620;color:#6d28d9;border:1.5px solid #8b5cf640">🎂 حلا زفة وضيافة</div>
+      <div class="dept-chip" style="background:#f59e0b20;color:#b45309;border:1.5px solid #f59e0b40">🥐 معجنات وموالح</div>
+      <div class="dept-chip" style="background:#92400e20;color:#78350f;border:1.5px solid #92400e40">🍫 شوكولاتة</div>
+      <div class="dept-chip" style="background:#ec489920;color:#be185d;border:1.5px solid #ec489940">🎂 كيك</div>
+      <div class="dept-chip" style="background:#14b8a620;color:#0f766e;border:1.5px solid #14b8a640">📦 تغليف</div>
+    </div>
+
+    <div class="highlight-row">
+      <div class="hl-card"><div class="hl-icon">🧾</div><div class="hl-num">∞</div><div class="hl-label">فواتير يومياً</div></div>
+      <div class="hl-card"><div class="hl-icon">⚡</div><div class="hl-num">< 1s</div><div class="hl-label">مزامنة Firestore</div></div>
+      <div class="hl-card"><div class="hl-icon">👥</div><div class="hl-num">∞</div><div class="hl-label">موظف وعميل</div></div>
+      <div class="hl-card"><div class="hl-icon">📊</div><div class="hl-num">12</div><div class="hl-label">شاشة وظيفية</div></div>
+    </div>
+
+  </div>
+  <div class="page-foot">
+    <span class="page-foot-brand">فوترة | FAWTARA</span>
+    <span class="page-foot-page">2</span>
+  </div>
+</div>
+
+<!-- ═══ الصفحة 3 — تفاصيل الشاشات الـ 12 ═══ -->
+<div class="page">
+  <div class="page-header">
+    <div class="page-header-badge">§ 02 · الشاشات والميزات</div>
+    <h2>12 شاشة وظيفية متكاملة</h2>
+    <p>قائمة تحتية ذكية بـ 5 عناصر ترئيسية تُنظّم الوصول إلى جميع الشاشات بأناقة</p>
+    <div class="page-header-icon">📱</div>
+  </div>
+  <div class="page-body-sm">
+
+    <!-- Nav preview -->
+    <div class="section-heading"><div class="bar"></div><h3>القائمة التحتية الجديدة</h3></div>
+    <div class="nav-preview">
+      <div class="nav-item active">
+        <div style="position:relative;display:flex;flex-direction:column;align-items:center">
+          <div class="ni-pip"></div>
+          <div class="ni-icon">🧾</div>
+        </div>
+        <div class="ni-label" style="color:var(--gold)">كاشير</div>
+      </div>
+      <div class="nav-item">
+        <div class="ni-icon">⊞</div>
+        <div class="ni-label">الأقسام ▼</div>
+      </div>
+      <div class="nav-item">
+        <div class="ni-icon">📦</div>
+        <div class="ni-label">الأرشيف</div>
+      </div>
+      <div class="nav-item">
+        <div class="ni-icon">📊</div>
+        <div class="ni-label">التقارير</div>
+      </div>
+      <div class="nav-item">
+        <div class="ni-icon">⋯</div>
+        <div class="ni-label">المزيد ▼</div>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:18px;line-height:1.7">
+      <strong>الأقسام:</strong> ينبثق لعرض 5 أقسام إنتاجية &nbsp;|&nbsp; <strong>المزيد:</strong> ينبثق لعرض العملاء، التوصيل، الصواني، لوحة المشرف
+    </div>
+
+    <div class="screens-grid">
+      <div class="screen-card accent">
+        <div class="sc-icon">🧾</div>
+        <div class="sc-title">الكاشير</div>
+        <div class="sc-desc">إنشاء فواتير متكاملة مع بيانات العميل، الأصناف، الدفع، التوصيل، وطباعة بالباركود</div>
+      </div>
+      <div class="screen-card" style="border-color:var(--halwa)30;background:linear-gradient(135deg,#f8f5ff,#f3eeff)">
+        <div class="sc-icon">🎂</div>
+        <div class="sc-title">قسم حلا زفة</div>
+        <div class="sc-desc">قائمة طلبات لحظية، قبول/إنجاز، نقل للفرع مع التسجيل</div>
+      </div>
+      <div class="screen-card" style="border-color:var(--mawali)30;background:linear-gradient(135deg,#fffdf5,#fff9ea)">
+        <div class="sc-icon">🥐</div>
+        <div class="sc-title">قسم المعجنات</div>
+        <div class="sc-desc">قائمة طلبات منفصلة لموالح ومعجنات، نفس آلية التتبع</div>
+      </div>
+      <div class="screen-card" style="border-color:var(--choco)30">
+        <div class="sc-icon">🍫</div>
+        <div class="sc-title">قسم الشوكولاتة</div>
+        <div class="sc-desc">طلبات الشوكولاتة مع تفاصيل كل صنف والكميات</div>
+      </div>
+      <div class="screen-card" style="border-color:var(--cake)30;background:linear-gradient(135deg,#fff5f9,#ffecf5)">
+        <div class="sc-icon">🎂</div>
+        <div class="sc-title">قسم الكيك</div>
+        <div class="sc-desc">طلبات الكيك مع ملاحظات التصميم والمواصفات</div>
+      </div>
+      <div class="screen-card" style="border-color:var(--pack)30;background:linear-gradient(135deg,#f0fffe,#e6fffe)">
+        <div class="sc-icon">📦</div>
+        <div class="sc-title">التغليف</div>
+        <div class="sc-desc">طلبات التغليف والتنسيق النهائي قبل التسليم</div>
+      </div>
+      <div class="screen-card">
+        <div class="sc-icon">🗂️</div>
+        <div class="sc-title">الأرشيف</div>
+        <div class="sc-desc">سجل كامل للطلبات مع بحث وتصفية متقدمة حسب القسم والحالة والتاريخ</div>
+      </div>
+      <div class="screen-card" style="border-color:#8b5cf640">
+        <div class="sc-icon">📊</div>
+        <div class="sc-title">التقارير</div>
+        <div class="sc-desc">KPIs مالية، أداء الأقسام، طرق الدفع، أفضل المنتجات</div>
+      </div>
+      <div class="screen-card" style="border-color:#0891b240">
+        <div class="sc-icon">👥</div>
+        <div class="sc-title">العملاء (CRM)</div>
+        <div class="sc-desc">قاعدة عملاء تلقائية، سجل مشتريات، فلتر المتكررين</div>
+      </div>
+      <div class="screen-card" style="border-color:#0d948840">
+        <div class="sc-icon">🚚</div>
+        <div class="sc-title">تتبع التوصيل</div>
+        <div class="sc-desc">قسمة بالتبويبات: معلّق / تم التسليم، ملخص حالات التوصيل</div>
+      </div>
+      <div class="screen-card" style="border-color:var(--gold)40;background:linear-gradient(135deg,#fffbf0,#fff8e3)">
+        <div class="sc-icon">🪣</div>
+        <div class="sc-title">الصواني</div>
+        <div class="sc-desc">تتبع صواني التأمين، تسجيل الإرجاع، ملخص المبالغ</div>
+      </div>
+      <div class="screen-card" style="border-color:#1a274440;background:linear-gradient(135deg,#f0f4ff,#e8eeff)">
+        <div class="sc-icon">⚙️</div>
+        <div class="sc-title">لوحة المشرف</div>
+        <div class="sc-desc">6 تبويبات: إحصاء، منتجات، موظفون، عروض، طلبات الأسعار، إعدادات</div>
+      </div>
+    </div>
+
+  </div>
+  <div class="page-foot">
+    <span class="page-foot-brand">فوترة | FAWTARA</span>
+    <span class="page-foot-page">3</span>
+  </div>
+</div>
+
+<!-- ═══ الصفحة 4 — لوحة المشرف + دعم اللغات ═══ -->
+<div class="page">
+  <div class="page-header">
+    <div class="page-header-badge">§ 03 · الإدارة والتخصيص</div>
+    <h2>لوحة المشرف + دعم 4 لغات</h2>
+    <p>تحكم كامل في النظام مع واجهة متعددة اللغات تخدم موظفين من جميع الجنسيات</p>
+    <div class="page-header-icon">🔧</div>
+  </div>
+  <div class="page-body-sm">
+
+    <div class="section-heading"><div class="bar"></div><h3>لوحة المشرف — 6 تبويبات</h3></div>
+
+    <div class="admin-tabs">
+      <div class="admin-tab active">📊 نظرة عامة</div>
+      <div class="admin-tab">🛍️ المنتجات</div>
+      <div class="admin-tab">👥 الموظفون</div>
+      <div class="admin-tab">🎁 العروض</div>
+      <div class="admin-tab">💰 طلبات الأسعار</div>
+      <div class="admin-tab">⚙️ إعدادات الأقسام</div>
+    </div>
+
+    <div class="feature-grid" style="margin-bottom:20px">
+      <div class="feature-card">
+        <div class="fc-icon">📊</div>
+        <div class="fc-title">النظرة العامة</div>
+        <div class="fc-desc">إحصاءات مالية شاملة: إجمالي المبيعات، متوسط قيمة الطلب، أداء الكاشيرين، آخر الفواتير</div>
+      </div>
+      <div class="feature-card">
+        <div class="fc-icon">🛍️</div>
+        <div class="fc-title">إدارة المنتجات</div>
+        <div class="fc-desc">إضافة/تعديل/حذف الأصناف، رفع الصور، ترتيب العرض، تبديل الحالة (متاح/موقوف)</div>
+      </div>
+      <div class="feature-card">
+        <div class="fc-icon">👥</div>
+        <div class="fc-title">إدارة الموظفين</div>
+        <div class="fc-desc">إضافة موظفين، تعيين الأدوار، تحديد كلمة السر، وتجميع حسب القسم</div>
+      </div>
+      <div class="feature-card">
+        <div class="fc-icon">🎁</div>
+        <div class="fc-title">العروض والخصومات</div>
+        <div class="fc-desc">إنشاء عروض خاصة مرتبطة برقم هاتف العميل، مدة محددة وخصم مخصص</div>
+      </div>
+      <div class="feature-card">
+        <div class="fc-icon">💰</div>
+        <div class="fc-title">طلبات تعديل الأسعار</div>
+        <div class="fc-desc">سير عمل احترافي: يطلب الموظف تعديل السعر ← يوافق أو يرفض المشرف من لوحة التحكم</div>
+      </div>
+      <div class="feature-card">
+        <div class="fc-icon">⚙️</div>
+        <div class="fc-title">إعدادات الأقسام</div>
+        <div class="fc-desc">تفعيل/تعطيل أي قسم أو ميزة بلمسة واحدة — مزامنة فورية لجميع الأجهزة عبر Firestore</div>
+      </div>
+    </div>
+
+    <div class="section-heading"><div class="bar"></div><h3>دعم 4 لغات كاملة</h3></div>
+    <div class="lang-row">
+      <div class="lang-chip"><div class="lc-flag">🇸🇦</div><div class="lc-name">العربية</div><div class="lc-sub">RTL — Arabic</div></div>
+      <div class="lang-chip"><div class="lc-flag">🇬🇧</div><div class="lc-name">English</div><div class="lc-sub">LTR — English</div></div>
+      <div class="lang-chip" style="background:linear-gradient(135deg,#1a3a5c,#243259)"><div class="lc-flag">🇵🇰</div><div class="lc-name">اردو</div><div class="lc-sub">RTL — Urdu</div></div>
+      <div class="lang-chip" style="background:linear-gradient(135deg,#1a3a2a,#1a4a2a)"><div class="lc-flag">🇮🇳</div><div class="lc-name">हिंदी</div><div class="lc-sub">LTR — Hindi</div></div>
+    </div>
+    <div class="info-box">
+      زر تبديل اللغة في الهيدر يدور بين: <strong>AR ← EN ← UR ← HI</strong> ← مع عكس اتجاه العرض (RTL/LTR) تلقائياً للعربية والأردو — جميع نصوص واجهة المستخدم مترجمة بالكامل.
+    </div>
+
+  </div>
+  <div class="page-foot">
+    <span class="page-foot-brand">فوترة | FAWTARA</span>
+    <span class="page-foot-page">4</span>
+  </div>
+</div>
+
+<!-- ═══ الصفحة 5 — التقنية والبنية التحتية ═══ -->
+<div class="page">
+  <div class="page-header">
+    <div class="page-header-badge">§ 04 · البنية التقنية</div>
+    <h2>Stack التقني والبنية التحتية</h2>
+    <p>بُني على أحدث التقنيات لضمان الأداء العالي والموثوقية والتوسعية</p>
+    <div class="page-header-icon">🏗️</div>
+  </div>
+  <div class="page-body-sm">
+
+    <div class="section-heading"><div class="bar"></div><h3>تقنيات التطوير</h3></div>
+    <table class="tech-table">
+      <tr>
+        <th>الطبقة</th>
+        <th>التطبيق الجوال</th>
+        <th>لوحة الويب</th>
+      </tr>
+      <tr>
+        <td><strong>الإطار</strong></td>
+        <td class="td-val">Expo SDK · React Native</td>
+        <td class="td-val">React 19 · Vite 7</td>
+      </tr>
+      <tr>
+        <td><strong>اللغة</strong></td>
+        <td class="td-val">TypeScript (strict)</td>
+        <td class="td-val">TypeScript (strict)</td>
+      </tr>
+      <tr>
+        <td><strong>التنقل</strong></td>
+        <td class="td-val">Expo Router v6 (file-based)</td>
+        <td class="td-val">Wouter (client-side)</td>
+      </tr>
+      <tr>
+        <td><strong>قاعدة البيانات</strong></td>
+        <td class="td-val">Firebase Firestore (realtime)</td>
+        <td class="td-val">Firebase Firestore (مشترك)</td>
+      </tr>
+      <tr>
+        <td><strong>إدارة الحالة</strong></td>
+        <td class="td-val">React Context API (8 contexts)</td>
+        <td class="td-val">React Context API (8 contexts)</td>
+      </tr>
+      <tr>
+        <td><strong>التصميم</strong></td>
+        <td class="td-val">مكونات مخصصة · Feather Icons</td>
+        <td class="td-val">Tailwind CSS · Radix UI · shadcn</td>
+      </tr>
+      <tr>
+        <td><strong>حزمة التبعيات</strong></td>
+        <td class="td-val">pnpm workspace monorepo</td>
+        <td class="td-val">pnpm workspace monorepo</td>
+      </tr>
+    </table>
+
+    <div class="section-heading"><div class="bar"></div><h3>مجموعات Firestore</h3></div>
+    <div class="firebase-grid">
+      <div class="fb-card">
+        <div class="fb-col">🧾 <span>orders/</span></div>
+        <div class="fb-desc">جميع الطلبات — بيانات العميل، الأصناف، المبلغ، الحالة، الموظف المسؤول، التسليم</div>
+      </div>
+      <div class="fb-card">
+        <div class="fb-col">🛍️ <span>products/</span></div>
+        <div class="fb-desc">كتالوج المنتجات الكامل — الاسم، السعر، القسم، الترتيب، الصورة، الحالة</div>
+      </div>
+      <div class="fb-card">
+        <div class="fb-col">👥 <span>employees/</span></div>
+        <div class="fb-desc">بيانات الموظفين — الاسم، الدور، الرقم الوظيفي، كلمة السر، الفرع</div>
+      </div>
+      <div class="fb-card">
+        <div class="fb-col">🔢 <span>counters/orders</span></div>
+        <div class="fb-desc">عداد تلقائي لأرقام الطلبات — يضمن تسلسلاً فريداً بدون تكرار</div>
+      </div>
+      <div class="fb-card">
+        <div class="fb-col">💰 <span>priceChangeRequests/</span></div>
+        <div class="fb-desc">طلبات تعديل الأسعار — الصنف، السعر الحالي، الجديد، الموظف، حالة الطلب</div>
+      </div>
+      <div class="fb-card">
+        <div class="fb-col">⚙️ <span>devPortalConfig/appFeatures</span></div>
+        <div class="fb-desc">Feature flags للأقسام والميزات — يتزامن فورياً عبر جميع الأجهزة</div>
+      </div>
+    </div>
+
+    <div class="section-heading"><div class="bar"></div><h3>سير عمل الطلب</h3></div>
+    <div class="workflow">
+      <div class="wf-step">
+        <div class="wf-num">1</div>
+        <div class="wf-content">
+          <div class="wf-title">الكاشير يُنشئ الفاتورة</div>
+          <div class="wf-desc">إدخال بيانات العميل، اختيار الأصناف من المعرض، تحديد طريقة الدفع وبيانات التوصيل إن وجد</div>
+        </div>
+      </div>
+      <div class="wf-step">
+        <div class="wf-num">2</div>
+        <div class="wf-content">
+          <div class="wf-title">Firebase يُوزّع الطلبات على الأقسام</div>
+          <div class="wf-desc">كل قسم يرى طلباته الخاصة فقط — مزامنة لحظية عبر onSnapshot</div>
+        </div>
+      </div>
+      <div class="wf-step">
+        <div class="wf-num">3</div>
+        <div class="wf-content">
+          <div class="wf-title">القسم يتابع ويُنجز</div>
+          <div class="wf-desc">موظف القسم يقبل الطلب، يحوله لـ"قيد التنفيذ"، ثم يُنهيه — أو يُحيله لفرع آخر</div>
+        </div>
+      </div>
+      <div class="wf-step">
+        <div class="wf-num">4</div>
+        <div class="wf-content">
+          <div class="wf-title">التسليم والأرشفة التلقائية</div>
+          <div class="wf-desc">الطلب المُكتمل يُتاح للتتبع في شاشة التوصيل ويُؤرشف تلقائياً بكامل تفاصيله</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <div class="page-foot">
+    <span class="page-foot-brand">فوترة | FAWTARA</span>
+    <span class="page-foot-page">5</span>
+  </div>
+</div>
+
+<!-- ═══ الصفحة 6 — لماذا النظام + الخطط ═══ -->
+<div class="page">
+  <div class="page-header">
+    <div class="page-header-badge">§ 05 · المزايا والخطط</div>
+    <h2>لماذا فوترة؟</h2>
+    <p>مزايا تنافسية حقيقية تُحدث فارقاً في عمليات يومك</p>
+    <div class="page-header-icon">🏆</div>
+  </div>
+  <div class="page-body-sm">
+
+    <div class="section-heading"><div class="bar"></div><h3>ما يميّزنا</h3></div>
+    <div class="why-grid">
+      <div class="why-card">
+        <div class="why-icon">⚡</div>
+        <div>
+          <div class="why-title">مزامنة لحظية حقيقية</div>
+          <div class="why-desc">Firebase Firestore يضمن أن جميع الأجهزة ترى نفس البيانات في نفس اللحظة — بدون تحديث يدوي.</div>
+        </div>
+      </div>
+      <div class="why-card">
+        <div class="why-icon">📱</div>
+        <div>
+          <div class="why-title">جوال + ويب بقاعدة واحدة</div>
+          <div class="why-desc">نفس Firestore يخدم تطبيق iOS/Android ولوحة الويب — لا تضارب، لا تكرار في البيانات.</div>
+        </div>
+      </div>
+      <div class="why-card">
+        <div class="why-icon">🌐</div>
+        <div>
+          <div class="why-title">4 لغات — أردو وهندية</div>
+          <div class="why-desc">النظام الوحيد في المنطقة الذي يدعم العمال الأردو والهندي الناطقين مع دعم RTL كامل.</div>
+        </div>
+      </div>
+      <div class="why-card">
+        <div class="why-icon">🔒</div>
+        <div>
+          <div class="why-title">نظام أدوار محكم</div>
+          <div class="why-desc">كاشير، قسم إنتاجي، مشرف — كل دور يرى ما يحتاجه فقط مع مسار محاسبة واضح لكل عملية.</div>
+        </div>
+      </div>
+      <div class="why-card">
+        <div class="why-icon">📊</div>
+        <div>
+          <div class="why-title">تقارير ومؤشرات ذكية</div>
+          <div class="why-desc">KPIs مالية، تحليل الأقسام، أفضل المنتجات، طرق الدفع — رؤية كاملة لأداء مشروعك.</div>
+        </div>
+      </div>
+      <div class="why-card">
+        <div class="why-icon">🎨</div>
+        <div>
+          <div class="why-title">تصميم احترافي مُحكم</div>
+          <div class="why-desc">واجهة Navy & Gold أنيقة، قائمة تحتية ذكية بـ 5 عناصر بدل 12، تجربة مستخدم متميزة.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-heading"><div class="bar"></div><h3>خطط الاشتراك</h3></div>
+    <div class="plans-grid">
+      <div class="plan-card">
+        <div class="plan-badge" style="color:var(--muted)">STARTER</div>
+        <div class="plan-name">مبتدئ</div>
+        <div class="plan-price">99 <span>ر.س / شهر</span></div>
+        <div class="plan-divider"></div>
+        <ul class="plan-features">
+          <li>تطبيق جوال كامل</li>
+          <li>كاشير + أرشيف</li>
+          <li>5 موظفين</li>
+          <li>قسمين إنتاجيين</li>
+          <li class="no">لوحة ويب</li>
+          <li class="no">التقارير المتقدمة</li>
+        </ul>
+      </div>
+      <div class="plan-card pro">
+        <div class="plan-badge" style="color:var(--gold3)">PROFESSIONAL</div>
+        <div class="plan-name">احترافي</div>
+        <div class="plan-price">249 <span>ر.س / شهر</span></div>
+        <div class="plan-divider"></div>
+        <ul class="plan-features">
+          <li>جوال + لوحة ويب</li>
+          <li>12 شاشة كاملة</li>
+          <li>موظفون غير محدودون</li>
+          <li>5 أقسام إنتاجية</li>
+          <li>تقارير وتحليلات</li>
+          <li>CRM العملاء</li>
+        </ul>
+      </div>
+      <div class="plan-card">
+        <div class="plan-badge" style="color:var(--navy2)">ENTERPRISE</div>
+        <div class="plan-name">مؤسسات</div>
+        <div class="plan-price">حسب الطلب</div>
+        <div class="plan-divider"></div>
+        <ul class="plan-features">
+          <li>كل مميزات الاحترافي</li>
+          <li>فروع متعددة</li>
+          <li>واجهة برمجية API</li>
+          <li>تخصيص الهوية</li>
+          <li>دعم مخصص 24/7</li>
+          <li>تدريب الفريق</li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+  <div class="page-foot">
+    <span class="page-foot-brand">فوترة | FAWTARA</span>
+    <span class="page-foot-page">6</span>
+  </div>
+</div>
+
+<!-- ═══ الصفحة 7 — CTA النهاية ═══ -->
+<div class="page">
+  <div class="cta-page">
+    <div class="cta-top-line"></div>
+
+    <div class="cta-icon">🚀</div>
+
+    <div class="cta-title">
+      جاهز لرقمنة عملياتك؟<br>
+      <span>ابدأ اليوم مع فوترة</span>
+    </div>
+
+    <div class="cta-subtitle">
+      اطلب نسخة تجريبية مجانية من النظام — جوال + ويب<br>
+      ونُعدّها خصيصاً بمنتجاتك وموظفيك خلال 24 ساعة
+    </div>
+
+    <div class="contact-cards">
+      <div class="contact-card">
+        <div class="cc-icon">📱</div>
+        <div class="cc-label">واتساب</div>
+        <div class="cc-value">+966 5X XXX XXXX</div>
+      </div>
+      <div class="contact-card">
+        <div class="cc-icon">✉️</div>
+        <div class="cc-label">البريد الإلكتروني</div>
+        <div class="cc-value">info@fawtara.app</div>
+      </div>
+      <div class="contact-card">
+        <div class="cc-icon">🌐</div>
+        <div class="cc-label">الموقع</div>
+        <div class="cc-value">www.fawtara.app</div>
+      </div>
+    </div>
+
+    <div class="cta-guarantee">
+      <div class="cta-g-item"><span>✅</span> نسخة تجريبية مجانية 14 يوم</div>
+      <div class="cta-g-item"><span>🔧</span> إعداد مخصص خلال 24 ساعة</div>
+      <div class="cta-g-item"><span>💬</span> دعم فني مباشر</div>
+    </div>
+
+    <div style="margin-top:36px;z-index:1;text-align:center">
+      <div style="font-size:48px;font-weight:900;color:rgba(255,255,255,0.06);letter-spacing:4px">فوترة | FAWTARA</div>
+    </div>
+
+    <div class="cta-footer">
+      © 2026 فوترة | FAWTARA — W&H Cake & Chocolate | نظام إدارة الفواتير والطلبات | سري وخاص
+    </div>
+  </div>
+</div>
+
+</div><!-- /pages -->
+</body>
+</html>
