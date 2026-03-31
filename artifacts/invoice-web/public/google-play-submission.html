@@ -1,0 +1,1898 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ملف نشر التطبيق — Google Play Store</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #1A2744;
+    --navy-light: #243460;
+    --navy-dark: #0F1A30;
+    --gold: #C9A84C;
+    --gold-light: #E8C96B;
+    --gold-pale: #FFF8E7;
+    --white: #FFFFFF;
+    --gray: #F5F6FA;
+    --gray-mid: #E8EAF0;
+    --text: #1A1A2E;
+    --text-light: #5A6080;
+    --green: #2ECC71;
+    --green-bg: #E8F8F0;
+    --red: #E74C3C;
+    --red-bg: #FDEAEA;
+    --blue: #3498DB;
+    --blue-bg: #EBF5FB;
+    --orange: #F39C12;
+    --orange-bg: #FEF5E7;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Cairo', 'Tajawal', sans-serif;
+    background: #F0F2F8;
+    color: var(--text);
+    direction: rtl;
+  }
+
+  /* ─────────────── PAGE LAYOUT ─────────────── */
+  .page {
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0 auto 8mm;
+    background: white;
+    position: relative;
+    overflow: hidden;
+    page-break-after: always;
+  }
+
+  @media print {
+    body { background: white; }
+    .page {
+      margin: 0;
+      page-break-after: always;
+      page-break-inside: avoid;
+    }
+  }
+
+  @page { size: A4; margin: 0; }
+
+  /* ─────────────── PAGE 1: COVER ─────────────── */
+  .cover {
+    background: var(--navy-dark);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 297mm;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .cover-bg-circles {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+  }
+
+  .cover-bg-circles::before {
+    content: '';
+    position: absolute;
+    width: 500px; height: 500px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(201,168,76,0.12) 0%, transparent 70%);
+    top: -100px; right: -100px;
+  }
+
+  .cover-bg-circles::after {
+    content: '';
+    position: absolute;
+    width: 400px; height: 400px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(26,39,68,0.8) 0%, transparent 70%);
+    bottom: -80px; left: -80px;
+  }
+
+  .cover-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(201,168,76,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(201,168,76,0.04) 1px, transparent 1px);
+    background-size: 30px 30px;
+  }
+
+  .cover-badge {
+    background: rgba(201,168,76,0.15);
+    border: 1px solid rgba(201,168,76,0.4);
+    color: var(--gold-light);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 3px;
+    padding: 6px 18px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    margin-bottom: 32px;
+    position: relative;
+    z-index: 2;
+  }
+
+  .cover-logo {
+    position: relative;
+    z-index: 2;
+    margin-bottom: 30px;
+    text-align: center;
+  }
+
+  .logo-icon {
+    width: 90px;
+    height: 90px;
+    background: linear-gradient(135deg, var(--gold), var(--gold-light));
+    border-radius: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 42px;
+    margin: 0 auto 16px;
+    box-shadow: 0 20px 60px rgba(201,168,76,0.35), 0 0 0 1px rgba(201,168,76,0.2);
+  }
+
+  .logo-ar {
+    font-size: 42px;
+    font-weight: 900;
+    color: var(--white);
+    letter-spacing: -1px;
+    line-height: 1;
+  }
+
+  .logo-en {
+    font-size: 16px;
+    font-weight: 400;
+    color: var(--gold);
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
+  .cover-divider {
+    width: 60px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    margin: 24px auto;
+    position: relative;
+    z-index: 2;
+  }
+
+  .cover-title {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    color: var(--white);
+  }
+
+  .cover-title h1 {
+    font-size: 24px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--gold-light);
+  }
+
+  .cover-title h2 {
+    font-size: 14px;
+    font-weight: 400;
+    color: rgba(255,255,255,0.65);
+    letter-spacing: 2px;
+  }
+
+  .cover-meta {
+    position: relative;
+    z-index: 2;
+    margin-top: 50px;
+    display: flex;
+    gap: 16px;
+    flex-direction: row-reverse;
+  }
+
+  .cover-meta-item {
+    text-align: center;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(201,168,76,0.2);
+    border-radius: 12px;
+    padding: 14px 22px;
+  }
+
+  .cover-meta-item .label {
+    font-size: 9px;
+    color: rgba(255,255,255,0.5);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+  }
+
+  .cover-meta-item .value {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--gold);
+  }
+
+  .cover-footer {
+    position: absolute;
+    bottom: 0;
+    left: 0; right: 0;
+    z-index: 2;
+    background: linear-gradient(transparent, rgba(0,0,0,0.4));
+    padding: 24px 40px 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+
+  .cover-footer-badge {
+    background: linear-gradient(135deg, #34A853, #2ECC71);
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 6px 16px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .cover-footer-date {
+    color: rgba(255,255,255,0.4);
+    font-size: 10px;
+  }
+
+  /* ─────────────── COMMON PAGE ELEMENTS ─────────────── */
+  .page-header {
+    background: var(--navy);
+    padding: 20px 32px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-direction: row-reverse;
+  }
+
+  .page-header-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-direction: row-reverse;
+  }
+
+  .brand-dot {
+    width: 8px; height: 8px;
+    background: var(--gold);
+    border-radius: 50%;
+  }
+
+  .brand-name {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--white);
+  }
+
+  .brand-sub {
+    font-size: 9px;
+    color: rgba(255,255,255,0.5);
+    font-weight: 400;
+    margin-top: 1px;
+  }
+
+  .page-header-tag {
+    background: rgba(201,168,76,0.15);
+    border: 1px solid rgba(201,168,76,0.35);
+    color: var(--gold);
+    font-size: 9px;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 12px;
+    letter-spacing: 1px;
+  }
+
+  .page-content {
+    padding: 28px 32px;
+  }
+
+  .page-footer {
+    position: absolute;
+    bottom: 0;
+    left: 0; right: 0;
+    padding: 12px 32px;
+    background: var(--navy-dark);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-direction: row-reverse;
+  }
+
+  .page-footer-text {
+    font-size: 8px;
+    color: rgba(255,255,255,0.35);
+    letter-spacing: 1px;
+  }
+
+  .page-num {
+    font-size: 9px;
+    color: var(--gold);
+    font-weight: 700;
+  }
+
+  /* ─────────────── SECTION HEADERS ─────────────── */
+  .section-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 18px;
+    flex-direction: row-reverse;
+  }
+
+  .section-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+    flex-shrink: 0;
+  }
+
+  .section-icon.navy { background: rgba(26,39,68,0.12); }
+  .section-icon.gold { background: rgba(201,168,76,0.15); }
+  .section-icon.green { background: var(--green-bg); }
+  .section-icon.red { background: var(--red-bg); }
+  .section-icon.blue { background: var(--blue-bg); }
+
+  .section-text h2 {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--navy);
+    line-height: 1.2;
+  }
+
+  .section-text p {
+    font-size: 10px;
+    color: var(--text-light);
+    margin-top: 2px;
+  }
+
+  .section-rule {
+    height: 2px;
+    background: linear-gradient(to left, var(--navy), var(--gold) 40%, transparent);
+    margin-bottom: 20px;
+    border-radius: 2px;
+  }
+
+  /* ─────────────── INFO CARDS ─────────────── */
+  .info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+
+  .info-grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+
+  .info-card {
+    background: var(--gray);
+    border: 1px solid var(--gray-mid);
+    border-radius: 12px;
+    padding: 14px 16px;
+    direction: rtl;
+  }
+
+  .info-card.highlighted {
+    background: var(--gold-pale);
+    border-color: rgba(201,168,76,0.35);
+  }
+
+  .info-card.navy-card {
+    background: var(--navy);
+    border-color: var(--navy);
+  }
+
+  .info-card-label {
+    font-size: 9px;
+    color: var(--text-light);
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .navy-card .info-card-label { color: rgba(255,255,255,0.5); }
+
+  .info-card-value {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--navy);
+    line-height: 1.4;
+  }
+
+  .navy-card .info-card-value { color: var(--white); }
+  .highlighted .info-card-value { color: var(--gold); }
+
+  .info-card-sub {
+    font-size: 9px;
+    color: var(--text-light);
+    margin-top: 3px;
+  }
+
+  /* ─────────────── DESCRIPTION BOX ─────────────── */
+  .desc-box {
+    background: var(--gray);
+    border: 1px solid var(--gray-mid);
+    border-radius: 12px;
+    padding: 16px 18px;
+    margin-bottom: 14px;
+    direction: rtl;
+  }
+
+  .desc-box-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    flex-direction: row-reverse;
+  }
+
+  .desc-box-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--navy);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-direction: row-reverse;
+  }
+
+  .desc-box-counter {
+    font-size: 9px;
+    color: var(--text-light);
+    background: var(--gray-mid);
+    padding: 2px 8px;
+    border-radius: 8px;
+  }
+
+  .desc-box-counter.ok { background: var(--green-bg); color: #27AE60; }
+  .desc-box-counter.warn { background: var(--orange-bg); color: var(--orange); }
+
+  .desc-text {
+    font-size: 10.5px;
+    color: var(--text);
+    line-height: 1.8;
+  }
+
+  /* ─────────────── CHECKLIST ─────────────── */
+  .checklist {
+    list-style: none;
+    margin-bottom: 16px;
+  }
+
+  .checklist li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    margin-bottom: 6px;
+    flex-direction: row-reverse;
+    font-size: 10.5px;
+    color: var(--text);
+    line-height: 1.5;
+  }
+
+  .checklist li:nth-child(odd) { background: var(--gray); }
+
+  .check-icon {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .check-icon.ok { background: var(--green-bg); color: #27AE60; }
+  .check-icon.req { background: var(--blue-bg); color: var(--blue); }
+  .check-icon.warn { background: var(--orange-bg); color: var(--orange); }
+  .check-icon.no { background: var(--red-bg); color: var(--red); }
+
+  .checklist li .item-text { flex: 1; text-align: right; }
+  .checklist li .item-note {
+    font-size: 9px;
+    color: var(--text-light);
+    margin-top: 2px;
+  }
+
+  /* ─────────────── ASSET CARD ─────────────── */
+  .asset-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+
+  .asset-card {
+    border: 2px dashed var(--gray-mid);
+    border-radius: 14px;
+    padding: 16px;
+    text-align: center;
+    background: var(--gray);
+    direction: rtl;
+  }
+
+  .asset-card.required {
+    border-color: rgba(201,168,76,0.5);
+    background: var(--gold-pale);
+  }
+
+  .asset-preview {
+    background: var(--navy);
+    border-radius: 8px;
+    margin: 0 auto 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255,255,255,0.3);
+    font-size: 10px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .asset-preview::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(201,168,76,0.15), transparent);
+  }
+
+  .asset-name {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 4px;
+  }
+
+  .asset-dim {
+    font-size: 10px;
+    color: var(--gold);
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .asset-note {
+    font-size: 9px;
+    color: var(--text-light);
+    line-height: 1.5;
+  }
+
+  .asset-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 8px;
+    font-size: 8px;
+    font-weight: 700;
+    margin-top: 6px;
+  }
+
+  .asset-badge.req { background: var(--gold-pale); color: var(--gold); border: 1px solid rgba(201,168,76,0.4); }
+  .asset-badge.opt { background: var(--blue-bg); color: var(--blue); border: 1px solid rgba(52,152,219,0.3); }
+
+  /* ─────────────── PERMISSION TABLE ─────────────── */
+  .perm-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 10px;
+    margin-bottom: 14px;
+    direction: rtl;
+  }
+
+  .perm-table th {
+    background: var(--navy);
+    color: var(--white);
+    padding: 8px 12px;
+    text-align: right;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+
+  .perm-table th:first-child { border-radius: 0 8px 0 0; }
+  .perm-table th:last-child { border-radius: 8px 0 0 0; }
+
+  .perm-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--gray-mid);
+    vertical-align: top;
+    line-height: 1.5;
+    text-align: right;
+  }
+
+  .perm-table tr:nth-child(even) td { background: var(--gray); }
+
+  .perm-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 8px;
+    font-weight: 700;
+  }
+
+  .perm-badge.low { background: var(--green-bg); color: #27AE60; }
+  .perm-badge.med { background: var(--orange-bg); color: var(--orange); }
+  .perm-badge.none { background: var(--gray-mid); color: var(--text-light); }
+
+  /* ─────────────── PRIVACY POLICY ─────────────── */
+  .policy-section {
+    margin-bottom: 14px;
+  }
+
+  .policy-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 6px;
+    padding-right: 10px;
+    border-right: 3px solid var(--gold);
+  }
+
+  .policy-text {
+    font-size: 9.5px;
+    color: var(--text);
+    line-height: 1.9;
+    background: var(--gray);
+    padding: 10px 14px;
+    border-radius: 8px;
+  }
+
+  /* ─────────────── RATING CARD ─────────────── */
+  .rating-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .rating-card {
+    border-radius: 12px;
+    padding: 14px 12px;
+    text-align: center;
+    direction: rtl;
+  }
+
+  .rating-card .rating-icon { font-size: 28px; margin-bottom: 6px; }
+  .rating-card .rating-label { font-size: 9px; color: var(--text-light); margin-bottom: 4px; }
+  .rating-card .rating-value { font-size: 12px; font-weight: 800; color: var(--navy); }
+
+  /* ─────────────── AAB SECTION ─────────────── */
+  .aab-box {
+    background: var(--navy);
+    border-radius: 14px;
+    padding: 22px 24px;
+    margin-bottom: 14px;
+    direction: rtl;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .aab-box::before {
+    content: '';
+    position: absolute;
+    top: -30px; left: -30px;
+    width: 120px; height: 120px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(201,168,76,0.2), transparent 70%);
+  }
+
+  .aab-title {
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--white);
+    margin-bottom: 6px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .aab-sub {
+    font-size: 10px;
+    color: rgba(255,255,255,0.55);
+    margin-bottom: 16px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .aab-steps {
+    list-style: none;
+    position: relative;
+    z-index: 1;
+  }
+
+  .aab-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    flex-direction: row-reverse;
+    margin-bottom: 10px;
+  }
+
+  .aab-step-num {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--gold);
+    color: var(--navy);
+    font-size: 10px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .aab-step-text {
+    font-size: 10px;
+    color: rgba(255,255,255,0.85);
+    line-height: 1.6;
+    flex: 1;
+    text-align: right;
+  }
+
+  .aab-step-text strong { color: var(--gold); }
+  .aab-step-text code {
+    background: rgba(0,0,0,0.3);
+    color: var(--gold-light);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 9px;
+  }
+
+  /* ─────────────── COMPLIANCE TABLE ─────────────── */
+  .comp-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .comp-item {
+    background: var(--gray);
+    border-radius: 10px;
+    padding: 12px 14px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    flex-direction: row-reverse;
+  }
+
+  .comp-icon {
+    font-size: 18px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .comp-text { text-align: right; }
+  .comp-text strong { font-size: 10.5px; color: var(--navy); display: block; margin-bottom: 2px; }
+  .comp-text span { font-size: 9px; color: var(--text-light); line-height: 1.5; }
+
+  /* ─────────────── ALERT BOX ─────────────── */
+  .alert {
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    flex-direction: row-reverse;
+    font-size: 10px;
+    line-height: 1.7;
+  }
+
+  .alert.info { background: var(--blue-bg); color: #1A5276; border-right: 3px solid var(--blue); }
+  .alert.success { background: var(--green-bg); color: #145A32; border-right: 3px solid var(--green); }
+  .alert.warn { background: var(--orange-bg); color: #784212; border-right: 3px solid var(--orange); }
+  .alert-icon { font-size: 16px; flex-shrink: 0; }
+
+  /* ─────────────── TAG CHIPS ─────────────── */
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 12px;
+    flex-direction: row-reverse;
+  }
+
+  .chip {
+    background: rgba(26,39,68,0.08);
+    color: var(--navy);
+    border: 1px solid rgba(26,39,68,0.15);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 9.5px;
+    font-weight: 600;
+  }
+
+  .chip.gold { background: var(--gold-pale); color: var(--gold); border-color: rgba(201,168,76,0.4); }
+  .chip.green { background: var(--green-bg); color: #27AE60; border-color: rgba(46,204,113,0.3); }
+
+  /* ─────────────── TOC (Page 1 bottom) ─────────────── */
+  .toc {
+    margin-top: 32px;
+    position: relative;
+    z-index: 2;
+    width: 80%;
+  }
+
+  .toc-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+    flex-direction: row-reverse;
+  }
+
+  .toc-name {
+    font-size: 11px;
+    color: rgba(255,255,255,0.75);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-direction: row-reverse;
+  }
+
+  .toc-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--gold); }
+  .toc-page { font-size: 9px; color: var(--gold); font-weight: 700; }
+
+  /* ─────────────── DIVIDER ─────────────── */
+  .divider {
+    height: 1px;
+    background: var(--gray-mid);
+    margin: 16px 0;
+  }
+
+  .spacer { height: 10px; }
+  .spacer-lg { height: 20px; }
+
+  /* Screenshot mockup */
+  .screen-mockup {
+    display: inline-block;
+    width: 55px;
+    height: 95px;
+    background: var(--navy);
+    border-radius: 8px;
+    border: 2px solid var(--gray-mid);
+    position: relative;
+    overflow: hidden;
+    vertical-align: top;
+    margin: 4px;
+  }
+
+  .screen-mockup::before {
+    content: '';
+    position: absolute;
+    top: 5px; left: 50%; transform: translateX(-50%);
+    width: 16px; height: 2px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 2px;
+  }
+
+  .screen-mockup .screen-inner {
+    margin: 14px 3px 3px;
+    background: rgba(201,168,76,0.1);
+    height: calc(100% - 17px);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: rgba(255,255,255,0.3);
+    font-size: 7px;
+    text-align: center;
+  }
+
+  .screenshots-row {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin: 12px 0;
+    gap: 4px;
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- PAGE 1: COVER                                             -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="cover">
+    <div class="cover-bg-circles"></div>
+    <div class="cover-grid"></div>
+
+    <div class="cover-badge">وثيقة نشر رسمية · OFFICIAL SUBMISSION DOCUMENT</div>
+
+    <div class="cover-logo">
+      <div class="logo-icon">🧾</div>
+      <div class="logo-ar">فوترة</div>
+      <div class="logo-en">F A W T A R A</div>
+    </div>
+
+    <div class="cover-divider"></div>
+
+    <div class="cover-title">
+      <h1>ملف النشر الرسمي على Google Play Store</h1>
+      <h2>GOOGLE PLAY STORE — OFFICIAL SUBMISSION PACKAGE</h2>
+    </div>
+
+    <div class="cover-meta">
+      <div class="cover-meta-item">
+        <div class="label">PACKAGE</div>
+        <div class="value">com.wh.cakechocolate</div>
+      </div>
+      <div class="cover-meta-item">
+        <div class="label">VERSION</div>
+        <div class="value">1.0.0 (1)</div>
+      </div>
+      <div class="cover-meta-item">
+        <div class="label">CATEGORY</div>
+        <div class="value">Business</div>
+      </div>
+      <div class="cover-meta-item">
+        <div class="label">RATING</div>
+        <div class="value">Everyone</div>
+      </div>
+    </div>
+
+    <div class="toc">
+      <div class="toc-item">
+        <div class="toc-name"><div class="toc-dot"></div> بيانات التطبيق وقائمة المتجر</div>
+        <div class="toc-page">٢</div>
+      </div>
+      <div class="toc-item">
+        <div class="toc-name"><div class="toc-dot"></div> الوصف الكامل بالعربية والإنجليزية</div>
+        <div class="toc-page">٣</div>
+      </div>
+      <div class="toc-item">
+        <div class="toc-name"><div class="toc-dot"></div> سياسة الخصوصية</div>
+        <div class="toc-page">٤</div>
+      </div>
+      <div class="toc-item">
+        <div class="toc-name"><div class="toc-dot"></div> تصنيف المحتوى والصلاحيات</div>
+        <div class="toc-page">٥</div>
+      </div>
+      <div class="toc-item">
+        <div class="toc-name"><div class="toc-dot"></div> مواصفات الأصول المرئية (الصور والأيقونات)</div>
+        <div class="toc-page">٦</div>
+      </div>
+      <div class="toc-item">
+        <div class="toc-name"><div class="toc-dot"></div> خطوات بناء ملف AAB ورفعه</div>
+        <div class="toc-page">٧</div>
+      </div>
+      <div class="toc-item">
+        <div class="toc-name"><div class="toc-dot"></div> قائمة التحقق النهائية وسياسات Google</div>
+        <div class="toc-page">٨</div>
+      </div>
+    </div>
+
+    <div class="cover-footer">
+      <div class="cover-footer-badge">✓ متوافق مع سياسات Google Play 2025</div>
+      <div class="cover-footer-date">مارس 2026 · W&H Cake & Chocolate</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- PAGE 2: STORE LISTING METADATA                            -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="page-header">
+    <div class="page-header-brand">
+      <div class="brand-dot"></div>
+      <div>
+        <div class="brand-name">فوترة · FAWTARA</div>
+        <div class="brand-sub">نظام إدارة الفواتير والطلبات</div>
+      </div>
+    </div>
+    <div class="page-header-tag">صفحة ٢ من ٨ · بيانات المتجر</div>
+  </div>
+
+  <div class="page-content">
+    <div class="section-head">
+      <div class="section-icon navy">📋</div>
+      <div class="section-text">
+        <h2>بيانات التطبيق الأساسية — Store Listing</h2>
+        <p>أدخل هذه البيانات حرفياً في Google Play Console</p>
+      </div>
+    </div>
+    <div class="section-rule"></div>
+
+    <!-- App Title -->
+    <div class="info-grid">
+      <div class="info-card highlighted">
+        <div class="info-card-label">🇸🇦 عنوان التطبيق (العربية) — ٣٠ حرف كحد أقصى</div>
+        <div class="info-card-value">فوترة — إدارة الفواتير</div>
+        <div class="info-card-sub">✓ ٢١ حرف · ضمن الحد المسموح</div>
+      </div>
+      <div class="info-card highlighted">
+        <div class="info-card-label">🇺🇸 App Title (English) — Max 30 chars</div>
+        <div class="info-card-value">FAWTARA — Invoice Manager</div>
+        <div class="info-card-sub">✓ 26 chars · Within limit</div>
+      </div>
+    </div>
+
+    <!-- Short Description -->
+    <div class="desc-box">
+      <div class="desc-box-header">
+        <div class="desc-box-title">🇸🇦 الوصف المختصر (عربي) — ٨٠ حرف كحد أقصى</div>
+        <div class="desc-box-counter ok">٧٢ / ٨٠ ✓</div>
+      </div>
+      <div class="desc-text">نظام احترافي لإدارة الفواتير والطلبات للمطاعم والحلويات، يدعم العربية والإنجليزية والأردية والهندية.</div>
+    </div>
+
+    <div class="desc-box">
+      <div class="desc-box-header">
+        <div class="desc-box-title">🇺🇸 Short Description (English) — Max 80 chars</div>
+        <div class="desc-box-counter ok">78 / 80 ✓</div>
+      </div>
+      <div class="desc-text">Professional invoice & order management for bakeries and confectioneries. 4-language.</div>
+    </div>
+
+    <!-- Technical Identity -->
+    <div class="section-head" style="margin-top:16px;">
+      <div class="section-icon gold">⚙️</div>
+      <div class="section-text">
+        <h2>البيانات التقنية — Technical Identity</h2>
+        <p>أدخل هذه القيم في إعدادات التطبيق</p>
+      </div>
+    </div>
+    <div class="section-rule"></div>
+
+    <div class="info-grid-3">
+      <div class="info-card navy-card">
+        <div class="info-card-label">Package Name</div>
+        <div class="info-card-value" style="font-size:10px; letter-spacing:-0.3px;">com.wh.cakechocolate</div>
+      </div>
+      <div class="info-card">
+        <div class="info-card-label">Version Name</div>
+        <div class="info-card-value">1.0.0</div>
+        <div class="info-card-sub">versionName في app.json</div>
+      </div>
+      <div class="info-card">
+        <div class="info-card-label">Version Code</div>
+        <div class="info-card-value">1</div>
+        <div class="info-card-sub">versionCode — رقم صحيح متصاعد</div>
+      </div>
+      <div class="info-card">
+        <div class="info-card-label">Category</div>
+        <div class="info-card-value">Business</div>
+        <div class="info-card-sub">تطبيقات الأعمال</div>
+      </div>
+      <div class="info-card">
+        <div class="info-card-label">Min SDK</div>
+        <div class="info-card-value">Android 6.0+</div>
+        <div class="info-card-sub">API Level 23</div>
+      </div>
+      <div class="info-card">
+        <div class="info-card-label">Target SDK</div>
+        <div class="info-card-value">API 35</div>
+        <div class="info-card-sub">Android 15</div>
+      </div>
+    </div>
+
+    <!-- Contact -->
+    <div class="info-grid">
+      <div class="info-card">
+        <div class="info-card-label">📧 Email الدعم الفني — Support Email</div>
+        <div class="info-card-value">support@fawtara.app</div>
+        <div class="info-card-sub">يظهر للمستخدمين في صفحة التطبيق</div>
+      </div>
+      <div class="info-card">
+        <div class="info-card-label">🌐 Privacy Policy URL</div>
+        <div class="info-card-value" style="font-size:10px;">https://fawtara.app/privacy</div>
+        <div class="info-card-sub">⚠️ مطلوب إلزامياً — يمكن استخدام رابط الملف على Google Docs</div>
+      </div>
+    </div>
+
+    <div class="alert warn">
+      <div class="alert-icon">⚠️</div>
+      <div><strong>تنبيه مهم:</strong> إذا لم يكن لديك نطاق (Domain)، يمكنك نشر سياسة الخصوصية كملف Google Docs أو GitHub Gist بصلاحية عرض للعموم واستخدام رابطه. سياسة الخصوصية الكاملة موجودة في الصفحة ٤ من هذا الملف.</div>
+    </div>
+  </div>
+
+  <div class="page-footer">
+    <div class="page-footer-text">فوترة FAWTARA · ملف نشر Google Play · مارس 2026</div>
+    <div class="page-num">٢</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- PAGE 3: FULL DESCRIPTIONS                                 -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="page-header">
+    <div class="page-header-brand">
+      <div class="brand-dot"></div>
+      <div>
+        <div class="brand-name">فوترة · FAWTARA</div>
+        <div class="brand-sub">الوصف الكامل للتطبيق</div>
+      </div>
+    </div>
+    <div class="page-header-tag">صفحة ٣ من ٨ · الوصف الكامل</div>
+  </div>
+
+  <div class="page-content">
+    <div class="section-head">
+      <div class="section-icon navy">📝</div>
+      <div class="section-text">
+        <h2>الوصف الكامل — Full Description</h2>
+        <p>الحد الأقصى ٤٠٠٠ حرف · انسخ كل وصف في حقله المخصص</p>
+      </div>
+    </div>
+    <div class="section-rule"></div>
+
+    <div class="desc-box" dir="rtl">
+      <div class="desc-box-header">
+        <div class="desc-box-title">🇸🇦 الوصف الكامل بالعربية — يُدخل في خانة العربية</div>
+        <div class="desc-box-counter ok">٨٥٠ / ٤٠٠٠ ✓</div>
+      </div>
+      <div class="desc-text" dir="rtl">
+        <strong>فوترة</strong> — نظام إدارة فواتير وطلبات احترافي مصمم خصيصاً للمطاعم، محلات الحلويات، المخابز، وشركات الكيك والشوكولاتة.
+
+يمنحك <strong>فوترة</strong> تحكماً كاملاً في دورة العمل اليومية؛ من استقبال الطلبات وإدارة الأقسام، إلى إصدار الفواتير وتتبع التسليمات ومراجعة التقارير.
+
+<strong>✅ المميزات الرئيسية:</strong>
+• <strong>كاشير سريع</strong> — أنشئ فواتير وطلبات في ثوانٍ
+• <strong>إدارة أقسام</strong> — كيك، شوكولاتة، حلا زفة، معجنات، تغليف
+• <strong>أرشيف الطلبات</strong> — تاريخ كامل مع إمكانية البحث والتصفية
+• <strong>تقارير ذكية</strong> — مبيعات يومية وشهرية وإحصائيات تفصيلية
+• <strong>إدارة العملاء</strong> — سجل بيانات العملاء وتاريخ طلباتهم
+• <strong>تتبع التوصيل</strong> — تنسيق طلبات التوصيل وحالتها
+• <strong>إدارة الصواني</strong> — تتبع الصواني والعدد الخاصة بالطلبات
+• <strong>لوحة المشرف</strong> — إدارة الموظفين والصلاحيات
+• <strong>طلبات تغيير السعر</strong> — نظام موافقة منظم
+• <strong>دعم ٤ لغات</strong> — العربية، الإنجليزية، الأردية، الهندية
+
+<strong>☁️ مزامنة فورية:</strong>
+تعمل جميع البيانات في الوقت الفعلي عبر Firebase Firestore، مما يضمن تزامن الطلبات فوراً بين جميع الأجهزة.
+
+<strong>🔒 الأمان والخصوصية:</strong>
+بيانات عملك محمية بالكامل، مع نظام صلاحيات يضمن أن كل موظف يرى فقط ما يحتاجه.
+
+<strong>مناسب لـ:</strong> محلات الكيك والحلويات · المخابز · شركات التوصيل · المطاعم الصغيرة والمتوسطة
+      </div>
+    </div>
+
+    <div class="desc-box" dir="ltr" style="text-align:left;">
+      <div class="desc-box-header" style="flex-direction:row;">
+        <div class="desc-box-title" style="flex-direction:row;">🇺🇸 Full Description (English)</div>
+        <div class="desc-box-counter ok">720 / 4000 ✓</div>
+      </div>
+      <div class="desc-text" dir="ltr" style="text-align:left;">
+        <strong>FAWTARA</strong> — Professional invoice and order management system built for bakeries, confectioneries, chocolate shops, and food businesses.
+
+Take full control of your daily operations: from receiving orders and managing departments, to issuing invoices, tracking deliveries, and reviewing detailed reports.
+
+<strong>✅ Key Features:</strong>
+• <strong>Fast Cashier</strong> — Create invoices and orders in seconds
+• <strong>Department Management</strong> — Cake, Chocolate, Wedding Sweets, Savory, Packaging
+• <strong>Order Archive</strong> — Complete history with search and filtering
+• <strong>Smart Reports</strong> — Daily and monthly sales with detailed statistics
+• <strong>Customer Management</strong> — Client database with order history
+• <strong>Delivery Tracking</strong> — Coordinate and track delivery orders
+• <strong>Tray Management</strong> — Track trays associated with orders
+• <strong>Admin Dashboard</strong> — Manage employees and permissions
+• <strong>Price Change Requests</strong> — Organized approval workflow
+• <strong>4-Language Support</strong> — Arabic, English, Urdu, Hindi
+
+<strong>☁️ Real-time Sync:</strong>
+All data syncs instantly across all devices via Firebase Firestore. Orders placed on one device appear immediately on all others.
+
+<strong>🔒 Security & Privacy:</strong>
+Your business data is fully protected with a role-based permission system ensuring each employee only accesses what they need.
+
+<strong>Perfect for:</strong> Cake & Pastry Shops · Bakeries · Catering Services · Small-Medium Food Businesses
+      </div>
+    </div>
+
+    <div class="chips">
+      <div class="chip gold">كلمات مفتاحية</div>
+      <div class="chip">فوترة</div>
+      <div class="chip">فاتورة</div>
+      <div class="chip">إدارة طلبات</div>
+      <div class="chip">كيك</div>
+      <div class="chip">حلويات</div>
+      <div class="chip">مخبز</div>
+      <div class="chip">invoice</div>
+      <div class="chip">bakery management</div>
+      <div class="chip">order management</div>
+      <div class="chip">POS</div>
+      <div class="chip">business app</div>
+    </div>
+  </div>
+
+  <div class="page-footer">
+    <div class="page-footer-text">فوترة FAWTARA · ملف نشر Google Play · مارس 2026</div>
+    <div class="page-num">٣</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- PAGE 4: PRIVACY POLICY                                    -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="page-header">
+    <div class="page-header-brand">
+      <div class="brand-dot"></div>
+      <div>
+        <div class="brand-name">فوترة · FAWTARA</div>
+        <div class="brand-sub">سياسة الخصوصية</div>
+      </div>
+    </div>
+    <div class="page-header-tag">صفحة ٤ من ٨ · سياسة الخصوصية</div>
+  </div>
+
+  <div class="page-content">
+    <div class="section-head">
+      <div class="section-icon green">🔒</div>
+      <div class="section-text">
+        <h2>سياسة الخصوصية — Privacy Policy</h2>
+        <p>مطلوبة إلزامياً من Google · انشرها على رابط عام واستخدمه في Console</p>
+      </div>
+    </div>
+    <div class="section-rule"></div>
+
+    <div class="alert success">
+      <div class="alert-icon">✅</div>
+      <div><strong>كيفية النشر:</strong> انسخ النص أدناه والصقه في Google Docs جديد، ثم اجعله عاماً (Anyone with the link can view)، وانسخ الرابط الناتج في حقل Privacy Policy URL في Google Play Console.</div>
+    </div>
+
+    <div class="policy-section">
+      <div class="policy-title">سياسة الخصوصية لتطبيق فوترة — Privacy Policy for FAWTARA App</div>
+      <div class="policy-text">
+        <strong>آخر تحديث: مارس ٢٠٢٦ | Last Updated: March 2026</strong><br><br>
+
+        <strong>١. المعلومات التي نجمعها</strong><br>
+        يجمع تطبيق فوترة المعلومات التالية لأغراض تشغيلية فقط: بيانات الطلبات والفواتير التي تدخلها أنت وفريقك، أسماء الموظفين وبيانات التعريف الخاصة بهم، بيانات العملاء التي تدخلها يدوياً. لا نجمع أي معلومات شخصية تلقائياً دون علمك.<br><br>
+
+        <strong>٢. استخدام المعلومات</strong><br>
+        تُستخدم البيانات المجموعة حصراً في: تشغيل نظام الفواتير والطلبات، عرض التقارير والإحصائيات لك، المزامنة الفورية بين أجهزة فريقك. لا نبيع أي بيانات لأطراف ثالثة ولا نستخدمها لأغراض إعلانية.<br><br>
+
+        <strong>٣. تخزين البيانات</strong><br>
+        يتم تخزين بياناتك بأمان على خوادم Google Firebase في منطقة us-central وهي مشفرة ومحمية وفق معايير Google Cloud الأمنية.<br><br>
+
+        <strong>٤. الصلاحيات والأذونات</strong><br>
+        يطلب التطبيق صلاحية الكاميرا لتحميل صور المنتجات فقط. لا يُشارك الموقع الجغرافي ولا جهات الاتصال ولا أي بيانات حساسة أخرى.<br><br>
+
+        <strong>٥. حقوق المستخدم</strong><br>
+        يحق لك طلب حذف جميع بياناتك في أي وقت بالتواصل عبر: support@fawtara.app<br><br>
+
+        <strong>٦. سياسة الأطفال</strong><br>
+        هذا التطبيق مخصص للاستخدام التجاري فقط ولا يستهدف الأطفال دون ١٣ عاماً.<br><br>
+
+        <strong>٧. التواصل</strong><br>
+        لأي استفسار بخصوص الخصوصية: support@fawtara.app
+      </div>
+    </div>
+
+    <div class="policy-section">
+      <div class="policy-title">Privacy Policy — English Version</div>
+      <div class="policy-text" dir="ltr" style="text-align:left;">
+        <strong>Last Updated: March 2026</strong><br><br>
+
+        <strong>1. Information We Collect</strong><br>
+        FAWTARA collects the following for operational purposes only: order and invoice data you and your team enter, employee name and identification data, customer information you manually enter. We do not collect personal information automatically without your knowledge.<br><br>
+
+        <strong>2. Use of Information</strong><br>
+        Collected data is used exclusively to operate the invoice system, display reports and statistics, and sync data across your team's devices. We do not sell data or use it for advertising purposes.<br><br>
+
+        <strong>3. Data Storage</strong><br>
+        Your data is securely stored on Google Firebase servers (us-central region), encrypted and protected per Google Cloud security standards.<br><br>
+
+        <strong>4. Permissions</strong><br>
+        The app requests Camera permission only for uploading product images. Location, contacts, and other sensitive data are never accessed or shared.<br><br>
+
+        <strong>5. Your Rights</strong><br>
+        You may request deletion of all your data at any time by contacting: support@fawtara.app<br><br>
+
+        <strong>6. Children's Policy</strong><br>
+        This app is for business use only and is not directed at children under 13.<br><br>
+
+        <strong>7. Contact</strong><br>
+        For privacy inquiries: support@fawtara.app
+      </div>
+    </div>
+  </div>
+
+  <div class="page-footer">
+    <div class="page-footer-text">فوترة FAWTARA · ملف نشر Google Play · مارس 2026</div>
+    <div class="page-num">٤</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- PAGE 5: CONTENT RATING & PERMISSIONS                     -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="page-header">
+    <div class="page-header-brand">
+      <div class="brand-dot"></div>
+      <div>
+        <div class="brand-name">فوترة · FAWTARA</div>
+        <div class="brand-sub">تصنيف المحتوى والصلاحيات</div>
+      </div>
+    </div>
+    <div class="page-header-tag">صفحة ٥ من ٨ · التصنيف والصلاحيات</div>
+  </div>
+
+  <div class="page-content">
+    <div class="section-head">
+      <div class="section-icon blue">🎯</div>
+      <div class="section-text">
+        <h2>تصنيف المحتوى — Content Rating</h2>
+        <p>أجب على أسئلة Google Play Console بهذه الإجابات</p>
+      </div>
+    </div>
+    <div class="section-rule"></div>
+
+    <div class="rating-grid">
+      <div class="rating-card" style="background:var(--green-bg);">
+        <div class="rating-icon">🟢</div>
+        <div class="rating-label">التصنيف النهائي</div>
+        <div class="rating-value" style="color:#27AE60;">Everyone</div>
+      </div>
+      <div class="rating-card" style="background:var(--blue-bg);">
+        <div class="rating-icon">👔</div>
+        <div class="rating-label">نوع التطبيق</div>
+        <div class="rating-value" style="color:var(--blue);">Business</div>
+      </div>
+      <div class="rating-card" style="background:var(--gold-pale);">
+        <div class="rating-icon">👤</div>
+        <div class="rating-label">الجمهور المستهدف</div>
+        <div class="rating-value" style="color:var(--gold);">18+ (أصحاب عمل)</div>
+      </div>
+    </div>
+
+    <div class="alert info">
+      <div class="alert-icon">ℹ️</div>
+      <div><strong>في خطوة Content Rating في Console:</strong> عند سؤالك عن نوع التطبيق اختر <strong>"Utility / Productivity / Other"</strong>، ثم أجب بـ <strong>NO</strong> على جميع الأسئلة الخاصة بالعنف والجنس والمقامرة والكحول — لأن التطبيق خالٍ تماماً من هذه المحتويات.</div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section-head">
+      <div class="section-icon navy">🔐</div>
+      <div class="section-text">
+        <h2>الصلاحيات المطلوبة — App Permissions</h2>
+        <p>فقط هذه الصلاحيات المدرجة أدناه، لا غيرها</p>
+      </div>
+    </div>
+    <div class="section-rule"></div>
+
+    <table class="perm-table">
+      <thead>
+        <tr>
+          <th>الصلاحية / Permission</th>
+          <th>الغرض / Purpose</th>
+          <th>الضرورة</th>
+          <th>مستوى الخطورة</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>CAMERA</code></td>
+          <td>تصوير المنتجات لإضافتها للقائمة</td>
+          <td>اختيارية</td>
+          <td><span class="perm-badge med">Normal</span></td>
+        </tr>
+        <tr>
+          <td><code>READ_MEDIA_IMAGES</code></td>
+          <td>اختيار صور المنتجات من المعرض</td>
+          <td>اختيارية</td>
+          <td><span class="perm-badge med">Normal</span></td>
+        </tr>
+        <tr>
+          <td><code>INTERNET</code></td>
+          <td>الاتصال بـ Firebase لمزامنة البيانات</td>
+          <td>إلزامية</td>
+          <td><span class="perm-badge low">حميدة</span></td>
+        </tr>
+        <tr>
+          <td><code>ACCESS_NETWORK_STATE</code></td>
+          <td>التحقق من الاتصال بالإنترنت</td>
+          <td>إلزامية</td>
+          <td><span class="perm-badge low">حميدة</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="alert success">
+      <div class="alert-icon">✅</div>
+      <div><strong>لا يستخدم التطبيق:</strong> GPS / الموقع الجغرافي · جهات الاتصال · المايكروفون · الرسائل SMS · بيانات صحية · تتبع الإعلانات (IDFA/GAID) · خدمات الدفع المدمجة</div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section-head">
+      <div class="section-head">
+        <div class="section-icon gold">📊</div>
+        <div class="section-text">
+          <h2>استهداف البيانات — Data Safety Section</h2>
+          <p>أجوبة قسم Data Safety في Google Play Console</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="comp-grid">
+      <div class="comp-item">
+        <div class="comp-icon">✅</div>
+        <div class="comp-text">
+          <strong>هل تجمع بيانات مستخدمين؟</strong>
+          <span>نعم — بيانات الطلبات التي يدخلها المستخدم فقط</span>
+        </div>
+      </div>
+      <div class="comp-item">
+        <div class="comp-icon">❌</div>
+        <div class="comp-text">
+          <strong>هل تبيع بيانات للأطراف الثالثة؟</strong>
+          <span>لا — Data is not sold</span>
+        </div>
+      </div>
+      <div class="comp-item">
+        <div class="comp-icon">❌</div>
+        <div class="comp-text">
+          <strong>هل تجمع بيانات موقع جغرافي؟</strong>
+          <span>لا — No location data</span>
+        </div>
+      </div>
+      <div class="comp-item">
+        <div class="comp-icon">✅</div>
+        <div class="comp-text">
+          <strong>هل تشفر البيانات أثناء النقل؟</strong>
+          <span>نعم — Firebase HTTPS encryption</span>
+        </div>
+      </div>
+      <div class="comp-item">
+        <div class="comp-icon">✅</div>
+        <div class="comp-text">
+          <strong>هل يمكن للمستخدم حذف بياناته؟</strong>
+          <span>نعم — عبر التواصل بالبريد الإلكتروني</span>
+        </div>
+      </div>
+      <div class="comp-item">
+        <div class="comp-icon">❌</div>
+        <div class="comp-text">
+          <strong>هل تستخدم الإعلانات؟</strong>
+          <span>لا — No ads, no tracking IDs</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-footer">
+    <div class="page-footer-text">فوترة FAWTARA · ملف نشر Google Play · مارس 2026</div>
+    <div class="page-num">٥</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- PAGE 6: VISUAL ASSETS SPECIFICATIONS                     -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="page-header">
+    <div class="page-header-brand">
+      <div class="brand-dot"></div>
+      <div>
+        <div class="brand-name">فوترة · FAWTARA</div>
+        <div class="brand-sub">مواصفات الأصول المرئية</div>
+      </div>
+    </div>
+    <div class="page-header-tag">صفحة ٦ من ٨ · الأصول المرئية</div>
+  </div>
+
+  <div class="page-content">
+    <div class="section-head">
+      <div class="section-icon gold">🎨</div>
+      <div class="section-text">
+        <h2>الأصول المرئية المطلوبة — Required Visual Assets</h2>
+        <p>أعدّ هذه الملفات قبل البدء برفع التطبيق</p>
+      </div>
+    </div>
+    <div class="section-rule"></div>
+
+    <div class="asset-grid">
+      <!-- App Icon -->
+      <div class="asset-card required">
+        <div class="asset-preview" style="width:80px; height:80px; border-radius:18px; margin:0 auto 12px;">
+          <div style="position:relative; z-index:1; font-size:32px;">🧾</div>
+        </div>
+        <div class="asset-name">أيقونة التطبيق</div>
+        <div class="asset-dim">512 × 512 بكسل</div>
+        <div class="asset-note">PNG · لا شفافية · لا زوايا مدورة<br>الخلفية: Navy #1A2744<br>اللون الثانوي: Gold #C9A84C</div>
+        <div class="asset-badge req">إلزامي</div>
+      </div>
+
+      <!-- Feature Graphic -->
+      <div class="asset-card required">
+        <div class="asset-preview" style="width:160px; height:80px; border-radius:8px; margin:0 auto 12px;">
+          <div style="position:relative; z-index:1; font-size:11px; padding:8px;">فوترة · FAWTARA<br><span style="font-size:9px; opacity:0.5;">Feature Graphic</span></div>
+        </div>
+        <div class="asset-name">الصورة البارزة — Feature Graphic</div>
+        <div class="asset-dim">1024 × 500 بكسل</div>
+        <div class="asset-note">PNG أو JPG · تُستخدم في رأس صفحة المتجر<br>تصميم مع اسم "فوترة" والشعار بخلفية Navy</div>
+        <div class="asset-badge req">إلزامي</div>
+      </div>
+    </div>
+
+    <!-- Screenshots -->
+    <div class="asset-card" style="margin-bottom:14px;">
+      <div class="asset-name" style="margin-bottom:8px;">📱 لقطات الشاشة — Screenshots (Phone)</div>
+      <div class="asset-dim">1080 × 2400 بكسل (أو أي نسبة 9:16 أو 9:19.5)</div>
+      <div class="asset-note" style="margin-bottom:12px;">الحد الأدنى: ٢ لقطة · الموصى به: ٨ لقطات · PNG أو JPEG · حجم أقصى 8MB لكل صورة</div>
+
+      <div class="screenshots-row">
+        <div class="screen-mockup"><div class="screen-inner">كاشير</div></div>
+        <div class="screen-mockup"><div class="screen-inner">أقسام</div></div>
+        <div class="screen-mockup"><div class="screen-inner">أرشيف</div></div>
+        <div class="screen-mockup"><div class="screen-inner">تقارير</div></div>
+        <div class="screen-mockup"><div class="screen-inner">عملاء</div></div>
+        <div class="screen-mockup"><div class="screen-inner">توصيل</div></div>
+        <div class="screen-mockup"><div class="screen-inner">مشرف</div></div>
+        <div class="screen-mockup"><div class="screen-inner">لغات</div></div>
+      </div>
+
+      <div style="margin-top:10px; display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:6px; direction:rtl;">
+        <div class="info-card" style="text-align:center; padding:8px;">
+          <div class="info-card-label">شاشة ١</div>
+          <div class="info-card-value" style="font-size:10px;">الكاشير الرئيسي</div>
+        </div>
+        <div class="info-card" style="text-align:center; padding:8px;">
+          <div class="info-card-label">شاشة ٢</div>
+          <div class="info-card-value" style="font-size:10px;">قائمة الأقسام</div>
+        </div>
+        <div class="info-card" style="text-align:center; padding:8px;">
+          <div class="info-card-label">شاشة ٣</div>
+          <div class="info-card-value" style="font-size:10px;">أرشيف الطلبات</div>
+        </div>
+        <div class="info-card" style="text-align:center; padding:8px;">
+          <div class="info-card-label">شاشة ٤</div>
+          <div class="info-card-value" style="font-size:10px;">التقارير</div>
+        </div>
+        <div class="info-card" style="text-align:center; padding:8px;">
+          <div class="info-card-label">شاشة ٥</div>
+          <div class="info-card-value" style="font-size:10px;">بيانات العملاء</div>
+        </div>
+        <div class="info-card" style="text-align:center; padding:8px;">
+          <div class="info-card-label">شاشة ٦</div>
+          <div class="info-card-value" style="font-size:10px;">التوصيل</div>
+        </div>
+        <div class="info-card" style="text-align:center; padding:8px;">
+          <div class="info-card-label">شاشة ٧</div>
+          <div class="info-card-value" style="font-size:10px;">لوحة المشرف</div>
+        </div>
+        <div class="info-card" style="text-align:center; padding:8px;">
+          <div class="info-card-label">شاشة ٨</div>
+          <div class="info-card-value" style="font-size:10px;">دعم ٤ لغات</div>
+        </div>
+      </div>
+      <div class="asset-badge req" style="margin-top:8px;">٢ إلزاميتان · ٨ موصى بها</div>
+    </div>
+
+    <div class="alert info">
+      <div class="alert-icon">💡</div>
+      <div><strong>نصيحة:</strong> التقط لقطات الشاشة على جهاز Android فعلي أو محاكي بدقة ١٠٨٠×٢٤٠٠ (نسبة ٩:٢٠). تأكد من ظهور النصوص العربية بوضوح وأن الشاشات ممتلئة بالبيانات الحقيقية لتبدو احترافية.</div>
+    </div>
+  </div>
+
+  <div class="page-footer">
+    <div class="page-footer-text">فوترة FAWTARA · ملف نشر Google Play · مارس 2026</div>
+    <div class="page-num">٦</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- PAGE 7: AAB BUILD GUIDE                                   -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="page-header">
+    <div class="page-header-brand">
+      <div class="brand-dot"></div>
+      <div>
+        <div class="brand-name">فوترة · FAWTARA</div>
+        <div class="brand-sub">بناء ملف AAB</div>
+      </div>
+    </div>
+    <div class="page-header-tag">صفحة ٧ من ٨ · بناء AAB</div>
+  </div>
+
+  <div class="page-content">
+    <div class="section-head">
+      <div class="section-icon navy">📦</div>
+      <div class="section-text">
+        <h2>بناء ملف AAB ورفعه — Build & Upload AAB</h2>
+        <p>Android App Bundle — الملف المطلوب للنشر على Google Play</p>
+      </div>
+    </div>
+    <div class="section-rule"></div>
+
+    <div class="alert info">
+      <div class="alert-icon">ℹ️</div>
+      <div><strong>ما هو AAB؟</strong> ملف Android App Bundle هو تنسيق النشر الرسمي لـ Google Play. يختلف عن APK في أنه يحتوي على جميع موارد التطبيق ويسمح لـ Google بإنشاء APK مُحسّن لكل جهاز. Google Play تطلبه إلزامياً منذ ٢٠٢١.</div>
+    </div>
+
+    <!-- EAS Build Method -->
+    <div class="aab-box">
+      <div class="aab-title">🚀 الطريقة المُوصى بها: EAS Build (Expo Application Services)</div>
+      <div class="aab-sub">الأسرع والأسهل · بناء سحابي مجاني على الـ Tier المجاني</div>
+
+      <ul class="aab-steps">
+        <li class="aab-step">
+          <div class="aab-step-num">١</div>
+          <div class="aab-step-text">
+            <strong>أنشئ حساباً على Expo:</strong> اذهب إلى <code>expo.dev</code> وأنشئ حساباً مجانياً (لو لم يكن لديك)
+          </div>
+        </li>
+        <li class="aab-step">
+          <div class="aab-step-num">٢</div>
+          <div class="aab-step-text">
+            <strong>ثبّت EAS CLI:</strong> في Terminal نفّذ: <code>npm install -g eas-cli</code>
+          </div>
+        </li>
+        <li class="aab-step">
+          <div class="aab-step-num">٣</div>
+          <div class="aab-step-text">
+            <strong>سجّل الدخول:</strong> نفّذ <code>eas login</code> وأدخل بيانات حساب Expo
+          </div>
+        </li>
+        <li class="aab-step">
+          <div class="aab-step-num">٤</div>
+          <div class="aab-step-text">
+            <strong>اذهب لمجلد التطبيق:</strong> <code>cd artifacts/invoice-app</code>
+          </div>
+        </li>
+        <li class="aab-step">
+          <div class="aab-step-num">٥</div>
+          <div class="aab-step-text">
+            <strong>هيّئ EAS:</strong> نفّذ <code>eas build:configure</code> — سيُنشئ ملف <code>eas.json</code> تلقائياً
+          </div>
+        </li>
+        <li class="aab-step">
+          <div class="aab-step-num">٦</div>
+          <div class="aab-step-text">
+            <strong>ابدأ البناء:</strong> نفّذ <code>eas build --platform android --profile production</code>
+            <br>سيطلب منك EAS إنشاء Keystore تلقائياً — اختر <strong>Yes</strong> ليُحفظ على Expo بأمان
+          </div>
+        </li>
+        <li class="aab-step">
+          <div class="aab-step-num">٧</div>
+          <div class="aab-step-text">
+            <strong>تنزيل AAB:</strong> بعد ١٠-١٥ دقيقة ستصلك رسالة بـ URL لتحميل ملف <code>.aab</code>
+            <br>أو اذهب إلى <code>expo.dev/accounts/[اسمك]/builds</code>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Alternative Local Build -->
+    <div class="info-grid">
+      <div class="info-card">
+        <div class="info-card-label">⏱️ وقت البناء المتوقع</div>
+        <div class="info-card-value">١٠ — ٢٠ دقيقة</div>
+        <div class="info-card-sub">على خوادم EAS السحابية</div>
+      </div>
+      <div class="info-card">
+        <div class="info-card-label">💰 التكلفة</div>
+        <div class="info-card-value">مجاني</div>
+        <div class="info-card-sub">Expo Free Tier: ١٥ بناء / شهر</div>
+      </div>
+      <div class="info-card highlighted">
+        <div class="info-card-label">📁 نوع الملف الناتج</div>
+        <div class="info-card-value">release.aab</div>
+        <div class="info-card-sub">جاهز مباشرة للرفع على Play Console</div>
+      </div>
+      <div class="info-card">
+        <div class="info-card-label">🔑 Keystore</div>
+        <div class="info-card-value">تلقائي بـ EAS</div>
+        <div class="info-card-sub">احفظ النسخة الاحتياطية من expo.dev</div>
+      </div>
+    </div>
+
+    <div class="alert warn">
+      <div class="alert-icon">⚠️</div>
+      <div><strong>مهم جداً — Keystore:</strong> لا تفقد ملف Keystore أبداً. بدونه لن تستطيع نشر تحديثات للتطبيق. EAS يحفظه تلقائياً على خوادمه عندما تختار "Generate new Keystore". يمكنك تحميل نسخة احتياطية منه في أي وقت من expo.dev.</div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section-head">
+      <div class="section-icon green">📤</div>
+      <div class="section-text">
+        <h2>رفع AAB على Google Play Console</h2>
+        <p>بعد تحميل الملف</p>
+      </div>
+    </div>
+
+    <ul class="checklist">
+      <li>
+        <div class="check-icon req">١</div>
+        <div class="item-text">اذهب إلى <strong>play.google.com/console</strong> وسجّل الدخول بحساب Google Developer ($25 رسم تسجيل لمرة واحدة)</div>
+      </li>
+      <li>
+        <div class="check-icon req">٢</div>
+        <div class="item-text">اضغط <strong>Create app</strong> واملأ الاسم واللغة ونوع التطبيق (Free/Paid)</div>
+      </li>
+      <li>
+        <div class="check-icon req">٣</div>
+        <div class="item-text">اذهب إلى <strong>Production → Releases → Create new release</strong></div>
+      </li>
+      <li>
+        <div class="check-icon req">٤</div>
+        <div class="item-text">اضغط <strong>Upload</strong> وارفع ملف AAB الذي نزّلته من EAS</div>
+      </li>
+      <li>
+        <div class="check-icon req">٥</div>
+        <div class="item-text">أكمل جميع المعلومات من هذا الملف (الوصف، الأيقونة، لقطات الشاشة، سياسة الخصوصية)</div>
+      </li>
+      <li>
+        <div class="check-icon req">٦</div>
+        <div class="item-text">اضغط <strong>Submit for review</strong> — مدة المراجعة: ١-٣ أيام عمل</div>
+      </li>
+    </ul>
+  </div>
+
+  <div class="page-footer">
+    <div class="page-footer-text">فوترة FAWTARA · ملف نشر Google Play · مارس 2026</div>
+    <div class="page-num">٧</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- PAGE 8: FINAL COMPLIANCE CHECKLIST                       -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div class="page">
+  <div class="page-header">
+    <div class="page-header-brand">
+      <div class="brand-dot"></div>
+      <div>
+        <div class="brand-name">فوترة · FAWTARA</div>
+        <div class="brand-sub">قائمة التحقق النهائية</div>
+      </div>
+    </div>
+    <div class="page-header-tag">صفحة ٨ من ٨ · التحقق النهائي</div>
+  </div>
+
+  <div class="page-content">
+    <div class="section-head">
+      <div class="section-icon green">✅</div>
+      <div class="section-text">
+        <h2>قائمة التحقق النهائية — Final Submission Checklist</h2>
+        <p>تأكد من إتمام كل بند قبل الضغط على Submit for Review</p>
+      </div>
+    </div>
+    <div class="section-rule"></div>
+
+    <div class="info-grid">
+      <div>
+        <div style="font-size:11px; font-weight:700; color:var(--navy); margin-bottom:8px;">📋 قائمة المتجر — Store Listing</div>
+        <ul class="checklist" style="margin-bottom:0;">
+          <li><div class="check-icon ok">✓</div><div class="item-text">عنوان التطبيق (عربي + إنجليزي)</div></li>
+          <li><div class="check-icon ok">✓</div><div class="item-text">الوصف المختصر (أقل من ٨٠ حرفاً)</div></li>
+          <li><div class="check-icon ok">✓</div><div class="item-text">الوصف الكامل (عربي + إنجليزي)</div></li>
+          <li><div class="check-icon ok">✓</div><div class="item-text">تصنيف الفئة: Business</div></li>
+          <li><div class="check-icon req">!</div><div class="item-text">أيقونة ٥١٢×٥١٢ PNG — أعدّها</div></li>
+          <li><div class="check-icon req">!</div><div class="item-text">Feature Graphic 1024×500 — أعدّها</div></li>
+          <li><div class="check-icon req">!</div><div class="item-text">لقطات الشاشة (٨ صور موصى به)</div></li>
+          <li><div class="check-icon req">!</div><div class="item-text">رابط سياسة الخصوصية منشور</div></li>
+          <li><div class="check-icon ok">✓</div><div class="item-text">بريد إلكتروني للدعم الفني</div></li>
+        </ul>
+      </div>
+      <div>
+        <div style="font-size:11px; font-weight:700; color:var(--navy); margin-bottom:8px;">🔧 الإعدادات التقنية</div>
+        <ul class="checklist" style="margin-bottom:0;">
+          <li><div class="check-icon ok">✓</div><div class="item-text">اسم الحزمة: com.wh.cakechocolate</div></li>
+          <li><div class="check-icon ok">✓</div><div class="item-text">الإصدار: 1.0.0 / versionCode: 1</div></li>
+          <li><div class="check-icon ok">✓</div><div class="item-text">targetSdkVersion ≥ 34</div></li>
+          <li><div class="check-icon req">!</div><div class="item-text">بناء ملف AAB بـ EAS Build</div></li>
+          <li><div class="check-icon ok">✓</div><div class="item-text">الصلاحيات فقط الضرورية</div></li>
+          <li><div class="check-icon ok">✓</div><div class="item-text">لا إعلانات مدمجة</div></li>
+          <li><div class="check-icon ok">✓</div><div class="item-text">تصنيف المحتوى: Everyone</div></li>
+          <li><div class="check-icon ok">✓</div><div class="item-text">Data Safety Form مكتمل</div></li>
+          <li><div class="check-icon ok">✓</div><div class="item-text">لا تتبع إعلاني / No IDFA</div></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="section-head">
+      <div class="section-icon navy">📜</div>
+      <div class="section-text">
+        <h2>سياسات Google Play الأساسية — Key Policies</h2>
+        <p>التطبيق متوافق مع جميع هذه السياسات</p>
+      </div>
+    </div>
+
+    <div class="comp-grid">
+      <div class="comp-item">
+        <div class="comp-icon">✅</div>
+        <div class="comp-text">
+          <strong>سياسة البيانات الشخصية</strong>
+          <span>لا بيانات شخصية تُجمع أو تُباع</span>
+        </div>
+      </div>
+      <div class="comp-item">
+        <div class="comp-icon">✅</div>
+        <div class="comp-text">
+          <strong>سياسة محتوى التطبيقات</strong>
+          <span>محتوى تجاري خالٍ من المواد المقيدة</span>
+        </div>
+      </div>
+      <div class="comp-item">
+        <div class="comp-icon">✅</div>
+        <div class="comp-text">
+          <strong>سياسة الأمان والصلاحيات</strong>
+          <span>صلاحيات محدودة وضرورية فقط</span>
+        </div>
+      </div>
+      <div class="comp-item">
+        <div class="comp-icon">✅</div>
+        <div class="comp-text">
+          <strong>سياسة الإعلانات</strong>
+          <span>لا إعلانات مدمجة في التطبيق</span>
+        </div>
+      </div>
+      <div class="comp-item">
+        <div class="comp-icon">✅</div>
+        <div class="comp-text">
+          <strong>سياسة SDK المشروع — Expo SDK</strong>
+          <span>Expo SDK 54 مُعتمد ومدعوم</span>
+        </div>
+      </div>
+      <div class="comp-item">
+        <div class="comp-icon">✅</div>
+        <div class="comp-text">
+          <strong>متطلبات 2025 Targets</strong>
+          <span>targetSdkVersion 35 — Android 15</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Final Summary Box -->
+    <div style="background: linear-gradient(135deg, var(--navy), var(--navy-light)); border-radius: 14px; padding: 20px 24px; display:flex; align-items:center; gap:20px; flex-direction:row-reverse;">
+      <div style="font-size:42px; flex-shrink:0;">🚀</div>
+      <div style="text-align:right;">
+        <div style="font-size:14px; font-weight:800; color:var(--white); margin-bottom:4px;">التطبيق جاهز للنشر على Google Play</div>
+        <div style="font-size:10px; color:rgba(255,255,255,0.65); line-height:1.7;">
+          أكمل الخطوات المُعلّمة بـ <span style="color:var(--gold);">(!) </span> — وهي: إعداد الأصول المرئية، ونشر سياسة الخصوصية، وبناء ملف AAB.
+          بعدها يمكنك رفع التطبيق مباشرة. مدة مراجعة Google: ١-٣ أيام عمل.
+        </div>
+      </div>
+    </div>
+
+    <div style="text-align:center; margin-top:14px; font-size:9px; color:var(--text-light);">
+      هذا الملف أعدّه نظام فوترة FAWTARA · W&H Cake &amp; Chocolate · مارس ٢٠٢٦
+    </div>
+  </div>
+
+  <div class="page-footer">
+    <div class="page-footer-text">فوترة FAWTARA · ملف نشر Google Play · مارس 2026</div>
+    <div class="page-num">٨</div>
+  </div>
+</div>
+
+</body>
+</html>
