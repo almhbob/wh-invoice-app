@@ -18,13 +18,14 @@ import React, {
 
 import { db } from "@/lib/firebase";
 
-export type EmployeeRole = "cashier" | "halwa" | "mawali" | "chocolate" | "cake" | "packaging" | "admin";
+export type EmployeeRole = "cashier" | "halwa" | "mawali" | "chocolate" | "cake" | "packaging" | "admin" | "branch_supervisor" | "dept_supervisor" | "guest";
 
 export interface Employee {
   id: string;
   name: string;
   employeeId: string;
   role: EmployeeRole;
+  permissions?: string[];
   createdAt: string;
 }
 

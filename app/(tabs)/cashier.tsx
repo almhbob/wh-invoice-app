@@ -23,6 +23,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors } from "@/constants/colors";
 import { ProductGalleryModal } from "@/components/ProductGalleryModal";
 import { useEmployee } from "@/context/EmployeeContext";
+import { useLang } from "@/context/LanguageContext";
 import {
   Department,
   Discount,
@@ -79,6 +80,7 @@ export default function CashierScreen() {
   const { addOrder } = useOrders();
   const { currentEmployee } = useEmployee();
   const { getOfferByPhone, incrementUsage } = useOffers();
+  const { t } = useLang();
 
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -97,6 +99,7 @@ export default function CashierScreen() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showGallery, setShowGallery] = useState(false);
   const [receiptOrder, setReceiptOrder] = useState<Order | null>(null);
+  const [isAiLoading, setIsAiLoading] = useState(false);
 
   // Discount
   const [discountEnabled, setDiscountEnabled] = useState(false);
@@ -289,6 +292,27 @@ export default function CashierScreen() {
     Share.share({ message: buildReceiptText(order) });
   };
 
+  const handleAIAnalysis = async (order: Order) => {
+    setIsAiLoading(true);
+    try {
+      const response = await fetch("http://127.0.0.1:3000/analyze-invoice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ invoiceData: order }),
+      });
+      const data = await response.json();
+      if (data.result) {
+        Alert.alert("💡 تحليل الذكاء الاصطناعي", data.result);
+      } else {
+        Alert.alert("⚠️ تنبيه", "لم نتمكن من الحصول على تحليل، تأكد من تشغيل الخادم.");
+      }
+    } catch {
+      Alert.alert("⚠️ فشل الاتصال", "تعذّر الاتصال بخادم Termux. تأكد أنه يعمل في الخلفية.");
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!customerName.trim()) { Alert.alert("خطأ", "الرجاء إدخال اسم العميل"); return; }
     if (!customerPhone.trim()) { Alert.alert("خطأ", "الرجاء إدخال رقم الهاتف"); return; }
@@ -442,22 +466,22 @@ export default function CashierScreen() {
 
       {/* نوع الطلب */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>نوع الطلب</Text>
+        <Text style={styles.cardTitle}>{t("orderType")}</Text>
         <View style={styles.orderTypeRow}>
-          {(["pickup", "delivery"] as OrderType[]).map((t) => (
+          {(["pickup", "delivery"] as OrderType[]).map((ot) => (
             <TouchableOpacity
-              key={t}
-              style={[styles.orderTypeBtn, orderType === t && styles.orderTypeBtnActive]}
-              onPress={() => { Haptics.selectionAsync(); setOrderType(t); }}
+              key={ot}
+              style={[styles.orderTypeBtn, orderType === ot && styles.orderTypeBtnActive]}
+              onPress={() => { Haptics.selectionAsync(); setOrderType(ot); }}
               activeOpacity={0.8}
             >
               <Feather
-                name={t === "pickup" ? "shopping-bag" : "truck"}
+                name={ot === "pickup" ? "shopping-bag" : "truck"}
                 size={18}
-                color={orderType === t ? "#fff" : Colors.textSecondary}
+                color={orderType === ot ? "#fff" : Colors.textSecondary}
               />
-              <Text style={[styles.orderTypeBtnText, orderType === t && styles.orderTypeBtnTextActive]}>
-                {ORDER_TYPE_LABELS[t]}
+              <Text style={[styles.orderTypeBtnText, orderType === ot && styles.orderTypeBtnTextActive]}>
+                {ot === "pickup" ? t("pickup") : t("delivery")}
               </Text>
             </TouchableOpacity>
           ))}
@@ -1013,7 +1037,7 @@ export default function CashierScreen() {
                   <Text style={[styles.receiptTypeBadgeText, {
                     color: receiptOrder.orderType === "delivery" ? Colors.mawali : Colors.success
                   }]}>
-                    {ORDER_TYPE_LABELS[receiptOrder.orderType]}
+                    {receiptOrder.orderType === "pickup" ? t("pickup") : t("delivery")}
                   </Text>
                 </View>
               )}
@@ -1188,6 +1212,16 @@ export default function CashierScreen() {
               >
                 <Feather name="share-2" size={16} color={Colors.primary} />
                 <Text style={styles.shareBtnText}>مشاركة</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.aiBtn, isAiLoading && { opacity: 0.7 }]}
+                onPress={() => handleAIAnalysis(receiptOrder)}
+                activeOpacity={0.85}
+                disabled={isAiLoading}
+              >
+                <Text style={styles.aiBtnText}>
+                  {isAiLoading ? "⏳ جارٍ التحليل..." : "🤖 تحليل بالذكاء الاصطناعي"}
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.closeReceiptBtn}
@@ -1469,6 +1503,13 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
   },
   shareBtnText: { color: Colors.primary, fontSize: 14, fontWeight: "600" },
+  aiBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
+    backgroundColor: "#6C3FC5", borderRadius: 14, paddingVertical: 12,
+    shadowColor: "#6C3FC5", shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25, shadowRadius: 6, elevation: 4,
+  },
+  aiBtnText: { color: "#fff", fontSize: 14, fontWeight: "700" },
   closeReceiptBtn: {
     alignItems: "center", paddingVertical: 10,
   },

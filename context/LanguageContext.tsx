@@ -10,8 +10,8 @@ import { I18nManager } from "react-native";
 
 import { Lang, TranslationKey, roleLabel, t as translate } from "@/constants/translations";
 
-const LANGS: Lang[] = ["ar", "en", "ur", "hi"];
-const LANG_LABELS: Record<Lang, string> = { ar: "ع", en: "EN", ur: "اردو", hi: "हि" };
+const LANGS: Lang[] = ["ar", "en", "ur", "hi", "bn"];
+const LANG_LABELS: Record<Lang, string> = { ar: "ع", en: "EN", ur: "اردو", hi: "हि", bn: "বাং" };
 
 interface LanguageContextType {
   lang: Lang;

@@ -2,7 +2,6 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   addDoc,
   collection,
-  deleteDoc,
   doc,
   onSnapshot,
   orderBy,
@@ -111,10 +110,14 @@ export interface Order {
   branchTransfer?: BranchTransfer;
   createdAt: string;
   updatedAt: string;
+  deleted?: boolean;
+  deletedAt?: string;
+  deletedBy?: { name: string; employeeId: string } | null;
 }
 
 interface OrdersContextType {
   orders: Order[];
+  deletedOrders: Order[];
   addOrder: (
     order: Omit<Order, "id" | "orderNumber" | "createdAt" | "updatedAt" | "departmentStatuses" | "departmentReceivers">
   ) => Promise<Order>;
@@ -128,7 +131,8 @@ interface OrdersContextType {
     orderId: string,
     transfer: BranchTransfer
   ) => Promise<void>;
-  deleteOrder: (id: string) => Promise<void>;
+  deleteOrder: (id: string, deletedBy?: { name: string; employeeId: string }) => Promise<void>;
+  restoreOrder: (id: string) => Promise<void>;
   getOrdersForDepartment: (department: Department) => Order[];
   isLoading: boolean;
 }
@@ -139,9 +143,12 @@ const OrdersContext = createContext<OrdersContextType | undefined>(undefined);
 const LOCAL_COUNTER_KEY = "@order_counter_v4_fallback";
 
 export function OrdersProvider({ children }: { children: React.ReactNode }) {
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [allOrders, setAllOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const unsubscribeRef = useRef<(() => void) | null>(null);
+
+  const orders        = allOrders.filter(o => !o.deleted);
+  const deletedOrders = allOrders.filter(o =>  o.deleted);
 
   useEffect(() => {
     const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
@@ -152,7 +159,7 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
           id: d.id,
           ...(d.data() as Omit<Order, "id">),
         }));
-        setOrders(loaded);
+        setAllOrders(loaded);
         setIsLoading(false);
       },
       (err) => {
@@ -267,8 +274,23 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
     [orders]
   );
 
-  const deleteOrder = useCallback(async (id: string) => {
-    await deleteDoc(doc(db, "orders", id));
+  const deleteOrder = useCallback(async (
+    id: string,
+    deletedBy?: { name: string; employeeId: string }
+  ) => {
+    await updateDoc(doc(db, "orders", id), {
+      deleted:   true,
+      deletedAt: new Date().toISOString(),
+      deletedBy: deletedBy ?? null,
+    });
+  }, []);
+
+  const restoreOrder = useCallback(async (id: string) => {
+    await updateDoc(doc(db, "orders", id), {
+      deleted:   false,
+      deletedAt: null,
+      deletedBy: null,
+    });
   }, []);
 
   const getOrdersForDepartment = useCallback(
@@ -290,10 +312,12 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
     <OrdersContext.Provider
       value={{
         orders,
+        deletedOrders,
         addOrder,
         updateDepartmentStatus,
         transferToBranch,
         deleteOrder,
+        restoreOrder,
         getOrdersForDepartment,
         isLoading,
       }}

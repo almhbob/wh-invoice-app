@@ -11,6 +11,7 @@ import {
 
 import { Colors } from "@/constants/colors";
 import { useEmployee } from "@/context/EmployeeContext";
+import { useLang } from "@/context/LanguageContext";
 import { Department, Order, OrderStatus, useOrders } from "@/context/OrdersContext";
 
 // ─── constants ────────────────────────────────────────────────────────────────
@@ -66,6 +67,7 @@ interface Props {
 export function PackagingOrderCard({ order }: Props) {
   const { updateDepartmentStatus } = useOrders();
   const { currentEmployee } = useEmployee();
+  const { t } = useLang();
 
   const packStatus: OrderStatus = order.departmentStatuses["packaging"] ?? "pending";
   const cfg = STATUS_CONFIG[packStatus];
@@ -120,7 +122,7 @@ export function PackagingOrderCard({ order }: Props) {
           <Text style={styles.customerName}>{order.customerName}</Text>
           <View style={styles.orderTypeBadge}>
             <Text style={styles.orderTypeTxt}>
-              {order.orderType === "delivery" ? "🚚 توصيل" : "🏪 استلام"}
+              {order.orderType === "delivery" ? `🚚 ${t("delivery")}` : `🏪 ${t("pickup")}`}
             </Text>
           </View>
         </View>

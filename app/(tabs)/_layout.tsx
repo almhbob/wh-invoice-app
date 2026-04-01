@@ -1,13 +1,14 @@
 import { Feather } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
-import { isLiquidGlassAvailable } from "expo-glass-effect";
 import { Image } from "expo-image";
-import { Tabs } from "expo-router";
-import { Icon, Label, NativeTabs } from "expo-router/unstable-native-tabs";
+import { Tabs, useRouter, usePathname } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import React, { useState } from "react";
 import {
+  Modal,
   Platform,
+  Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -21,7 +22,10 @@ import { Colors } from "@/constants/colors";
 import { useEmployee } from "@/context/EmployeeContext";
 import { useLang } from "@/context/LanguageContext";
 
-const ROLE_COLORS = {
+/* ─────────────────────────────────────────────
+   Role → accent colour map
+───────────────────────────────────────────── */
+const ROLE_COLORS: Record<string, string> = {
   cashier: Colors.gold,
   halwa: Colors.halwa,
   mawali: Colors.mawali,
@@ -31,6 +35,9 @@ const ROLE_COLORS = {
   admin: Colors.primaryLight,
 };
 
+/* ─────────────────────────────────────────────
+   Logo / Header
+───────────────────────────────────────────── */
 interface LogoHeaderProps {
   titleKey: string;
   accentColor?: string;
@@ -43,13 +50,22 @@ function LogoHeader({ titleKey, accentColor }: LogoHeaderProps) {
   const { lang, toggleLang, t } = useLang();
   const [showSelector, setShowSelector] = useState(false);
   const isRTL = lang === "ar" || lang === "ur";
-  const LANG_NEXT: Record<string, string> = { ar: "EN", en: "اردو", ur: "हि", hi: "ع" };
+  const LANG_NEXT: Record<string, string> = {
+    ar: "EN",
+    en: "اردو",
+    ur: "हि",
+    hi: "ع",
+  };
 
   return (
     <>
       <View style={[styles.headerContainer, { paddingTop: topInset }]}>
-        <View style={[styles.headerInner, isRTL ? styles.rowRTL : styles.rowLTR]}>
-          {/* Logo */}
+        <View
+          style={[
+            styles.headerInner,
+            isRTL ? styles.rowRTL : styles.rowLTR,
+          ]}
+        >
           <View style={styles.logoBox}>
             <Image
               source={require("@/assets/images/logo.jpg")}
@@ -58,7 +74,6 @@ function LogoHeader({ titleKey, accentColor }: LogoHeaderProps) {
             />
           </View>
 
-          {/* Brand */}
           <View style={styles.brandBlock}>
             <Text style={styles.brandName}>W&H</Text>
             <Text style={styles.brandSub}>{t("appSub")}</Text>
@@ -66,12 +81,14 @@ function LogoHeader({ titleKey, accentColor }: LogoHeaderProps) {
 
           <View style={{ flex: 1 }} />
 
-          {/* Lang toggle — cycles through AR → EN → UR → HI */}
-          <TouchableOpacity style={styles.langBtn} onPress={toggleLang} activeOpacity={0.75}>
+          <TouchableOpacity
+            style={styles.langBtn}
+            onPress={toggleLang}
+            activeOpacity={0.75}
+          >
             <Text style={styles.langBtnText}>{LANG_NEXT[lang] ?? "EN"}</Text>
           </TouchableOpacity>
 
-          {/* Employee button */}
           <TouchableOpacity
             style={styles.empBtn}
             onPress={() => setShowSelector(true)}
@@ -93,180 +110,441 @@ function LogoHeader({ titleKey, accentColor }: LogoHeaderProps) {
                   <Text style={styles.empName} numberOfLines={1}>
                     {currentEmployee.name}
                   </Text>
-                  <Text style={styles.empId}>#{currentEmployee.employeeId}</Text>
+                  <Text style={styles.empId}>
+                    #{currentEmployee.employeeId}
+                  </Text>
                 </View>
               </>
             ) : (
               <>
-                <Feather name="user" size={14} color="rgba(255,255,255,0.75)" />
+                <Feather
+                  name="user"
+                  size={14}
+                  color="rgba(255,255,255,0.75)"
+                />
                 <Text style={styles.loginText}>{t("loginBtn")}</Text>
               </>
             )}
           </TouchableOpacity>
 
-          {/* Screen badge */}
-          <View style={[styles.screenBadge, { backgroundColor: accentColor ?? Colors.gold }]}>
+          <View
+            style={[
+              styles.screenBadge,
+              { backgroundColor: accentColor ?? Colors.gold },
+            ]}
+          >
             <Text style={styles.screenBadgeText}>{titleKey}</Text>
           </View>
         </View>
 
-        {/* Gold accent line */}
         <View style={styles.goldLine} />
       </View>
 
-      <EmployeeSelectorModal visible={showSelector} onClose={() => setShowSelector(false)} />
+      <EmployeeSelectorModal
+        visible={showSelector}
+        onClose={() => setShowSelector(false)}
+      />
     </>
   );
 }
 
-function ClassicTabLayout() {
+/* ─────────────────────────────────────────────
+   Tab definitions
+───────────────────────────────────────────── */
+interface TabDef {
+  name: string;
+  labelKey: string;
+  titleKey: string;
+  icon: string;        // Feather icon name
+  sf?: string;         // SF Symbol (iOS)
+  accent: string;
+}
+
+const DEPT_TABS: TabDef[] = [
+  { name: "halwa",     labelKey: "tabHalwa",     titleKey: "titleHalwa",     icon: "coffee",    sf: "cup.and.saucer",  accent: Colors.halwa      },
+  { name: "mawali",    labelKey: "tabMawali",     titleKey: "titleMawali",    icon: "package",   sf: "tray",            accent: Colors.mawali     },
+  { name: "chocolate", labelKey: "tabChocolate",  titleKey: "titleChocolate", icon: "gift",      sf: "gift",            accent: Colors.chocolate  },
+  { name: "cake",      labelKey: "tabCake",       titleKey: "titleCake",      icon: "layers",    sf: "birthday.cake",   accent: Colors.cake       },
+  { name: "packaging", labelKey: "tabPackaging",  titleKey: "titlePackaging", icon: "box",       sf: "shippingbox",     accent: Colors.packaging  },
+];
+
+const MORE_TABS: TabDef[] = [
+  { name: "customers", labelKey: "tabCustomers", titleKey: "titleCustomers", icon: "users",     sf: "person.2",        accent: "#0891b2"          },
+  { name: "delivery",  labelKey: "tabDelivery",  titleKey: "titleDelivery",  icon: "truck",     sf: "shippingbox.and.arrow.backward", accent: "#0d9488" },
+  { name: "trays",     labelKey: "tabTrays",     titleKey: "titleTrays",     icon: "layers",    sf: "tray.2",          accent: Colors.gold        },
+  { name: "admin",     labelKey: "tabAdmin",     titleKey: "titleAdmin",     icon: "settings",  sf: "gearshape",       accent: Colors.primaryLight },
+];
+
+/* ─────────────────────────────────────────────
+   Popup sheet (Departments / More)
+───────────────────────────────────────────── */
+interface PopupSheetProps {
+  visible: boolean;
+  onClose: () => void;
+  tabs: TabDef[];
+  onSelect: (name: string) => void;
+  activePath: string;
+}
+
+function PopupSheet({
+  visible,
+  onClose,
+  tabs,
+  onSelect,
+  activePath,
+}: PopupSheetProps) {
+  const { t } = useLang();
+  const insets = useSafeAreaInsets();
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+    >
+      <Pressable style={styles.sheetBackdrop} onPress={onClose} />
+      <View style={[styles.sheetContainer, { paddingBottom: insets.bottom + 12 }]}>
+        {/* Handle */}
+        <View style={styles.sheetHandle} />
+
+        <ScrollView
+          horizontal={false}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.sheetGrid}
+        >
+          {tabs.map((tab) => {
+            const isActive = activePath.includes(tab.name);
+            return (
+              <TouchableOpacity
+                key={tab.name}
+                style={[
+                  styles.sheetItem,
+                  isActive && { backgroundColor: tab.accent + "18", borderColor: tab.accent + "60" },
+                ]}
+                onPress={() => onSelect(tab.name)}
+                activeOpacity={0.7}
+              >
+                <View
+                  style={[
+                    styles.sheetIconCircle,
+                    { backgroundColor: tab.accent + (isActive ? "30" : "18") },
+                  ]}
+                >
+                  <Feather
+                    name={tab.icon as any}
+                    size={22}
+                    color={isActive ? tab.accent : Colors.textMuted}
+                  />
+                </View>
+                <Text
+                  style={[
+                    styles.sheetItemLabel,
+                    isActive && { color: tab.accent, fontWeight: "700" },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {t(tab.labelKey)}
+                </Text>
+                {isActive && (
+                  <View style={[styles.sheetActiveDot, { backgroundColor: tab.accent }]} />
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+    </Modal>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   Custom Bottom Tab Bar
+───────────────────────────────────────────── */
+function CustomTabBar() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const { t } = useLang();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
+  const insets = useSafeAreaInsets();
   const isIOS = Platform.OS === "ios";
-  const isWeb = Platform.OS === "web";
+
+  const [showDepts, setShowDepts] = useState(false);
+  const [showMore, setShowMore] = useState(false);
+
+  const navigate = (name: string) => {
+    setShowDepts(false);
+    setShowMore(false);
+    router.navigate(`/(tabs)/${name}` as any);
+  };
+
+  const isCashier  = pathname.includes("cashier");
+  const isArchive  = pathname.includes("archive");
+  const isReports  = pathname.includes("reports");
+  const isDept     = DEPT_TABS.some((d) => pathname.includes(d.name));
+  const isMore     = MORE_TABS.some((m) => pathname.includes(m.name));
+
+  // Active dept/more accent colour for the indicator
+  const activeDeptAccent =
+    DEPT_TABS.find((d) => pathname.includes(d.name))?.accent ?? Colors.primary;
+  const activeMoreAccent =
+    MORE_TABS.find((m) => pathname.includes(m.name))?.accent ?? Colors.primary;
+
+  const bg = isDark ? "#0d1117" : "#ffffff";
+  const border = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.07)";
+
+  const tabH = 64;
+  const pb = Platform.OS === "ios" ? insets.bottom : 8;
+
+  return (
+    <>
+      {/* Dept sheet */}
+      <PopupSheet
+        visible={showDepts}
+        onClose={() => setShowDepts(false)}
+        tabs={DEPT_TABS}
+        onSelect={navigate}
+        activePath={pathname}
+      />
+
+      {/* More sheet */}
+      <PopupSheet
+        visible={showMore}
+        onClose={() => setShowMore(false)}
+        tabs={MORE_TABS}
+        onSelect={navigate}
+        activePath={pathname}
+      />
+
+      {/* Bar */}
+      <View
+        style={[
+          styles.bar,
+          {
+            height: tabH + pb,
+            paddingBottom: pb,
+            borderTopColor: border,
+          },
+        ]}
+      >
+        {/* Blur background on iOS */}
+        {isIOS && (
+          <BlurView
+            intensity={90}
+            tint={isDark ? "dark" : "light"}
+            style={StyleSheet.absoluteFill}
+          />
+        )}
+        {!isIOS && (
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: bg }]} />
+        )}
+
+        {/* ── CASHIER ── */}
+        <BarItem
+          label={t("tabCashier")}
+          icon="file-text"
+          sf="doc.text"
+          active={isCashier}
+          accent={Colors.gold}
+          onPress={() => navigate("cashier")}
+        />
+
+        {/* ── DEPARTMENTS ── */}
+        <BarItem
+          label={t("tabDepts")}
+          icon="grid"
+          sf="square.grid.2x2"
+          active={isDept}
+          accent={activeDeptAccent}
+          badge={showDepts ? "▲" : "▼"}
+          onPress={() => setShowDepts((v) => !v)}
+        />
+
+        {/* ── ARCHIVE ── */}
+        <BarItem
+          label={t("tabArchive")}
+          icon="archive"
+          sf="archivebox"
+          active={isArchive}
+          accent={Colors.primaryLight}
+          onPress={() => navigate("archive")}
+        />
+
+        {/* ── REPORTS ── */}
+        <BarItem
+          label={t("tabReports")}
+          icon="pie-chart"
+          sf="chart.pie"
+          active={isReports}
+          accent="#8b5cf6"
+          onPress={() => navigate("reports")}
+        />
+
+        {/* ── MORE ── */}
+        <BarItem
+          label={t("tabMore")}
+          icon="more-horizontal"
+          sf="ellipsis"
+          active={isMore}
+          accent={activeMoreAccent}
+          badge={showMore ? "▲" : "▼"}
+          onPress={() => setShowMore((v) => !v)}
+        />
+      </View>
+    </>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   Single bar item
+───────────────────────────────────────────── */
+interface BarItemProps {
+  label: string;
+  icon: string;
+  sf?: string;
+  active: boolean;
+  accent: string;
+  badge?: string;
+  onPress: () => void;
+}
+
+function BarItem({ label, icon, sf, active, accent, badge, onPress }: BarItemProps) {
+  const isIOS = Platform.OS === "ios";
+  const iconColor = active ? accent : Colors.textMuted;
+
+  return (
+    <TouchableOpacity
+      style={styles.barItem}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
+      {/* Active indicator pill */}
+      {active && (
+        <View style={[styles.activePill, { backgroundColor: accent }]} />
+      )}
+
+      <View style={styles.barIconWrap}>
+        {isIOS && sf ? (
+          <SymbolView name={sf as any} tintColor={iconColor} size={22} />
+        ) : (
+          <Feather name={icon as any} size={22} color={iconColor} />
+        )}
+        {badge && (
+          <Text style={[styles.arrowBadge, { color: active ? accent : Colors.textMuted }]}>
+            {badge}
+          </Text>
+        )}
+      </View>
+
+      <Text
+        style={[
+          styles.barLabel,
+          active && { color: accent, fontWeight: "700" },
+        ]}
+        numberOfLines={1}
+      >
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
+}
+
+/* ─────────────────────────────────────────────
+   Root layout
+───────────────────────────────────────────── */
+export default function TabLayout() {
   const { t } = useLang();
 
   return (
     <Tabs
+      tabBar={() => <CustomTabBar />}
       screenOptions={{
-        tabBarActiveTintColor: Colors.primary,
-        tabBarInactiveTintColor: Colors.textMuted,
         headerShown: true,
-        tabBarStyle: {
-          position: "absolute",
-          backgroundColor: isIOS ? "transparent" : isDark ? "#000" : "#fff",
-          borderTopWidth: isWeb ? 1 : 0,
-          borderTopColor: Colors.border,
-          elevation: 0,
-          ...(isWeb ? { height: 84 } : {}),
-        },
-        tabBarBackground: () =>
-          isIOS ? (
-            <BlurView intensity={100} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />
-          ) : isWeb ? (
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: isDark ? "#000" : "#fff" }]} />
-          ) : null,
-        tabBarLabelStyle: { fontSize: 11, fontWeight: "600", marginBottom: isWeb ? 8 : 0 },
       }}
     >
       <Tabs.Screen
         name="cashier"
         options={{
           title: t("titleCashier"),
-          tabBarLabel: t("tabCashier"),
           header: () => <LogoHeader titleKey={t("titleCashier")} accentColor={Colors.gold} />,
-          tabBarIcon: ({ color }) =>
-            isIOS ? <SymbolView name="doc.text" tintColor={color} size={22} /> : <Feather name="file-text" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
         name="halwa"
         options={{
           title: t("titleHalwa"),
-          tabBarLabel: t("tabHalwa"),
           header: () => <LogoHeader titleKey={t("titleHalwa")} accentColor={Colors.halwa} />,
-          tabBarIcon: ({ color }) =>
-            isIOS ? <SymbolView name="cup.and.saucer" tintColor={color} size={22} /> : <Feather name="coffee" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
         name="mawali"
         options={{
           title: t("titleMawali"),
-          tabBarLabel: t("tabMawali"),
           header: () => <LogoHeader titleKey={t("titleMawali")} accentColor={Colors.mawali} />,
-          tabBarIcon: ({ color }) =>
-            isIOS ? <SymbolView name="tray" tintColor={color} size={22} /> : <Feather name="package" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
         name="chocolate"
         options={{
           title: t("titleChocolate"),
-          tabBarLabel: t("tabChocolate"),
           header: () => <LogoHeader titleKey={t("titleChocolate")} accentColor={Colors.chocolate} />,
-          tabBarIcon: ({ color }) =>
-            isIOS ? <SymbolView name="gift" tintColor={color} size={22} /> : <Feather name="gift" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
         name="cake"
         options={{
           title: t("titleCake"),
-          tabBarLabel: t("tabCake"),
           header: () => <LogoHeader titleKey={t("titleCake")} accentColor={Colors.cake} />,
-          tabBarIcon: ({ color }) =>
-            isIOS ? <SymbolView name="birthday.cake" tintColor={color} size={22} /> : <Feather name="layers" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
         name="packaging"
         options={{
           title: t("titlePackaging"),
-          tabBarLabel: t("tabPackaging"),
           header: () => <LogoHeader titleKey={t("titlePackaging")} accentColor={Colors.packaging} />,
-          tabBarIcon: ({ color }) =>
-            isIOS ? <SymbolView name="shippingbox" tintColor={color} size={22} /> : <Feather name="box" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
         name="archive"
         options={{
           title: t("titleArchive"),
-          tabBarLabel: t("tabArchive"),
           header: () => <LogoHeader titleKey={t("titleArchive")} accentColor={Colors.primaryLight} />,
-          tabBarIcon: ({ color }) =>
-            isIOS ? <SymbolView name="archivebox" tintColor={color} size={22} /> : <Feather name="archive" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
         name="reports"
         options={{
           title: t("titleReports"),
-          tabBarLabel: t("tabReports"),
           header: () => <LogoHeader titleKey={t("titleReports")} accentColor="#8b5cf6" />,
-          tabBarIcon: ({ color }) =>
-            isIOS ? <SymbolView name="chart.pie" tintColor={color} size={22} /> : <Feather name="pie-chart" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
         name="customers"
         options={{
           title: t("titleCustomers"),
-          tabBarLabel: t("tabCustomers"),
           header: () => <LogoHeader titleKey={t("titleCustomers")} accentColor="#0891b2" />,
-          tabBarIcon: ({ color }) =>
-            isIOS ? <SymbolView name="person.2" tintColor={color} size={22} /> : <Feather name="users" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
         name="delivery"
         options={{
           title: t("titleDelivery"),
-          tabBarLabel: t("tabDelivery"),
           header: () => <LogoHeader titleKey={t("titleDelivery")} accentColor="#0d9488" />,
-          tabBarIcon: ({ color }) =>
-            isIOS ? <SymbolView name="shippingbox.and.arrow.backward" tintColor={color} size={22} /> : <Feather name="truck" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
         name="trays"
         options={{
           title: t("titleTrays"),
-          tabBarLabel: t("tabTrays"),
           header: () => <LogoHeader titleKey={t("titleTrays")} accentColor={Colors.gold} />,
-          tabBarIcon: ({ color }) =>
-            isIOS ? <SymbolView name="tray.2" tintColor={color} size={22} /> : <Feather name="layers" size={22} color={color} />,
         }}
       />
       <Tabs.Screen
         name="admin"
         options={{
           title: t("titleAdmin"),
-          tabBarLabel: t("tabAdmin"),
           header: () => <LogoHeader titleKey={t("titleAdmin")} accentColor={Colors.primaryLight} />,
-          tabBarIcon: ({ color }) =>
-            isIOS ? <SymbolView name="chart.bar" tintColor={color} size={22} /> : <Feather name="bar-chart-2" size={22} color={color} />,
         }}
       />
       <Tabs.Screen name="index" options={{ href: null }} />
@@ -274,68 +552,11 @@ function ClassicTabLayout() {
   );
 }
 
-function NativeTabLayout() {
-  const { t } = useLang();
-  return (
-    <NativeTabs>
-      <NativeTabs.Trigger name="cashier">
-        <Icon sf={{ default: "doc.text", selected: "doc.text.fill" }} />
-        <Label>{t("tabCashier")}</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="halwa">
-        <Icon sf={{ default: "cup.and.saucer", selected: "cup.and.saucer.fill" }} />
-        <Label>{t("tabHalwa")}</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="mawali">
-        <Icon sf={{ default: "tray", selected: "tray.fill" }} />
-        <Label>{t("tabMawali")}</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="chocolate">
-        <Icon sf={{ default: "gift", selected: "gift.fill" }} />
-        <Label>{t("tabChocolate")}</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="cake">
-        <Icon sf={{ default: "birthday.cake", selected: "birthday.cake.fill" }} />
-        <Label>{t("tabCake")}</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="packaging">
-        <Icon sf={{ default: "shippingbox", selected: "shippingbox.fill" }} />
-        <Label>{t("tabPackaging")}</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="archive">
-        <Icon sf={{ default: "archivebox", selected: "archivebox.fill" }} />
-        <Label>{t("tabArchive")}</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="reports">
-        <Icon sf={{ default: "chart.pie", selected: "chart.pie.fill" }} />
-        <Label>{t("tabReports")}</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="customers">
-        <Icon sf={{ default: "person.2", selected: "person.2.fill" }} />
-        <Label>{t("tabCustomers")}</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="delivery">
-        <Icon sf={{ default: "shippingbox.and.arrow.backward", selected: "shippingbox.and.arrow.backward.fill" }} />
-        <Label>{t("tabDelivery")}</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="trays">
-        <Icon sf={{ default: "tray.2", selected: "tray.2.fill" }} />
-        <Label>{t("tabTrays")}</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="admin">
-        <Icon sf={{ default: "chart.bar", selected: "chart.bar.fill" }} />
-        <Label>{t("tabAdmin")}</Label>
-      </NativeTabs.Trigger>
-    </NativeTabs>
-  );
-}
-
-export default function TabLayout() {
-  if (isLiquidGlassAvailable()) return <NativeTabLayout />;
-  return <ClassicTabLayout />;
-}
-
+/* ─────────────────────────────────────────────
+   Styles
+───────────────────────────────────────────── */
 const styles = StyleSheet.create({
+  /* ── Header ── */
   headerContainer: {
     backgroundColor: Colors.primary,
     shadowColor: "#000",
@@ -344,41 +565,186 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 8,
   },
-  headerInner: { alignItems: "center", paddingHorizontal: 12, paddingVertical: 10, gap: 8 },
+  headerInner: {
+    alignItems: "center",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 8,
+  },
   rowRTL: { flexDirection: "row-reverse" },
   rowLTR: { flexDirection: "row" },
   logoBox: {
-    width: 46, height: 46, borderRadius: 10, overflow: "hidden",
-    borderWidth: 2, borderColor: Colors.gold + "80", backgroundColor: "#fff",
+    width: 46,
+    height: 46,
+    borderRadius: 10,
+    overflow: "hidden",
+    borderWidth: 2,
+    borderColor: Colors.gold + "80",
+    backgroundColor: "#fff",
   },
   logoImg: { width: 46, height: 46 },
   brandBlock: { gap: 1 },
   brandName: {
-    color: Colors.gold, fontSize: 15, fontWeight: "800", letterSpacing: 1,
+    color: Colors.gold,
+    fontSize: 15,
+    fontWeight: "800",
+    letterSpacing: 1,
     fontFamily: Platform.OS === "ios" ? "Georgia" : "serif",
   },
-  brandSub: { color: "rgba(255,255,255,0.65)", fontSize: 10, fontWeight: "500" },
+  brandSub: {
+    color: "rgba(255,255,255,0.65)",
+    fontSize: 10,
+    fontWeight: "500",
+  },
   langBtn: {
-    width: 32, height: 32, borderRadius: 16,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: "rgba(255,255,255,0.15)",
-    borderWidth: 1, borderColor: "rgba(255,255,255,0.3)",
-    alignItems: "center", justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.3)",
+    alignItems: "center",
+    justifyContent: "center",
   },
   langBtnText: { color: "#fff", fontSize: 12, fontWeight: "800" },
   empBtn: {
-    flexDirection: "row", alignItems: "center", gap: 7,
-    backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 22,
-    paddingHorizontal: 10, paddingVertical: 6,
-    borderWidth: 1, borderColor: "rgba(255,255,255,0.2)",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    backgroundColor: "rgba(255,255,255,0.1)",
+    borderRadius: 22,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
     maxWidth: 130,
   },
-  empAvatar: { width: 26, height: 26, borderRadius: 13, alignItems: "center", justifyContent: "center" },
+  empAvatar: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   empAvatarText: { color: "#fff", fontSize: 12, fontWeight: "800" },
   empTextBlock: { flex: 1 },
   empName: { color: "#fff", fontSize: 11, fontWeight: "600" },
   empId: { color: "rgba(255,255,255,0.6)", fontSize: 9 },
-  loginText: { color: "rgba(255,255,255,0.85)", fontSize: 11, fontWeight: "600" },
+  loginText: {
+    color: "rgba(255,255,255,0.85)",
+    fontSize: 11,
+    fontWeight: "600",
+  },
   screenBadge: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20 },
   screenBadgeText: { color: "#fff", fontSize: 11, fontWeight: "700" },
   goldLine: { height: 2, backgroundColor: Colors.gold, opacity: 0.6 },
+
+  /* ── Bottom Bar ── */
+  bar: {
+    flexDirection: "row",
+    borderTopWidth: StyleSheet.hairlineWidth,
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 100,
+    overflow: "hidden",
+  },
+  barItem: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: 6,
+    gap: 3,
+    position: "relative",
+  },
+  activePill: {
+    position: "absolute",
+    top: 0,
+    width: 32,
+    height: 3,
+    borderRadius: 2,
+  },
+  barIconWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+  },
+  arrowBadge: {
+    fontSize: 7,
+    fontWeight: "900",
+    marginTop: 6,
+  },
+  barLabel: {
+    fontSize: 10,
+    fontWeight: "500",
+    color: Colors.textMuted,
+    letterSpacing: 0.1,
+  },
+
+  /* ── Popup Sheet ── */
+  sheetBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.45)",
+  },
+  sheetContainer: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: 12,
+    paddingHorizontal: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 20,
+  },
+  sheetHandle: {
+    alignSelf: "center",
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#d1d5db",
+    marginBottom: 18,
+  },
+  sheetGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+    justifyContent: "center",
+    paddingBottom: 8,
+  },
+  sheetItem: {
+    width: 88,
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 8,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: "transparent",
+    backgroundColor: "#f8f9fb",
+    position: "relative",
+  },
+  sheetIconCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  sheetItemLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: Colors.textMuted,
+    textAlign: "center",
+  },
+  sheetActiveDot: {
+    position: "absolute",
+    top: 8,
+    right: 10,
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+  },
 });

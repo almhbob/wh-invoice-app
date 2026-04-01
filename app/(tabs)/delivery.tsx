@@ -12,10 +12,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors } from "@/constants/colors";
 import { useLang } from "@/context/LanguageContext";
 import { Order, useOrders } from "@/context/OrdersContext";
+import { fmtDate } from "@/utils/dateUtils";
 
-function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString("ar-SA", { year: "numeric", month: "short", day: "numeric" });
-}
 function fmtCurrency(n: number) {
   return n.toLocaleString("ar-SA", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ر.س";
 }
@@ -25,7 +23,7 @@ function isFullyDone(order: Order): boolean {
 }
 
 function DeliveryCard({ order }: { order: Order }) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const done = isFullyDone(order);
   const accentColor = done ? "#16a34a" : Colors.gold;
 
@@ -34,7 +32,7 @@ function DeliveryCard({ order }: { order: Order }) {
       <View style={styles.cardHeader}>
         <View>
           <Text style={styles.orderNum}>#{order.orderNumber}</Text>
-          <Text style={styles.orderDate}>{fmtDate(order.createdAt)}</Text>
+          <Text style={styles.orderDate}>{fmtDate(order.createdAt, lang)}</Text>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: accentColor + "20" }]}>
           <Text style={[styles.statusText, { color: accentColor }]}>

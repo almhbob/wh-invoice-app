@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors } from "@/constants/colors";
 import { useLang } from "@/context/LanguageContext";
 import { Order, useOrders } from "@/context/OrdersContext";
+import { fmtDate } from "@/utils/dateUtils";
 
 interface Customer {
   phone: string;
@@ -24,15 +25,12 @@ interface Customer {
   lastOrderAt: string;
 }
 
-function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString("ar-SA", { year: "numeric", month: "short", day: "numeric" });
-}
 function fmtCurrency(n: number) {
   return n.toLocaleString("ar-SA", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ر.س";
 }
 
 function CustomerHistoryModal({ customer, onClose }: { customer: Customer; onClose: () => void }) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const insets = useSafeAreaInsets();
   return (
     <Modal visible animationType="slide" onRequestClose={onClose}>
@@ -66,7 +64,7 @@ function CustomerHistoryModal({ customer, onClose }: { customer: Customer; onClo
               <View key={order.id} style={styles.historyCard}>
                 <View style={styles.historyHeader}>
                   <Text style={styles.historyNum}>#{order.orderNumber}</Text>
-                  <Text style={styles.historyDate}>{fmtDate(order.createdAt)}</Text>
+                  <Text style={styles.historyDate}>{fmtDate(order.createdAt, lang)}</Text>
                   <Text style={styles.historyAmount}>{fmtCurrency(order.totalAmount ?? 0)}</Text>
                 </View>
                 {order.items.map((item, i) => (
@@ -82,7 +80,7 @@ function CustomerHistoryModal({ customer, onClose }: { customer: Customer; onClo
 }
 
 export default function CustomersScreen() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const { orders } = useOrders();
   const insets = useSafeAreaInsets();
   const [search, setSearch] = useState("");
@@ -165,7 +163,7 @@ export default function CustomersScreen() {
               <Text style={styles.custName}>{c.name}</Text>
               <Text style={styles.custPhone}>{c.phone}</Text>
               <Text style={styles.custMeta}>
-                {t("custLastOrder")} {fmtDate(c.lastOrderAt)}
+                {t("custLastOrder")} {fmtDate(c.lastOrderAt, lang)}
               </Text>
             </View>
             <View style={styles.ordersBadge}>

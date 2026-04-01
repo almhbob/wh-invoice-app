@@ -53,7 +53,7 @@ function fmtTime(iso: string) {
 }
 
 function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString("ar-SA", { year: "numeric", month: "short", day: "numeric" });
+  return new Date(iso).toLocaleDateString("ar-EG", { year: "numeric", month: "short", day: "numeric" });
 }
 
 export function OrderCard({ order, onStatusChange, onPress, compact = false }: OrderCardProps) {

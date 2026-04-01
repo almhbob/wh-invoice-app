@@ -19,6 +19,7 @@ import { Image } from "expo-image";
 import { Colors } from "@/constants/colors";
 import { DevSettingsModal } from "@/components/DevSettingsModal";
 import { ProductManagerModal } from "@/components/ProductManagerModal";
+import { useLang } from "@/context/LanguageContext";
 import {
   Employee,
   EmployeeRole,
@@ -1195,6 +1196,7 @@ export default function AdminScreen() {
   const insets = useSafeAreaInsets();
   const { orders } = useOrders();
   const { currentEmployee } = useEmployee();
+  const { t } = useLang();
   const [activeTab, setActiveTab] = useState<"overview" | "employees" | "products" | "offers" | "priceRequests" | "features">("overview");
   const [showDev, setShowDev] = useState(false);
   const { pendingCount: priceReqCount } = usePriceChange();
@@ -1203,12 +1205,12 @@ export default function AdminScreen() {
     currentEmployee?.role === "admin" || currentEmployee?.role === "cashier";
 
   const TABS = [
-    { key: "overview",      label: "نظرة عامة",   icon: "grid" },
-    { key: "products",      label: "المنتجات",     icon: "shopping-bag" },
-    { key: "employees",     label: "الموظفون",     icon: "users" },
-    { key: "offers",        label: "العروض",       icon: "tag" },
-    { key: "priceRequests", label: `الأسعار${priceReqCount > 0 ? ` (${priceReqCount})` : ""}`, icon: "dollar-sign" },
-    { key: "features",      label: "الأقسام",      icon: "sliders" },
+    { key: "overview",      label: t("adminTabOverview"),  icon: "grid" },
+    { key: "products",      label: t("adminTabProducts"),  icon: "shopping-bag" },
+    { key: "employees",     label: t("adminTabEmployees"), icon: "users" },
+    { key: "offers",        label: t("adminTabOffers"),    icon: "tag" },
+    { key: "priceRequests", label: `${t("adminTabPrices")}${priceReqCount > 0 ? ` (${priceReqCount})` : ""}`, icon: "dollar-sign" },
+    { key: "features",      label: t("adminTabFeatures"),  icon: "sliders" },
   ] as const;
 
   return (

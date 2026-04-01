@@ -12,16 +12,14 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors } from "@/constants/colors";
 import { useLang } from "@/context/LanguageContext";
 import { useOrders } from "@/context/OrdersContext";
+import { fmtDate } from "@/utils/dateUtils";
 
-function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString("ar-SA", { year: "numeric", month: "short", day: "numeric" });
-}
 function fmtCurrency(n: number) {
   return n.toLocaleString("ar-SA", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ر.س";
 }
 
 export default function TraysScreen() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const { orders } = useOrders();
   const insets = useSafeAreaInsets();
   const [returnedIds, setReturnedIds] = useState<Set<string>>(new Set());
@@ -110,7 +108,7 @@ export default function TraysScreen() {
               <View style={styles.cardHeader}>
                 <View>
                   <Text style={styles.orderNum}>#{order.orderNumber}</Text>
-                  <Text style={styles.orderDate}>{fmtDate(order.createdAt)}</Text>
+                  <Text style={styles.orderDate}>{fmtDate(order.createdAt, lang)}</Text>
                 </View>
                 <View style={[styles.amountBadge, { backgroundColor: Colors.gold + "20" }]}>
                   <Feather name="shield" size={12} color={Colors.gold} />
