@@ -1,7 +1,7 @@
 {
-  "buildCommand": "corepack enable && corepack prepare pnpm@9.15.4 --activate && pnpm install --frozen-lockfile=false && pnpm run build",
+  "buildCommand": "pnpm run build",
   "outputDirectory": "static-build",
-  "installCommand": "corepack enable && corepack prepare pnpm@9.15.4 --activate && pnpm install --frozen-lockfile=false",
+  "installCommand": "corepack enable && corepack prepare pnpm@9.15.4 --activate && pnpm install --frozen-lockfile=false --prod=false",
   "framework": null,
   "rewrites": [
     {
