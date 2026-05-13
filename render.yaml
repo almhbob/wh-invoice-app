@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: wh-invoice-app
+    runtime: node
+    plan: free
+    buildCommand: corepack enable && corepack prepare pnpm@9.15.4 --activate && pnpm install --frozen-lockfile=false && pnpm run build
+    startCommand: pnpm run start
+    healthCheckPath: /api/healthz
+    envVars:
+      - key: NODE_ENV
+        value: production
