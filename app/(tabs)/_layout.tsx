@@ -53,12 +53,7 @@ function LogoHeader({ titleKey, accentColor }: LogoHeaderProps) {
   return (
     <>
       <View style={[styles.headerContainer, { paddingTop: topInset }]}>
-        <View
-          style={[
-            styles.headerInner,
-            isRTL ? styles.rowRTL : styles.rowLTR,
-          ]}
-        >
+        <View style={[styles.headerInner, isRTL ? styles.rowRTL : styles.rowLTR]}>
           <View style={styles.logoBox}>
             <Text style={styles.logoText}>W&H</Text>
           </View>
@@ -70,35 +65,18 @@ function LogoHeader({ titleKey, accentColor }: LogoHeaderProps) {
 
           <View style={{ flex: 1 }} />
 
-          <TouchableOpacity
-            style={styles.langBtn}
-            onPress={toggleLang}
-            activeOpacity={0.75}
-          >
+          <TouchableOpacity style={styles.langBtn} onPress={toggleLang} activeOpacity={0.75}>
             <Text style={styles.langBtnText}>{LANG_NEXT[lang] ?? "EN"}</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={styles.empBtn}
-            onPress={() => setShowSelector(true)}
-            activeOpacity={0.8}
-          >
+          <TouchableOpacity style={styles.empBtn} onPress={() => setShowSelector(true)} activeOpacity={0.8}>
             {currentEmployee ? (
               <>
-                <View
-                  style={[
-                    styles.empAvatar,
-                    { backgroundColor: ROLE_COLORS[currentEmployee.role] },
-                  ]}
-                >
-                  <Text style={styles.empAvatarText}>
-                    {currentEmployee.name.charAt(0)}
-                  </Text>
+                <View style={[styles.empAvatar, { backgroundColor: ROLE_COLORS[currentEmployee.role] }]}>
+                  <Text style={styles.empAvatarText}>{currentEmployee.name.charAt(0)}</Text>
                 </View>
                 <View style={styles.empTextBlock}>
-                  <Text style={styles.empName} numberOfLines={1}>
-                    {currentEmployee.name}
-                  </Text>
+                  <Text style={styles.empName} numberOfLines={1}>{currentEmployee.name}</Text>
                   <Text style={styles.empId}>#{currentEmployee.employeeId}</Text>
                 </View>
               </>
@@ -218,12 +196,19 @@ function CustomTabBar() {
   const border = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.07)";
   const tabH = 64;
   const pb = Platform.OS === "ios" ? insets.bottom : 8;
+  const isWeb = Platform.OS === "web";
 
   return (
     <>
       <PopupSheet visible={showDepts} onClose={() => setShowDepts(false)} tabs={DEPT_TABS} onSelect={navigate} activePath={pathname} />
       <PopupSheet visible={showMore} onClose={() => setShowMore(false)} tabs={MORE_TABS} onSelect={navigate} activePath={pathname} />
-      <View style={[styles.bar, { height: tabH + pb, paddingBottom: pb, borderTopColor: border }]}> 
+      <View
+        style={[
+          styles.bar,
+          isWeb ? styles.webBar : styles.nativeBar,
+          { height: tabH + pb, paddingBottom: pb, borderTopColor: border },
+        ]}
+      >
         {isIOS && <BlurView intensity={90} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />}
         {!isIOS && <View style={[StyleSheet.absoluteFill, { backgroundColor: bg }]} />}
         <BarItem label={t("tabCashier")} icon="file-text" sf="doc.text" active={isCashier} accent={Colors.gold} onPress={() => navigate("cashier")} />
@@ -362,12 +347,20 @@ const styles = StyleSheet.create({
   bar: {
     flexDirection: "row",
     borderTopWidth: StyleSheet.hairlineWidth,
+    zIndex: 100,
+    overflow: "hidden",
+  },
+  nativeBar: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    zIndex: 100,
-    overflow: "hidden",
+  },
+  webBar: {
+    position: "relative",
+    left: 0,
+    right: 0,
+    bottom: undefined,
   },
   barItem: { flex: 1, alignItems: "center", justifyContent: "center", paddingTop: 6, gap: 3, position: "relative" },
   activePill: { position: "absolute", top: 0, width: 32, height: 3, borderRadius: 2 },
