@@ -22,13 +22,37 @@ export default function Root({ children }: PropsWithChildren) {
                 background: #f6f8fb;
               }
 
-              [data-rnw-scrollview] {
-                scroll-padding-bottom: 150px !important;
+              body {
+                overscroll-behavior-y: contain;
               }
 
-              [data-rnw-scrollview] > div {
-                padding-bottom: max(150px, env(safe-area-inset-bottom)) !important;
+              [data-rnw-scrollview],
+              div[style*="overflow: scroll"],
+              div[style*="overflow-y: scroll"],
+              div[style*="overflow: auto"],
+              div[style*="overflow-y: auto"] {
+                scroll-padding-bottom: 190px !important;
+              }
+
+              [data-rnw-scrollview] > div,
+              div[style*="overflow: scroll"] > div,
+              div[style*="overflow-y: scroll"] > div,
+              div[style*="overflow: auto"] > div,
+              div[style*="overflow-y: auto"] > div {
+                padding-bottom: 190px !important;
                 box-sizing: border-box !important;
+              }
+
+              [data-rnw-scrollview] > div::after,
+              div[style*="overflow: scroll"] > div::after,
+              div[style*="overflow-y: scroll"] > div::after,
+              div[style*="overflow: auto"] > div::after,
+              div[style*="overflow-y: auto"] > div::after {
+                content: "";
+                display: block;
+                width: 100%;
+                height: 120px;
+                flex: 0 0 120px;
               }
             `,
           }}
