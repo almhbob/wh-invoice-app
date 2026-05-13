@@ -1,25 +1,15 @@
-/**
- * Standalone production server for Expo static builds.
- *
- * Serves the output of build.js (static-build/) with two special routes:
- * - GET / or /manifest with expo-platform header → platform manifest JSON
- * - GET / without expo-platform → landing page HTML
- * Everything else falls through to static file serving from ./static-build/.
- *
- * Zero external dependencies — uses only Node.js built-ins (http, fs, path).
- */
-
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
 
 const STATIC_ROOT = path.resolve(__dirname, "..", "static-build");
-const TEMPLATE_PATH = path.resolve(__dirname, "templates", "landing-page.html");
-const basePath = (process.env.BASE_PATH || "/").replace(/\/+$/, "");
+const PORT = Number(process.env.PORT || 3000);
+const APP_NAME = "W&H Invoice";
 
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
   ".js": "application/javascript; charset=utf-8",
+  ".mjs": "application/javascript; charset=utf-8",
   ".json": "application/json; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".png": "image/png",
@@ -28,108 +18,109 @@ const MIME_TYPES = {
   ".gif": "image/gif",
   ".svg": "image/svg+xml",
   ".ico": "image/x-icon",
+  ".webp": "image/webp",
   ".woff": "font/woff",
   ".woff2": "font/woff2",
   ".ttf": "font/ttf",
   ".otf": "font/otf",
-  ".map": "application/json",
+  ".map": "application/json; charset=utf-8",
 };
 
-function getAppName() {
-  try {
-    const appJsonPath = path.resolve(__dirname, "..", "app.json");
-    const appJson = JSON.parse(fs.readFileSync(appJsonPath, "utf-8"));
-    return appJson.expo?.name || "App Landing Page";
-  } catch {
-    return "App Landing Page";
-  }
-}
-
-function serveManifest(platform, res) {
-  const manifestPath = path.join(STATIC_ROOT, platform, "manifest.json");
-
-  if (!fs.existsSync(manifestPath)) {
-    res.writeHead(404, { "content-type": "application/json" });
-    res.end(
-      JSON.stringify({ error: `Manifest not found for platform: ${platform}` }),
-    );
-    return;
-  }
-
-  const manifest = fs.readFileSync(manifestPath, "utf-8");
-  res.writeHead(200, {
-    "content-type": "application/json",
-    "expo-protocol-version": "1",
-    "expo-sfv-version": "0",
+function sendJson(res, statusCode, payload) {
+  res.writeHead(statusCode, {
+    "content-type": "application/json; charset=utf-8",
+    "cache-control": "no-store",
+    "x-content-type-options": "nosniff",
   });
-  res.end(manifest);
+  res.end(JSON.stringify(payload));
 }
 
-function serveLandingPage(req, res, landingPageTemplate, appName) {
-  const forwardedProto = req.headers["x-forwarded-proto"];
-  const protocol = forwardedProto || "https";
-  const host = req.headers["x-forwarded-host"] || req.headers["host"];
-  const baseUrl = `${protocol}://${host}`;
-  const expsUrl = `${host}`;
-
-  const html = landingPageTemplate
-    .replace(/BASE_URL_PLACEHOLDER/g, baseUrl)
-    .replace(/EXPS_URL_PLACEHOLDER/g, expsUrl)
-    .replace(/APP_NAME_PLACEHOLDER/g, appName);
-
-  res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
-  res.end(html);
+function securityHeaders(extra = {}) {
+  return {
+    "x-content-type-options": "nosniff",
+    "x-frame-options": "SAMEORIGIN",
+    "referrer-policy": "strict-origin-when-cross-origin",
+    "permissions-policy": "camera=(), microphone=(), geolocation=()",
+    ...extra,
+  };
 }
 
-function serveStaticFile(urlPath, res) {
-  const safePath = path.normalize(urlPath).replace(/^(\.\.(\/|\\|$))+/, "");
-  const filePath = path.join(STATIC_ROOT, safePath);
+function safeJoin(root, urlPath) {
+  const decoded = decodeURIComponent(urlPath.split("?")[0]);
+  const normalized = path.normalize(decoded).replace(/^(\.\.(\/|\\|$))+/, "");
+  const filePath = path.join(root, normalized);
 
-  if (!filePath.startsWith(STATIC_ROOT)) {
-    res.writeHead(403);
+  if (!filePath.startsWith(root)) {
+    return null;
+  }
+
+  return filePath;
+}
+
+function serveFile(filePath, res) {
+  const ext = path.extname(filePath).toLowerCase();
+  const contentType = MIME_TYPES[ext] || "application/octet-stream";
+  const immutable = /\.(js|css|png|jpg|jpeg|gif|svg|webp|woff2?|ttf|otf)$/i.test(filePath);
+
+  res.writeHead(200, securityHeaders({
+    "content-type": contentType,
+    "cache-control": immutable ? "public, max-age=31536000, immutable" : "no-cache",
+  }));
+
+  fs.createReadStream(filePath).pipe(res);
+}
+
+function serveStatic(req, res) {
+  if (!fs.existsSync(STATIC_ROOT)) {
+    return sendJson(res, 503, {
+      status: "error",
+      message: "static-build directory is missing. Run pnpm run build first.",
+    });
+  }
+
+  const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
+  const pathname = url.pathname === "/" ? "/index.html" : url.pathname;
+  const requestedPath = safeJoin(STATIC_ROOT, pathname);
+
+  if (!requestedPath) {
+    res.writeHead(403, securityHeaders());
     res.end("Forbidden");
     return;
   }
 
-  if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
-    res.writeHead(404);
-    res.end("Not Found");
+  if (fs.existsSync(requestedPath) && fs.statSync(requestedPath).isFile()) {
+    return serveFile(requestedPath, res);
+  }
+
+  const indexPath = path.join(STATIC_ROOT, "index.html");
+  if (fs.existsSync(indexPath)) {
+    return serveFile(indexPath, res);
+  }
+
+  sendJson(res, 404, { status: "error", message: "Not found" });
+}
+
+const server = http.createServer((req, res) => {
+  if (req.method !== "GET" && req.method !== "HEAD") {
+    res.writeHead(405, securityHeaders({ allow: "GET, HEAD" }));
+    res.end("Method Not Allowed");
     return;
   }
 
-  const ext = path.extname(filePath).toLowerCase();
-  const contentType = MIME_TYPES[ext] || "application/octet-stream";
-  const content = fs.readFileSync(filePath);
-  res.writeHead(200, { "content-type": contentType });
-  res.end(content);
-}
+  const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
 
-const landingPageTemplate = fs.readFileSync(TEMPLATE_PATH, "utf-8");
-const appName = getAppName();
-
-const server = http.createServer((req, res) => {
-  const url = new URL(req.url || "/", `http://${req.headers.host}`);
-  let pathname = url.pathname;
-
-  if (basePath && pathname.startsWith(basePath)) {
-    pathname = pathname.slice(basePath.length) || "/";
+  if (url.pathname === "/api/healthz" || url.pathname === "/healthz") {
+    return sendJson(res, 200, {
+      status: "ok",
+      service: APP_NAME,
+      uptime: Math.round(process.uptime()),
+      timestamp: new Date().toISOString(),
+    });
   }
 
-  if (pathname === "/" || pathname === "/manifest") {
-    const platform = req.headers["expo-platform"];
-    if (platform === "ios" || platform === "android") {
-      return serveManifest(platform, res);
-    }
-
-    if (pathname === "/") {
-      return serveLandingPage(req, res, landingPageTemplate, appName);
-    }
-  }
-
-  serveStaticFile(pathname, res);
+  serveStatic(req, res);
 });
 
-const port = parseInt(process.env.PORT || "3000", 10);
-server.listen(port, "0.0.0.0", () => {
-  console.log(`Serving static Expo build on port ${port}`);
+server.listen(PORT, "0.0.0.0", () => {
+  console.log(`${APP_NAME} server listening on port ${PORT}`);
 });
