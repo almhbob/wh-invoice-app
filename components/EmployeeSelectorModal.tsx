@@ -1,12 +1,10 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   Alert,
-  FlatList,
   Modal,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -17,12 +15,14 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Colors } from "@/constants/colors";
+import { canBranchSupervisorAssignRole } from "@/constants/branchSupervisorPermissions";
 import {
   Employee,
   EmployeeRole,
   ROLE_LABELS,
   useEmployee,
 } from "@/context/EmployeeContext";
+import { employeeCredentialErrorMessage, prepareEmployeeCredentialPayload } from "@/lib/employeeCredentials";
 
 const ROLE_COLORS: Record<EmployeeRole, string> = {
   cashier: Colors.primary,
@@ -32,6 +32,9 @@ const ROLE_COLORS: Record<EmployeeRole, string> = {
   cake: Colors.cake,
   packaging: Colors.packaging,
   admin: Colors.gold,
+  branch_supervisor: "#0d9488",
+  dept_supervisor: "#0891b2",
+  guest: Colors.textMuted,
 };
 
 const ROLE_ICONS: Record<EmployeeRole, string> = {
@@ -42,9 +45,13 @@ const ROLE_ICONS: Record<EmployeeRole, string> = {
   cake: "layers",
   packaging: "box",
   admin: "shield",
+  branch_supervisor: "git-branch",
+  dept_supervisor: "briefcase",
+  guest: "eye",
 };
 
-const ROLES: EmployeeRole[] = ["cashier", "halwa", "mawali", "chocolate", "cake", "packaging", "admin"];
+const ALL_ROLES: EmployeeRole[] = ["cashier", "halwa", "mawali", "chocolate", "cake", "packaging", "dept_supervisor", "branch_supervisor", "admin", "guest"];
+const DEFAULT_ADD_ROLES: EmployeeRole[] = ["cashier", "halwa", "mawali", "chocolate", "cake", "packaging", "dept_supervisor", "admin"];
 
 interface Props {
   visible: boolean;
@@ -58,8 +65,22 @@ export function EmployeeSelectorModal({ visible, onClose }: Props) {
   const [tab, setTab] = useState<"select" | "add">("select");
   const [newName, setNewName] = useState("");
   const [newEmpId, setNewEmpId] = useState("");
+  const [newUsername, setNewUsername] = useState("");
+  const [newPin, setNewPin] = useState("1234");
   const [newRole, setNewRole] = useState<EmployeeRole>("cashier");
   const [saving, setSaving] = useState(false);
+
+  const addRoles = useMemo(() => {
+    if (currentEmployee?.role === "branch_supervisor") {
+      return ALL_ROLES.filter(canBranchSupervisorAssignRole);
+    }
+    return DEFAULT_ADD_ROLES;
+  }, [currentEmployee?.role]);
+
+  const visibleRoles = useMemo(() => {
+    const present = new Set(employees.map((e) => e.role));
+    return ALL_ROLES.filter((role) => present.has(role));
+  }, [employees]);
 
   const handleSelect = (emp: Employee) => {
     Haptics.selectionAsync();
@@ -75,20 +96,35 @@ export function EmployeeSelectorModal({ visible, onClose }: Props) {
   const handleAddEmployee = async () => {
     if (!newName.trim()) { Alert.alert("خطأ", "أدخل اسم الموظف"); return; }
     if (!newEmpId.trim()) { Alert.alert("خطأ", "أدخل الرقم الوظيفي"); return; }
-    const exists = employees.find(
-      (e) => e.employeeId.toLowerCase() === newEmpId.trim().toLowerCase()
-    );
-    if (exists) { Alert.alert("خطأ", "هذا الرقم الوظيفي مستخدم مسبقاً"); return; }
+    const normalizedEmpId = newEmpId.trim().toUpperCase();
+    const normalizedUsername = (newUsername.trim() || normalizedEmpId).toLowerCase();
+    const exists = employees.find((e) => {
+      const empUsername = String((e as any).username || e.employeeId).toLowerCase();
+      return e.employeeId.toLowerCase() === normalizedEmpId.toLowerCase() || empUsername === normalizedUsername;
+    });
+    if (exists) { Alert.alert("خطأ", "الرقم الوظيفي أو اليوزر مستخدم مسبقاً"); return; }
+    if (!addRoles.includes(newRole)) {
+      Alert.alert("صلاحية غير مسموحة", "الدور المحدد غير مسموح لهذا المستخدم.");
+      return;
+    }
     setSaving(true);
     try {
-      await addEmployee({
-        name: newName.trim(),
-        employeeId: newEmpId.trim().toUpperCase(),
+      const payload = prepareEmployeeCredentialPayload({
+        name: newName,
+        employeeId: normalizedEmpId,
+        username: normalizedUsername,
+        pinCode: newPin,
         role: newRole,
       });
+      await addEmployee(payload as any);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setNewName(""); setNewEmpId(""); setNewRole("cashier");
+      setNewName(""); setNewEmpId(""); setNewUsername(""); setNewPin("1234"); setNewRole("cashier");
       setTab("select");
+      Alert.alert("تم", "تمت إضافة الموظف مع يوزر ورمز دخول.");
+    } catch (error) {
+      console.error("Add employee failed", error);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert("تعذر إضافة الموظف", employeeCredentialErrorMessage(error));
     } finally {
       setSaving(false);
     }
@@ -103,7 +139,10 @@ export function EmployeeSelectorModal({ visible, onClose }: Props) {
         {
           text: "حذف",
           style: "destructive",
-          onPress: () => removeEmployee(emp.id),
+          onPress: async () => {
+            try { await removeEmployee(emp.id); }
+            catch (error) { Alert.alert("تعذر الحذف", employeeCredentialErrorMessage(error)); }
+          },
         },
       ]
     );
@@ -112,7 +151,6 @@ export function EmployeeSelectorModal({ visible, onClose }: Props) {
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
       <View style={[styles.container, { paddingTop: Platform.OS === "ios" ? insets.top : 16 }]}>
-        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
             <Feather name="x" size={20} color={Colors.text} />
@@ -121,23 +159,12 @@ export function EmployeeSelectorModal({ visible, onClose }: Props) {
           <View style={{ width: 36 }} />
         </View>
 
-        {/* Tabs */}
         <View style={styles.tabs}>
-          <TouchableOpacity
-            style={[styles.tab, tab === "select" && styles.tabActive]}
-            onPress={() => setTab("select")}
-          >
-            <Text style={[styles.tabText, tab === "select" && styles.tabTextActive]}>
-              اختيار الموظف
-            </Text>
+          <TouchableOpacity style={[styles.tab, tab === "select" && styles.tabActive]} onPress={() => setTab("select")}>
+            <Text style={[styles.tabText, tab === "select" && styles.tabTextActive]}>اختيار الموظف</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, tab === "add" && styles.tabActive]}
-            onPress={() => setTab("add")}
-          >
-            <Text style={[styles.tabText, tab === "add" && styles.tabTextActive]}>
-              إضافة موظف
-            </Text>
+          <TouchableOpacity style={[styles.tab, tab === "add" && styles.tabActive]} onPress={() => setTab("add")}>
+            <Text style={[styles.tabText, tab === "add" && styles.tabTextActive]}>إضافة موظف</Text>
           </TouchableOpacity>
         </View>
 
@@ -157,53 +184,28 @@ export function EmployeeSelectorModal({ visible, onClose }: Props) {
                 <Text style={styles.emptySubText}>اضغط "إضافة موظف" لإضافة أول موظف</Text>
               </View>
             ) : (
-              ROLES.map((role) => {
+              visibleRoles.map((role) => {
                 const roleEmps = employees.filter((e) => e.role === role);
                 if (roleEmps.length === 0) return null;
                 return (
                   <View key={role} style={styles.roleGroup}>
                     <View style={[styles.roleHeader, { backgroundColor: ROLE_COLORS[role] + "15" }]}>
                       <Feather name={ROLE_ICONS[role] as any} size={14} color={ROLE_COLORS[role]} />
-                      <Text style={[styles.roleTitle, { color: ROLE_COLORS[role] }]}>
-                        {ROLE_LABELS[role]}
-                      </Text>
+                      <Text style={[styles.roleTitle, { color: ROLE_COLORS[role] }]}>{ROLE_LABELS[role]}</Text>
                     </View>
                     {roleEmps.map((emp) => {
                       const isCurrent = currentEmployee?.id === emp.id;
                       return (
-                        <TouchableOpacity
-                          key={emp.id}
-                          style={[styles.empCard, isCurrent && styles.empCardActive]}
-                          onPress={() => handleSelect(emp)}
-                          activeOpacity={0.75}
-                        >
-                          <View
-                            style={[
-                              styles.empAvatar,
-                              { backgroundColor: ROLE_COLORS[role] + (isCurrent ? "FF" : "25") },
-                            ]}
-                          >
-                            <Text
-                              style={[
-                                styles.empAvatarText,
-                                { color: isCurrent ? "#fff" : ROLE_COLORS[role] },
-                              ]}
-                            >
-                              {emp.name.charAt(0)}
-                            </Text>
+                        <TouchableOpacity key={emp.id} style={[styles.empCard, isCurrent && styles.empCardActive]} onPress={() => handleSelect(emp)} activeOpacity={0.75}>
+                          <View style={[styles.empAvatar, { backgroundColor: ROLE_COLORS[role] + (isCurrent ? "FF" : "25") }]}>
+                            <Text style={[styles.empAvatarText, { color: isCurrent ? "#fff" : ROLE_COLORS[role] }]}>{emp.name.charAt(0)}</Text>
                           </View>
                           <View style={styles.empInfo}>
                             <Text style={styles.empName}>{emp.name}</Text>
-                            <Text style={styles.empIdText}>#{emp.employeeId}</Text>
+                            <Text style={styles.empIdText}>#{emp.employeeId} · {(emp as any).username || emp.employeeId}</Text>
                           </View>
-                          {isCurrent ? (
-                            <Feather name="check-circle" size={20} color={ROLE_COLORS[role]} />
-                          ) : null}
-                          <TouchableOpacity
-                            style={styles.delBtn}
-                            onPress={() => handleRemove(emp)}
-                            hitSlop={10}
-                          >
+                          {isCurrent ? <Feather name="check-circle" size={20} color={ROLE_COLORS[role]} /> : null}
+                          <TouchableOpacity style={styles.delBtn} onPress={() => handleRemove(emp)} hitSlop={10}>
                             <Feather name="trash-2" size={15} color={Colors.textMuted} />
                           </TouchableOpacity>
                         </TouchableOpacity>
@@ -217,67 +219,35 @@ export function EmployeeSelectorModal({ visible, onClose }: Props) {
         ) : (
           <ScrollView contentContainerStyle={styles.addContent} showsVerticalScrollIndicator={false}>
             <Text style={styles.fieldLabel}>اسم الموظف *</Text>
-            <TextInput
-              style={styles.input}
-              value={newName}
-              onChangeText={setNewName}
-              placeholder="أدخل الاسم الكامل"
-              placeholderTextColor={Colors.textMuted}
-              textAlign="right"
-            />
+            <TextInput style={styles.input} value={newName} onChangeText={setNewName} placeholder="أدخل الاسم الكامل" placeholderTextColor={Colors.textMuted} textAlign="right" />
 
             <Text style={styles.fieldLabel}>الرقم الوظيفي *</Text>
-            <TextInput
-              style={styles.input}
-              value={newEmpId}
-              onChangeText={setNewEmpId}
-              placeholder="مثال: EMP001"
-              placeholderTextColor={Colors.textMuted}
-              textAlign="right"
-              autoCapitalize="characters"
-            />
+            <TextInput style={styles.input} value={newEmpId} onChangeText={setNewEmpId} placeholder="مثال: EMP001" placeholderTextColor={Colors.textMuted} textAlign="right" autoCapitalize="characters" />
+
+            <Text style={styles.fieldLabel}>يوزر الدخول</Text>
+            <TextInput style={styles.input} value={newUsername} onChangeText={setNewUsername} placeholder="اختياري، الافتراضي الرقم الوظيفي" placeholderTextColor={Colors.textMuted} textAlign="right" autoCapitalize="none" />
+
+            <Text style={styles.fieldLabel}>رمز الدخول</Text>
+            <TextInput style={styles.input} value={newPin} onChangeText={setNewPin} placeholder="مثال: 1234" placeholderTextColor={Colors.textMuted} textAlign="right" secureTextEntry keyboardType="number-pad" />
 
             <Text style={styles.fieldLabel}>الدور الوظيفي</Text>
+            {currentEmployee?.role === "branch_supervisor" ? <Text style={styles.permissionNote}>مشرف الفرع يستطيع إضافة الأدوار التشغيلية ومشرف القسم فقط.</Text> : null}
             <View style={styles.roleGrid}>
-              {ROLES.map((r) => (
+              {addRoles.map((r) => (
                 <TouchableOpacity
                   key={r}
-                  style={[
-                    styles.roleChip,
-                    newRole === r && {
-                      backgroundColor: ROLE_COLORS[r],
-                      borderColor: ROLE_COLORS[r],
-                    },
-                  ]}
+                  style={[styles.roleChip, newRole === r && { backgroundColor: ROLE_COLORS[r], borderColor: ROLE_COLORS[r] }]}
                   onPress={() => { Haptics.selectionAsync(); setNewRole(r); }}
                 >
-                  <Feather
-                    name={ROLE_ICONS[r] as any}
-                    size={14}
-                    color={newRole === r ? "#fff" : ROLE_COLORS[r]}
-                  />
-                  <Text
-                    style={[
-                      styles.roleChipText,
-                      newRole === r ? { color: "#fff" } : { color: ROLE_COLORS[r] },
-                    ]}
-                  >
-                    {ROLE_LABELS[r]}
-                  </Text>
+                  <Feather name={ROLE_ICONS[r] as any} size={14} color={newRole === r ? "#fff" : ROLE_COLORS[r]} />
+                  <Text style={[styles.roleChipText, newRole === r ? { color: "#fff" } : { color: ROLE_COLORS[r] }]}>{ROLE_LABELS[r]}</Text>
                 </TouchableOpacity>
               ))}
             </View>
 
-            <TouchableOpacity
-              style={[styles.saveBtn, saving && { opacity: 0.6 }]}
-              onPress={handleAddEmployee}
-              disabled={saving}
-              activeOpacity={0.85}
-            >
+            <TouchableOpacity style={[styles.saveBtn, saving && { opacity: 0.6 }]} onPress={handleAddEmployee} disabled={saving} activeOpacity={0.85}>
               <Feather name="user-plus" size={18} color="#fff" />
-              <Text style={styles.saveBtnText}>
-                {saving ? "جاري الحفظ..." : "إضافة الموظف"}
-              </Text>
+              <Text style={styles.saveBtnText}>{saving ? "جاري الحفظ..." : "إضافة الموظف"}</Text>
             </TouchableOpacity>
           </ScrollView>
         )}
@@ -288,83 +258,38 @@ export function EmployeeSelectorModal({ visible, onClose }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  header: {
-    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    paddingHorizontal: 20, paddingVertical: 14,
-    borderBottomWidth: 1, borderBottomColor: Colors.border,
-  },
-  closeBtn: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: Colors.surfaceSecondary,
-    alignItems: "center", justifyContent: "center",
-  },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: Colors.border },
+  closeBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.surfaceSecondary, alignItems: "center", justifyContent: "center" },
   title: { fontSize: 18, fontWeight: "700", color: Colors.primary },
-  tabs: {
-    flexDirection: "row", marginHorizontal: 16, marginVertical: 12,
-    backgroundColor: Colors.surfaceSecondary, borderRadius: 12, padding: 4,
-  },
+  tabs: { flexDirection: "row", marginHorizontal: 16, marginVertical: 12, backgroundColor: Colors.surfaceSecondary, borderRadius: 12, padding: 4 },
   tab: { flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: "center" },
   tabActive: { backgroundColor: Colors.primary, shadowColor: Colors.primary, shadowOpacity: 0.2, shadowRadius: 6, shadowOffset: { width: 0, height: 2 } },
   tabText: { fontSize: 13, fontWeight: "600", color: Colors.textSecondary },
   tabTextActive: { color: "#fff" },
   listContent: { padding: 16, gap: 16 },
-  logoutRow: {
-    flexDirection: "row", alignItems: "center", gap: 8,
-    paddingVertical: 12, paddingHorizontal: 16,
-    backgroundColor: Colors.accent + "10", borderRadius: 12,
-    borderWidth: 1, borderColor: Colors.accent + "25",
-  },
+  logoutRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 12, paddingHorizontal: 16, backgroundColor: Colors.accent + "10", borderRadius: 12, borderWidth: 1, borderColor: Colors.accent + "25" },
   logoutText: { fontSize: 13, color: Colors.accent, fontWeight: "600" },
   emptyBox: { alignItems: "center", gap: 12, paddingVertical: 60 },
   emptyText: { fontSize: 16, color: Colors.textSecondary, fontWeight: "600" },
   emptySubText: { fontSize: 13, color: Colors.textMuted, textAlign: "center" },
   roleGroup: { gap: 8 },
-  roleHeader: {
-    flexDirection: "row", alignItems: "center", gap: 8,
-    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8,
-  },
+  roleHeader: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
   roleTitle: { fontSize: 13, fontWeight: "700" },
-  empCard: {
-    flexDirection: "row", alignItems: "center", gap: 12,
-    backgroundColor: Colors.surface, borderRadius: 14, padding: 14,
-    borderWidth: 1.5, borderColor: Colors.border,
-    shadowColor: Colors.shadow, shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05, shadowRadius: 4, elevation: 1,
-  },
+  empCard: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: Colors.surface, borderRadius: 14, padding: 14, borderWidth: 1.5, borderColor: Colors.border, shadowColor: Colors.shadow, shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 },
   empCardActive: { borderColor: Colors.primary + "60", backgroundColor: Colors.primary + "05" },
-  empAvatar: {
-    width: 44, height: 44, borderRadius: 22,
-    alignItems: "center", justifyContent: "center",
-  },
+  empAvatar: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
   empAvatarText: { fontSize: 18, fontWeight: "800" },
   empInfo: { flex: 1, gap: 3 },
   empName: { fontSize: 15, fontWeight: "700", color: Colors.text },
   empIdText: { fontSize: 12, color: Colors.textMuted, fontWeight: "500" },
-  delBtn: {
-    width: 32, height: 32, borderRadius: 16,
-    backgroundColor: Colors.surfaceSecondary,
-    alignItems: "center", justifyContent: "center",
-  },
+  delBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.surfaceSecondary, alignItems: "center", justifyContent: "center" },
   addContent: { padding: 20, gap: 10 },
   fieldLabel: { fontSize: 13, color: Colors.textSecondary, fontWeight: "600", marginTop: 8 },
-  input: {
-    borderWidth: 1.5, borderColor: Colors.border, borderRadius: 12,
-    paddingHorizontal: 14, paddingVertical: 13, fontSize: 15,
-    color: Colors.text, backgroundColor: Colors.surface,
-  },
+  permissionNote: { fontSize: 11, color: Colors.info, textAlign: "right", lineHeight: 17, fontWeight: "700" },
+  input: { borderWidth: 1.5, borderColor: Colors.border, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13, fontSize: 15, color: Colors.text, backgroundColor: Colors.surface },
   roleGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  roleChip: {
-    flexDirection: "row", alignItems: "center", gap: 7,
-    paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12,
-    borderWidth: 1.5, borderColor: Colors.border, backgroundColor: Colors.surface,
-  },
+  roleChip: { flexDirection: "row", alignItems: "center", gap: 7, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12, borderWidth: 1.5, borderColor: Colors.border, backgroundColor: Colors.surface },
   roleChipText: { fontSize: 13, fontWeight: "600" },
-  saveBtn: {
-    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10,
-    backgroundColor: Colors.primary, borderRadius: 16, paddingVertical: 15,
-    marginTop: 16,
-    shadowColor: Colors.primary, shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3, shadowRadius: 8, elevation: 5,
-  },
+  saveBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, backgroundColor: Colors.primary, borderRadius: 16, paddingVertical: 15, marginTop: 16, shadowColor: Colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 5 },
   saveBtnText: { color: "#fff", fontSize: 15, fontWeight: "700" },
 });
