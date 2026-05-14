@@ -46,6 +46,12 @@ service cloud.firestore {
         allow delete: if isPlatformOwner();
       }
 
+      match /priceChangeRequests/{requestId} {
+        allow read, create, update: if activeTenant(companyId)
+          && (!('companyId' in request.resource.data) || request.resource.data.companyId == companyId);
+        allow delete: if isPlatformOwner();
+      }
+
       match /trays/{trayId} {
         allow read, create, update: if activeTenant(companyId)
           && (!('companyId' in request.resource.data) || request.resource.data.companyId == companyId);
