@@ -30,6 +30,9 @@ const ROLE_COLORS: Record<string, string> = {
   cake: Colors.cake,
   packaging: Colors.packaging,
   admin: Colors.primaryLight,
+  branch_supervisor: "#0d9488",
+  dept_supervisor: "#0891b2",
+  guest: Colors.textMuted,
 };
 
 interface LogoHeaderProps {
@@ -84,7 +87,7 @@ function LogoHeader({ titleKey, accentColor }: LogoHeaderProps) {
           <TouchableOpacity style={styles.empBtn} onPress={() => setShowSelector(true)} activeOpacity={0.8}>
             {currentEmployee ? (
               <>
-                <View style={[styles.empAvatar, { backgroundColor: ROLE_COLORS[currentEmployee.role] }]}>
+                <View style={[styles.empAvatar, { backgroundColor: ROLE_COLORS[currentEmployee.role] ?? Colors.primaryLight }]}>
                   <Text style={styles.empAvatarText}>{currentEmployee.name.charAt(0)}</Text>
                 </View>
                 <View style={styles.empTextBlock}>
@@ -131,6 +134,7 @@ const DEPT_TABS: TabDef[] = [
 ];
 
 const MORE_TABS: TabDef[] = [
+  { name: "branches", labelKey: "الفروع", titleKey: "إدارة الفروع", icon: "git-branch", sf: "building.2", accent: "#0d9488" },
   { name: "customers", labelKey: "tabCustomers", titleKey: "titleCustomers", icon: "users", sf: "person.2", accent: "#0891b2" },
   { name: "delivery", labelKey: "tabDelivery", titleKey: "titleDelivery", icon: "truck", sf: "shippingbox.and.arrow.backward", accent: "#0d9488" },
   { name: "trays", labelKey: "tabTrays", titleKey: "titleTrays", icon: "layers", sf: "tray.2", accent: Colors.gold },
@@ -148,6 +152,8 @@ interface PopupSheetProps {
 function PopupSheet({ visible, onClose, tabs, onSelect, activePath }: PopupSheetProps) {
   const { t } = useLang();
   const insets = useSafeAreaInsets();
+
+  const labelFor = (key: string) => key.startsWith("tab") ? t(key) : key;
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -168,7 +174,7 @@ function PopupSheet({ visible, onClose, tabs, onSelect, activePath }: PopupSheet
                   <Feather name={tab.icon as any} size={22} color={isActive ? tab.accent : Colors.textMuted} />
                 </View>
                 <Text style={[styles.sheetItemLabel, isActive && { color: tab.accent, fontWeight: "700" }]} numberOfLines={1}>
-                  {t(tab.labelKey)}
+                  {labelFor(tab.labelKey)}
                 </Text>
                 {isActive && <View style={[styles.sheetActiveDot, { backgroundColor: tab.accent }]} />}
               </TouchableOpacity>
@@ -272,6 +278,7 @@ export default function TabLayout() {
       <Tabs.Screen name="packaging" options={{ title: t("titlePackaging"), header: () => <LogoHeader titleKey={t("titlePackaging")} accentColor={Colors.packaging} /> }} />
       <Tabs.Screen name="archive" options={{ title: t("titleArchive"), header: () => <LogoHeader titleKey={t("titleArchive")} accentColor={Colors.primaryLight} /> }} />
       <Tabs.Screen name="reports" options={{ title: t("titleReports"), header: () => <LogoHeader titleKey={t("titleReports")} accentColor="#8b5cf6" /> }} />
+      <Tabs.Screen name="branches" options={{ title: "إدارة الفروع", header: () => <LogoHeader titleKey="إدارة الفروع" accentColor="#0d9488" /> }} />
       <Tabs.Screen name="customers" options={{ title: t("titleCustomers"), header: () => <LogoHeader titleKey={t("titleCustomers")} accentColor="#0891b2" /> }} />
       <Tabs.Screen name="delivery" options={{ title: t("titleDelivery"), header: () => <LogoHeader titleKey={t("titleDelivery")} accentColor="#0d9488" /> }} />
       <Tabs.Screen name="trays" options={{ title: t("titleTrays"), header: () => <LogoHeader titleKey={t("titleTrays")} accentColor={Colors.gold} /> }} />
