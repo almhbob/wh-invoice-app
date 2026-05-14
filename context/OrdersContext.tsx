@@ -14,10 +14,10 @@ import React, {
   useCallback,
   useContext,
   useEffect,
-  useRef,
   useState,
 } from "react";
 
+import { useCompany } from "@/context/CompanyContext";
 import { db } from "@/lib/firebase";
 
 export type Department = "halwa" | "mawali" | "chocolate" | "cake" | "packaging";
@@ -88,6 +88,7 @@ export interface BranchTransfer {
 
 export interface Order {
   id: string;
+  companyId?: string;
   orderNumber: number;
   customerName: string;
   customerPhone: string;
@@ -119,7 +120,7 @@ interface OrdersContextType {
   orders: Order[];
   deletedOrders: Order[];
   addOrder: (
-    order: Omit<Order, "id" | "orderNumber" | "createdAt" | "updatedAt" | "departmentStatuses" | "departmentReceivers">
+    order: Omit<Order, "id" | "companyId" | "orderNumber" | "createdAt" | "updatedAt" | "departmentStatuses" | "departmentReceivers">
   ) => Promise<Order>;
   updateDepartmentStatus: (
     id: string,
@@ -143,57 +144,64 @@ const OrdersContext = createContext<OrdersContextType | undefined>(undefined);
 const LOCAL_COUNTER_KEY = "@order_counter_v4_fallback";
 
 export function OrdersProvider({ children }: { children: React.ReactNode }) {
+  const { companyId } = useCompany();
   const [allOrders, setAllOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const unsubscribeRef = useRef<(() => void) | null>(null);
 
   const orders        = allOrders.filter(o => !o.deleted);
   const deletedOrders = allOrders.filter(o =>  o.deleted);
 
+  const ordersCollection = useCallback(() => collection(db, "companies", companyId, "orders"), [companyId]);
+  const orderDoc = useCallback((id: string) => doc(db, "companies", companyId, "orders", id), [companyId]);
+  const counterDoc = useCallback(() => doc(db, "companies", companyId, "counters", "orders"), [companyId]);
+
   useEffect(() => {
-    const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
+    setIsLoading(true);
+    setAllOrders([]);
+    const q = query(ordersCollection(), orderBy("createdAt", "desc"));
     const unsub = onSnapshot(
       q,
       (snapshot) => {
         const loaded: Order[] = snapshot.docs.map((d) => ({
           id: d.id,
+          companyId,
           ...(d.data() as Omit<Order, "id">),
         }));
         setAllOrders(loaded);
         setIsLoading(false);
       },
       (err) => {
-        console.error("Firestore orders error:", err);
+        console.error("Firestore tenant orders error:", err);
         setIsLoading(false);
       }
     );
-    unsubscribeRef.current = unsub;
     return () => unsub();
-  }, []);
+  }, [companyId, ordersCollection]);
 
   const getNextOrderNumber = async (): Promise<number> => {
     try {
-      const counterRef = doc(db, "counters", "orders");
+      const counterRef = counterDoc();
       let next = 1;
       await runTransaction(db, async (txn) => {
         const snap = await txn.get(counterRef);
         next = snap.exists() ? (snap.data().value as number) + 1 : 1;
-        txn.set(counterRef, { value: next });
+        txn.set(counterRef, { value: next, companyId, updatedAt: new Date().toISOString() });
       });
       return next;
     } catch {
       // Fallback to local counter
-      const stored = await AsyncStorage.getItem(LOCAL_COUNTER_KEY);
+      const key = `${LOCAL_COUNTER_KEY}_${companyId}`;
+      const stored = await AsyncStorage.getItem(key);
       const current = stored ? parseInt(stored, 10) : 0;
       const next = current + 1;
-      await AsyncStorage.setItem(LOCAL_COUNTER_KEY, next.toString());
+      await AsyncStorage.setItem(key, next.toString());
       return next;
     }
   };
 
   const addOrder = useCallback(
     async (
-      orderData: Omit<Order, "id" | "orderNumber" | "createdAt" | "updatedAt" | "departmentStatuses" | "departmentReceivers">
+      orderData: Omit<Order, "id" | "companyId" | "orderNumber" | "createdAt" | "updatedAt" | "departmentStatuses" | "departmentReceivers">
     ): Promise<Order> => {
       const orderNumber = await getNextOrderNumber();
       const now = new Date().toISOString();
@@ -205,6 +213,7 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
 
       const firestoreData = {
         ...orderData,
+        companyId,
         orderNumber,
         departmentStatuses,
         departmentReceivers: {},
@@ -217,10 +226,10 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
         Object.entries(firestoreData).filter(([, v]) => v !== undefined)
       );
 
-      const ref = await addDoc(collection(db, "orders"), clean);
+      const ref = await addDoc(ordersCollection(), clean);
       return { id: ref.id, ...(firestoreData as Omit<Order, "id">) };
     },
-    []
+    [companyId, ordersCollection]
   );
 
   const updateDepartmentStatus = useCallback(
@@ -233,13 +242,14 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
         newReceivers[department] = receiver;
       }
 
-      await updateDoc(doc(db, "orders", id), {
+      await updateDoc(orderDoc(id), {
         [`departmentStatuses.${department}`]: status,
         departmentReceivers: newReceivers,
+        companyId,
         updatedAt: new Date().toISOString(),
       });
     },
-    [orders]
+    [companyId, orderDoc, orders]
   );
 
   const transferToBranch = useCallback(
@@ -265,33 +275,38 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
           items: updatedItems,
           departmentStatuses: updatedStatuses,
           branchTransfer: transfer,
+          companyId,
           updatedAt: new Date().toISOString(),
         }).filter(([, v]) => v !== undefined)
       );
 
-      await updateDoc(doc(db, "orders", orderId), clean);
+      await updateDoc(orderDoc(orderId), clean);
     },
-    [orders]
+    [companyId, orderDoc, orders]
   );
 
   const deleteOrder = useCallback(async (
     id: string,
     deletedBy?: { name: string; employeeId: string }
   ) => {
-    await updateDoc(doc(db, "orders", id), {
+    await updateDoc(orderDoc(id), {
       deleted:   true,
       deletedAt: new Date().toISOString(),
       deletedBy: deletedBy ?? null,
+      companyId,
+      updatedAt: new Date().toISOString(),
     });
-  }, []);
+  }, [companyId, orderDoc]);
 
   const restoreOrder = useCallback(async (id: string) => {
-    await updateDoc(doc(db, "orders", id), {
+    await updateDoc(orderDoc(id), {
       deleted:   false,
       deletedAt: null,
       deletedBy: null,
+      companyId,
+      updatedAt: new Date().toISOString(),
     });
-  }, []);
+  }, [companyId, orderDoc]);
 
   const getOrdersForDepartment = useCallback(
     (department: Department) => {
