@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { EmployeeSelectorModal } from "@/components/EmployeeSelectorModal";
 import { Colors } from "@/constants/colors";
+import { DEFAULT_TENANT, PLATFORM_OWNER } from "@/constants/platform";
 import { useEmployee } from "@/context/EmployeeContext";
 import { useLang } from "@/context/LanguageContext";
 
@@ -34,6 +35,17 @@ const ROLE_COLORS: Record<string, string> = {
 interface LogoHeaderProps {
   titleKey: string;
   accentColor?: string;
+}
+
+function FawtaraMark() {
+  return (
+    <View style={styles.fawtaraMark}>
+      <View style={styles.markBlueStem} />
+      <View style={styles.markBlueFoot} />
+      <View style={styles.markGoldTop} />
+      <View style={styles.markGoldMid} />
+    </View>
+  );
 }
 
 function LogoHeader({ titleKey, accentColor }: LogoHeaderProps) {
@@ -55,12 +67,12 @@ function LogoHeader({ titleKey, accentColor }: LogoHeaderProps) {
       <View style={[styles.headerContainer, { paddingTop: topInset }]}>
         <View style={[styles.headerInner, isRTL ? styles.rowRTL : styles.rowLTR]}>
           <View style={styles.logoBox}>
-            <Text style={styles.logoText}>W&H</Text>
+            <FawtaraMark />
           </View>
 
           <View style={styles.brandBlock}>
-            <Text style={styles.brandName}>W&H</Text>
-            <Text style={styles.brandSub}>{t("appSub")}</Text>
+            <Text style={styles.brandName}>{PLATFORM_OWNER.nameAr}</Text>
+            <Text style={styles.brandSub}>{PLATFORM_OWNER.nameEn} · {DEFAULT_TENANT.name}</Text>
           </View>
 
           <View style={{ flex: 1 }} />
@@ -297,6 +309,43 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  fawtaraMark: {
+    width: 31,
+    height: 31,
+    position: "relative",
+  },
+  markBlueStem: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    width: 10,
+    height: 31,
+    backgroundColor: "#132446",
+  },
+  markBlueFoot: {
+    position: "absolute",
+    left: 0,
+    bottom: 0,
+    width: 22,
+    height: 12,
+    backgroundColor: "#132446",
+  },
+  markGoldTop: {
+    position: "absolute",
+    right: 0,
+    top: 0,
+    width: 24,
+    height: 9,
+    backgroundColor: "#c79a35",
+  },
+  markGoldMid: {
+    position: "absolute",
+    right: 6,
+    top: 13,
+    width: 18,
+    height: 9,
+    backgroundColor: "#c79a35",
+  },
   logoText: {
     color: Colors.primary,
     fontSize: 12,
@@ -306,12 +355,12 @@ const styles = StyleSheet.create({
   brandBlock: { gap: 1 },
   brandName: {
     color: Colors.gold,
-    fontSize: 15,
-    fontWeight: "800",
-    letterSpacing: 1,
+    fontSize: 16,
+    fontWeight: "900",
+    letterSpacing: 0.3,
     fontFamily: Platform.OS === "ios" ? "Georgia" : "serif",
   },
-  brandSub: { color: "rgba(255,255,255,0.65)", fontSize: 10, fontWeight: "500" },
+  brandSub: { color: "rgba(255,255,255,0.65)", fontSize: 9, fontWeight: "600" },
   langBtn: {
     width: 32,
     height: 32,
