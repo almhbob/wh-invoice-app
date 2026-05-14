@@ -14,6 +14,7 @@ import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { TenantAccessGate } from "@/components/TenantAccessGate";
 import { CompanyProvider } from "@/context/CompanyContext";
 import { EmployeeProvider } from "@/context/EmployeeContext";
 import { LanguageProvider } from "@/context/LanguageContext";
@@ -30,9 +31,11 @@ const queryClient = new QueryClient();
 
 function RootLayoutNav() {
   return (
-    <Stack screenOptions={{ headerBackTitle: "Back" }}>
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-    </Stack>
+    <TenantAccessGate>
+      <Stack screenOptions={{ headerBackTitle: "Back" }}>
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      </Stack>
+    </TenantAccessGate>
   );
 }
 
