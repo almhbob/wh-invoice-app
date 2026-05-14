@@ -16,6 +16,11 @@ import React, {
   useState,
 } from "react";
 
+import {
+  canBranchSupervisorAssignRole,
+  canBranchSupervisorManageRole,
+  defaultPermissionsForRole,
+} from "@/constants/branchSupervisorPermissions";
 import { useCompany } from "@/context/CompanyContext";
 import { db } from "@/lib/firebase";
 
@@ -28,6 +33,8 @@ export interface Employee {
   employeeId: string;
   role: EmployeeRole;
   permissions?: string[];
+  branchId?: string;
+  createdBy?: string;
   createdAt: string;
 }
 
@@ -120,20 +127,36 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
 
   const addEmployee = useCallback(
     async (data: Omit<Employee, "id" | "createdAt" | "companyId">): Promise<Employee> => {
+      if (currentEmployee?.role === "branch_supervisor" && !canBranchSupervisorAssignRole(data.role)) {
+        throw new Error("BRANCH_SUPERVISOR_CANNOT_ASSIGN_PROTECTED_ROLE");
+      }
+
       const now = new Date().toISOString();
-      const payload = { ...data, companyId, createdAt: now };
+      const payload = {
+        ...data,
+        companyId,
+        permissions: data.permissions?.length ? data.permissions : defaultPermissionsForRole(data.role),
+        branchId: data.branchId ?? currentEmployee?.branchId,
+        createdBy: data.createdBy ?? currentEmployee?.employeeId,
+        createdAt: now,
+      };
       const ref = await addDoc(employeesCollection(), payload);
       return { id: ref.id, ...payload };
     },
-    [companyId, employeesCollection]
+    [companyId, currentEmployee, employeesCollection]
   );
 
   const removeEmployee = useCallback(
     async (id: string) => {
+      const target = employees.find((e) => e.id === id);
+      if (currentEmployee?.role === "branch_supervisor" && target && !canBranchSupervisorManageRole(target.role)) {
+        throw new Error("BRANCH_SUPERVISOR_CANNOT_REMOVE_PROTECTED_ROLE");
+      }
+
       await deleteDoc(employeeDoc(id));
       if (currentEmployee?.id === id) setCurrentEmployee(null);
     },
-    [currentEmployee, employeeDoc, setCurrentEmployee]
+    [currentEmployee, employeeDoc, employees, setCurrentEmployee]
   );
 
   return (
