@@ -1,5 +1,7 @@
 import { doc, onSnapshot, setDoc } from "firebase/firestore";
 import React, { createContext, useContext, useEffect, useState } from "react";
+
+import { useCompany } from "@/context/CompanyContext";
 import { db } from "@/lib/firebase";
 
 export interface AppFeatures {
@@ -39,26 +41,33 @@ const FeaturesContext = createContext<FeaturesContextType>({
 });
 
 export function FeaturesProvider({ children }: { children: React.ReactNode }) {
+  const { companyId } = useCompany();
   const [features, setFeatures] = useState<AppFeatures>(DEFAULT_FEATURES);
   const [isLoading, setIsLoading] = useState(true);
 
+  const settingsRef = () => doc(db, "companies", companyId, "settings", "appFeatures");
+
   useEffect(() => {
+    setIsLoading(true);
+    setFeatures(DEFAULT_FEATURES);
     const unsub = onSnapshot(
-      doc(db, "devPortalConfig", "appFeatures"),
+      settingsRef(),
       (snap) => {
         if (snap.exists()) {
-          setFeatures({ ...DEFAULT_FEATURES, ...(snap.data() as AppFeatures) });
+          setFeatures({ ...DEFAULT_FEATURES, ...(snap.data() as Partial<AppFeatures>) });
+        } else {
+          setFeatures(DEFAULT_FEATURES);
         }
         setIsLoading(false);
       },
       () => setIsLoading(false)
     );
     return () => unsub();
-  }, []);
+  }, [companyId]);
 
   const setFeature = async (key: keyof AppFeatures, value: boolean) => {
-    const ref = doc(db, "devPortalConfig", "appFeatures");
-    await setDoc(ref, { [key]: value }, { merge: true });
+    const ref = settingsRef();
+    await setDoc(ref, { [key]: value, companyId, updatedAt: new Date().toISOString() }, { merge: true });
     setFeatures((prev) => ({ ...prev, [key]: value }));
   };
 
