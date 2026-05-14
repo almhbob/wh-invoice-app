@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 
 import { Colors } from "@/constants/colors";
+import { bootstrapPolicy } from "@/lib/bootstrapPolicy";
 import { firebaseConfigDiagnostics, isFirebaseConfigured } from "@/lib/firebase";
 
 interface CheckItem {
@@ -34,9 +35,9 @@ export function ProductionReadinessPanel() {
     {
       id: "bootstrap_mode",
       titleAr: "Bootstrap المحلي",
-      descriptionAr: "يوجد دخول محلي مؤقت لتجاوز تعطل Firestore أثناء التجربة.",
-      ok: false,
-      actionAr: "اجعله مقصورًا على بيئة التطوير أو أزله بعد تفعيل Auth.",
+      descriptionAr: bootstrapPolicy.reasonAr,
+      ok: !bootstrapPolicy.allowLocalBootstrap,
+      actionAr: bootstrapPolicy.productionRequiredActionAr,
     },
     {
       id: "storage_rules",
