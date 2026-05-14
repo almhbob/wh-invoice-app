@@ -1,0 +1,53 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isPlatformOwner() {
+      return signedIn() && request.auth.token.platformRole in ['owner', 'developer', 'super_admin'];
+    }
+
+    function belongsToCompany(companyId) {
+      return signedIn() && request.auth.token.companyId == companyId;
+    }
+
+    function canAccessCompany(companyId) {
+      return isPlatformOwner() || belongsToCompany(companyId);
+    }
+
+    function isSafeFile() {
+      return request.resource == null || request.resource.size < 10 * 1024 * 1024;
+    }
+
+    match /contracts/{companyId}/{fileName} {
+      allow read: if canAccessCompany(companyId);
+      allow write: if canAccessCompany(companyId) && isSafeFile();
+    }
+
+    match /company-documents/{companyId}/{fileName} {
+      allow read: if canAccessCompany(companyId);
+      allow write: if canAccessCompany(companyId) && isSafeFile();
+    }
+
+    match /product-images/{companyId}/{fileName} {
+      allow read: if canAccessCompany(companyId);
+      allow write: if canAccessCompany(companyId) && isSafeFile();
+    }
+
+    match /damage-images/{companyId}/{fileName} {
+      allow read: if canAccessCompany(companyId);
+      allow write: if canAccessCompany(companyId) && isSafeFile();
+    }
+
+    match /logos/{companyId}/{fileName} {
+      allow read: if canAccessCompany(companyId);
+      allow write: if canAccessCompany(companyId) && isSafeFile();
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
