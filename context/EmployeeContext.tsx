@@ -16,12 +16,14 @@ import React, {
   useState,
 } from "react";
 
+import { useCompany } from "@/context/CompanyContext";
 import { db } from "@/lib/firebase";
 
 export type EmployeeRole = "cashier" | "halwa" | "mawali" | "chocolate" | "cake" | "packaging" | "admin" | "branch_supervisor" | "dept_supervisor" | "guest";
 
 export interface Employee {
   id: string;
+  companyId?: string;
   name: string;
   employeeId: string;
   role: EmployeeRole;
@@ -33,15 +35,13 @@ interface EmployeeContextType {
   employees: Employee[];
   currentEmployee: Employee | null;
   setCurrentEmployee: (emp: Employee | null) => void;
-  addEmployee: (data: Omit<Employee, "id" | "createdAt">) => Promise<Employee>;
+  addEmployee: (data: Omit<Employee, "id" | "createdAt" | "companyId">) => Promise<Employee>;
   removeEmployee: (id: string) => Promise<void>;
   isLoading: boolean;
 }
 
 const EmployeeContext = createContext<EmployeeContextType | undefined>(undefined);
-
-// Session is per-device — stays in AsyncStorage
-const SESSION_KEY = "@wh_session_v1";
+const SESSION_KEY_PREFIX = "@wh_session_v1";
 
 const ROLE_LABELS: Record<EmployeeRole, string> = {
   cashier: "كاشير",
@@ -51,94 +51,93 @@ const ROLE_LABELS: Record<EmployeeRole, string> = {
   cake: "قسم الكيك",
   packaging: "قسم التغليف",
   admin: "مشرف",
+  branch_supervisor: "مشرف فرع",
+  dept_supervisor: "مشرف قسم",
+  guest: "ضيف",
 };
 export { ROLE_LABELS };
 
 export function EmployeeProvider({ children }: { children: React.ReactNode }) {
+  const { companyId } = useCompany();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [currentEmployee, setCurrentEmployeeState] = useState<Employee | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Subscribe to Firestore employees
+  const employeesCollection = useCallback(() => collection(db, "companies", companyId, "employees"), [companyId]);
+  const employeeDoc = useCallback((id: string) => doc(db, "companies", companyId, "employees", id), [companyId]);
+  const sessionKey = `${SESSION_KEY_PREFIX}_${companyId}`;
+
   useEffect(() => {
-    const q = query(collection(db, "employees"), orderBy("createdAt", "asc"));
+    setIsLoading(true);
+    setEmployees([]);
+    setCurrentEmployeeState(null);
+
+    const q = query(employeesCollection(), orderBy("createdAt", "asc"));
     const unsub = onSnapshot(
       q,
       async (snapshot) => {
         const loaded: Employee[] = snapshot.docs.map((d) => ({
           id: d.id,
+          companyId,
           ...(d.data() as Omit<Employee, "id">),
         }));
         setEmployees(loaded);
         setIsLoading(false);
 
-        // Restore session from local storage
         try {
-          const sessionId = await AsyncStorage.getItem(SESSION_KEY);
+          const sessionId = await AsyncStorage.getItem(sessionKey);
           if (sessionId) {
             const found = loaded.find((e) => e.id === sessionId);
             if (found) setCurrentEmployeeState(found);
             else {
-              // Employee was deleted — clear session
-              await AsyncStorage.removeItem(SESSION_KEY);
+              await AsyncStorage.removeItem(sessionKey);
               setCurrentEmployeeState(null);
             }
           }
         } catch {}
       },
       (err) => {
-        console.error("Firestore employees error:", err);
+        console.error("Firestore company employees error:", err);
         setIsLoading(false);
       }
     );
     return () => unsub();
-  }, []);
+  }, [companyId, employeesCollection, sessionKey]);
 
-  // Also update currentEmployee state when employees list changes
   useEffect(() => {
     if (!currentEmployee) return;
     const updated = employees.find((e) => e.id === currentEmployee.id);
     if (updated) setCurrentEmployeeState(updated);
-  }, [employees]);
+  }, [employees, currentEmployee]);
 
   const setCurrentEmployee = useCallback(async (emp: Employee | null) => {
     setCurrentEmployeeState(emp);
     try {
-      if (emp) await AsyncStorage.setItem(SESSION_KEY, emp.id);
-      else await AsyncStorage.removeItem(SESSION_KEY);
+      if (emp) await AsyncStorage.setItem(sessionKey, emp.id);
+      else await AsyncStorage.removeItem(sessionKey);
     } catch {}
-  }, []);
+  }, [sessionKey]);
 
   const addEmployee = useCallback(
-    async (data: Omit<Employee, "id" | "createdAt">): Promise<Employee> => {
+    async (data: Omit<Employee, "id" | "createdAt" | "companyId">): Promise<Employee> => {
       const now = new Date().toISOString();
-      const ref = await addDoc(collection(db, "employees"), { ...data, createdAt: now });
-      return { id: ref.id, ...data, createdAt: now };
+      const payload = { ...data, companyId, createdAt: now };
+      const ref = await addDoc(employeesCollection(), payload);
+      return { id: ref.id, ...payload };
     },
-    []
+    [companyId, employeesCollection]
   );
 
   const removeEmployee = useCallback(
     async (id: string) => {
-      await deleteDoc(doc(db, "employees", id));
-      if (currentEmployee?.id === id) {
-        setCurrentEmployee(null);
-      }
+      await deleteDoc(employeeDoc(id));
+      if (currentEmployee?.id === id) setCurrentEmployee(null);
     },
-    [currentEmployee, setCurrentEmployee]
+    [currentEmployee, employeeDoc, setCurrentEmployee]
   );
 
   return (
-    <EmployeeContext.Provider
-      value={{
-        employees,
-        currentEmployee,
-        setCurrentEmployee,
-        addEmployee,
-        removeEmployee,
-        isLoading,
-      }}
-    >
+    <EmployeeContext.Provider value={{ employees, currentEmployee, setCurrentEmployee, addEmployee, removeEmployee, isLoading }}>
       {children}
     </EmployeeContext.Provider>
   );
