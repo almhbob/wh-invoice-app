@@ -1,6 +1,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
+import { DEFAULT_TENANT } from "@/constants/platform";
+
 export type CompanyStatus = "trial" | "active" | "suspended" | "expired";
 export type CompanyPlan = "starter" | "business" | "enterprise";
 
@@ -25,16 +27,16 @@ interface CompanyContextType {
 }
 
 const DEFAULT_COMPANY: CompanyTenant = {
-  id: "default-company",
-  name: "W&H Cake & Chocolate",
-  slug: "wh-cake-chocolate",
+  id: DEFAULT_TENANT.id,
+  name: DEFAULT_TENANT.name,
+  slug: DEFAULT_TENANT.slug,
   status: "active",
   plan: "business",
   maxUsers: 25,
   createdAt: "2026-01-01T00:00:00.000Z",
 };
 
-const COMPANY_STORAGE_KEY = "@wh_current_company_v1";
+const COMPANY_STORAGE_KEY = "@fawtara_current_tenant_v1";
 const CompanyContext = createContext<CompanyContextType | undefined>(undefined);
 
 export function CompanyProvider({ children }: { children: React.ReactNode }) {
