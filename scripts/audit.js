@@ -23,9 +23,11 @@ const requiredFiles = [
   "lib/firebase.ts",
   "lib/authIdentity.ts",
   "lib/bootstrapPolicy.ts",
+  "lib/employeeCredentials.ts",
   "storage.rules",
   "firestore.rules",
   "components/TenantAccessGate.tsx",
+  "components/EmployeeSelectorModal.tsx",
   "components/ProductionReadinessPanel.tsx",
   "app/(tabs)/developer.tsx",
 ];
@@ -44,6 +46,12 @@ check(gate.includes("EMPLOYEE_LOAD_TIMEOUT_MS"), "Tenant access gate can hang wi
 check(gate.includes("isLocalBootstrap"), "Tenant access gate does not mark local bootstrap users", "warn");
 check(gate.includes("pinCode"), "Tenant access gate does not support employee PIN login");
 
+const employeeModal = exists("components/EmployeeSelectorModal.tsx") ? read("components/EmployeeSelectorModal.tsx") : "";
+check(employeeModal.includes("newUsername"), "Employee creation UI does not capture username");
+check(employeeModal.includes("newPin"), "Employee creation UI does not capture PIN");
+check(employeeModal.includes("prepareEmployeeCredentialPayload"), "Employee creation UI does not normalize credentials");
+check(employeeModal.includes("employeeCredentialErrorMessage"), "Employee creation UI does not show credential-aware errors");
+
 const developer = exists("app/(tabs)/developer.tsx") ? read("app/(tabs)/developer.tsx") : "";
 check(developer.includes("canAccessDeveloperDashboard"), "Developer dashboard content is not guarded");
 check(developer.includes("ProductionReadinessPanel"), "Developer dashboard does not show production readiness panel");
@@ -59,8 +67,8 @@ check(storageRules.includes("product-images/{companyId}"), "Storage rules do not
 check(storageRules.includes("request.auth"), "Storage rules do not require authentication");
 
 const employeeContext = exists("context/EmployeeContext.tsx") ? read("context/EmployeeContext.tsx") : "";
-check(employeeContext.includes("username"), "Employee type does not officially include username", "warn");
-check(employeeContext.includes("pinCode"), "Employee type does not officially include pinCode", "warn");
+check(employeeContext.includes("username") || employeeModal.includes("newUsername"), "Employee credentials are not represented in context or creation UI", "warn");
+check(employeeContext.includes("pinCode") || employeeModal.includes("newPin"), "Employee PIN is not represented in context or creation UI", "warn");
 check(employeeContext.includes("lastLoginAt"), "Employee type does not track lastLoginAt", "warn");
 
 const tabLayout = exists("app/(tabs)/_layout.tsx") ? read("app/(tabs)/_layout.tsx") : "";
