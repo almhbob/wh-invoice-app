@@ -10,6 +10,7 @@ import { Employee, useEmployee } from "@/context/EmployeeContext";
 
 const ACCESS_KEY = "@fawtara_access_gate_v1";
 const BOOTSTRAP_USERS_KEY = "@fawtara_bootstrap_users_v1";
+const EMPLOYEE_LOAD_TIMEOUT_MS = 4500;
 
 const DEMO_TENANT: CompanyTenant = {
   id: DEFAULT_TENANT.id,
@@ -44,6 +45,7 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
   const [ownerPin, setOwnerPin] = useState("1234");
   const [saving, setSaving] = useState(false);
   const [localUsers, setLocalUsers] = useState<BootstrapEmployee[]>([]);
+  const [employeeLoadTimedOut, setEmployeeLoadTimedOut] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -64,8 +66,16 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
     return () => { mounted = false; };
   }, [company.id]);
 
+  useEffect(() => {
+    setEmployeeLoadTimedOut(false);
+    if (!unlocked || !isLoading) return;
+    const timer = setTimeout(() => setEmployeeLoadTimedOut(true), EMPLOYEE_LOAD_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [unlocked, isLoading, company.id]);
+
   const allUsers = useMemo(() => [...employees, ...localUsers], [employees, localUsers]);
   const employeeCountLabel = useMemo(() => allUsers.length ? `${allUsers.length} مستخدم` : "لا يوجد مستخدمون", [allUsers.length]);
+  const shouldShowBootstrapForm = !isLoading || employeeLoadTimedOut || allUsers.length > 0;
 
   const saveLocalUser = async (employee: BootstrapEmployee) => {
     const next = [employee, ...localUsers.filter((u) => u.employeeId !== employee.employeeId)];
@@ -188,8 +198,15 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
           <TouchableOpacity style={styles.switchBtn} onPress={resetCompany}><Text style={styles.switchText}>تغيير الشركة</Text></TouchableOpacity>
           <Text style={styles.title}>دخول المستخدم</Text>
           <Text style={styles.subtitle}>الشركة الحالية: {company.name} · {employeeCountLabel}</Text>
-          {isLoading ? <ActivityIndicator color={Colors.gold} /> : allUsers.length > 0 ? (
+
+          {!shouldShowBootstrapForm ? (
+            <View style={styles.loadingBox}>
+              <ActivityIndicator color={Colors.gold} />
+              <Text style={styles.hint}>جاري تحميل مستخدمي الشركة...</Text>
+            </View>
+          ) : allUsers.length > 0 ? (
             <View style={styles.list}>
+              {employeeLoadTimedOut ? <Text style={styles.warningText}>لم يكتمل تحميل Firestore، يمكنك الدخول بمستخدم محلي إن وجد أو تغيير الشركة.</Text> : null}
               <TextInput style={styles.input} value={loginId} onChangeText={setLoginId} placeholder="اليوزر أو الرقم الوظيفي" placeholderTextColor={Colors.textMuted} textAlign="right" autoCapitalize="none" />
               <TextInput style={styles.input} value={loginPin} onChangeText={setLoginPin} placeholder="رمز الدخول" placeholderTextColor={Colors.textMuted} textAlign="right" secureTextEntry keyboardType="number-pad" />
               <TouchableOpacity style={styles.primaryBtn} onPress={loginEmployee}><Feather name="unlock" size={16} color="#fff" /><Text style={styles.primaryText}>دخول المستخدم</Text></TouchableOpacity>
@@ -197,6 +214,7 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
             </View>
           ) : (
             <View style={styles.list}>
+              {employeeLoadTimedOut ? <Text style={styles.warningText}>تعذر تحميل المستخدمين من Firestore. يمكنك إنشاء مسؤول محلي مؤقت الآن لإكمال التجربة.</Text> : null}
               <Text style={styles.subtitle}>لا يوجد مستخدمون لهذه الشركة. أنشئ أول مسؤول بيوزر ورمز دخول.</Text>
               <TextInput style={styles.input} value={ownerName} onChangeText={setOwnerName} placeholder="اسم المسؤول" placeholderTextColor={Colors.textMuted} textAlign="right" />
               <TextInput style={styles.input} value={ownerId} onChangeText={setOwnerId} placeholder="يوزر / الرقم الوظيفي" placeholderTextColor={Colors.textMuted} textAlign="right" autoCapitalize="characters" />
@@ -220,6 +238,7 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 13, color: Colors.textMuted, textAlign: "center", lineHeight: 21 },
   muted: { fontSize: 12, color: Colors.textMuted, textAlign: "right" },
   hint: { fontSize: 11, color: Colors.info, textAlign: "center", lineHeight: 18, fontWeight: "700" },
+  warningText: { fontSize: 11, color: Colors.accent, textAlign: "center", lineHeight: 18, fontWeight: "800" },
   input: { minHeight: 48, borderRadius: 14, paddingHorizontal: 14, backgroundColor: "#f8fafc", borderWidth: 1, borderColor: Colors.border, color: Colors.text },
   primaryBtn: { minHeight: 48, borderRadius: 14, backgroundColor: Colors.primary, flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 8 },
   primaryText: { color: "#fff", fontSize: 14, fontWeight: "900" },
@@ -228,4 +247,5 @@ const styles = StyleSheet.create({
   switchBtn: { alignSelf: "flex-start", paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: Colors.accent + "12" },
   switchText: { color: Colors.accent, fontSize: 12, fontWeight: "900" },
   list: { gap: 10 },
+  loadingBox: { gap: 10, alignItems: "center", justifyContent: "center", paddingVertical: 20 },
 });
