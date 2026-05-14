@@ -7,6 +7,7 @@ import { CompanySubscriptionsPanel } from "@/components/CompanySubscriptionsPane
 import { DeveloperControlCenterPanel } from "@/components/DeveloperControlCenterPanel";
 import { DeveloperOwnerProfilePanel } from "@/components/DeveloperOwnerProfilePanel";
 import { DeveloperSubscriptionsPanel } from "@/components/DeveloperSubscriptionsPanel";
+import { ReleaseStatusPanel } from "@/components/ReleaseStatusPanel";
 import { Colors } from "@/constants/colors";
 import { useEmployee } from "@/context/EmployeeContext";
 import { canAccessDeveloperDashboard } from "@/lib/developerAccess";
@@ -36,6 +37,7 @@ export default function DeveloperScreen() {
       >
         {allowed ? (
           <>
+            <ReleaseStatusPanel />
             <DeveloperControlCenterPanel />
             <DeveloperOwnerProfilePanel />
             <DeveloperSubscriptionsPanel />
