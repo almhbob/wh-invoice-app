@@ -6,9 +6,10 @@ import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, Touc
 import { Colors } from "@/constants/colors";
 import { DEFAULT_TENANT } from "@/constants/platform";
 import { CompanyTenant, useCompany } from "@/context/CompanyContext";
-import { useEmployee } from "@/context/EmployeeContext";
+import { Employee, useEmployee } from "@/context/EmployeeContext";
 
 const ACCESS_KEY = "@fawtara_access_gate_v1";
+const BOOTSTRAP_USERS_KEY = "@fawtara_bootstrap_users_v1";
 
 const DEMO_TENANT: CompanyTenant = {
   id: DEFAULT_TENANT.id,
@@ -20,8 +21,14 @@ const DEMO_TENANT: CompanyTenant = {
   createdAt: "2026-01-01T00:00:00.000Z",
 };
 
+type BootstrapEmployee = Employee & { username?: string; pinCode?: string; isLocalBootstrap?: boolean };
+
 function normalize(value: string) {
   return value.trim().toLowerCase();
+}
+
+function bootstrapKey(companyId: string) {
+  return `${BOOTSTRAP_USERS_KEY}_${companyId}`;
 }
 
 export function TenantAccessGate({ children }: { children: React.ReactNode }) {
@@ -36,6 +43,7 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
   const [ownerId, setOwnerId] = useState("OWNER001");
   const [ownerPin, setOwnerPin] = useState("1234");
   const [saving, setSaving] = useState(false);
+  const [localUsers, setLocalUsers] = useState<BootstrapEmployee[]>([]);
 
   useEffect(() => {
     let mounted = true;
@@ -45,7 +53,25 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
     return () => { mounted = false; };
   }, []);
 
-  const employeeCountLabel = useMemo(() => employees.length ? `${employees.length} مستخدم` : "لا يوجد مستخدمون", [employees.length]);
+  useEffect(() => {
+    let mounted = true;
+    AsyncStorage.getItem(bootstrapKey(company.id))
+      .then((raw) => {
+        if (!mounted) return;
+        setLocalUsers(raw ? JSON.parse(raw) : []);
+      })
+      .catch(() => mounted && setLocalUsers([]));
+    return () => { mounted = false; };
+  }, [company.id]);
+
+  const allUsers = useMemo(() => [...employees, ...localUsers], [employees, localUsers]);
+  const employeeCountLabel = useMemo(() => allUsers.length ? `${allUsers.length} مستخدم` : "لا يوجد مستخدمون", [allUsers.length]);
+
+  const saveLocalUser = async (employee: BootstrapEmployee) => {
+    const next = [employee, ...localUsers.filter((u) => u.employeeId !== employee.employeeId)];
+    setLocalUsers(next);
+    await AsyncStorage.setItem(bootstrapKey(company.id), JSON.stringify(next));
+  };
 
   const unlockDemo = async () => {
     await setCompany(DEMO_TENANT);
@@ -80,7 +106,7 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const found = employees.find((emp) => {
+    const found = allUsers.find((emp) => {
       const empUser = normalize((emp as any).username || emp.employeeId || "");
       const empId = normalize(emp.employeeId || "");
       const empPin = String((emp as any).pinCode || "1234");
@@ -105,18 +131,33 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
       return;
     }
     setSaving(true);
+    const ownerPayload = {
+      name: ownerName.trim(),
+      employeeId: ownerId.trim().toUpperCase(),
+      username: ownerId.trim().toLowerCase(),
+      pinCode: ownerPin.trim(),
+      role: "admin" as const,
+    };
+
     try {
-      const emp = await addEmployee({
-        name: ownerName.trim(),
-        employeeId: ownerId.trim().toUpperCase(),
-        username: ownerId.trim().toLowerCase(),
-        pinCode: ownerPin.trim(),
-        role: "admin",
-      } as any);
+      const emp = await addEmployee(ownerPayload as any);
       await setCurrentEmployee(emp);
     } catch (error) {
-      console.error("Create owner failed", error);
-      Alert.alert("تعذر إنشاء المستخدم", "راجع صلاحيات Firestore أو اتصال الإنترنت ثم حاول مرة أخرى.");
+      console.error("Create owner failed; using local bootstrap user", error);
+      const localOwner: BootstrapEmployee = {
+        id: `local-${company.id}-${ownerPayload.employeeId}`,
+        companyId: company.id,
+        ...ownerPayload,
+        permissions: ["*"],
+        createdAt: new Date().toISOString(),
+        isLocalBootstrap: true,
+      };
+      await saveLocalUser(localOwner);
+      await setCurrentEmployee(localOwner);
+      Alert.alert(
+        "تم الدخول مؤقتًا",
+        "تم إنشاء مسؤول محلي مؤقت لأن Firebase Auth/Firestore Rules غير مكتملة. اربط Firebase Auth لاحقًا لحفظ المستخدم في قاعدة البيانات بشكل دائم."
+      );
     } finally {
       setSaving(false);
     }
@@ -147,7 +188,7 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
           <TouchableOpacity style={styles.switchBtn} onPress={resetCompany}><Text style={styles.switchText}>تغيير الشركة</Text></TouchableOpacity>
           <Text style={styles.title}>دخول المستخدم</Text>
           <Text style={styles.subtitle}>الشركة الحالية: {company.name} · {employeeCountLabel}</Text>
-          {isLoading ? <ActivityIndicator color={Colors.gold} /> : employees.length > 0 ? (
+          {isLoading ? <ActivityIndicator color={Colors.gold} /> : allUsers.length > 0 ? (
             <View style={styles.list}>
               <TextInput style={styles.input} value={loginId} onChangeText={setLoginId} placeholder="اليوزر أو الرقم الوظيفي" placeholderTextColor={Colors.textMuted} textAlign="right" autoCapitalize="none" />
               <TextInput style={styles.input} value={loginPin} onChangeText={setLoginPin} placeholder="رمز الدخول" placeholderTextColor={Colors.textMuted} textAlign="right" secureTextEntry keyboardType="number-pad" />
