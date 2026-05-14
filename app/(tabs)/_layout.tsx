@@ -103,7 +103,7 @@ function LogoHeader({ titleKey, accentColor }: LogoHeaderProps) {
             )}
           </TouchableOpacity>
 
-          <View style={[styles.screenBadge, { backgroundColor: accentColor ?? Colors.gold }]}> 
+          <View style={[styles.screenBadge, { backgroundColor: accentColor ?? Colors.gold }]}>
             <Text style={styles.screenBadgeText}>{titleKey}</Text>
           </View>
         </View>
@@ -134,6 +134,7 @@ const DEPT_TABS: TabDef[] = [
 ];
 
 const MORE_TABS: TabDef[] = [
+  { name: "developer", labelKey: "المطور", titleKey: "لوحة المطور", icon: "code", sf: "chevron.left.forwardslash.chevron.right", accent: "#7c3aed" },
   { name: "branches", labelKey: "الفروع", titleKey: "إدارة الفروع", icon: "git-branch", sf: "building.2", accent: "#0d9488" },
   { name: "customers", labelKey: "tabCustomers", titleKey: "titleCustomers", icon: "users", sf: "person.2", accent: "#0891b2" },
   { name: "delivery", labelKey: "tabDelivery", titleKey: "titleDelivery", icon: "truck", sf: "shippingbox.and.arrow.backward", accent: "#0d9488" },
@@ -278,6 +279,7 @@ export default function TabLayout() {
       <Tabs.Screen name="packaging" options={{ title: t("titlePackaging"), header: () => <LogoHeader titleKey={t("titlePackaging")} accentColor={Colors.packaging} /> }} />
       <Tabs.Screen name="archive" options={{ title: t("titleArchive"), header: () => <LogoHeader titleKey={t("titleArchive")} accentColor={Colors.primaryLight} /> }} />
       <Tabs.Screen name="reports" options={{ title: t("titleReports"), header: () => <LogoHeader titleKey={t("titleReports")} accentColor="#8b5cf6" /> }} />
+      <Tabs.Screen name="developer" options={{ title: "لوحة المطور", header: () => <LogoHeader titleKey="لوحة المطور" accentColor="#7c3aed" /> }} />
       <Tabs.Screen name="branches" options={{ title: "إدارة الفروع", header: () => <LogoHeader titleKey="إدارة الفروع" accentColor="#0d9488" /> }} />
       <Tabs.Screen name="customers" options={{ title: t("titleCustomers"), header: () => <LogoHeader titleKey={t("titleCustomers")} accentColor="#0891b2" /> }} />
       <Tabs.Screen name="delivery" options={{ title: t("titleDelivery"), header: () => <LogoHeader titleKey={t("titleDelivery")} accentColor="#0d9488" /> }} />
