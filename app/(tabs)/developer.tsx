@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { CompanySubscriptionsPanel } from "@/components/CompanySubscriptionsPanel";
+import { DeveloperControlCenterPanel } from "@/components/DeveloperControlCenterPanel";
 import { DeveloperOwnerProfilePanel } from "@/components/DeveloperOwnerProfilePanel";
 import { DeveloperSubscriptionsPanel } from "@/components/DeveloperSubscriptionsPanel";
 import { Colors } from "@/constants/colors";
@@ -16,6 +17,7 @@ export default function DeveloperScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 120 }]}
         showsVerticalScrollIndicator={false}
       >
+        <DeveloperControlCenterPanel />
         <DeveloperOwnerProfilePanel />
         <DeveloperSubscriptionsPanel />
         <CompanySubscriptionsPanel />
