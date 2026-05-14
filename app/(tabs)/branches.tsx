@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { BranchReturnsDamagePanel } from "@/components/BranchReturnsDamagePanel";
+import { BranchSupervisorPanel } from "@/components/BranchSupervisorPanel";
 import { Colors } from "@/constants/colors";
 
 export default function BranchesScreen() {
@@ -14,6 +15,7 @@ export default function BranchesScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 120 }]}
         showsVerticalScrollIndicator={false}
       >
+        <BranchSupervisorPanel />
         <BranchReturnsDamagePanel />
       </ScrollView>
     </View>
