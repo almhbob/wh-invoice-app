@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { Linking, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Linking, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 
 import { Colors } from "@/constants/colors";
@@ -15,6 +15,7 @@ import {
   planByKey,
   visibleFeaturesForCompany,
 } from "@/constants/companySubscriptions";
+import { pickAndUploadImage, pickAndUploadWebFile } from "@/lib/uploadFiles";
 
 function price(n: number) {
   return `${n.toLocaleString("ar-SA")} ر.س`;
@@ -29,6 +30,8 @@ export function CompanySubscriptionsPanel() {
   const [selectedPlan, setSelectedPlan] = useState<CompanyPlanKey>("business");
   const [contractUrl, setContractUrl] = useState("");
   const [contractFileName, setContractFileName] = useState("");
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [uploadError, setUploadError] = useState("");
 
   const activeSub = subscriptions[0];
   const activePlan = planByKey(activeSub.planKey);
@@ -59,12 +62,36 @@ export function CompanySubscriptionsPanel() {
     } : sub));
   };
 
-  const saveContract = () => {
+  const applyContract = (url: string, fileName: string) => {
     setSubscriptions((prev) => prev.map((sub, idx) => idx === 0 ? {
       ...sub,
-      contractUrl: contractUrl.trim(),
-      contractFileName: contractFileName.trim() || "عقد الشركة",
+      contractUrl: url,
+      contractFileName: fileName || "عقد الشركة",
     } : sub));
+    setContractUrl(url);
+    setContractFileName(fileName || "عقد الشركة");
+  };
+
+  const saveContractLink = () => {
+    applyContract(contractUrl.trim(), contractFileName.trim() || "عقد الشركة");
+  };
+
+  const uploadContract = async () => {
+    try {
+      setUploadError("");
+      setUploadProgress(0);
+      const ownerId = activeSub.companyId || activeSub.id;
+      const uploaded = Platform.OS === "web"
+        ? await pickAndUploadWebFile({ kind: "contracts", ownerId, accept: "application/pdf,image/*", onProgress: setUploadProgress })
+        : await pickAndUploadImage({ kind: "contracts", ownerId, onProgress: setUploadProgress });
+
+      if (uploaded) applyContract(uploaded.url, uploaded.name);
+      setUploadProgress(null);
+    } catch (error) {
+      console.error("Contract upload failed", error);
+      setUploadProgress(null);
+      setUploadError("تعذر رفع العقد. تأكد من إعداد Firebase Storage وصلاحيات الرفع ثم حاول مرة أخرى.");
+    }
   };
 
   const openContract = async () => {
@@ -127,17 +154,22 @@ export function CompanySubscriptionsPanel() {
       <Text style={styles.sectionTitle}>العقد</Text>
       <View style={styles.contractBox}>
         <TextInput style={styles.input} value={contractFileName} onChangeText={setContractFileName} placeholder="اسم ملف العقد" placeholderTextColor={Colors.textMuted} textAlign="right" />
-        <TextInput style={styles.input} value={contractUrl} onChangeText={setContractUrl} placeholder="رابط العقد أو مسار ملف العقد" placeholderTextColor={Colors.textMuted} textAlign="right" autoCapitalize="none" />
+        <TextInput style={styles.input} value={contractUrl} onChangeText={setContractUrl} placeholder="رابط العقد اليدوي اختياري" placeholderTextColor={Colors.textMuted} textAlign="right" autoCapitalize="none" />
         <View style={styles.contractActions}>
-          <TouchableOpacity style={styles.saveBtn} onPress={saveContract}>
+          <TouchableOpacity style={styles.saveBtn} onPress={uploadContract} disabled={uploadProgress !== null}>
             <Feather name="upload-cloud" size={14} color="#fff" />
-            <Text style={styles.saveBtnText}>حفظ العقد</Text>
+            <Text style={styles.saveBtnText}>{uploadProgress !== null ? `جاري الرفع ${uploadProgress}%` : "رفع عقد"}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.saveBtn, styles.linkBtn]} onPress={saveContractLink}>
+            <Feather name="link" size={14} color="#fff" />
+            <Text style={styles.saveBtnText}>حفظ رابط</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.saveBtn, styles.downloadBtn]} onPress={openContract} disabled={!activeSub.contractUrl}>
             <Feather name="download" size={14} color="#fff" />
-            <Text style={styles.saveBtnText}>تحميل العقد</Text>
+            <Text style={styles.saveBtnText}>تحميل</Text>
           </TouchableOpacity>
         </View>
+        {uploadError ? <Text style={styles.errorText}>{uploadError}</Text> : null}
         {activeSub.contractFileName ? <Text style={styles.contractSaved}>العقد الحالي: {activeSub.contractFileName}</Text> : <Text style={styles.contractHint}>لم يتم رفع عقد لهذه الشركة بعد.</Text>}
       </View>
 
@@ -198,10 +230,12 @@ const styles = StyleSheet.create({
   input: { minHeight: 42, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 9, backgroundColor: "#fff", color: Colors.text, borderWidth: 1, borderColor: Colors.border },
   contractActions: { flexDirection: "row-reverse", gap: 8 },
   saveBtn: { flex: 1, flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 10, borderRadius: 12, backgroundColor: Colors.primary },
+  linkBtn: { backgroundColor: Colors.info },
   downloadBtn: { backgroundColor: Colors.gold },
   saveBtnText: { color: "#fff", fontSize: 12, fontWeight: "900" },
   contractSaved: { fontSize: 11, color: Colors.success, textAlign: "right", fontWeight: "800" },
   contractHint: { fontSize: 11, color: Colors.textMuted, textAlign: "right" },
+  errorText: { fontSize: 11, color: Colors.accent, textAlign: "right", fontWeight: "800", lineHeight: 17 },
   applicationCard: { gap: 7, padding: 12, borderRadius: 14, backgroundColor: "#f8fafc", borderWidth: 1, borderColor: Colors.border },
   requestedWrap: { flexDirection: "row-reverse", flexWrap: "wrap", gap: 6 },
   requestedChip: { overflow: "hidden", paddingHorizontal: 8, paddingVertical: 5, borderRadius: 18, backgroundColor: Colors.info + "12", color: Colors.info, fontSize: 10, fontWeight: "800" },
