@@ -1,11 +1,13 @@
 export const RELEASE_INFO = {
-  version: "2026.05.14-developer-dashboard-force-deploy",
-  labelAr: "تفعيل لوحة المطور واشتراكات الشركات وإجبار Vercel على النشر",
-  expectedRoutes: ["/(tabs)/developer", "/developer", "/dev", "/branches"],
-  deploymentMarker: "force-vercel-deploy-2026-05-14",
+  version: "2026.05.14-guarded-platform-release",
+  labelAr: "بوابة شركة ومستخدم، حماية لوحة المطور، وتجهيز رفع العقود والصور",
+  expectedRoutes: ["/", "/developer", "/dev", "/branches"],
+  deploymentMarker: "guarded-platform-release-2026-05-14",
+  latestRequiredCommitHint: "انشر آخر commit من GitHub واجعله Production Current في Vercel.",
   notesAr: [
-    "إذا لم تظهر لوحة المطور فهذا يعني أن Vercel لم ينشر آخر commit أو أن المتصفح يعرض نسخة مخزنة.",
-    "لوحة المطور متاحة من قائمة المزيد باسم المطور بعد نشر هذه النسخة.",
-    "تمت إضافة مسار dev كاختصار مباشر للوحة المطور.",
+    "النظام يجب أن يبدأ بدخول الشركة ثم دخول المستخدم، ولا يفتح الكاشير مباشرة.",
+    "لوحة المطور محمية من الداخل ولا تعرض محتواها إلا للمستخدم المصرح.",
+    "رفع العقود والصور يحتاج Firebase Storage Bucket وقواعد Storage منشورة.",
+    "إذا ظهرت نسخة قديمة فهذا يعني أن Vercel لم يجعل آخر Deployment هو Current.",
   ],
 };
