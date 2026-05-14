@@ -14,6 +14,7 @@ import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { CompanyProvider } from "@/context/CompanyContext";
 import { EmployeeProvider } from "@/context/EmployeeContext";
 import { LanguageProvider } from "@/context/LanguageContext";
 import { OffersProvider } from "@/context/OffersContext";
@@ -44,9 +45,7 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    if (fontsLoaded || fontError) {
-      SplashScreen.hideAsync();
-    }
+    if (fontsLoaded || fontError) SplashScreen.hideAsync();
   }, [fontsLoaded, fontError]);
 
   if (!fontsLoaded && !fontError) return null;
@@ -56,25 +55,27 @@ export default function RootLayout() {
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
           <LanguageProvider>
-            <EmployeeProvider>
-              <ProductsProvider>
-                <OrdersProvider>
-                  <OffersProvider>
-                    <TraysProvider>
-                      <PriceChangeProvider>
-                        <FeaturesProvider>
-                          <GestureHandlerRootView>
-                            <KeyboardProvider>
-                              <RootLayoutNav />
-                            </KeyboardProvider>
-                          </GestureHandlerRootView>
-                        </FeaturesProvider>
-                      </PriceChangeProvider>
-                    </TraysProvider>
-                  </OffersProvider>
-                </OrdersProvider>
-              </ProductsProvider>
-            </EmployeeProvider>
+            <CompanyProvider>
+              <EmployeeProvider>
+                <ProductsProvider>
+                  <OrdersProvider>
+                    <OffersProvider>
+                      <TraysProvider>
+                        <PriceChangeProvider>
+                          <FeaturesProvider>
+                            <GestureHandlerRootView>
+                              <KeyboardProvider>
+                                <RootLayoutNav />
+                              </KeyboardProvider>
+                            </GestureHandlerRootView>
+                          </FeaturesProvider>
+                        </PriceChangeProvider>
+                      </TraysProvider>
+                    </OffersProvider>
+                  </OrdersProvider>
+                </ProductsProvider>
+              </EmployeeProvider>
+            </CompanyProvider>
           </LanguageProvider>
         </QueryClientProvider>
       </ErrorBoundary>
