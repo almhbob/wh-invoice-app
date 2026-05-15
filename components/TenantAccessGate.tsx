@@ -22,7 +22,32 @@ const DEMO_TENANT: CompanyTenant = {
   createdAt: "2026-01-01T00:00:00.000Z",
 };
 
+const NEW_TRIAL_TENANT: CompanyTenant = {
+  id: "new-trial-company",
+  name: "الشركة الجديدة التجريبية",
+  slug: "new-trial-company",
+  status: "trial",
+  plan: "business",
+  maxUsers: 25,
+  maxInvoicesPerMonth: 1000,
+  expiresAt: "2026-06-30T23:59:59.999Z",
+  createdAt: new Date().toISOString(),
+};
+
 type BootstrapEmployee = Employee & { username?: string; pinCode?: string; isLocalBootstrap?: boolean };
+
+const NEW_TRIAL_USER: BootstrapEmployee = {
+  id: "local-new-trial-company-trial-admin",
+  companyId: NEW_TRIAL_TENANT.id,
+  name: "مسؤول الشركة التجريبية",
+  employeeId: "TRIAL001",
+  username: "trial",
+  pinCode: "1234",
+  role: "admin",
+  permissions: ["*"],
+  createdAt: new Date().toISOString(),
+  isLocalBootstrap: true,
+};
 
 function normalize(value: string) {
   return value.trim().toLowerCase();
@@ -83,10 +108,29 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
     await AsyncStorage.setItem(bootstrapKey(company.id), JSON.stringify(next));
   };
 
-  const unlockDemo = async () => {
-    await setCompany(DEMO_TENANT);
+  const unlockTenant = async (tenant: CompanyTenant, seedUser?: BootstrapEmployee) => {
+    await setCompany(tenant);
+    if (seedUser) {
+      const key = bootstrapKey(tenant.id);
+      const raw = await AsyncStorage.getItem(key);
+      const existing: BootstrapEmployee[] = raw ? JSON.parse(raw) : [];
+      const next = [seedUser, ...existing.filter((u) => u.employeeId !== seedUser.employeeId)];
+      await AsyncStorage.setItem(key, JSON.stringify(next));
+      setLocalUsers(next);
+      setLoginId(seedUser.username || seedUser.employeeId);
+      setLoginPin(seedUser.pinCode || "1234");
+    }
     await AsyncStorage.setItem(ACCESS_KEY, "1");
     setUnlocked(true);
+  };
+
+  const unlockDemo = async () => {
+    await unlockTenant(DEMO_TENANT);
+  };
+
+  const unlockNewTrial = async () => {
+    await unlockTenant(NEW_TRIAL_TENANT, NEW_TRIAL_USER);
+    Alert.alert("تم تجهيز الشركة التجريبية", "استخدم اليوزر trial ورمز الدخول 1234 للدخول كتجربة للشركة الجديدة.");
   };
 
   const unlockByCode = async () => {
@@ -185,6 +229,7 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
           <Text style={styles.subtitle}>يجب اختيار الشركة قبل فتح النظام حتى لا تختلط بيانات الشركات.</Text>
           <TextInput style={styles.input} value={companyCode} onChangeText={setCompanyCode} placeholder="كود الشركة" placeholderTextColor={Colors.textMuted} textAlign="right" />
           <TouchableOpacity style={styles.primaryBtn} onPress={unlockByCode}><Feather name="log-in" size={16} color="#fff" /><Text style={styles.primaryText}>دخول بالكود</Text></TouchableOpacity>
+          <TouchableOpacity style={styles.secondaryBtn} onPress={unlockNewTrial}><Feather name="star" size={16} color={Colors.gold} /><Text style={styles.secondaryText}>إنشاء شركة جديدة تجريبية</Text></TouchableOpacity>
           <TouchableOpacity style={styles.secondaryBtn} onPress={unlockDemo}><Feather name="briefcase" size={16} color={Colors.gold} /><Text style={styles.secondaryText}>دخول الشركة الحالية / التجريبية</Text></TouchableOpacity>
         </View>
       </ScrollView>
