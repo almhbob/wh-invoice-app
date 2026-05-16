@@ -1,14 +1,13 @@
 export const RELEASE_INFO = {
-  version: "2026.05.16-production-redeploy-check",
-  labelAr: "إجبار النشر بعد بوابة الشركة والمستخدم وطلبات تفعيل الاشتراك",
+  version: "2026.05.16-release-status-02",
+  labelAr: "تحديث حالة الإصدار للنظام",
   expectedRoutes: ["/", "/developer", "/dev", "/branches"],
-  deploymentMarker: "force-production-redeploy-2026-05-16",
-  latestRequiredCommitHint: "يجب أن يكون هذا الإصدار هو Production Current في Vercel حتى تفتح الروابط وتظهر آخر التعديلات.",
+  deploymentMarker: "release-status-2026-05-16-02",
+  latestRequiredCommitHint: "اجعل آخر نشر في Vercel هو Production Current حتى تظهر هذه النسخة.",
   notesAr: [
-    "النظام يبدأ بدخول الشركة ثم دخول المستخدم ولا يفتح الكاشير مباشرة.",
-    "الشركة الجديدة التجريبية متاحة من بوابة الدخول بيوزر trial ورمز 1234.",
-    "تم تجهيز خدمة طلب تفعيل الاشتراك وحفظ الطلبات محليًا ومع Firestore عند توفر الصلاحيات.",
-    "لوحة المطور محمية من الداخل وتعرض حالة الإصدار وفحص جاهزية الإنتاج.",
-    "إذا لم يفتح الرابط بعد هذا الإصدار فالمشكلة من Vercel Production Current أو DNS للدومين.",
+    "بوابة الشركة والمستخدم مفعلة.",
+    "الشركة التجريبية الجديدة متاحة بيوزر trial ورمز 1234.",
+    "لوحة المطور تعرض حالة الإصدار وفحص الجاهزية.",
+    "خدمة طلب تفعيل الاشتراك جاهزة في الكود.",
   ],
 };
