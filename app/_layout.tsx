@@ -8,7 +8,7 @@ import {
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -25,9 +25,10 @@ import { TraysProvider } from "@/context/TraysInventoryContext";
 import { PriceChangeProvider } from "@/context/PriceChangeContext";
 import { FeaturesProvider } from "@/context/FeaturesContext";
 
-SplashScreen.preventAutoHideAsync();
+SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
 const queryClient = new QueryClient();
+const FONT_LOAD_FAILSAFE_MS = 2500;
 
 function RootLayoutNav() {
   return (
@@ -40,6 +41,7 @@ function RootLayoutNav() {
 }
 
 export default function RootLayout() {
+  const [forceRender, setForceRender] = useState(false);
   const [fontsLoaded, fontError] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
@@ -48,10 +50,17 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    if (fontsLoaded || fontError) SplashScreen.hideAsync();
-  }, [fontsLoaded, fontError]);
+    const timer = setTimeout(() => setForceRender(true), FONT_LOAD_FAILSAFE_MS);
+    return () => clearTimeout(timer);
+  }, []);
 
-  if (!fontsLoaded && !fontError) return null;
+  useEffect(() => {
+    if (fontsLoaded || fontError || forceRender) {
+      SplashScreen.hideAsync().catch(() => undefined);
+    }
+  }, [fontsLoaded, fontError, forceRender]);
+
+  if (!fontsLoaded && !fontError && !forceRender) return null;
 
   return (
     <SafeAreaProvider>
@@ -66,7 +75,7 @@ export default function RootLayout() {
                       <TraysProvider>
                         <PriceChangeProvider>
                           <FeaturesProvider>
-                            <GestureHandlerRootView>
+                            <GestureHandlerRootView style={{ flex: 1 }}>
                               <KeyboardProvider>
                                 <RootLayoutNav />
                               </KeyboardProvider>
