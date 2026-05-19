@@ -3,7 +3,7 @@ import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
-const firebaseConfig = {
+const rawFirebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
   projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
@@ -13,18 +13,35 @@ const firebaseConfig = {
 };
 
 export const firebaseConfigDiagnostics = {
-  hasApiKey: Boolean(firebaseConfig.apiKey),
-  hasAuthDomain: Boolean(firebaseConfig.authDomain),
-  hasProjectId: Boolean(firebaseConfig.projectId),
-  hasStorageBucket: Boolean(firebaseConfig.storageBucket),
-  hasMessagingSenderId: Boolean(firebaseConfig.messagingSenderId),
-  hasAppId: Boolean(firebaseConfig.appId),
-  missingKeys: Object.entries(firebaseConfig)
+  hasApiKey: Boolean(rawFirebaseConfig.apiKey),
+  hasAuthDomain: Boolean(rawFirebaseConfig.authDomain),
+  hasProjectId: Boolean(rawFirebaseConfig.projectId),
+  hasStorageBucket: Boolean(rawFirebaseConfig.storageBucket),
+  hasMessagingSenderId: Boolean(rawFirebaseConfig.messagingSenderId),
+  hasAppId: Boolean(rawFirebaseConfig.appId),
+  missingKeys: Object.entries(rawFirebaseConfig)
     .filter(([, value]) => !value)
     .map(([key]) => key),
 };
 
 export const isFirebaseConfigured = firebaseConfigDiagnostics.missingKeys.length === 0;
+
+const fallbackProjectId = "fawtara-bootstrap-demo";
+
+const firebaseConfig = isFirebaseConfigured
+  ? rawFirebaseConfig
+  : {
+      apiKey: rawFirebaseConfig.apiKey || "bootstrap-demo-key",
+      authDomain: rawFirebaseConfig.authDomain || `${fallbackProjectId}.firebaseapp.com`,
+      projectId: rawFirebaseConfig.projectId || fallbackProjectId,
+      storageBucket: rawFirebaseConfig.storageBucket || `${fallbackProjectId}.appspot.com`,
+      messagingSenderId: rawFirebaseConfig.messagingSenderId || "000000000000",
+      appId: rawFirebaseConfig.appId || "1:000000000000:web:bootstrapdemo",
+    };
+
+if (!isFirebaseConfigured) {
+  console.warn("Firebase config is incomplete. Running in bootstrap mode.", firebaseConfigDiagnostics.missingKeys);
+}
 
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 export const auth = getAuth(app);
