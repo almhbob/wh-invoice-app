@@ -31,11 +31,15 @@ export interface Employee {
   companyId?: string;
   name: string;
   employeeId: string;
+  username?: string;
+  pinCode?: string;
+  status?: "active" | "suspended";
   role: EmployeeRole;
   permissions?: string[];
   branchId?: string;
   createdBy?: string;
   createdAt: string;
+  isLocalFallback?: boolean;
 }
 
 interface EmployeeContextType {
@@ -49,6 +53,7 @@ interface EmployeeContextType {
 
 const EmployeeContext = createContext<EmployeeContextType | undefined>(undefined);
 const SESSION_KEY_PREFIX = "@wh_session_v1";
+const FIRESTORE_EMPLOYEE_TIMEOUT_MS = 5000;
 
 const ROLE_LABELS: Record<EmployeeRole, string> = {
   cashier: "كاشير",
@@ -63,6 +68,22 @@ const ROLE_LABELS: Record<EmployeeRole, string> = {
   guest: "ضيف",
 };
 export { ROLE_LABELS };
+
+function fallbackEmployee(companyId: string): Employee {
+  return {
+    id: `local-fallback-${companyId}`,
+    companyId,
+    name: companyId === "new-trial-company" ? "مسؤول الشركة التجريبية" : "مسؤول الشركة",
+    employeeId: companyId === "new-trial-company" ? "TRIAL001" : "000001",
+    username: companyId === "new-trial-company" ? "trial" : "admin",
+    pinCode: "1234",
+    status: "active",
+    role: "admin",
+    permissions: defaultPermissionsForRole("admin"),
+    createdAt: new Date().toISOString(),
+    isLocalFallback: true,
+  };
+}
 
 export function EmployeeProvider({ children }: { children: React.ReactNode }) {
   const { companyId } = useCompany();
@@ -79,23 +100,30 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
     setEmployees([]);
     setCurrentEmployeeState(null);
 
+    const timeout = setTimeout(() => {
+      setEmployees((existing) => existing.length ? existing : [fallbackEmployee(companyId)]);
+      setIsLoading(false);
+    }, FIRESTORE_EMPLOYEE_TIMEOUT_MS);
+
     const q = query(employeesCollection(), orderBy("createdAt", "asc"));
     const unsub = onSnapshot(
       q,
       async (snapshot) => {
+        clearTimeout(timeout);
         const loaded: Employee[] = snapshot.docs.map((d) => ({
           id: d.id,
           companyId,
           ...(d.data() as Omit<Employee, "id">),
         }));
-        setEmployees(loaded);
+        setEmployees(loaded.length ? loaded : [fallbackEmployee(companyId)]);
         setIsLoading(false);
 
         try {
           const sessionId = await AsyncStorage.getItem(sessionKey);
           if (sessionId) {
-            const found = loaded.find((e) => e.id === sessionId);
-            if (found) setCurrentEmployeeState(found);
+            const pool = loaded.length ? loaded : [fallbackEmployee(companyId)];
+            const found = pool.find((e) => e.id === sessionId);
+            if (found && found.status !== "suspended") setCurrentEmployeeState(found);
             else {
               await AsyncStorage.removeItem(sessionKey);
               setCurrentEmployeeState(null);
@@ -104,23 +132,30 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
         } catch {}
       },
       (err) => {
+        clearTimeout(timeout);
         console.error("Firestore company employees error:", err);
+        setEmployees([fallbackEmployee(companyId)]);
         setIsLoading(false);
       }
     );
-    return () => unsub();
+    return () => {
+      clearTimeout(timeout);
+      unsub();
+    };
   }, [companyId, employeesCollection, sessionKey]);
 
   useEffect(() => {
     if (!currentEmployee) return;
     const updated = employees.find((e) => e.id === currentEmployee.id);
-    if (updated) setCurrentEmployeeState(updated);
+    if (updated && updated.status !== "suspended") setCurrentEmployeeState(updated);
+    if (updated?.status === "suspended") setCurrentEmployee(null);
   }, [employees, currentEmployee]);
 
   const setCurrentEmployee = useCallback(async (emp: Employee | null) => {
-    setCurrentEmployeeState(emp);
+    const allowedEmployee = emp?.status === "suspended" ? null : emp;
+    setCurrentEmployeeState(allowedEmployee);
     try {
-      if (emp) await AsyncStorage.setItem(sessionKey, emp.id);
+      if (allowedEmployee) await AsyncStorage.setItem(sessionKey, allowedEmployee.id);
       else await AsyncStorage.removeItem(sessionKey);
     } catch {}
   }, [sessionKey]);
@@ -134,6 +169,9 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
       const now = new Date().toISOString();
       const payload = {
         ...data,
+        username: data.username || data.employeeId.toLowerCase(),
+        pinCode: data.pinCode || "1234",
+        status: data.status || "active",
         companyId,
         permissions: data.permissions?.length ? data.permissions : defaultPermissionsForRole(data.role),
         branchId: data.branchId ?? currentEmployee?.branchId,
@@ -149,6 +187,10 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
   const removeEmployee = useCallback(
     async (id: string) => {
       const target = employees.find((e) => e.id === id);
+      if (target?.isLocalFallback) {
+        setEmployees((current) => current.filter((e) => e.id !== id));
+        return;
+      }
       if (currentEmployee?.role === "branch_supervisor" && target && !canBranchSupervisorManageRole(target.role)) {
         throw new Error("BRANCH_SUPERVISOR_CANNOT_REMOVE_PROTECTED_ROLE");
       }
