@@ -5,8 +5,10 @@ import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, Touc
 
 import { Colors } from "@/constants/colors";
 import { DEFAULT_TENANT } from "@/constants/platform";
+import { tenantAccessText } from "@/constants/tenantAccessTranslations";
 import { CompanyTenant, useCompany } from "@/context/CompanyContext";
 import { Employee, useEmployee } from "@/context/EmployeeContext";
+import { useLang } from "@/context/LanguageContext";
 
 const ACCESS_KEY = "@fawtara_access_gate_v1";
 const BOOTSTRAP_USERS_KEY = "@fawtara_bootstrap_users_v1";
@@ -58,6 +60,10 @@ function bootstrapKey(companyId: string) {
 }
 
 export function TenantAccessGate({ children }: { children: React.ReactNode }) {
+  const { lang, isRTL } = useLang();
+  const tx = (key: Parameters<typeof tenantAccessText>[0]) => tenantAccessText(key, lang);
+  const textAlign = isRTL ? "right" : "left";
+  const rowDirection = isRTL ? "row-reverse" : "row";
   const { company, setCompany, switchCompanyById } = useCompany();
   const { employees, currentEmployee, setCurrentEmployee, addEmployee, isLoading } = useEmployee();
   const [ready, setReady] = useState(false);
@@ -99,7 +105,7 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
   }, [unlocked, isLoading, company.id]);
 
   const allUsers = useMemo(() => [...employees, ...localUsers], [employees, localUsers]);
-  const employeeCountLabel = useMemo(() => allUsers.length ? `${allUsers.length} مستخدم` : "لا يوجد مستخدمون", [allUsers.length]);
+  const employeeCountLabel = useMemo(() => allUsers.length ? `${allUsers.length} ${tx("usersCount")}` : tx("noUsers"), [allUsers.length, lang]);
   const shouldShowBootstrapForm = !isLoading || employeeLoadTimedOut || allUsers.length > 0;
 
   const saveLocalUser = async (employee: BootstrapEmployee) => {
@@ -130,13 +136,13 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
 
   const unlockNewTrial = async () => {
     await unlockTenant(NEW_TRIAL_TENANT, NEW_TRIAL_USER);
-    Alert.alert("تم تجهيز الشركة التجريبية", "استخدم اليوزر trial ورمز الدخول 1234 للدخول كتجربة للشركة الجديدة.");
+    Alert.alert(tx("trialReadyTitle"), tx("trialReadyMessage"));
   };
 
   const unlockByCode = async () => {
     const code = companyCode.trim();
     if (!code) {
-      Alert.alert("مطلوب", "أدخل كود الشركة أو اختر الشركة التجريبية.");
+      Alert.alert(tx("requiredTitle"), tx("companyCodeRequired"));
       return;
     }
     await switchCompanyById(code);
@@ -156,7 +162,7 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
     const user = normalize(loginId);
     const pin = loginPin.trim();
     if (!user || !pin) {
-      Alert.alert("مطلوب", "أدخل اليوزر أو الرقم الوظيفي ورمز الدخول.");
+      Alert.alert(tx("requiredTitle"), tx("requiredCredentialsMessage"));
       return;
     }
 
@@ -168,7 +174,7 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
     });
 
     if (!found) {
-      Alert.alert("بيانات غير صحيحة", "لم يتم العثور على مستخدم مطابق داخل هذه الشركة، أو رمز الدخول غير صحيح.");
+      Alert.alert(tx("invalidCredentialsTitle"), tx("invalidCredentialsMessage"));
       return;
     }
 
@@ -177,11 +183,11 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
 
   const createOwner = async () => {
     if (!ownerName.trim()) {
-      Alert.alert("مطلوب", "أدخل اسم المسؤول.");
+      Alert.alert(tx("requiredTitle"), tx("ownerNameRequired"));
       return;
     }
     if (!ownerId.trim() || !ownerPin.trim()) {
-      Alert.alert("مطلوب", "أدخل اليوزر/الرقم الوظيفي ورمز الدخول.");
+      Alert.alert(tx("requiredTitle"), tx("ownerCredentialsRequired"));
       return;
     }
     setSaving(true);
@@ -208,29 +214,26 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
       };
       await saveLocalUser(localOwner);
       await setCurrentEmployee(localOwner);
-      Alert.alert(
-        "تم الدخول مؤقتًا",
-        "تم إنشاء مسؤول محلي مؤقت لأن Firebase Auth/Firestore Rules غير مكتملة. اربط Firebase Auth لاحقًا لحفظ المستخدم في قاعدة البيانات بشكل دائم."
-      );
+      Alert.alert(tx("temporaryLoginTitle"), tx("temporaryLoginMessage"));
     } finally {
       setSaving(false);
     }
   };
 
   if (!ready) {
-    return <View style={styles.center}><ActivityIndicator color={Colors.gold} /><Text style={styles.muted}>جاري التحقق...</Text></View>;
+    return <View style={styles.center}><ActivityIndicator color={Colors.gold} /><Text style={styles.muted}>{tx("checking")}</Text></View>;
   }
 
   if (!unlocked) {
     return (
       <ScrollView contentContainerStyle={styles.screen}>
         <View style={styles.card}>
-          <Text style={styles.title}>دخول الشركة</Text>
-          <Text style={styles.subtitle}>يجب اختيار الشركة قبل فتح النظام حتى لا تختلط بيانات الشركات.</Text>
-          <TextInput style={styles.input} value={companyCode} onChangeText={setCompanyCode} placeholder="كود الشركة" placeholderTextColor={Colors.textMuted} textAlign="right" />
-          <TouchableOpacity style={styles.primaryBtn} onPress={unlockByCode}><Feather name="log-in" size={16} color="#fff" /><Text style={styles.primaryText}>دخول بالكود</Text></TouchableOpacity>
-          <TouchableOpacity style={styles.secondaryBtn} onPress={unlockNewTrial}><Feather name="star" size={16} color={Colors.gold} /><Text style={styles.secondaryText}>إنشاء شركة جديدة تجريبية</Text></TouchableOpacity>
-          <TouchableOpacity style={styles.secondaryBtn} onPress={unlockDemo}><Feather name="briefcase" size={16} color={Colors.gold} /><Text style={styles.secondaryText}>دخول الشركة الحالية / التجريبية</Text></TouchableOpacity>
+          <Text style={styles.title}>{tx("companyLoginTitle")}</Text>
+          <Text style={styles.subtitle}>{tx("companyLoginSubtitle")}</Text>
+          <TextInput style={[styles.input, { textAlign }]} value={companyCode} onChangeText={setCompanyCode} placeholder={tx("companyCodePlaceholder")} placeholderTextColor={Colors.textMuted} />
+          <TouchableOpacity style={[styles.primaryBtn, { flexDirection: rowDirection }]} onPress={unlockByCode}><Feather name="log-in" size={16} color="#fff" /><Text style={styles.primaryText}>{tx("loginByCode")}</Text></TouchableOpacity>
+          <TouchableOpacity style={[styles.secondaryBtn, { flexDirection: rowDirection }]} onPress={unlockNewTrial}><Feather name="star" size={16} color={Colors.gold} /><Text style={styles.secondaryText}>{tx("createTrialCompany")}</Text></TouchableOpacity>
+          <TouchableOpacity style={[styles.secondaryBtn, { flexDirection: rowDirection }]} onPress={unlockDemo}><Feather name="briefcase" size={16} color={Colors.gold} /><Text style={styles.secondaryText}>{tx("openDemoCompany")}</Text></TouchableOpacity>
         </View>
       </ScrollView>
     );
@@ -240,31 +243,31 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
     return (
       <ScrollView contentContainerStyle={styles.screen}>
         <View style={styles.card}>
-          <TouchableOpacity style={styles.switchBtn} onPress={resetCompany}><Text style={styles.switchText}>تغيير الشركة</Text></TouchableOpacity>
-          <Text style={styles.title}>دخول المستخدم</Text>
-          <Text style={styles.subtitle}>الشركة الحالية: {company.name} · {employeeCountLabel}</Text>
+          <TouchableOpacity style={styles.switchBtn} onPress={resetCompany}><Text style={styles.switchText}>{tx("changeCompany")}</Text></TouchableOpacity>
+          <Text style={styles.title}>{tx("employeeLoginTitle")}</Text>
+          <Text style={styles.subtitle}>{tx("currentCompany")}: {company.name} · {employeeCountLabel}</Text>
 
           {!shouldShowBootstrapForm ? (
             <View style={styles.loadingBox}>
               <ActivityIndicator color={Colors.gold} />
-              <Text style={styles.hint}>جاري تحميل مستخدمي الشركة...</Text>
+              <Text style={styles.hint}>{tx("loadingCompanyUsers")}</Text>
             </View>
           ) : allUsers.length > 0 ? (
             <View style={styles.list}>
-              {employeeLoadTimedOut ? <Text style={styles.warningText}>لم يكتمل تحميل Firestore، يمكنك الدخول بمستخدم محلي إن وجد أو تغيير الشركة.</Text> : null}
-              <TextInput style={styles.input} value={loginId} onChangeText={setLoginId} placeholder="اليوزر أو الرقم الوظيفي" placeholderTextColor={Colors.textMuted} textAlign="right" autoCapitalize="none" />
-              <TextInput style={styles.input} value={loginPin} onChangeText={setLoginPin} placeholder="رمز الدخول" placeholderTextColor={Colors.textMuted} textAlign="right" secureTextEntry keyboardType="number-pad" />
-              <TouchableOpacity style={styles.primaryBtn} onPress={loginEmployee}><Feather name="unlock" size={16} color="#fff" /><Text style={styles.primaryText}>دخول المستخدم</Text></TouchableOpacity>
-              <Text style={styles.hint}>لكل موظف يوزر مستقل داخل شركته. افتراضيًا للموظفين القدامى يمكن استخدام الرقم الوظيفي ورمز 1234 حتى يتم تغييره.</Text>
+              {employeeLoadTimedOut ? <Text style={styles.warningText}>{tx("firestoreTimeout")}</Text> : null}
+              <TextInput style={[styles.input, { textAlign }]} value={loginId} onChangeText={setLoginId} placeholder={tx("employeeLoginPlaceholder")} placeholderTextColor={Colors.textMuted} autoCapitalize="none" />
+              <TextInput style={[styles.input, { textAlign }]} value={loginPin} onChangeText={setLoginPin} placeholder={tx("pinPlaceholder")} placeholderTextColor={Colors.textMuted} secureTextEntry keyboardType="number-pad" />
+              <TouchableOpacity style={[styles.primaryBtn, { flexDirection: rowDirection }]} onPress={loginEmployee}><Feather name="unlock" size={16} color="#fff" /><Text style={styles.primaryText}>{tx("employeeLoginButton")}</Text></TouchableOpacity>
+              <Text style={styles.hint}>{tx("employeeLoginHint")}</Text>
             </View>
           ) : (
             <View style={styles.list}>
-              {employeeLoadTimedOut ? <Text style={styles.warningText}>تعذر تحميل المستخدمين من Firestore. يمكنك إنشاء مسؤول محلي مؤقت الآن لإكمال التجربة.</Text> : null}
-              <Text style={styles.subtitle}>لا يوجد مستخدمون لهذه الشركة. أنشئ أول مسؤول بيوزر ورمز دخول.</Text>
-              <TextInput style={styles.input} value={ownerName} onChangeText={setOwnerName} placeholder="اسم المسؤول" placeholderTextColor={Colors.textMuted} textAlign="right" />
-              <TextInput style={styles.input} value={ownerId} onChangeText={setOwnerId} placeholder="يوزر / الرقم الوظيفي" placeholderTextColor={Colors.textMuted} textAlign="right" autoCapitalize="characters" />
-              <TextInput style={styles.input} value={ownerPin} onChangeText={setOwnerPin} placeholder="رمز الدخول" placeholderTextColor={Colors.textMuted} textAlign="right" secureTextEntry keyboardType="number-pad" />
-              <TouchableOpacity style={[styles.primaryBtn, saving && { opacity: 0.6 }]} onPress={createOwner} disabled={saving}><Feather name="user-plus" size={16} color="#fff" /><Text style={styles.primaryText}>{saving ? "جاري الإنشاء..." : "إنشاء المسؤول والدخول"}</Text></TouchableOpacity>
+              {employeeLoadTimedOut ? <Text style={styles.warningText}>{tx("firestoreTimeout")}</Text> : null}
+              <Text style={styles.subtitle}>{tx("createOwnerTitle")}</Text>
+              <TextInput style={[styles.input, { textAlign }]} value={ownerName} onChangeText={setOwnerName} placeholder={tx("ownerNamePlaceholder")} placeholderTextColor={Colors.textMuted} />
+              <TextInput style={[styles.input, { textAlign }]} value={ownerId} onChangeText={setOwnerId} placeholder={tx("ownerIdPlaceholder")} placeholderTextColor={Colors.textMuted} autoCapitalize="characters" />
+              <TextInput style={[styles.input, { textAlign }]} value={ownerPin} onChangeText={setOwnerPin} placeholder={tx("pinPlaceholder")} placeholderTextColor={Colors.textMuted} secureTextEntry keyboardType="number-pad" />
+              <TouchableOpacity style={[styles.primaryBtn, saving && { opacity: 0.6 }, { flexDirection: rowDirection }]} onPress={createOwner} disabled={saving}><Feather name="user-plus" size={16} color="#fff" /><Text style={styles.primaryText}>{saving ? tx("creating") : tx("ownerCreateButton")}</Text></TouchableOpacity>
             </View>
           )}
         </View>
@@ -285,9 +288,9 @@ const styles = StyleSheet.create({
   hint: { fontSize: 11, color: Colors.info, textAlign: "center", lineHeight: 18, fontWeight: "700" },
   warningText: { fontSize: 11, color: Colors.accent, textAlign: "center", lineHeight: 18, fontWeight: "800" },
   input: { minHeight: 48, borderRadius: 14, paddingHorizontal: 14, backgroundColor: "#f8fafc", borderWidth: 1, borderColor: Colors.border, color: Colors.text },
-  primaryBtn: { minHeight: 48, borderRadius: 14, backgroundColor: Colors.primary, flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 8 },
+  primaryBtn: { minHeight: 48, borderRadius: 14, backgroundColor: Colors.primary, alignItems: "center", justifyContent: "center", gap: 8 },
   primaryText: { color: "#fff", fontSize: 14, fontWeight: "900" },
-  secondaryBtn: { minHeight: 48, borderRadius: 14, backgroundColor: Colors.gold + "18", flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 8 },
+  secondaryBtn: { minHeight: 48, borderRadius: 14, backgroundColor: Colors.gold + "18", alignItems: "center", justifyContent: "center", gap: 8 },
   secondaryText: { color: Colors.gold, fontSize: 14, fontWeight: "900" },
   switchBtn: { alignSelf: "flex-start", paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: Colors.accent + "12" },
   switchText: { color: Colors.accent, fontSize: 12, fontWeight: "900" },
