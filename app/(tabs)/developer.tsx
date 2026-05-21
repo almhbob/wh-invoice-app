@@ -11,10 +11,9 @@ import { DeveloperSubscriptionsPanel } from "@/components/DeveloperSubscriptions
 import { ProductionReadinessPanel } from "@/components/ProductionReadinessPanel";
 import { ReleaseStatusPanel } from "@/components/ReleaseStatusPanel";
 import { Colors } from "@/constants/colors";
-import { useEmployee } from "@/context/EmployeeContext";
-import { canAccessDeveloperDashboard } from "@/lib/developerAccess";
 
-const DEVELOPER_UNLOCK_KEY = "@fawtara_developer_unlock_v1";
+const DEVELOPER_UNLOCK_KEY = "@fawtara_developer_code_unlock_v2";
+const LEGACY_DEVELOPER_UNLOCK_KEY = "@fawtara_developer_unlock_v1";
 const OWNER_DEVELOPER_CODE = "Almhbob2013#";
 
 function AccessDenied({ onUnlock }: { onUnlock: () => void }) {
@@ -25,6 +24,7 @@ function AccessDenied({ onUnlock }: { onUnlock: () => void }) {
       Alert.alert("رمز غير صحيح", "رمز قسم المطور غير صحيح.");
       return;
     }
+    setCode("");
     onUnlock();
   };
 
@@ -34,7 +34,7 @@ function AccessDenied({ onUnlock }: { onUnlock: () => void }) {
         <Feather name="lock" size={24} color={Colors.accent} />
       </View>
       <Text style={styles.deniedTitle}>قسم المطور مغلق</Text>
-      <Text style={styles.deniedText}>هذه اللوحة مخصصة لمالك النظام فقط. أدخل رمز المطور لفتح أدوات الخوادم والاشتراكات والإعدادات الحساسة.</Text>
+      <Text style={styles.deniedText}>أدخل رمز المطور لفتح أدوات الخوادم والاشتراكات والإعدادات الحساسة.</Text>
       <TextInput
         style={styles.codeInput}
         value={code}
@@ -51,19 +51,17 @@ function AccessDenied({ onUnlock }: { onUnlock: () => void }) {
         <Feather name="unlock" size={16} color="#fff" />
         <Text style={styles.unlockText}>فتح قسم المطور</Text>
       </TouchableOpacity>
-      <Text style={styles.deniedHint}>لن يُفتح القسم إلا بعد إدخال الرمز الصحيح أو منح صلاحية مطور إنتاجية لاحقًا.</Text>
+      <Text style={styles.deniedHint}>لا يعتمد الفتح على صلاحية الموظف وحدها. الرمز مطلوب لهذا القسم.</Text>
     </View>
   );
 }
 
 export default function DeveloperScreen() {
   const insets = useSafeAreaInsets();
-  const { currentEmployee } = useEmployee();
   const [codeUnlocked, setCodeUnlocked] = useState(false);
-  const allowedByRole = canAccessDeveloperDashboard(currentEmployee as any);
-  const allowed = allowedByRole || codeUnlocked;
 
   useEffect(() => {
+    AsyncStorage.removeItem(LEGACY_DEVELOPER_UNLOCK_KEY).catch(() => undefined);
     AsyncStorage.getItem(DEVELOPER_UNLOCK_KEY)
       .then((value) => setCodeUnlocked(value === "1"))
       .catch(() => setCodeUnlocked(false));
@@ -77,6 +75,7 @@ export default function DeveloperScreen() {
   const lockDeveloperSection = async () => {
     setCodeUnlocked(false);
     await AsyncStorage.removeItem(DEVELOPER_UNLOCK_KEY);
+    await AsyncStorage.removeItem(LEGACY_DEVELOPER_UNLOCK_KEY);
   };
 
   return (
@@ -85,7 +84,7 @@ export default function DeveloperScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 120 }]}
         showsVerticalScrollIndicator={false}
       >
-        {allowed ? (
+        {codeUnlocked ? (
           <>
             <TouchableOpacity style={styles.lockBtn} onPress={lockDeveloperSection} activeOpacity={0.85}>
               <Feather name="lock" size={14} color={Colors.accent} />
