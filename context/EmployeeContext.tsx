@@ -39,6 +39,7 @@ export interface Employee {
   branchId?: string;
   createdBy?: string;
   createdAt: string;
+  lastLoginAt?: string;
   isLocalFallback?: boolean;
 }
 
@@ -81,6 +82,7 @@ function fallbackEmployee(companyId: string): Employee {
     role: "admin",
     permissions: defaultPermissionsForRole("admin"),
     createdAt: new Date().toISOString(),
+    lastLoginAt: undefined,
     isLocalFallback: true,
   };
 }
@@ -153,9 +155,10 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
 
   const setCurrentEmployee = useCallback(async (emp: Employee | null) => {
     const allowedEmployee = emp?.status === "suspended" ? null : emp;
-    setCurrentEmployeeState(allowedEmployee);
+    const withLoginTime = allowedEmployee ? { ...allowedEmployee, lastLoginAt: new Date().toISOString() } : null;
+    setCurrentEmployeeState(withLoginTime);
     try {
-      if (allowedEmployee) await AsyncStorage.setItem(sessionKey, allowedEmployee.id);
+      if (withLoginTime) await AsyncStorage.setItem(sessionKey, withLoginTime.id);
       else await AsyncStorage.removeItem(sessionKey);
     } catch {}
   }, [sessionKey]);
@@ -177,6 +180,7 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
         branchId: data.branchId ?? currentEmployee?.branchId,
         createdBy: data.createdBy ?? currentEmployee?.employeeId,
         createdAt: now,
+        lastLoginAt: data.lastLoginAt,
       };
       const ref = await addDoc(employeesCollection(), payload);
       return { id: ref.id, ...payload };
