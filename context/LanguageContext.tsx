@@ -6,12 +6,18 @@ import React, {
   useEffect,
   useState,
 } from "react";
-import { I18nManager } from "react-native";
+import { I18nManager, Platform } from "react-native";
 
 import { Lang, TranslationKey, roleLabel, t as translate } from "@/constants/translations";
 
 const LANGS: Lang[] = ["ar", "en", "ur", "hi", "bn"];
-const LANG_LABELS: Record<Lang, string> = { ar: "ع", en: "EN", ur: "اردو", hi: "हि", bn: "বাং" };
+const LANG_LABELS: Record<Lang, string> = {
+  ar: "العربية",
+  en: "English",
+  ur: "اردو",
+  hi: "हिंदी",
+  bn: "বাংলা",
+};
 
 interface LanguageContextType {
   lang: Lang;
@@ -23,11 +29,24 @@ interface LanguageContextType {
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
-
 const STORAGE_KEY = "@wh_language_v2";
+
+function isRTLForLang(lang: Lang) {
+  return lang === "ar" || lang === "ur";
+}
+
+function applyWebDirection(lang: Lang, isRTL: boolean) {
+  if (Platform.OS !== "web") return;
+  const doc = (globalThis as any).document;
+  if (!doc?.documentElement) return;
+  doc.documentElement.lang = lang;
+  doc.documentElement.dir = isRTL ? "rtl" : "ltr";
+  doc.body?.setAttribute("dir", isRTL ? "rtl" : "ltr");
+}
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [lang, setLang] = useState<Lang>("ar");
+  const isRTL = isRTLForLang(lang);
 
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY).then((stored) => {
@@ -35,26 +54,23 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  useEffect(() => {
+    I18nManager.allowRTL(true);
+    I18nManager.forceRTL(isRTL);
+    applyWebDirection(lang, isRTL);
+  }, [lang, isRTL]);
+
   const toggleLang = useCallback(() => {
     setLang((prev) => {
       const idx = LANGS.indexOf(prev);
       const next = LANGS[(idx + 1) % LANGS.length];
-      AsyncStorage.setItem(STORAGE_KEY, next);
+      AsyncStorage.setItem(STORAGE_KEY, next).catch(() => undefined);
       return next;
     });
   }, []);
 
-  const t = useCallback(
-    (key: TranslationKey) => translate(key, lang),
-    [lang]
-  );
-
-  const rl = useCallback(
-    (role: string) => roleLabel(role, lang),
-    [lang]
-  );
-
-  const isRTL = lang === "ar" || lang === "ur";
+  const t = useCallback((key: TranslationKey) => translate(key, lang), [lang]);
+  const rl = useCallback((role: string) => roleLabel(role, lang), [lang]);
 
   return (
     <LanguageContext.Provider value={{ lang, toggleLang, t, rl, isRTL, langLabel: LANG_LABELS[lang] }}>
