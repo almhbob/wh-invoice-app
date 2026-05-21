@@ -9,8 +9,9 @@ export default function Root({ children }: PropsWithChildren) {
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
         <meta
           name="viewport"
-          content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover"
+          content="width=device-width, initial-scale=1, maximum-scale=1, shrink-to-fit=no, viewport-fit=cover"
         />
+        <meta name="theme-color" content="#14213d" />
         <ScrollViewStyleReset />
         <style
           dangerouslySetInnerHTML={{
@@ -18,12 +19,43 @@ export default function Root({ children }: PropsWithChildren) {
               html,
               body,
               #root {
+                width: 100%;
+                min-width: 320px;
                 min-height: 100%;
+                margin: 0;
                 background: #f6f8fb;
+                -webkit-text-size-adjust: 100%;
+                text-size-adjust: 100%;
               }
 
               body {
                 overscroll-behavior-y: contain;
+                touch-action: manipulation;
+              }
+
+              * {
+                box-sizing: border-box;
+              }
+
+              input,
+              textarea,
+              select,
+              button {
+                font: inherit;
+              }
+
+              @media (min-width: 900px) {
+                body {
+                  background: radial-gradient(circle at top, #ffffff 0, #f6f8fb 42%, #edf2f7 100%);
+                }
+              }
+
+              @media (max-width: 420px) {
+                html,
+                body,
+                #root {
+                  min-width: 0;
+                }
               }
 
               /* Expo / React Native Web scroll containers */
@@ -36,7 +68,6 @@ export default function Root({ children }: PropsWithChildren) {
                 overscroll-behavior-y: contain !important;
               }
 
-              /* Direct fix for CashierScreen web paddingBottom: 34 */
               div[style*="padding-bottom: 34px"],
               div[style*="padding-bottom:34px"],
               div[style*="paddingBottom: 34"],
