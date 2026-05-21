@@ -1,6 +1,5 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Feather } from "@expo/vector-icons";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -12,8 +11,6 @@ import { ProductionReadinessPanel } from "@/components/ProductionReadinessPanel"
 import { ReleaseStatusPanel } from "@/components/ReleaseStatusPanel";
 import { Colors } from "@/constants/colors";
 
-const DEVELOPER_UNLOCK_KEY = "@fawtara_developer_code_unlock_v2";
-const LEGACY_DEVELOPER_UNLOCK_KEY = "@fawtara_developer_unlock_v1";
 const OWNER_DEVELOPER_CODE = "Almhbob2013#";
 
 function AccessDenied({ onUnlock }: { onUnlock: () => void }) {
@@ -51,7 +48,7 @@ function AccessDenied({ onUnlock }: { onUnlock: () => void }) {
         <Feather name="unlock" size={16} color="#fff" />
         <Text style={styles.unlockText}>فتح قسم المطور</Text>
       </TouchableOpacity>
-      <Text style={styles.deniedHint}>لا يعتمد الفتح على صلاحية الموظف وحدها. الرمز مطلوب لهذا القسم.</Text>
+      <Text style={styles.deniedHint}>لا يعتمد الفتح على صلاحية الموظف ولا يُحفظ بعد تحديث الصفحة.</Text>
     </View>
   );
 }
@@ -59,24 +56,6 @@ function AccessDenied({ onUnlock }: { onUnlock: () => void }) {
 export default function DeveloperScreen() {
   const insets = useSafeAreaInsets();
   const [codeUnlocked, setCodeUnlocked] = useState(false);
-
-  useEffect(() => {
-    AsyncStorage.removeItem(LEGACY_DEVELOPER_UNLOCK_KEY).catch(() => undefined);
-    AsyncStorage.getItem(DEVELOPER_UNLOCK_KEY)
-      .then((value) => setCodeUnlocked(value === "1"))
-      .catch(() => setCodeUnlocked(false));
-  }, []);
-
-  const unlockWithCode = async () => {
-    setCodeUnlocked(true);
-    await AsyncStorage.setItem(DEVELOPER_UNLOCK_KEY, "1");
-  };
-
-  const lockDeveloperSection = async () => {
-    setCodeUnlocked(false);
-    await AsyncStorage.removeItem(DEVELOPER_UNLOCK_KEY);
-    await AsyncStorage.removeItem(LEGACY_DEVELOPER_UNLOCK_KEY);
-  };
 
   return (
     <View style={styles.container}>
@@ -86,7 +65,7 @@ export default function DeveloperScreen() {
       >
         {codeUnlocked ? (
           <>
-            <TouchableOpacity style={styles.lockBtn} onPress={lockDeveloperSection} activeOpacity={0.85}>
+            <TouchableOpacity style={styles.lockBtn} onPress={() => setCodeUnlocked(false)} activeOpacity={0.85}>
               <Feather name="lock" size={14} color={Colors.accent} />
               <Text style={styles.lockText}>إغلاق قسم المطور</Text>
             </TouchableOpacity>
@@ -98,7 +77,7 @@ export default function DeveloperScreen() {
             <CompanySubscriptionsPanel />
           </>
         ) : (
-          <AccessDenied onUnlock={unlockWithCode} />
+          <AccessDenied onUnlock={() => setCodeUnlocked(true)} />
         )}
       </ScrollView>
     </View>
