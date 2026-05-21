@@ -54,6 +54,7 @@ interface EmployeeContextType {
 
 const EmployeeContext = createContext<EmployeeContextType | undefined>(undefined);
 const SESSION_KEY_PREFIX = "@wh_session_v1";
+const SESSION_EMPLOYEE_KEY_PREFIX = "@wh_session_employee_v1";
 const FIRESTORE_EMPLOYEE_TIMEOUT_MS = 5000;
 
 const ROLE_LABELS: Record<EmployeeRole, string> = {
@@ -87,6 +88,12 @@ function fallbackEmployee(companyId: string): Employee {
   };
 }
 
+function mergeSessionIntoEmployees(employees: Employee[], sessionEmployee: Employee | null): Employee[] {
+  if (!sessionEmployee || sessionEmployee.status === "suspended") return employees;
+  const exists = employees.some((emp) => emp.id === sessionEmployee.id);
+  return exists ? employees : [sessionEmployee, ...employees];
+}
+
 export function EmployeeProvider({ children }: { children: React.ReactNode }) {
   const { companyId } = useCompany();
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -96,14 +103,36 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
   const employeesCollection = useCallback(() => collection(db, "companies", companyId, "employees"), [companyId]);
   const employeeDoc = useCallback((id: string) => doc(db, "companies", companyId, "employees", id), [companyId]);
   const sessionKey = `${SESSION_KEY_PREFIX}_${companyId}`;
+  const sessionEmployeeKey = `${SESSION_EMPLOYEE_KEY_PREFIX}_${companyId}`;
 
   useEffect(() => {
+    let mounted = true;
     setIsLoading(true);
     setEmployees([]);
-    setCurrentEmployeeState(null);
 
-    const timeout = setTimeout(() => {
-      setEmployees((existing) => existing.length ? existing : [fallbackEmployee(companyId)]);
+    async function restoreSessionSnapshot() {
+      try {
+        const raw = await AsyncStorage.getItem(sessionEmployeeKey);
+        if (!mounted || !raw) return null;
+        const parsed = JSON.parse(raw) as Employee;
+        if (parsed?.status === "suspended") return null;
+        setCurrentEmployeeState(parsed);
+        setEmployees((existing) => mergeSessionIntoEmployees(existing, parsed));
+        return parsed;
+      } catch {
+        return null;
+      }
+    }
+
+    const restoredPromise = restoreSessionSnapshot();
+
+    const timeout = setTimeout(async () => {
+      const restored = await restoredPromise;
+      if (!mounted) return;
+      setEmployees((existing) => {
+        const base = existing.length ? existing : [fallbackEmployee(companyId)];
+        return mergeSessionIntoEmployees(base, restored);
+      });
       setIsLoading(false);
     }, FIRESTORE_EMPLOYEE_TIMEOUT_MS);
 
@@ -112,39 +141,48 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
       q,
       async (snapshot) => {
         clearTimeout(timeout);
+        const restored = await restoredPromise;
+        if (!mounted) return;
         const loaded: Employee[] = snapshot.docs.map((d) => ({
           id: d.id,
           companyId,
           ...(d.data() as Omit<Employee, "id">),
         }));
-        setEmployees(loaded.length ? loaded : [fallbackEmployee(companyId)]);
+        const base = loaded.length ? loaded : [fallbackEmployee(companyId)];
+        const withSession = mergeSessionIntoEmployees(base, restored);
+        setEmployees(withSession);
         setIsLoading(false);
 
         try {
           const sessionId = await AsyncStorage.getItem(sessionKey);
           if (sessionId) {
-            const pool = loaded.length ? loaded : [fallbackEmployee(companyId)];
-            const found = pool.find((e) => e.id === sessionId);
-            if (found && found.status !== "suspended") setCurrentEmployeeState(found);
-            else {
+            const found = withSession.find((e) => e.id === sessionId) || restored;
+            if (found && found.status !== "suspended") {
+              setCurrentEmployeeState(found);
+            } else {
               await AsyncStorage.removeItem(sessionKey);
+              await AsyncStorage.removeItem(sessionEmployeeKey);
               setCurrentEmployeeState(null);
             }
           }
         } catch {}
       },
-      (err) => {
+      async (err) => {
         clearTimeout(timeout);
         console.error("Firestore company employees error:", err);
-        setEmployees([fallbackEmployee(companyId)]);
+        const restored = await restoredPromise;
+        if (!mounted) return;
+        setEmployees(mergeSessionIntoEmployees([fallbackEmployee(companyId)], restored));
+        if (restored) setCurrentEmployeeState(restored);
         setIsLoading(false);
       }
     );
     return () => {
+      mounted = false;
       clearTimeout(timeout);
       unsub();
     };
-  }, [companyId, employeesCollection, sessionKey]);
+  }, [companyId, employeesCollection, sessionKey, sessionEmployeeKey]);
 
   useEffect(() => {
     if (!currentEmployee) return;
@@ -157,11 +195,19 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
     const allowedEmployee = emp?.status === "suspended" ? null : emp;
     const withLoginTime = allowedEmployee ? { ...allowedEmployee, lastLoginAt: new Date().toISOString() } : null;
     setCurrentEmployeeState(withLoginTime);
+    if (withLoginTime) {
+      setEmployees((existing) => mergeSessionIntoEmployees(existing, withLoginTime));
+    }
     try {
-      if (withLoginTime) await AsyncStorage.setItem(sessionKey, withLoginTime.id);
-      else await AsyncStorage.removeItem(sessionKey);
+      if (withLoginTime) {
+        await AsyncStorage.setItem(sessionKey, withLoginTime.id);
+        await AsyncStorage.setItem(sessionEmployeeKey, JSON.stringify(withLoginTime));
+      } else {
+        await AsyncStorage.removeItem(sessionKey);
+        await AsyncStorage.removeItem(sessionEmployeeKey);
+      }
     } catch {}
-  }, [sessionKey]);
+  }, [sessionKey, sessionEmployeeKey]);
 
   const addEmployee = useCallback(
     async (data: Omit<Employee, "id" | "createdAt" | "companyId">): Promise<Employee> => {
