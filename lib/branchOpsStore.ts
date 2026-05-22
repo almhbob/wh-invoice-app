@@ -3,15 +3,15 @@ import { addDoc, collection, doc, updateDoc } from "firebase/firestore";
 
 import { db } from "@/lib/firebase";
 
-type BranchOpsCollection = "branchProductionRequests" | "branchInventoryAudits";
+export type BranchOpsCollection = "branchProductionRequests" | "branchInventoryAudits";
+export type BranchOpsSyncStatus = "local" | "synced" | "sync_failed";
 
-interface BranchOpsRecord {
+export interface BranchOpsBaseRecord {
   id: string;
   companyId: string;
   createdAt?: string;
   syncedAt?: string;
-  syncStatus?: "local" | "synced" | "sync_failed";
-  [key: string]: unknown;
+  syncStatus?: BranchOpsSyncStatus;
 }
 
 function localStorageKey(prefix: string, companyId: string) {
@@ -22,16 +22,16 @@ function collectionRef(companyId: string, collectionName: BranchOpsCollection) {
   return collection(db, "companies", companyId, collectionName);
 }
 
-export async function loadLocalBranchOps<T extends BranchOpsRecord>(prefix: string, companyId: string): Promise<T[]> {
+export async function loadLocalBranchOps<T extends BranchOpsBaseRecord>(prefix: string, companyId: string): Promise<T[]> {
   const raw = await AsyncStorage.getItem(localStorageKey(prefix, companyId));
   return raw ? JSON.parse(raw) : [];
 }
 
-export async function saveLocalBranchOps<T extends BranchOpsRecord>(prefix: string, companyId: string, records: T[]) {
+export async function saveLocalBranchOps<T extends BranchOpsBaseRecord>(prefix: string, companyId: string, records: T[]) {
   await AsyncStorage.setItem(localStorageKey(prefix, companyId), JSON.stringify(records));
 }
 
-export async function saveBranchOpsRecord<T extends BranchOpsRecord>(params: {
+export async function saveBranchOpsRecord<T extends BranchOpsBaseRecord>(params: {
   prefix: string;
   collectionName: BranchOpsCollection;
   companyId: string;
@@ -40,7 +40,7 @@ export async function saveBranchOpsRecord<T extends BranchOpsRecord>(params: {
   limit?: number;
 }) {
   const { prefix, collectionName, companyId, record, existingRecords, limit = 60 } = params;
-  const localRecord = { ...record, syncStatus: "local" as const };
+  const localRecord = { ...record, syncStatus: "local" as const } as T;
   const localRecords = [localRecord, ...existingRecords].slice(0, limit) as T[];
   await saveLocalBranchOps(prefix, companyId, localRecords);
 
@@ -64,7 +64,7 @@ export async function saveBranchOpsRecord<T extends BranchOpsRecord>(params: {
   }
 }
 
-export async function updateBranchOpsRecordStatus<T extends BranchOpsRecord>(params: {
+export async function updateBranchOpsRecordStatus<T extends BranchOpsBaseRecord>(params: {
   prefix: string;
   collectionName: BranchOpsCollection;
   companyId: string;
