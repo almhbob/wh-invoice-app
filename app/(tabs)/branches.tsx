@@ -8,6 +8,7 @@ import { BranchOperationsSyncPanel } from "@/components/BranchOperationsSyncPane
 import { BranchProductionReceivingPanel } from "@/components/BranchProductionReceivingPanel";
 import { BranchReturnsDamagePanel } from "@/components/BranchReturnsDamagePanel";
 import { BranchSupervisorPanel } from "@/components/BranchSupervisorPanel";
+import { BranchWorkflowGuidePanel } from "@/components/BranchWorkflowGuidePanel";
 import { EnterpriseOpsPanel } from "@/components/EnterpriseOpsPanel";
 import { Colors } from "@/constants/colors";
 
@@ -20,6 +21,7 @@ export default function BranchesScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 120 }]}
         showsVerticalScrollIndicator={false}
       >
+        <BranchWorkflowGuidePanel />
         <BranchOperationsSyncPanel />
         <BranchDailyProductionRequestPanel />
         <BranchProductionReceivingPanel />
