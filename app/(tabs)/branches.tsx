@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BranchDailyProductionRequestPanel } from "@/components/BranchDailyProductionRequestPanel";
 import { BranchInventoryAuditPanel } from "@/components/BranchInventoryAuditPanel";
 import { BranchOperationsSyncPanel } from "@/components/BranchOperationsSyncPanel";
+import { BranchProductionReceivingPanel } from "@/components/BranchProductionReceivingPanel";
 import { BranchReturnsDamagePanel } from "@/components/BranchReturnsDamagePanel";
 import { BranchSupervisorPanel } from "@/components/BranchSupervisorPanel";
 import { EnterpriseOpsPanel } from "@/components/EnterpriseOpsPanel";
@@ -21,6 +22,7 @@ export default function BranchesScreen() {
       >
         <BranchOperationsSyncPanel />
         <BranchDailyProductionRequestPanel />
+        <BranchProductionReceivingPanel />
         <BranchInventoryAuditPanel />
         <EnterpriseOpsPanel />
         <BranchSupervisorPanel />
