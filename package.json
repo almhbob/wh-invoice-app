@@ -1,14 +1,14 @@
 {
   "name": "wh-invoice-app",
-  "version": "1.0.0",
+  "version": "1.0.1-no-cache",
   "private": true,
   "packageManager": "pnpm@9.15.4",
   "main": "expo-router/entry",
   "scripts": {
     "dev": "npx expo start --clear",
     "build": "node scripts/build.js",
-    "start": "node server/serve.js",
-    "serve": "node server/serve.js",
+    "start": "node server/serve-no-cache.js",
+    "serve": "node server/serve-no-cache.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "audit:project": "node scripts/audit.js",
     "validate": "pnpm run typecheck && pnpm run audit:project",
