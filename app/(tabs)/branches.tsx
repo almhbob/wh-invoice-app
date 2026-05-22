@@ -2,6 +2,7 @@ import React from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { BranchDailyProductionRequestPanel } from "@/components/BranchDailyProductionRequestPanel";
 import { BranchReturnsDamagePanel } from "@/components/BranchReturnsDamagePanel";
 import { BranchSupervisorPanel } from "@/components/BranchSupervisorPanel";
 import { EnterpriseOpsPanel } from "@/components/EnterpriseOpsPanel";
@@ -16,6 +17,7 @@ export default function BranchesScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 120 }]}
         showsVerticalScrollIndicator={false}
       >
+        <BranchDailyProductionRequestPanel />
         <EnterpriseOpsPanel />
         <BranchSupervisorPanel />
         <BranchReturnsDamagePanel />
