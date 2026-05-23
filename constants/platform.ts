@@ -5,9 +5,9 @@ export const PLATFORM_OWNER = {
 };
 
 export const DEFAULT_TENANT = {
-  id: "wh-cake-chocolate",
-  name: "W&H Cake & Chocolate",
-  slug: "wh-cake-chocolate",
+  id: "select-company",
+  name: "اختر الشركة",
+  slug: "select-company",
 };
 
 export const TENANT_ROLES = {
