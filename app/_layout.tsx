@@ -14,6 +14,7 @@ import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { StrictTenantBoundary } from "@/components/StrictTenantBoundary";
 import { TenantAccessGate } from "@/components/TenantAccessGate";
 import { CompanyProvider } from "@/context/CompanyContext";
 import { EmployeeProvider } from "@/context/EmployeeContext";
@@ -32,11 +33,13 @@ const FONT_LOAD_FAILSAFE_MS = 2500;
 
 function RootLayoutNav() {
   return (
-    <TenantAccessGate>
-      <Stack screenOptions={{ headerBackTitle: "Back" }}>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      </Stack>
-    </TenantAccessGate>
+    <StrictTenantBoundary>
+      <TenantAccessGate>
+        <Stack screenOptions={{ headerBackTitle: "Back" }}>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        </Stack>
+      </TenantAccessGate>
+    </StrictTenantBoundary>
   );
 }
 
