@@ -72,12 +72,30 @@ const ROLE_LABELS: Record<EmployeeRole, string> = {
 export { ROLE_LABELS };
 
 function fallbackEmployee(companyId: string): Employee {
+  const fallbackByCompany: Record<string, { name: string; employeeId: string; username: string }> = {
+    "new-trial-company": {
+      name: "مسؤول الشركة التجريبية",
+      employeeId: "TRIAL001",
+      username: "trial",
+    },
+    "laviviane-trial": {
+      name: "مسؤول شركة Laviviane",
+      employeeId: "LAVI001",
+      username: "laviviane",
+    },
+  };
+  const fallback = fallbackByCompany[companyId] ?? {
+    name: "مسؤول الشركة",
+    employeeId: "000001",
+    username: "admin",
+  };
+
   return {
     id: `local-fallback-${companyId}`,
     companyId,
-    name: companyId === "new-trial-company" ? "مسؤول الشركة التجريبية" : "مسؤول الشركة",
-    employeeId: companyId === "new-trial-company" ? "TRIAL001" : "000001",
-    username: companyId === "new-trial-company" ? "trial" : "admin",
+    name: fallback.name,
+    employeeId: fallback.employeeId,
+    username: fallback.username,
     pinCode: "1234",
     status: "active",
     role: "admin",
