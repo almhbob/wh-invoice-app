@@ -41,15 +41,44 @@ interface ProductsContextType {
 
 const ProductsContext = createContext<ProductsContextType | undefined>(undefined);
 
+const DEPARTMENT_ORDER: ProductDept[] = ["cake", "halwa", "mawali", "chocolate"];
+const CATEGORY_ORDER = [
+  "New Cake Collection",
+  "Laviviane Cakes",
+  "Celebration Bites",
+  "Mousse Cake",
+  "Laviviane Bites",
+  "Sandwich",
+  "Luxury Chocolate",
+  "Occasion Chocolate",
+  "Distributions and Gifts",
+];
+
+function orderIndex(list: readonly string[], value?: string) {
+  const index = list.indexOf(value ?? "");
+  return index === -1 ? 999 : index;
+}
+
+function normalizeName(value?: string) {
+  return (value ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+}
+
 function clean(data: Record<string, unknown>) {
   return Object.fromEntries(Object.entries(data).filter(([, value]) => value !== undefined));
 }
 
 function sortProducts(items: Product[]) {
-  return items.sort((a, b) => {
-    if (a.department !== b.department) return a.department.localeCompare(b.department);
-    if ((a.category ?? "") !== (b.category ?? "")) return (a.category ?? "").localeCompare(b.category ?? "");
-    return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+  return [...items].sort((a, b) => {
+    const deptDiff = orderIndex(DEPARTMENT_ORDER, a.department) - orderIndex(DEPARTMENT_ORDER, b.department);
+    if (deptDiff !== 0) return deptDiff;
+
+    const categoryDiff = orderIndex(CATEGORY_ORDER, a.category) - orderIndex(CATEGORY_ORDER, b.category);
+    if (categoryDiff !== 0) return categoryDiff;
+
+    const sortDiff = (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
+    if (sortDiff !== 0) return sortDiff;
+
+    return normalizeName(a.name).localeCompare(normalizeName(b.name));
   });
 }
 
