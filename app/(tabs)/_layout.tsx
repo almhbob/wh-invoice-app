@@ -18,7 +18,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { EmployeeSelectorModal } from "@/components/EmployeeSelectorModal";
 import { Colors } from "@/constants/colors";
-import { DEFAULT_TENANT, PLATFORM_OWNER } from "@/constants/platform";
+import { PLATFORM_OWNER } from "@/constants/platform";
+import { useCompany } from "@/context/CompanyContext";
 import { useEmployee } from "@/context/EmployeeContext";
 import { useLang } from "@/context/LanguageContext";
 
@@ -33,6 +34,23 @@ const ROLE_COLORS: Record<string, string> = {
   branch_supervisor: "#0d9488",
   dept_supervisor: "#0891b2",
   guest: Colors.textMuted,
+};
+
+const TENANT_BRANDS: Record<string, { name: string; subtitle: string; logoText: string; primary: string; accent: string }> = {
+  "laviviane-trial": {
+    name: "Laviviane",
+    subtitle: "Maison de Patisserie",
+    logoText: "L",
+    primary: "#2f241d",
+    accent: "#d6b56d",
+  },
+  "select-company": {
+    name: PLATFORM_OWNER.nameAr,
+    subtitle: PLATFORM_OWNER.nameEn,
+    logoText: "ف",
+    primary: Colors.primary,
+    accent: Colors.gold,
+  },
 };
 
 interface LogoHeaderProps {
@@ -51,23 +69,41 @@ function FawtaraMark() {
   );
 }
 
+function TenantLogoMark({ logoText, primary, accent }: { logoText: string; primary: string; accent: string }) {
+  if (logoText === "ف") return <FawtaraMark />;
+  return (
+    <View style={[styles.tenantLogoMark, { borderColor: accent + "80", backgroundColor: primary }]}> 
+      <Text style={[styles.tenantLogoText, { color: accent }]}>{logoText}</Text>
+      <View style={[styles.tenantLogoLine, { backgroundColor: accent }]} />
+    </View>
+  );
+}
+
 function LogoHeader({ titleKey, accentColor }: LogoHeaderProps) {
   const insets = useSafeAreaInsets();
   const topInset = Platform.OS === "web" ? 0 : insets.top;
+  const { company } = useCompany();
   const { currentEmployee } = useEmployee();
   const { lang, toggleLang, t } = useLang();
   const [showSelector, setShowSelector] = useState(false);
   const isRTL = lang === "ar" || lang === "ur";
   const LANG_NEXT: Record<string, string> = { ar: "EN", en: "اردو", ur: "हि", hi: "ع" };
+  const tenantBrand = TENANT_BRANDS[company.id] ?? {
+    name: company.name || PLATFORM_OWNER.nameAr,
+    subtitle: company.slug || PLATFORM_OWNER.nameEn,
+    logoText: (company.name || PLATFORM_OWNER.nameAr).trim().charAt(0),
+    primary: Colors.primary,
+    accent: Colors.gold,
+  };
 
   return (
     <>
       <View style={[styles.headerContainer, { paddingTop: topInset }]}>
         <View style={[styles.headerInner, isRTL ? styles.rowRTL : styles.rowLTR]}>
-          <View style={styles.logoBox}><FawtaraMark /></View>
+          <View style={styles.logoBox}><TenantLogoMark logoText={tenantBrand.logoText} primary={tenantBrand.primary} accent={tenantBrand.accent} /></View>
           <View style={styles.brandBlock}>
-            <Text style={styles.brandName}>{PLATFORM_OWNER.nameAr}</Text>
-            <Text style={styles.brandSub}>{PLATFORM_OWNER.nameEn} · {DEFAULT_TENANT.name}</Text>
+            <Text style={styles.brandName}>{tenantBrand.name}</Text>
+            <Text style={styles.brandSub}>{PLATFORM_OWNER.nameEn} · {tenantBrand.subtitle}</Text>
           </View>
           <View style={{ flex: 1 }} />
           <TouchableOpacity style={styles.langBtn} onPress={toggleLang} activeOpacity={0.75}>
@@ -240,6 +276,9 @@ const styles = StyleSheet.create({
   markBlueFoot: { position: "absolute", left: 0, bottom: 0, width: 22, height: 12, backgroundColor: "#132446" },
   markGoldTop: { position: "absolute", right: 0, top: 0, width: 24, height: 9, backgroundColor: "#c79a35" },
   markGoldMid: { position: "absolute", right: 6, top: 13, width: 18, height: 9, backgroundColor: "#c79a35" },
+  tenantLogoMark: { width: 38, height: 38, borderRadius: 10, borderWidth: 1.5, alignItems: "center", justifyContent: "center" },
+  tenantLogoText: { fontSize: 22, fontWeight: "900", fontFamily: Platform.OS === "ios" ? "Georgia" : "serif" },
+  tenantLogoLine: { width: 18, height: 2, borderRadius: 2, marginTop: 1 },
   logoText: { color: Colors.primary, fontSize: 12, fontWeight: "900", letterSpacing: 0.5 },
   brandBlock: { gap: 1 },
   brandName: { color: Colors.gold, fontSize: 16, fontWeight: "900", letterSpacing: 0.3, fontFamily: Platform.OS === "ios" ? "Georgia" : "serif" },
