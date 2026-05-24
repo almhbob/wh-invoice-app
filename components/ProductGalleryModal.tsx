@@ -16,6 +16,8 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Colors } from "@/constants/colors";
+import { LAVIVIANE_COMPANY_ID, buildLavivianeProducts } from "@/constants/lavivianeProducts";
+import { useCompany } from "@/context/CompanyContext";
 import { useLang } from "@/context/LanguageContext";
 import { Department, OrderItem } from "@/context/OrdersContext";
 import { Product, useProducts } from "@/context/ProductsContext";
@@ -40,6 +42,10 @@ function makeOrderItemId() {
 
 function formatPrice(value: number, lang: string) {
   return `${value.toFixed(2)} ${lang === "ar" ? "ر.س" : "SAR"}`;
+}
+
+function isLavivianeTenant(company: { id?: string; slug?: string; name?: string }) {
+  return company.id === LAVIVIANE_COMPANY_ID || company.slug === LAVIVIANE_COMPANY_ID || /laviviane/i.test(company.name ?? "");
 }
 
 function ProductCard({
@@ -151,6 +157,7 @@ export function ProductGalleryModal({ visible, onClose, onConfirm }: Props) {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const { products } = useProducts();
+  const { company } = useCompany();
   const { lang } = useLang();
   const [search, setSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState<Department | "all">("all");
@@ -158,18 +165,24 @@ export function ProductGalleryModal({ visible, onClose, onConfirm }: Props) {
 
   const columnCount = width >= 980 ? 4 : width >= 700 ? 3 : 2;
 
+  const visibleProducts = useMemo(() => {
+    if (products.length > 0) return products;
+    if (isLavivianeTenant(company)) return buildLavivianeProducts();
+    return [];
+  }, [products, company]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return products.filter((p) => {
+    return visibleProducts.filter((p) => {
       if (deptFilter !== "all" && p.department !== deptFilter) return false;
       if (q && !p.name.toLowerCase().includes(q) && !(p.nameEn ?? "").toLowerCase().includes(q) && !(p.category ?? "").toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [products, deptFilter, search]);
+  }, [visibleProducts, deptFilter, search]);
 
   const totalSelected = Object.values(selected).reduce((s, n) => s + n, 0);
   const totalValue = Object.entries(selected).reduce((sum, [productId, qty]) => {
-    const prod = products.find((p) => p.id === productId);
+    const prod = visibleProducts.find((p) => p.id === productId);
     return sum + ((prod?.price ?? 0) * qty);
   }, 0);
 
@@ -192,7 +205,7 @@ export function ProductGalleryModal({ visible, onClose, onConfirm }: Props) {
     const items: OrderItem[] = Object.entries(selected)
       .filter(([, qty]) => qty > 0)
       .map(([productId, qty]) => {
-        const prod = products.find((p) => p.id === productId)!;
+        const prod = visibleProducts.find((p) => p.id === productId)!;
         return {
           id: makeOrderItemId(),
           name: prod.name,
@@ -288,6 +301,9 @@ export function ProductGalleryModal({ visible, onClose, onConfirm }: Props) {
             <View style={styles.emptyBox}>
               <Feather name="shopping-bag" size={40} color={Colors.textMuted} />
               <Text style={styles.emptyText}>{lang === "ar" ? "لا توجد منتجات" : "No products found"}</Text>
+              {isLavivianeTenant(company) ? (
+                <Text style={styles.emptyHint}>{lang === "ar" ? "جاري تحميل كتالوج Laviviane المحلي بعد تحديث النشر." : "Loading Laviviane local catalog after deployment refresh."}</Text>
+              ) : null}
             </View>
           }
           showsVerticalScrollIndicator={false}
@@ -384,6 +400,7 @@ const styles = StyleSheet.create({
   qtyNum: { flex: 1, textAlign: "center", fontSize: 15, fontWeight: "900" },
   emptyBox: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, paddingVertical: 80 },
   emptyText: { fontSize: 15, color: Colors.textMuted },
+  emptyHint: { maxWidth: 280, fontSize: 12, color: Colors.info, textAlign: "center", lineHeight: 18 },
   confirmBar: {
     flexDirection: "row", alignItems: "center", gap: 12,
     paddingHorizontal: 16, paddingTop: 14,
