@@ -10,6 +10,7 @@ import {
 } from "firebase/firestore";
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 
+import { LAVIVIANE_COMPANY_ID, buildLavivianeProducts } from "@/constants/lavivianeProducts";
 import { useCompany } from "@/context/CompanyContext";
 import { db } from "@/lib/firebase";
 
@@ -67,6 +68,11 @@ function clean(data: Record<string, unknown>) {
   return Object.fromEntries(Object.entries(data).filter(([, value]) => value !== undefined));
 }
 
+function fallbackProducts(companyId: string) {
+  if (companyId === LAVIVIANE_COMPANY_ID) return buildLavivianeProducts();
+  return [];
+}
+
 function sortProducts(items: Product[]) {
   return [...items].sort((a, b) => {
     const deptDiff = orderIndex(DEPARTMENT_ORDER, a.department) - orderIndex(DEPARTMENT_ORDER, b.department);
@@ -102,11 +108,13 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
           companyId,
           ...(d.data() as Omit<Product, "id">),
         }));
-        setProducts(sortProducts(loaded));
+        const visibleProducts = loaded.length ? loaded : fallbackProducts(companyId);
+        setProducts(sortProducts(visibleProducts));
         setIsLoading(false);
       },
       (err) => {
         console.error("Firestore tenant products error:", err);
+        setProducts(sortProducts(fallbackProducts(companyId)));
         setIsLoading(false);
       }
     );
