@@ -44,9 +44,10 @@ const DEPT_OPTIONS: { value: Department; label: string; color: string }[] = [
   { value: "mawali",   label: "معجنات",    color: Colors.mawali },
   { value: "chocolate", label: "شوكولاتة", color: Colors.chocolate },
   { value: "cake",     label: "كيك",      color: Colors.cake },
+  { value: "packaging", label: "تغليف",   color: Colors.packaging },
 ];
 const DEPT_CYCLE: Partial<Record<Department, Department>> = {
-  halwa: "mawali", mawali: "chocolate", chocolate: "cake", cake: "halwa",
+  halwa: "mawali", mawali: "chocolate", chocolate: "cake", cake: "packaging", packaging: "halwa",
 };
 
 function formatNow() {
@@ -379,6 +380,7 @@ export default function CashierScreen() {
   const mawaliCount = items.filter((i) => i.department === "mawali" && i.name.trim()).length;
   const chocolateCount = items.filter((i) => i.department === "chocolate" && i.name.trim()).length;
   const cakeCount = items.filter((i) => i.department === "cake" && i.name.trim()).length;
+  const packagingCount = items.filter((i) => i.department === "packaging" && i.name.trim()).length;
 
   return (
     <>
@@ -585,6 +587,11 @@ export default function CashierScreen() {
             {cakeCount > 0 && (
               <View style={[styles.deptPill, { backgroundColor: Colors.cake }]}>
                 <Text style={styles.deptPillText}>كيك {cakeCount}</Text>
+              </View>
+            )}
+            {packagingCount > 0 && (
+              <View style={[styles.deptPill, { backgroundColor: Colors.packaging }]}>
+                <Text style={styles.deptPillText}>تغليف {packagingCount}</Text>
               </View>
             )}
           </View>
@@ -975,7 +982,7 @@ export default function CashierScreen() {
       )}
 
       {/* ملخص الإرسال */}
-      {(halwaCount > 0 || mawaliCount > 0 || chocolateCount > 0 || cakeCount > 0) && (
+      {(halwaCount > 0 || mawaliCount > 0 || chocolateCount > 0 || cakeCount > 0 || packagingCount > 0) && (
         <View style={styles.summaryCard}>
           <Feather name="send" size={15} color={Colors.primary} />
           <Text style={styles.summaryText}>
@@ -983,7 +990,8 @@ export default function CashierScreen() {
             {halwaCount > 0 && <Text style={{ color: Colors.halwa, fontWeight: "700" }}>حلا زفة ({halwaCount})  </Text>}
             {mawaliCount > 0 && <Text style={{ color: Colors.mawali, fontWeight: "700" }}>معجنات ({mawaliCount})  </Text>}
             {chocolateCount > 0 && <Text style={{ color: Colors.chocolate, fontWeight: "700" }}>شوكولاتة ({chocolateCount})  </Text>}
-            {cakeCount > 0 && <Text style={{ color: Colors.cake, fontWeight: "700" }}>كيك ({cakeCount})</Text>}
+            {cakeCount > 0 && <Text style={{ color: Colors.cake, fontWeight: "700" }}>كيك ({cakeCount})  </Text>}
+            {packagingCount > 0 && <Text style={{ color: Colors.packaging, fontWeight: "700" }}>تغليف ({packagingCount})</Text>}
           </Text>
         </View>
       )}

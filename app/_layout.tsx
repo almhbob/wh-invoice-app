@@ -25,6 +25,7 @@ import { ProductsProvider } from "@/context/ProductsContext";
 import { TraysProvider } from "@/context/TraysInventoryContext";
 import { PriceChangeProvider } from "@/context/PriceChangeContext";
 import { FeaturesProvider } from "@/context/FeaturesContext";
+import { ensureTemporaryFirebaseSession } from "@/lib/authIdentity";
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
@@ -51,6 +52,10 @@ export default function RootLayout() {
     Inter_600SemiBold,
     Inter_700Bold,
   });
+
+  useEffect(() => {
+    ensureTemporaryFirebaseSession().catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => setForceRender(true), FONT_LOAD_FAILSAFE_MS);
