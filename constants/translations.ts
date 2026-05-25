@@ -303,6 +303,29 @@ const translations = {
   // ── Misc ──────────────────────────────────────────────────────
   insurance_amount_sar: { ar: "ر.س", en: "SAR", ur: "ر.س", hi: "SAR", bn: "SAR" },
   langLabel:        { ar: "العربية",           en: "English",          ur: "اردو",               hi: "हिंदी",            bn: "বাংলা" },
+
+  // ── Header ────────────────────────────────────────────────────
+  loginBtn:         { ar: "دخول",              en: "Login",            ur: "لاگ ان",             hi: "लॉगिन",            bn: "লগইন" },
+
+  // ── Department screens ────────────────────────────────────────
+  deptHalwa:        { ar: "حلا زفة و ضيافة",  en: "Wedding Sweets",   ur: "حلوا زفہ و ضیافت",  hi: "शादी की मिठाई",    bn: "বিবাহের মিষ্টি" },
+  deptMawali:       { ar: "معجنات و موالح",   en: "Savory Dept.",     ur: "نمکین و پیسٹری",    hi: "नमकीन विभाग",      bn: "বেকারি বিভাগ" },
+  deptChocolate:    { ar: "قسم شوكولاتة",     en: "Chocolate Dept.",  ur: "چاکلیٹ قسم",        hi: "चॉकलेट विभाग",     bn: "চকলেট বিভাগ" },
+  deptCake:         { ar: "قسم الكيك",        en: "Cake Dept.",       ur: "کیک قسم",           hi: "केक विभाग",        bn: "কেক বিভাগ" },
+  deptPackaging:    { ar: "قسم التغليف",      en: "Packaging Dept.",  ur: "پیکنگ قسم",         hi: "पैकेजिंग विभाग",   bn: "প্যাকেজিং বিভাগ" },
+  halwa:            { ar: "حلا زفة",          en: "Wedding Sweets",   ur: "حلوا",              hi: "हलवा",             bn: "হালওয়া" },
+  mawali:           { ar: "معجنات",           en: "Savory",           ur: "نمکین",             hi: "नमकीन",            bn: "বেকারি" },
+  chocolate:        { ar: "شوكولاتة",         en: "Chocolate",        ur: "چاکلیٹ",            hi: "चॉकलेट",           bn: "চকলেট" },
+  cake:             { ar: "كيك",             en: "Cake",             ur: "کیک",               hi: "केक",              bn: "কেক" },
+  packaging:        { ar: "تغليف",           en: "Packaging",        ur: "پیکنگ",             hi: "पैकेजिंग",          bn: "প্যাকেজিং" },
+  waiting:          { ar: "انتظار",           en: "Waiting",          ur: "انتظار",             hi: "प्रतीक्षा",         bn: "অপেক্ষা" },
+  preparing:        { ar: "جاري التحضير",    en: "Preparing",        ur: "تیاری جاری",         hi: "तैयारी",            bn: "প্রস্তুতি" },
+  noPendingOrders:  { ar: "الكل جاهز ✓",     en: "All clear ✓",      ur: "سب تیار ✓",          hi: "सब तैयार ✓",        bn: "সব প্রস্তুত ✓" },
+  halwaSubtitle:    { ar: "طلبات حلا الزفة ستظهر هنا", en: "Wedding sweet orders will appear here", ur: "حلوا آرڈرز یہاں نظر آئیں گے", hi: "हलवा ऑर्डर यहाँ दिखेंगे", bn: "হালওয়া অর্ডার এখানে দেখাবে" },
+  mawaliSubtitle:   { ar: "طلبات المعجنات ستظهر هنا", en: "Savory orders will appear here", ur: "نمکین آرڈرز یہاں نظر آئیں گے", hi: "नमकीन ऑर्डर यहाँ दिखेंगे", bn: "বেকারি অর্ডার এখানে দেখাবে" },
+  chocolateSubtitle:{ ar: "طلبات الشوكولاتة ستظهر هنا", en: "Chocolate orders will appear here", ur: "چاکلیٹ آرڈرز یہاں نظر آئیں گے", hi: "चॉकलेट ऑर्डर यहाँ दिखेंगे", bn: "চকলেট অর্ডার এখানে দেখাবে" },
+  cakeSubtitle:     { ar: "طلبات الكيك ستظهر هنا", en: "Cake orders will appear here", ur: "کیک آرڈرز یہاں نظر آئیں گے", hi: "केक ऑर्डर यहाँ दिखेंगे", bn: "কেক অর্ডার এখানে দেখাবে" },
+  packagingSubtitle:{ ar: "جميع الطلبات ستظهر هنا للتغليف", en: "All orders appear here for packaging", ur: "تمام آرڈرز پیکنگ کے لیے یہاں نظر آئیں گے", hi: "सभी ऑर्डर यहाँ पैकेजिंग के लिए दिखेंगे", bn: "সব অর্ডার এখানে প্যাকেজিংয়ের জন্য দেখাবে" },
 } as const;
 
 export type TranslationKey = keyof typeof translations;

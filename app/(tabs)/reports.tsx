@@ -12,17 +12,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors } from "@/constants/colors";
 import { useLang } from "@/context/LanguageContext";
 import { useOrders } from "@/context/OrdersContext";
+import { fmtCurrency } from "@/utils/dateUtils";
 
 type Filter = "all" | "today" | "week" | "month";
-
-function todayStr() {
-  const d = new Date();
-  return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, "0")}-${d.getDate().toString().padStart(2, "0")}`;
-}
-
-function fmtCurrency(n: number) {
-  return n.toLocaleString("ar-SA", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ر.س";
-}
 
 function isInFilter(isoDate: string, filter: Filter): boolean {
   const d = new Date(isoDate);

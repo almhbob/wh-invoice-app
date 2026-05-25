@@ -99,7 +99,7 @@ export function EmployeeSelectorModal({ visible, onClose }: Props) {
     const normalizedEmpId = newEmpId.trim().toUpperCase();
     const normalizedUsername = (newUsername.trim() || normalizedEmpId).toLowerCase();
     const exists = employees.find((e) => {
-      const empUsername = String((e as any).username || e.employeeId).toLowerCase();
+      const empUsername = String(e.username || e.employeeId).toLowerCase();
       return e.employeeId.toLowerCase() === normalizedEmpId.toLowerCase() || empUsername === normalizedUsername;
     });
     if (exists) { Alert.alert("خطأ", "الرقم الوظيفي أو اليوزر مستخدم مسبقاً"); return; }
@@ -202,7 +202,7 @@ export function EmployeeSelectorModal({ visible, onClose }: Props) {
                           </View>
                           <View style={styles.empInfo}>
                             <Text style={styles.empName}>{emp.name}</Text>
-                            <Text style={styles.empIdText}>#{emp.employeeId} · {(emp as any).username || emp.employeeId}</Text>
+                            <Text style={styles.empIdText}>#{emp.employeeId} · {emp.username || emp.employeeId}</Text>
                           </View>
                           {isCurrent ? <Feather name="check-circle" size={20} color={ROLE_COLORS[role]} /> : null}
                           <TouchableOpacity style={styles.delBtn} onPress={() => handleRemove(emp)} hitSlop={10}>

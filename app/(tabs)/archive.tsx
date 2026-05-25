@@ -17,24 +17,25 @@ import { useEmployee } from "@/context/EmployeeContext";
 import { Department, Order, OrderStatus, PAYMENT_LABELS, useOrders } from "@/context/OrdersContext";
 import { fmtDate } from "@/utils/dateUtils";
 
+const DEPT_META: Record<string, { label: string; shortLabel: string; color: string }> = {
+  halwa:     { label: "قسم الحلا",      shortLabel: "حلا",      color: Colors.halwa },
+  mawali:    { label: "قسم الموالح",    shortLabel: "موالح",    color: Colors.mawali },
+  chocolate: { label: "قسم الشوكولاتة", shortLabel: "شوكولاتة", color: Colors.chocolate },
+  cake:      { label: "قسم الكيك",      shortLabel: "كيك",      color: Colors.cake },
+  packaging: { label: "قسم التغليف",    shortLabel: "تغليف",    color: Colors.packaging },
+};
+
 const DEPT_FILTERS: { value: Department | "all"; label: string }[] = [
-  { value: "all", label: "الكل" },
-  { value: "halwa", label: "حلا" },
-  { value: "mawali", label: "موالح" },
+  { value: "all",       label: "الكل" },
+  { value: "halwa",     label: "حلا" },
+  { value: "mawali",    label: "موالح" },
+  { value: "chocolate", label: "شوكولاتة" },
+  { value: "cake",      label: "كيك" },
+  { value: "packaging", label: "تغليف" },
 ];
 
-const STATUS_FILTERS: { value: OrderStatus | "all"; label: string }[] = [
-  { value: "all", label: "الكل" },
-  { value: "pending", label: "انتظار" },
-  { value: "in_progress", label: "تحضير" },
-  { value: "done", label: "تم" },
-];
-
-function ArchiveCard({ order, canDelete, onDelete }: { order: any; canDelete?: boolean; onDelete?: (o: Order) => void }) {
+function ArchiveCard({ order, canDelete, onDelete }: { order: Order; canDelete?: boolean; onDelete?: (o: Order) => void }) {
   const { lang } = useLang();
-  const depts = [...new Set(order.items.map((i: any) => i.department))] as Department[];
-  const halwaItems = order.items.filter((i: any) => i.department === "halwa");
-  const mawaliItems = order.items.filter((i: any) => i.department === "mawali");
 
   return (
     <View style={styles.archiveCard}>
@@ -46,16 +47,14 @@ function ArchiveCard({ order, canDelete, onDelete }: { order: any; canDelete?: b
         </View>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
           <View style={styles.deptTags}>
-            {depts.includes("halwa") && (
-              <View style={[styles.deptTag, { backgroundColor: Colors.halwa }]}>
-                <Text style={styles.deptTagText}>حلا</Text>
-              </View>
-            )}
-            {depts.includes("mawali") && (
-              <View style={[styles.deptTag, { backgroundColor: Colors.mawali }]}>
-                <Text style={styles.deptTagText}>موالح</Text>
-              </View>
-            )}
+            {Object.entries(DEPT_META).map(([dept, meta]) => {
+              if (!order.items.some((i) => i.department === dept)) return null;
+              return (
+                <View key={dept} style={[styles.deptTag, { backgroundColor: meta.color }]}>
+                  <Text style={styles.deptTagText}>{meta.shortLabel}</Text>
+                </View>
+              );
+            })}
           </View>
           {canDelete && onDelete && (
             <TouchableOpacity
@@ -82,28 +81,21 @@ function ArchiveCard({ order, canDelete, onDelete }: { order: any; canDelete?: b
       </View>
 
       {/* Items grouped by dept */}
-      {halwaItems.length > 0 && (
-        <View style={[styles.deptSection, { borderLeftColor: Colors.halwa }]}>
-          <Text style={[styles.deptSectionTitle, { color: Colors.halwa }]}>قسم الحلا</Text>
-          {halwaItems.map((item: any, i: number) => (
-            <Text key={i} style={styles.archiveItem}>
-              • {item.quantity}× {item.name}{item.note ? ` (${item.note})` : ""}
-            </Text>
-          ))}
-          <StatusRow status={order.departmentStatuses?.halwa} />
-        </View>
-      )}
-      {mawaliItems.length > 0 && (
-        <View style={[styles.deptSection, { borderLeftColor: Colors.mawali }]}>
-          <Text style={[styles.deptSectionTitle, { color: Colors.mawali }]}>قسم الموالح</Text>
-          {mawaliItems.map((item: any, i: number) => (
-            <Text key={i} style={styles.archiveItem}>
-              • {item.quantity}× {item.name}{item.note ? ` (${item.note})` : ""}
-            </Text>
-          ))}
-          <StatusRow status={order.departmentStatuses?.mawali} />
-        </View>
-      )}
+      {Object.entries(DEPT_META).map(([dept, meta]) => {
+        const items = order.items.filter((i) => i.department === dept);
+        if (items.length === 0) return null;
+        return (
+          <View key={dept} style={[styles.deptSection, { borderLeftColor: meta.color }]}>
+            <Text style={[styles.deptSectionTitle, { color: meta.color }]}>{meta.label}</Text>
+            {items.map((item, i) => (
+              <Text key={i} style={styles.archiveItem}>
+                • {item.quantity}× {item.name}{item.note ? ` (${item.note})` : ""}
+              </Text>
+            ))}
+            <StatusRow status={order.departmentStatuses?.[dept as Department]} />
+          </View>
+        );
+      })}
 
       {/* Employee accountability trail */}
       <View style={styles.trailBox}>
@@ -115,22 +107,18 @@ function ArchiveCard({ order, canDelete, onDelete }: { order: any; canDelete?: b
             <Text style={styles.trailId}>#{order.cashierEmployee.employeeId}</Text>
           </View>
         )}
-        {order.departmentReceivers?.halwa && (
-          <View style={styles.trailRow}>
-            <Feather name="check-square" size={11} color={Colors.halwa} />
-            <Text style={[styles.trailLabel, { color: Colors.halwa }]}>استلم الحلا:</Text>
-            <Text style={[styles.trailName, { color: Colors.halwa }]}>{order.departmentReceivers.halwa.name}</Text>
-            <Text style={styles.trailId}>#{order.departmentReceivers.halwa.employeeId}</Text>
-          </View>
-        )}
-        {order.departmentReceivers?.mawali && (
-          <View style={styles.trailRow}>
-            <Feather name="check-square" size={11} color={Colors.mawali} />
-            <Text style={[styles.trailLabel, { color: Colors.mawali }]}>استلم الموالح:</Text>
-            <Text style={[styles.trailName, { color: Colors.mawali }]}>{order.departmentReceivers.mawali.name}</Text>
-            <Text style={styles.trailId}>#{order.departmentReceivers.mawali.employeeId}</Text>
-          </View>
-        )}
+        {Object.entries(DEPT_META).map(([dept, meta]) => {
+          const receiver = order.departmentReceivers?.[dept as Department];
+          if (!receiver) return null;
+          return (
+            <View key={dept} style={styles.trailRow}>
+              <Feather name="check-square" size={11} color={meta.color} />
+              <Text style={[styles.trailLabel, { color: meta.color }]}>استلم {meta.shortLabel}:</Text>
+              <Text style={[styles.trailName, { color: meta.color }]}>{receiver.name}</Text>
+              <Text style={styles.trailId}>#{receiver.employeeId}</Text>
+            </View>
+          );
+        })}
       </View>
 
       {/* Footer: timing & insurance */}
