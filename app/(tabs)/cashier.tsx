@@ -61,7 +61,7 @@ function formatNow() {
 
 function newItem(dept: Department = "halwa"): OrderItem {
   return {
-    id: Date.now().toString() + Math.random().toString(36).substr(2, 6),
+    id: Date.now().toString() + Math.random().toString(36).substring(2, 8),
     name: "",
     quantity: 1,
     price: undefined,
@@ -150,7 +150,7 @@ export default function CashierScreen() {
         setDiscountReason("");
       }
     }
-  }, [customerPhone, getOfferByPhone]);
+  }, [customerPhone, getOfferByPhone, detectedOffer, discountEnabled, appliedOfferId]);
 
   const addItemRow = (dept: Department) => {
     setItems((prev) => [...prev, newItem(dept)]);
@@ -294,8 +294,9 @@ export default function CashierScreen() {
 
   const handleAIAnalysis = async (order: Order) => {
     setIsAiLoading(true);
+    const aiBase = process.env.EXPO_PUBLIC_AI_ENDPOINT ?? "http://127.0.0.1:3000";
     try {
-      const response = await fetch("http://127.0.0.1:3000/analyze-invoice", {
+      const response = await fetch(`${aiBase}/analyze-invoice`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ invoiceData: order }),
@@ -314,10 +315,10 @@ export default function CashierScreen() {
   };
 
   const handleSubmit = async () => {
-    if (!customerName.trim()) { Alert.alert("خطأ", "الرجاء إدخال اسم العميل"); return; }
-    if (!customerPhone.trim()) { Alert.alert("خطأ", "الرجاء إدخال رقم الهاتف"); return; }
+    if (!customerName.trim()) { Alert.alert("خطأ", t("errName")); return; }
+    if (!customerPhone.trim()) { Alert.alert("خطأ", t("errPhone")); return; }
     const filteredItems = items.filter((i) => i.name.trim());
-    if (filteredItems.length === 0) { Alert.alert("خطأ", "الرجاء إضافة صنف واحد على الأقل"); return; }
+    if (filteredItems.length === 0) { Alert.alert("خطأ", t("errItems")); return; }
 
     const insurance = insuranceAmount.trim() ? parseFloat(insuranceAmount) : undefined;
     const total = grandTotal > 0 ? grandTotal : undefined;
@@ -367,7 +368,7 @@ export default function CashierScreen() {
       resetForm();
       setReceiptOrder(created);
     } catch {
-      Alert.alert("خطأ", "فشل إرسال الطلب، حاول مرة أخرى");
+      Alert.alert("خطأ", t("errSend"));
     } finally {
       setIsSubmitting(false);
     }
