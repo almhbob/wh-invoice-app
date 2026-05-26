@@ -319,6 +319,148 @@ export default function CashierScreen() {
     }
   };
 
+  const printInvoice = (order: Order) => {
+    const itemRows = order.items.map((item) => {
+      const lineTotal = item.price ? `${(item.price * item.quantity).toFixed(2)} ر.س` : "—";
+      const unitPrice = item.price ? `${item.price} ر.س` : "—";
+      const details = item.details ? `<div style="font-size:8px;color:#555;margin-top:2px">${item.details}</div>` : "";
+      const note = item.note ? `<div style="font-size:8px;color:#777">${item.note}</div>` : "";
+      return `<tr>
+        <td style="padding:4px 3px;border-bottom:1px dashed #ccc;vertical-align:top">
+          <div style="font-weight:700">${item.name}</div>${details}${note}
+        </td>
+        <td style="padding:4px 3px;border-bottom:1px dashed #ccc;text-align:center;white-space:nowrap">${item.quantity}</td>
+        <td style="padding:4px 3px;border-bottom:1px dashed #ccc;text-align:left;white-space:nowrap">${unitPrice}</td>
+        <td style="padding:4px 3px;border-bottom:1px dashed #ccc;text-align:left;white-space:nowrap;font-weight:700">${lineTotal}</td>
+      </tr>`;
+    }).join("");
+
+    const discountHtml = order.discount ? `
+      <div style="display:flex;justify-content:space-between;font-size:10px;margin:3px 0">
+        <span>خصم${order.discount.reason ? ` (${order.discount.reason})` : ""}</span>
+        <span>${order.discount.type === "percentage" ? `${order.discount.value}%` : `${order.discount.value.toFixed(2)} ر.س`}</span>
+      </div>` : "";
+
+    const insuranceHtml = order.insuranceAmount ? `
+      <div style="display:flex;justify-content:space-between;font-size:10px;margin:3px 0">
+        <span>تأمين الصواني (${order.insurancePaymentMethod === "card" ? "شبكة" : "كاش"})</span>
+        <span>${order.insuranceAmount.toFixed(2)} ر.س</span>
+      </div>` : "";
+
+    const paymentHtml = order.paymentMethod ? `
+      <div style="display:flex;justify-content:space-between;font-size:10px;margin:3px 0">
+        <span>طريقة الدفع</span><span>${PAYMENT_LABELS[order.paymentMethod]}</span>
+      </div>` : "";
+
+    const paidHtml = order.amountPaid != null ? `
+      <div style="display:flex;justify-content:space-between;font-size:10px;margin:3px 0">
+        <span>المبلغ المدفوع</span><span style="font-weight:700">${order.amountPaid.toFixed(2)} ر.س</span>
+      </div>
+      ${order.totalAmount && order.amountPaid < order.totalAmount ? `
+      <div style="display:flex;justify-content:space-between;font-size:10px;margin:3px 0">
+        <span>المتبقي</span><span style="font-weight:900">${(order.totalAmount - order.amountPaid).toFixed(2)} ر.س</span>
+      </div>` : ""}` : "";
+
+    const deliveryHtml = order.deliveryTime ? `
+      <div style="display:flex;justify-content:space-between;font-size:10px;margin:3px 0">
+        <span>موعد التسليم</span><span style="font-weight:700">${order.deliveryTime}</span>
+      </div>` : "";
+
+    const insuranceNote = order.insuranceAmount
+      ? `<div style="font-size:9px;border:1px dashed #000;padding:4px 6px;margin-top:6px;border-radius:3px">⚠️ ملاحظة: مدة التأمين 3 أيام حتى استرجاع الصواني</div>` : "";
+
+    const cashierHtml = order.cashierEmployee
+      ? `${order.cashierEmployee.name} #${order.cashierEmployee.employeeId}` : "—";
+
+    const isLavivianeOrder = isLaviviane;
+    const logoBlock = isLavivianeOrder
+      ? `<div style="font-size:22px;font-weight:900;letter-spacing:4px;font-family:Georgia,serif">LAVIVIANE</div>
+         <div style="font-size:8px;letter-spacing:2px;margin-top:2px;color:#555">MAISON DE PÂTISSERIE · FONDÉE EN 2010</div>`
+      : `<div style="font-size:18px;font-weight:900">فاتورة</div>`;
+
+    const html = `<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="UTF-8">
+<title>فاتورة #${order.orderNumber}</title>
+<style>
+  @page { size: auto; margin: 8mm 10mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; font-size: 11px; color: #000; background: #fff; direction: rtl; }
+  .center { text-align: center; }
+  .divider-solid { border: none; border-top: 1.5px solid #000; margin: 6px 0; }
+  .divider-dash { border: none; border-top: 1px dashed #888; margin: 5px 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 10px; }
+  th { padding: 4px 3px; border-top: 1.5px solid #000; border-bottom: 1.5px solid #000; text-align: right; font-size: 9px; }
+  th:last-child, td:last-child { text-align: left; }
+  th:nth-child(2), td:nth-child(2) { text-align: center; }
+  .total-line { display: flex; justify-content: space-between; margin: 4px 0; }
+  .grand-total { font-size: 14px; font-weight: 900; border-top: 2px solid #000; padding-top: 5px; margin-top: 4px; }
+  .footer { font-size: 9px; text-align: center; margin-top: 8px; color: #333; }
+  .badge { display: inline-block; border: 1px solid #000; border-radius: 3px; padding: 1px 7px; font-size: 9px; font-weight: 900; }
+  @media print { body { font-size: 10px; } }
+</style>
+</head>
+<body>
+  <div class="center" style="padding-bottom:7px;border-bottom:2px solid #000;margin-bottom:7px">
+    ${logoBlock}
+  </div>
+
+  <div class="center" style="margin:5px 0">
+    <div style="font-size:13px;font-weight:900">فاتورة #${order.orderNumber}</div>
+    ${order.orderType ? `<span class="badge">${order.orderType === "delivery" ? "توصيل" : "استلام"}</span>` : ""}
+  </div>
+
+  <hr class="divider-dash">
+
+  <div class="total-line"><span style="color:#555">العميل</span><span style="font-weight:700">${order.customerName}</span></div>
+  <div class="total-line"><span style="color:#555">الهاتف</span><span>${order.customerPhone}${order.customerPhone2 ? ` / ${order.customerPhone2}` : ""}</span></div>
+  <div class="total-line"><span style="color:#555">تاريخ الطلب</span><span>${order.receivedAt}</span></div>
+  ${deliveryHtml}
+  <div class="total-line"><span style="color:#555">منشئ الطلب</span><span>${cashierHtml}</span></div>
+
+  <hr class="divider-solid">
+
+  <table>
+    <thead>
+      <tr>
+        <th>الصنف</th>
+        <th>الكمية</th>
+        <th>السعر</th>
+        <th>الإجمالي</th>
+      </tr>
+    </thead>
+    <tbody>${itemRows}</tbody>
+  </table>
+
+  <hr class="divider-dash">
+
+  ${discountHtml}
+  ${insuranceHtml}
+  ${order.totalAmount ? `<div class="total-line grand-total"><span>الإجمالي الكلي</span><span>${order.totalAmount.toFixed(2)} ر.س</span></div>` : ""}
+  ${paymentHtml}
+  ${paidHtml}
+
+  ${insuranceNote}
+
+  <hr class="divider-solid" style="margin-top:8px">
+  <div class="footer">
+    شكراً لثقتكم · طُبع بتاريخ ${new Date().toLocaleDateString("ar-SA")}
+  </div>
+</body>
+</html>`;
+
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      const win = window.open("", "_blank", "width=420,height=700");
+      if (win) {
+        win.document.write(html);
+        win.document.close();
+        win.focus();
+        setTimeout(() => { win.print(); }, 350);
+      }
+    }
+  };
+
   const handleSubmit = async () => {
     if (!customerName.trim()) { Alert.alert("خطأ", t("errName")); return; }
     if (!customerPhone.trim()) { Alert.alert("خطأ", t("errPhone")); return; }
@@ -1224,11 +1366,19 @@ export default function CashierScreen() {
             {/* Share buttons */}
             <View style={styles.receiptActions}>
               <TouchableOpacity
+                style={styles.printBtn}
+                onPress={() => printInvoice(receiptOrder)}
+                activeOpacity={0.85}
+              >
+                <Feather name="printer" size={16} color="#fff" />
+                <Text style={styles.printBtnText}>طباعة</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
                 style={styles.whatsappBtn}
                 onPress={() => shareViaWhatsApp(receiptOrder)}
                 activeOpacity={0.85}
               >
-                <Text style={styles.whatsappBtnText}>📱 إرسال عبر واتساب</Text>
+                <Text style={styles.whatsappBtnText}>📱 واتساب</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.shareBtn}
@@ -1521,6 +1671,11 @@ const styles = StyleSheet.create({
     padding: 16, gap: 10, borderTopWidth: 1, borderTopColor: Colors.border,
     backgroundColor: Colors.surface,
   },
+  printBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
+    backgroundColor: "#1f2937", borderRadius: 14, paddingVertical: 13, paddingHorizontal: 18,
+  },
+  printBtnText: { color: "#fff", fontSize: 14, fontWeight: "800" },
   whatsappBtn: {
     backgroundColor: "#25D366", borderRadius: 14, paddingVertical: 14,
     alignItems: "center", justifyContent: "center",
