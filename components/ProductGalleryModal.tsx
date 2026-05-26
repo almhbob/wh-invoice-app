@@ -29,23 +29,19 @@ interface Props {
 }
 
 const DEPT_FILTERS: { value: Department | "all"; labelAr: string; labelEn: string; color: string }[] = [
-  { value: "all", labelAr: "الكل", labelEn: "All", color: Colors.primary },
-  { value: "halwa", labelAr: "حلا", labelEn: "Sweets", color: Colors.halwa },
-  { value: "mawali", labelAr: "موالح", labelEn: "Savory", color: Colors.mawali },
-  { value: "chocolate", labelAr: "شوكولاتة", labelEn: "Chocolate", color: Colors.chocolate },
-  { value: "cake", labelAr: "كيك", labelEn: "Cake", color: Colors.cake },
+  { value: "all",       labelAr: "الكل",            labelEn: "All",                  color: Colors.primary },
+  { value: "cake",      labelAr: "كيك و مناسبات",    labelEn: "Cakes & Occasions",    color: Colors.cake },
+  { value: "halwa",     labelAr: "حلويات وضيافة",    labelEn: "Sweets & Hospitality", color: Colors.halwa },
+  { value: "mawali",    labelAr: "موالح ومعجنات",    labelEn: "Savory & Pastries",    color: Colors.mawali },
+  { value: "chocolate", labelAr: "شوكولاتة وهدايا",  labelEn: "Chocolate & Gifts",    color: Colors.chocolate },
 ];
 
 function makeOrderItemId() {
-  return Date.now().toString() + Math.random().toString(36).substr(2, 6);
+  return Date.now().toString() + Math.random().toString(36).substring(2, 8);
 }
 
 function formatPrice(value: number, lang: string) {
   return `${value.toFixed(2)} ${lang === "ar" ? "ر.س" : "SAR"}`;
-}
-
-function isLavivianeTenant(company: { id?: string; slug?: string; name?: string }) {
-  return company.id === LAVIVIANE_COMPANY_ID || company.slug === LAVIVIANE_COMPANY_ID || /laviviane/i.test(company.name ?? "");
 }
 
 function ProductCard({
@@ -68,16 +64,16 @@ function ProductCard({
     cake: Colors.cake,
   };
   const deptLabelAr: Record<string, string> = {
-    halwa: "حلا",
-    mawali: "موالح",
-    chocolate: "شوكولاتة",
-    cake: "كيك",
+    halwa: "حلويات وضيافة",
+    mawali: "موالح ومعجنات",
+    chocolate: "شوكولاتة وهدايا",
+    cake: "كيك و مناسبات",
   };
   const deptLabelEn: Record<string, string> = {
-    halwa: "Sweets",
-    mawali: "Savory",
-    chocolate: "Chocolate",
-    cake: "Cake",
+    halwa: "Sweets & Hospitality",
+    mawali: "Savory & Pastries",
+    chocolate: "Chocolate & Gifts",
+    cake: "Cakes & Occasions",
   };
   const deptIconMap: Record<string, string> = {
     halwa: "coffee",
@@ -157,7 +153,7 @@ export function ProductGalleryModal({ visible, onClose, onConfirm }: Props) {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const { products } = useProducts();
-  const { company } = useCompany();
+  const { companyId } = useCompany();
   const { lang } = useLang();
   const [search, setSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState<Department | "all">("all");
@@ -167,9 +163,9 @@ export function ProductGalleryModal({ visible, onClose, onConfirm }: Props) {
 
   const visibleProducts = useMemo(() => {
     if (products.length > 0) return products;
-    if (isLavivianeTenant(company)) return buildLavivianeProducts();
+    if (companyId === LAVIVIANE_COMPANY_ID) return buildLavivianeProducts();
     return [];
-  }, [products, company]);
+  }, [products, companyId]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -301,7 +297,7 @@ export function ProductGalleryModal({ visible, onClose, onConfirm }: Props) {
             <View style={styles.emptyBox}>
               <Feather name="shopping-bag" size={40} color={Colors.textMuted} />
               <Text style={styles.emptyText}>{lang === "ar" ? "لا توجد منتجات" : "No products found"}</Text>
-              {isLavivianeTenant(company) ? (
+              {companyId === LAVIVIANE_COMPANY_ID ? (
                 <Text style={styles.emptyHint}>{lang === "ar" ? "جاري تحميل كتالوج Laviviane المحلي بعد تحديث النشر." : "Loading Laviviane local catalog after deployment refresh."}</Text>
               ) : null}
             </View>
