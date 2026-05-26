@@ -202,13 +202,6 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
     };
   }, [companyId, employeesCollection, sessionKey, sessionEmployeeKey]);
 
-  useEffect(() => {
-    if (!currentEmployee) return;
-    const updated = employees.find((e) => e.id === currentEmployee.id);
-    if (updated && updated.status !== "suspended") setCurrentEmployeeState(updated);
-    if (updated?.status === "suspended") setCurrentEmployee(null);
-  }, [employees, currentEmployee, setCurrentEmployee]);
-
   const setCurrentEmployee = useCallback(async (emp: Employee | null) => {
     const allowedEmployee = emp?.status === "suspended" ? null : emp;
     const withLoginTime = allowedEmployee ? { ...allowedEmployee, lastLoginAt: new Date().toISOString() } : null;
@@ -226,6 +219,13 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
       }
     } catch {}
   }, [sessionKey, sessionEmployeeKey]);
+
+  useEffect(() => {
+    if (!currentEmployee) return;
+    const updated = employees.find((e) => e.id === currentEmployee.id);
+    if (updated && updated.status !== "suspended") setCurrentEmployeeState(updated);
+    if (updated?.status === "suspended") setCurrentEmployee(null);
+  }, [employees, currentEmployee, setCurrentEmployee]);
 
   const addEmployee = useCallback(
     async (data: Omit<Employee, "id" | "createdAt" | "companyId">): Promise<Employee> => {
