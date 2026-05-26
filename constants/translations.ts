@@ -42,6 +42,7 @@ const translations = {
   loginPassword:    { ar: "كلمة المرور",      en: "Password",         ur: "پاس ورڈ",            hi: "पासवर्ड",           bn: "পাসওয়ার্ড" },
   loginWrongPw:     { ar: "كلمة المرور خاطئة", en: "Wrong password",  ur: "غلط پاس ورڈ",        hi: "गलत पासवर्ड",       bn: "ভুল পাসওয়ার্ড" },
   loginProtected:   { ar: "محمي بكلمة مرور", en: "Password protected", ur: "پاس ورڈ محفوظ",    hi: "पासवर्ड सुरक्षित",  bn: "পাসওয়ার্ড সুরক্ষিত" },
+  loginBtn:         { ar: "دخول",            en: "Login",            ur: "لاگ ان",            hi: "लॉगिन",             bn: "লগইন" },
 
   // ── Role labels ────────────────────────────────────────────────
   roleLabels: {

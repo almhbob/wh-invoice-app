@@ -12,11 +12,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors } from "@/constants/colors";
 import { useLang } from "@/context/LanguageContext";
 import { useOrders } from "@/context/OrdersContext";
-import { fmtDate } from "@/utils/dateUtils";
-
-function fmtCurrency(n: number) {
-  return n.toLocaleString("ar-SA", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ر.س";
-}
+import { fmtCurrency, fmtDate } from "@/utils/dateUtils";
 
 export default function TraysScreen() {
   const { t, lang } = useLang();

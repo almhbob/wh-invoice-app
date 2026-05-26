@@ -207,7 +207,7 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
     const updated = employees.find((e) => e.id === currentEmployee.id);
     if (updated && updated.status !== "suspended") setCurrentEmployeeState(updated);
     if (updated?.status === "suspended") setCurrentEmployee(null);
-  }, [employees, currentEmployee]);
+  }, [employees, currentEmployee, setCurrentEmployee]);
 
   const setCurrentEmployee = useCallback(async (emp: Employee | null) => {
     const allowedEmployee = emp?.status === "suspended" ? null : emp;

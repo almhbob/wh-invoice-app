@@ -87,7 +87,7 @@ function LogoHeader({ titleKey, accentColor }: LogoHeaderProps) {
   const { lang, toggleLang, t } = useLang();
   const [showSelector, setShowSelector] = useState(false);
   const isRTL = lang === "ar" || lang === "ur";
-  const LANG_NEXT: Record<string, string> = { ar: "EN", en: "اردو", ur: "हि", hi: "ع" };
+  const LANG_NEXT: Record<string, string> = { ar: "EN", en: "اردو", ur: "हि", hi: "বাং", bn: "ع" };
   const tenantBrand = TENANT_BRANDS[company.id] ?? {
     name: company.name || PLATFORM_OWNER.nameAr,
     subtitle: company.slug || PLATFORM_OWNER.nameEn,

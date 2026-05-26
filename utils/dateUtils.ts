@@ -28,3 +28,7 @@ export function fmtTime(iso: string): string {
   if (isNaN(d.getTime())) return iso;
   return `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
 }
+
+export function fmtCurrency(n: number): string {
+  return n.toLocaleString("ar-SA", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ر.س";
+}
