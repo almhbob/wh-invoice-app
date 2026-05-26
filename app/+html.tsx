@@ -9,104 +9,76 @@ export default function Root({ children }: PropsWithChildren) {
         <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
         <meta
           name="viewport"
-          content="width=device-width, initial-scale=1, maximum-scale=1, shrink-to-fit=no, viewport-fit=cover"
+          content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover"
         />
-        <meta name="theme-color" content="#14213d" />
+        <meta name="theme-color" content="#1A2744" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <ScrollViewStyleReset />
         <style
           dangerouslySetInnerHTML={{
             __html: `
-              html,
-              body,
-              #root {
-                width: 100%;
-                min-width: 320px;
-                min-height: 100%;
+              *, *::before, *::after { box-sizing: border-box; }
+
+              html, body {
                 margin: 0;
-                background: #f6f8fb;
+                padding: 0;
+                width: 100%;
+                height: 100%;
                 -webkit-text-size-adjust: 100%;
                 text-size-adjust: 100%;
               }
 
               body {
+                background: #F5F7FA;
                 overscroll-behavior-y: contain;
                 touch-action: manipulation;
+                -webkit-font-smoothing: antialiased;
+                -moz-osx-font-smoothing: grayscale;
               }
 
-              * {
-                box-sizing: border-box;
+              #root {
+                width: 100%;
+                height: 100%;
+                min-height: 100dvh;
+                display: flex;
+                flex-direction: column;
               }
 
-              input,
-              textarea,
-              select,
-              button {
-                font: inherit;
-              }
-
-              @media (min-width: 900px) {
+              /* ── Desktop background ── */
+              @media (min-width: 768px) {
                 body {
-                  background: radial-gradient(circle at top, #ffffff 0, #f6f8fb 42%, #edf2f7 100%);
+                  background:
+                    radial-gradient(ellipse at 20% 0%, rgba(26,39,68,0.07) 0%, transparent 60%),
+                    radial-gradient(ellipse at 80% 100%, rgba(201,168,76,0.05) 0%, transparent 60%),
+                    linear-gradient(135deg, #eef2f7 0%, #f5f7fa 50%, #edf1f8 100%);
                 }
               }
 
-              @media (max-width: 420px) {
-                html,
-                body,
-                #root {
-                  min-width: 0;
-                }
+              /* ── Scrollbar styling (desktop) ── */
+              @media (min-width: 768px) {
+                ::-webkit-scrollbar { width: 6px; height: 6px; }
+                ::-webkit-scrollbar-track { background: transparent; }
+                ::-webkit-scrollbar-thumb { background: rgba(26,39,68,0.18); border-radius: 3px; }
+                ::-webkit-scrollbar-thumb:hover { background: rgba(26,39,68,0.32); }
               }
 
-              /* Expo / React Native Web scroll containers */
-              [data-rnw-scrollview],
-              div[style*="overflow: scroll"],
-              div[style*="overflow-y: scroll"],
-              div[style*="overflow: auto"],
-              div[style*="overflow-y: auto"] {
-                scroll-padding-bottom: 240px !important;
-                overscroll-behavior-y: contain !important;
+              /* ── Hide scrollbar on mobile for cleaner look ── */
+              @media (max-width: 767px) {
+                ::-webkit-scrollbar { display: none; }
+                * { scrollbar-width: none; }
               }
 
-              div[style*="padding-bottom: 34px"],
-              div[style*="padding-bottom:34px"],
-              div[style*="paddingBottom: 34"],
-              div[style*="paddingBottom:34"] {
-                padding-bottom: 240px !important;
-                box-sizing: border-box !important;
-              }
+              /* ── Form elements ── */
+              input, textarea, select, button { font: inherit; }
 
-              div[style*="padding-bottom: 34px"]::after,
-              div[style*="padding-bottom:34px"]::after,
-              div[style*="paddingBottom: 34"]::after,
-              div[style*="paddingBottom:34"]::after {
-                content: "";
-                display: block;
-                height: 170px;
-                min-height: 170px;
-                width: 100%;
-              }
+              /* ── Smooth text rendering ── */
+              * { text-rendering: optimizeLegibility; }
 
-              [data-rnw-scrollview] > div,
-              div[style*="overflow: scroll"] > div,
-              div[style*="overflow-y: scroll"] > div,
-              div[style*="overflow: auto"] > div,
-              div[style*="overflow-y: auto"] > div {
-                padding-bottom: 240px !important;
-                box-sizing: border-box !important;
-              }
-
-              [data-rnw-scrollview] > div::after,
-              div[style*="overflow: scroll"] > div::after,
-              div[style*="overflow-y: scroll"] > div::after,
-              div[style*="overflow: auto"] > div::after,
-              div[style*="overflow-y: auto"] > div::after {
-                content: "";
-                display: block;
-                width: 100%;
-                height: 170px;
-                min-height: 170px;
-                flex: 0 0 170px;
+              /* ── Prevent content from being hidden under mobile browser chrome ── */
+              @supports (height: 100dvh) {
+                #root { min-height: 100dvh; }
               }
             `,
           }}
