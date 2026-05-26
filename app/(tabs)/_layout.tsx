@@ -69,10 +69,21 @@ function FawtaraMark() {
   );
 }
 
+function LavivianeLogoMark({ accent, primary }: { accent: string; primary: string }) {
+  return (
+    <View style={[styles.laviMark, { backgroundColor: primary, borderColor: accent + "90" }]}>
+      <View style={[styles.laviRule, { backgroundColor: accent }]} />
+      <Text style={[styles.laviL, { color: accent }]}>L</Text>
+      <View style={[styles.laviRule, { backgroundColor: accent }]} />
+    </View>
+  );
+}
+
 function TenantLogoMark({ logoText, primary, accent }: { logoText: string; primary: string; accent: string }) {
   if (logoText === "ف") return <FawtaraMark />;
+  if (logoText === "L") return <LavivianeLogoMark accent={accent} primary={primary} />;
   return (
-    <View style={[styles.tenantLogoMark, { borderColor: accent + "80", backgroundColor: primary }]}> 
+    <View style={[styles.tenantLogoMark, { borderColor: accent + "80", backgroundColor: primary }]}>
       <Text style={[styles.tenantLogoText, { color: accent }]}>{logoText}</Text>
       <View style={[styles.tenantLogoLine, { backgroundColor: accent }]} />
     </View>
@@ -96,14 +107,21 @@ function LogoHeader({ titleKey, accentColor }: LogoHeaderProps) {
     accent: Colors.gold,
   };
 
+  const isNamedTenant = company.id in TENANT_BRANDS;
+  const logoBg = isNamedTenant ? tenantBrand.primary : "#fff";
+
   return (
     <>
-      <View style={[styles.headerContainer, { paddingTop: topInset }]}>
+      <View style={[styles.headerContainer, { paddingTop: topInset, backgroundColor: tenantBrand.primary }]}>
         <View style={[styles.headerInner, isRTL ? styles.rowRTL : styles.rowLTR]}>
-          <View style={styles.logoBox}><TenantLogoMark logoText={tenantBrand.logoText} primary={tenantBrand.primary} accent={tenantBrand.accent} /></View>
+          <View style={[styles.logoBox, { borderColor: tenantBrand.accent + "90", backgroundColor: logoBg }]}>
+            <TenantLogoMark logoText={tenantBrand.logoText} primary={tenantBrand.primary} accent={tenantBrand.accent} />
+          </View>
           <View style={styles.brandBlock}>
-            <Text style={styles.brandName}>{tenantBrand.name}</Text>
-            <Text style={styles.brandSub}>{PLATFORM_OWNER.nameEn} · {tenantBrand.subtitle}</Text>
+            <Text style={[styles.brandName, { color: tenantBrand.accent }]}>{tenantBrand.name}</Text>
+            <Text style={styles.brandSub}>
+              {isNamedTenant ? tenantBrand.subtitle : `${PLATFORM_OWNER.nameEn} · ${tenantBrand.subtitle}`}
+            </Text>
           </View>
           <View style={{ flex: 1 }} />
           <TouchableOpacity style={styles.langBtn} onPress={toggleLang} activeOpacity={0.75}>
@@ -127,11 +145,11 @@ function LogoHeader({ titleKey, accentColor }: LogoHeaderProps) {
               </>
             )}
           </TouchableOpacity>
-          <View style={[styles.screenBadge, { backgroundColor: accentColor ?? Colors.gold }]}>
+          <View style={[styles.screenBadge, { backgroundColor: accentColor ?? tenantBrand.accent }]}>
             <Text style={styles.screenBadgeText}>{titleKey}</Text>
           </View>
         </View>
-        <View style={styles.goldLine} />
+        <View style={[styles.goldLine, { backgroundColor: tenantBrand.accent }]} />
       </View>
       <EmployeeSelectorModal visible={showSelector} onClose={() => setShowSelector(false)} />
     </>
@@ -267,21 +285,24 @@ export default function TabLayout() {
 }
 
 const styles = StyleSheet.create({
-  headerContainer: { backgroundColor: Colors.primary, shadowColor: "#000", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.18, shadowRadius: 8, elevation: 8 },
+  headerContainer: { shadowColor: "#000", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.18, shadowRadius: 8, elevation: 8 },
   headerInner: { alignItems: "center", paddingHorizontal: 12, paddingVertical: 10, gap: 8 },
   rowRTL: { flexDirection: "row-reverse" }, rowLTR: { flexDirection: "row" },
-  logoBox: { width: 46, height: 46, borderRadius: 10, overflow: "hidden", borderWidth: 2, borderColor: Colors.gold + "80", backgroundColor: "#fff", alignItems: "center", justifyContent: "center" },
+  logoBox: { width: 46, height: 46, borderRadius: 10, overflow: "hidden", borderWidth: 2, alignItems: "center", justifyContent: "center" },
   fawtaraMark: { width: 31, height: 31, position: "relative" },
   markBlueStem: { position: "absolute", left: 0, top: 0, width: 10, height: 31, backgroundColor: "#132446" },
   markBlueFoot: { position: "absolute", left: 0, bottom: 0, width: 22, height: 12, backgroundColor: "#132446" },
   markGoldTop: { position: "absolute", right: 0, top: 0, width: 24, height: 9, backgroundColor: "#c79a35" },
   markGoldMid: { position: "absolute", right: 6, top: 13, width: 18, height: 9, backgroundColor: "#c79a35" },
+  laviMark: { width: 42, height: 42, borderRadius: 9, borderWidth: 1.5, alignItems: "center", justifyContent: "center", gap: 3 },
+  laviRule: { width: 24, height: 1, opacity: 0.8 },
+  laviL: { fontSize: 20, fontWeight: "900", fontFamily: Platform.OS === "ios" ? "Georgia" : "serif", letterSpacing: 2, lineHeight: 22 },
   tenantLogoMark: { width: 38, height: 38, borderRadius: 10, borderWidth: 1.5, alignItems: "center", justifyContent: "center" },
   tenantLogoText: { fontSize: 22, fontWeight: "900", fontFamily: Platform.OS === "ios" ? "Georgia" : "serif" },
   tenantLogoLine: { width: 18, height: 2, borderRadius: 2, marginTop: 1 },
   logoText: { color: Colors.primary, fontSize: 12, fontWeight: "900", letterSpacing: 0.5 },
   brandBlock: { gap: 1 },
-  brandName: { color: Colors.gold, fontSize: 16, fontWeight: "900", letterSpacing: 0.3, fontFamily: Platform.OS === "ios" ? "Georgia" : "serif" },
+  brandName: { fontSize: 16, fontWeight: "900", letterSpacing: 0.3, fontFamily: Platform.OS === "ios" ? "Georgia" : "serif" },
   brandSub: { color: "rgba(255,255,255,0.65)", fontSize: 9, fontWeight: "600" },
   langBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.15)", borderWidth: 1, borderColor: "rgba(255,255,255,0.3)", alignItems: "center", justifyContent: "center" },
   langBtnText: { color: "#fff", fontSize: 12, fontWeight: "800" },
@@ -294,7 +315,7 @@ const styles = StyleSheet.create({
   loginText: { color: "rgba(255,255,255,0.85)", fontSize: 11, fontWeight: "600" },
   screenBadge: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20 },
   screenBadgeText: { color: "#fff", fontSize: 11, fontWeight: "700" },
-  goldLine: { height: 2, backgroundColor: Colors.gold, opacity: 0.6 },
+  goldLine: { height: 2, opacity: 0.75 },
   bar: { flexDirection: "row", borderTopWidth: StyleSheet.hairlineWidth, zIndex: 100, overflow: "hidden" },
   nativeBar: { position: "absolute", bottom: 0, left: 0, right: 0 },
   webBar: { position: "relative", left: 0, right: 0, bottom: undefined },
