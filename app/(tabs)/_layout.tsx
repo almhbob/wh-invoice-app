@@ -435,6 +435,33 @@ function BarItem({ label, icon, sf, active, accent, badge, onPress }: {
 
 // ── Root layout ────────────────────────────────────────────────────────────────
 
+const SCREEN_META: Record<string, { titleKey: string; accent: string }> = {
+  cashier:          { titleKey: "titleCashier",   accent: Colors.gold },
+  halwa:            { titleKey: "titleHalwa",      accent: Colors.halwa },
+  mawali:           { titleKey: "titleMawali",     accent: Colors.mawali },
+  chocolate:        { titleKey: "titleChocolate",  accent: Colors.chocolate },
+  cake:             { titleKey: "titleCake",       accent: Colors.cake },
+  packaging:        { titleKey: "titlePackaging",  accent: Colors.packaging },
+  archive:          { titleKey: "titleArchive",    accent: Colors.primaryLight },
+  reports:          { titleKey: "titleReports",    accent: "#8b5cf6" },
+  developer:        { titleKey: "لوحة المطور",    accent: "#7c3aed" },
+  "branch-orders":  { titleKey: "طلبية الفرع",   accent: Colors.gold },
+  "branch-inventory": { titleKey: "جرد الفرع",   accent: "#2563eb" },
+  branches:         { titleKey: "إدارة الفروع",  accent: "#0d9488" },
+  customers:        { titleKey: "titleCustomers",  accent: "#0891b2" },
+  delivery:         { titleKey: "titleDelivery",   accent: "#0d9488" },
+  trays:            { titleKey: "titleTrays",      accent: Colors.gold },
+  admin:            { titleKey: "titleAdmin",      accent: Colors.primaryLight },
+};
+
+function useScreenMeta(pathname: string, t: (k: string) => string) {
+  const key = Object.keys(SCREEN_META).find((k) => pathname.includes(k)) ?? "cashier";
+  const meta = SCREEN_META[key];
+  const rawKey = meta.titleKey;
+  const title = rawKey.startsWith("title") || rawKey.startsWith("tab") ? t(rawKey) : rawKey;
+  return { title, accent: meta.accent };
+}
+
 export default function TabLayout() {
   const { width } = useWindowDimensions();
   const { lang } = useLang();
@@ -444,25 +471,26 @@ export default function TabLayout() {
   const isRTL = lang === "ar" || lang === "ur";
   const isDesktop = Platform.OS === "web" && width >= 768;
   const navigate = useCallback((name: string) => { router.navigate(`/(tabs)/${name}` as any); }, [router]);
+  const { title: screenTitle, accent: screenAccent } = useScreenMeta(pathname, t);
 
   const screens = (
     <>
-      <Tabs.Screen name="cashier"          options={{ title: t("titleCashier"),   header: () => <LogoHeader titleKey={t("titleCashier")}   accentColor={Colors.gold}         isDesktop={isDesktop} /> }} />
-      <Tabs.Screen name="halwa"            options={{ title: t("titleHalwa"),     header: () => <LogoHeader titleKey={t("titleHalwa")}     accentColor={Colors.halwa}        isDesktop={isDesktop} /> }} />
-      <Tabs.Screen name="mawali"           options={{ title: t("titleMawali"),    header: () => <LogoHeader titleKey={t("titleMawali")}    accentColor={Colors.mawali}       isDesktop={isDesktop} /> }} />
-      <Tabs.Screen name="chocolate"        options={{ title: t("titleChocolate"), header: () => <LogoHeader titleKey={t("titleChocolate")} accentColor={Colors.chocolate}    isDesktop={isDesktop} /> }} />
-      <Tabs.Screen name="cake"             options={{ title: t("titleCake"),      header: () => <LogoHeader titleKey={t("titleCake")}      accentColor={Colors.cake}         isDesktop={isDesktop} /> }} />
-      <Tabs.Screen name="packaging"        options={{ title: t("titlePackaging"), header: () => <LogoHeader titleKey={t("titlePackaging")} accentColor={Colors.packaging}    isDesktop={isDesktop} /> }} />
-      <Tabs.Screen name="archive"          options={{ title: t("titleArchive"),   header: () => <LogoHeader titleKey={t("titleArchive")}   accentColor={Colors.primaryLight}  isDesktop={isDesktop} /> }} />
-      <Tabs.Screen name="reports"          options={{ title: t("titleReports"),   header: () => <LogoHeader titleKey={t("titleReports")}   accentColor="#8b5cf6"             isDesktop={isDesktop} /> }} />
-      <Tabs.Screen name="developer"        options={{ href: null, title: "لوحة المطور",    header: () => <LogoHeader titleKey="لوحة المطور"    accentColor="#7c3aed"             isDesktop={isDesktop} /> }} />
-      <Tabs.Screen name="branch-orders"    options={{ title: "طلبية الفرع",               header: () => <LogoHeader titleKey="طلبية الفرع"    accentColor={Colors.gold}         isDesktop={isDesktop} /> }} />
-      <Tabs.Screen name="branch-inventory" options={{ title: "جرد الفرع",                 header: () => <LogoHeader titleKey="جرد الفرع"      accentColor="#2563eb"             isDesktop={isDesktop} /> }} />
-      <Tabs.Screen name="branches"         options={{ title: "إدارة الفروع",              header: () => <LogoHeader titleKey="إدارة الفروع"   accentColor="#0d9488"             isDesktop={isDesktop} /> }} />
-      <Tabs.Screen name="customers"        options={{ title: t("titleCustomers"), header: () => <LogoHeader titleKey={t("titleCustomers")} accentColor="#0891b2"             isDesktop={isDesktop} /> }} />
-      <Tabs.Screen name="delivery"         options={{ title: t("titleDelivery"),  header: () => <LogoHeader titleKey={t("titleDelivery")}  accentColor="#0d9488"             isDesktop={isDesktop} /> }} />
-      <Tabs.Screen name="trays"            options={{ title: t("titleTrays"),     header: () => <LogoHeader titleKey={t("titleTrays")}     accentColor={Colors.gold}         isDesktop={isDesktop} /> }} />
-      <Tabs.Screen name="admin"            options={{ title: t("titleAdmin"),     header: () => <LogoHeader titleKey={t("titleAdmin")}     accentColor={Colors.primaryLight}  isDesktop={isDesktop} /> }} />
+      <Tabs.Screen name="cashier"          options={{ title: t("titleCashier"),   headerShown: false }} />
+      <Tabs.Screen name="halwa"            options={{ title: t("titleHalwa"),     headerShown: false }} />
+      <Tabs.Screen name="mawali"           options={{ title: t("titleMawali"),    headerShown: false }} />
+      <Tabs.Screen name="chocolate"        options={{ title: t("titleChocolate"), headerShown: false }} />
+      <Tabs.Screen name="cake"             options={{ title: t("titleCake"),      headerShown: false }} />
+      <Tabs.Screen name="packaging"        options={{ title: t("titlePackaging"), headerShown: false }} />
+      <Tabs.Screen name="archive"          options={{ title: t("titleArchive"),   headerShown: false }} />
+      <Tabs.Screen name="reports"          options={{ title: t("titleReports"),   headerShown: false }} />
+      <Tabs.Screen name="developer"        options={{ href: null, title: "لوحة المطور", headerShown: false }} />
+      <Tabs.Screen name="branch-orders"    options={{ title: "طلبية الفرع",      headerShown: false }} />
+      <Tabs.Screen name="branch-inventory" options={{ title: "جرد الفرع",        headerShown: false }} />
+      <Tabs.Screen name="branches"         options={{ title: "إدارة الفروع",     headerShown: false }} />
+      <Tabs.Screen name="customers"        options={{ title: t("titleCustomers"), headerShown: false }} />
+      <Tabs.Screen name="delivery"         options={{ title: t("titleDelivery"),  headerShown: false }} />
+      <Tabs.Screen name="trays"            options={{ title: t("titleTrays"),     headerShown: false }} />
+      <Tabs.Screen name="admin"            options={{ title: t("titleAdmin"),     headerShown: false }} />
       <Tabs.Screen name="index"            options={{ href: null }} />
     </>
   );
@@ -472,7 +500,7 @@ export default function TabLayout() {
       <View style={[ds.root, isRTL ? ds.rootRTL : ds.rootLTR]}>
         <DesktopSidebar activePath={pathname} navigate={navigate} isRTL={isRTL} />
         <View style={ds.content}>
-          <Tabs tabBar={() => <></>} screenOptions={{ headerShown: true }}>
+          <Tabs tabBar={() => <></>} screenOptions={{ headerShown: false }}>
             {screens}
           </Tabs>
         </View>
@@ -481,9 +509,12 @@ export default function TabLayout() {
   }
 
   return (
-    <Tabs tabBar={() => <CustomTabBar />} screenOptions={{ headerShown: true }}>
-      {screens}
-    </Tabs>
+    <View style={{ flex: 1 }}>
+      <LogoHeader titleKey={screenTitle} accentColor={screenAccent} isDesktop={false} />
+      <Tabs tabBar={() => <CustomTabBar />} screenOptions={{ headerShown: false }}>
+        {screens}
+      </Tabs>
+    </View>
   );
 }
 
