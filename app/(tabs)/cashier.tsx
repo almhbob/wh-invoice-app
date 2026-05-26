@@ -21,7 +21,9 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Colors } from "@/constants/colors";
+import { LAVIVIANE_COMPANY_ID } from "@/constants/lavivianeProducts";
 import { ProductGalleryModal } from "@/components/ProductGalleryModal";
+import { useCompany } from "@/context/CompanyContext";
 import { useEmployee } from "@/context/EmployeeContext";
 import { useLang } from "@/context/LanguageContext";
 import {
@@ -82,6 +84,8 @@ export default function CashierScreen() {
   const { currentEmployee } = useEmployee();
   const { getOfferByPhone, incrementUsage } = useOffers();
   const { t } = useLang();
+  const { company } = useCompany();
+  const isLaviviane = company.id === LAVIVIANE_COMPANY_ID;
 
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -1021,9 +1025,21 @@ export default function CashierScreen() {
             {/* Handle */}
             <View style={styles.receiptHandle} />
 
+            {/* Tenant logo header */}
+            {isLaviviane && (
+              <View style={styles.receiptLogoHeader}>
+                <Image
+                  source={{ uri: "/laviviane-logo.png" }}
+                  style={styles.receiptLogoImg}
+                  contentFit="contain"
+                />
+                <Text style={styles.receiptLogoSub}>Maison de Pâtisserie</Text>
+              </View>
+            )}
+
             {/* Success banner */}
-            <View style={styles.receiptBanner}>
-              <View style={styles.receiptCheckCircle}>
+            <View style={[styles.receiptBanner, isLaviviane && { backgroundColor: "#2f241d" }]}>
+              <View style={[styles.receiptCheckCircle, isLaviviane && { backgroundColor: "#d6b56d" }]}>
                 <Feather name="check" size={28} color="#fff" />
               </View>
               <Text style={styles.receiptBannerTitle}>تم الإرسال بنجاح!</Text>
@@ -1465,6 +1481,12 @@ const styles = StyleSheet.create({
     width: 40, height: 4, borderRadius: 2, backgroundColor: Colors.border,
     alignSelf: "center", marginTop: 10, marginBottom: 6,
   },
+  receiptLogoHeader: {
+    backgroundColor: "#2f241d", alignItems: "center", justifyContent: "center",
+    paddingTop: 18, paddingBottom: 10, paddingHorizontal: 20, gap: 4,
+  },
+  receiptLogoImg: { width: 160, height: 60 },
+  receiptLogoSub: { color: "#d6b56d", fontSize: 10, fontWeight: "600", letterSpacing: 1.5 },
   receiptBanner: {
     backgroundColor: Colors.primary, paddingVertical: 20, paddingHorizontal: 24,
     alignItems: "center", gap: 6,
