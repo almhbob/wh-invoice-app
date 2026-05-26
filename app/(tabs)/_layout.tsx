@@ -500,6 +500,11 @@ export default function TabLayout() {
       <View style={[ds.root, isRTL ? ds.rootRTL : ds.rootLTR]}>
         <DesktopSidebar activePath={pathname} navigate={navigate} isRTL={isRTL} />
         <View style={ds.content}>
+          <View style={[ds.contentHeader, isRTL ? ds.rowRTL : ds.rowLTR]}>
+            <View style={[ds.contentBadge, { backgroundColor: screenAccent }]}>
+              <Text style={ds.contentBadgeText}>{screenTitle}</Text>
+            </View>
+          </View>
           <Tabs tabBar={() => <></>} screenOptions={{ headerShown: false }}>
             {screens}
           </Tabs>
@@ -597,4 +602,11 @@ const ds = StyleSheet.create({
   langRow: { alignItems: "center", gap: 8, paddingHorizontal: 14, paddingBottom: 18, paddingTop: 4 },
   langLabel: { color: "rgba(255,255,255,0.55)", fontSize: 12, fontWeight: "700", flex: 1 },
   langCurrent: { color: "rgba(255,255,255,0.25)", fontSize: 10 },
+  contentHeader: {
+    paddingHorizontal: 20, paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: "rgba(0,0,0,0.08)",
+    backgroundColor: "#fff",
+  },
+  contentBadge: { borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6, alignSelf: "flex-start" },
+  contentBadgeText: { color: "#fff", fontSize: 12, fontWeight: "800" },
 });

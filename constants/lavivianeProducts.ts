@@ -111,7 +111,7 @@ const PAGE3: LavivianeProductSeed[] = [
     imageUri: "/laviviane-cards/02_New_Cake_s_Collection_Page_3/02_01_p3.png",
     sourceFile: "02_New_Cake_s_Collection_Page_3/02_01_p3.png",
     sourcePage: 3,
-    isAvailable: true,
+    isAvailable: false,
     sortOrder: 1060,
   },
   {
@@ -124,7 +124,7 @@ const PAGE3: LavivianeProductSeed[] = [
     imageUri: "/laviviane-cards/02_New_Cake_s_Collection_Page_3/02_02_p3.png",
     sourceFile: "02_New_Cake_s_Collection_Page_3/02_02_p3.png",
     sourcePage: 3,
-    isAvailable: true,
+    isAvailable: false,
     sortOrder: 1070,
   },
   {
@@ -137,7 +137,7 @@ const PAGE3: LavivianeProductSeed[] = [
     imageUri: "/laviviane-cards/02_New_Cake_s_Collection_Page_3/02_03_p3.png",
     sourceFile: "02_New_Cake_s_Collection_Page_3/02_03_p3.png",
     sourcePage: 3,
-    isAvailable: true,
+    isAvailable: false,
     sortOrder: 1080,
   },
   {
@@ -150,7 +150,7 @@ const PAGE3: LavivianeProductSeed[] = [
     imageUri: "/laviviane-cards/02_New_Cake_s_Collection_Page_3/02_04_p3.png",
     sourceFile: "02_New_Cake_s_Collection_Page_3/02_04_p3.png",
     sourcePage: 3,
-    isAvailable: true,
+    isAvailable: false,
     sortOrder: 1090,
   },
   {

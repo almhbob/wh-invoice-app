@@ -264,8 +264,14 @@ export default function CashierScreen() {
     const remaining = order.amountPaid != null && order.totalAmount
       ? `\nالمتبقي: ${Math.max(0, order.totalAmount - order.amountPaid).toFixed(2)} ر.س` : "";
     const cashier = order.cashierEmployee ? `\nمنشئ الطلب: ${order.cashierEmployee.name} #${order.cashierEmployee.employeeId}` : "";
+    const brandHeader = isLaviviane
+      ? `🏰 Laviviane — Maison de Pâtisserie\n`
+      : `🎂 فاتورة W&H كيك وشوكولاتة\n`;
+    const brandFooter = isLaviviane
+      ? `Laviviane · Fondée en 2010 🌹`
+      : `شكراً لثقتكم 🙏`;
     return (
-      `🎂 فاتورة W&H كيك وشوكولاتة\n` +
+      `${brandHeader}` +
       `━━━━━━━━━━━━━━━━\n` +
       `رقم الفاتورة: #${order.orderNumber}\n` +
       `العميل: ${order.customerName}\n` +
@@ -279,7 +285,7 @@ export default function CashierScreen() {
       `━━━━━━━━━━━━━━━━\n` +
       `${cashier}\n` +
       (order.insuranceAmount ? `⚠️ ملاحظة: مدة التأمين 3 أيام حتى استرجاع الصواني\n` : "") +
-      `شكراً لثقتكم 🙏`
+      `${brandFooter}`
     );
   };
 
