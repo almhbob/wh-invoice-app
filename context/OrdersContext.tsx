@@ -208,7 +208,7 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
 
       const depts = new Set(orderData.items.map((i) => i.department));
       depts.add("packaging"); // every order always routed to packaging
-      const departmentStatuses: Record<Department, OrderStatus> = {} as any;
+      const departmentStatuses = {} as Record<Department, OrderStatus>;
       depts.forEach((d) => { departmentStatuses[d] = "pending"; });
 
       const firestoreData = {

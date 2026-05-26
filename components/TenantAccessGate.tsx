@@ -167,9 +167,9 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
     }
 
     const found = allUsers.find((emp) => {
-      const empUser = normalize((emp as any).username || emp.employeeId || "");
+      const empUser = normalize(emp.username || emp.employeeId || "");
       const empId = normalize(emp.employeeId || "");
-      const empPin = String((emp as any).pinCode || "1234");
+      const empPin = String(emp.pinCode || "1234");
       return (empUser === user || empId === user) && empPin === pin;
     });
 
@@ -200,7 +200,7 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
     };
 
     try {
-      const emp = await addEmployee(ownerPayload as any);
+      const emp = await addEmployee(ownerPayload);
       await setCurrentEmployee(emp);
     } catch (error) {
       console.error("Create owner failed; using local bootstrap user", error);
