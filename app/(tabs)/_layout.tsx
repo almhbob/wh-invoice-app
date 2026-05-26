@@ -1,5 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
+import { Image } from "expo-image";
 import { Tabs, useRouter, usePathname } from "expo-router";
 import { SymbolView } from "expo-symbols";
 import React, { useCallback, useState } from "react";
@@ -19,6 +20,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { EmployeeSelectorModal } from "@/components/EmployeeSelectorModal";
 import { Colors } from "@/constants/colors";
+import { LAVIVIANE_COMPANY_ID } from "@/constants/lavivianeProducts";
 import { PLATFORM_OWNER } from "@/constants/platform";
 import { useCompany } from "@/context/CompanyContext";
 import { useEmployee } from "@/context/EmployeeContext";
@@ -38,9 +40,9 @@ const ROLE_COLORS: Record<string, string> = {
 };
 
 const TENANT_BRANDS: Record<string, { name: string; subtitle: string; logoText: string; primary: string; accent: string }> = {
-  "laviviane-trial": {
+  [LAVIVIANE_COMPANY_ID]: {
     name: "Laviviane",
-    subtitle: "Maison de Patisserie",
+    subtitle: "Maison de Pâtisserie",
     logoText: "L",
     primary: "#2f241d",
     accent: "#d6b56d",
@@ -71,8 +73,21 @@ function FawtaraMark() {
   );
 }
 
+function LavivianeLogoMark({ small }: { small?: boolean }) {
+  const w = small ? 36 : 112;
+  const h = small ? 36 : 42;
+  return (
+    <Image
+      source={{ uri: "/laviviane-logo.png" }}
+      style={{ width: w, height: h, borderRadius: small ? 6 : 0 }}
+      contentFit="contain"
+    />
+  );
+}
+
 function TenantLogoMark({ logoText, primary, accent, small }: { logoText: string; primary: string; accent: string; small?: boolean }) {
   if (logoText === "ف") return <FawtaraMark />;
+  if (logoText === "L") return <LavivianeLogoMark small={small} />;
   return (
     <View style={[styles.tenantLogoMark, small && styles.tenantLogoMarkSmall, { borderColor: accent + "80", backgroundColor: primary }]}>
       <Text style={[styles.tenantLogoText, small && styles.tenantLogoTextSmall, { color: accent }]}>{logoText}</Text>
@@ -97,20 +112,29 @@ function LogoHeader({ titleKey, accentColor, isDesktop }: LogoHeaderProps) {
     primary: Colors.primary,
     accent: Colors.gold,
   };
+  const isNamedTenant = company.id in TENANT_BRANDS;
+  const isLaviviane = company.id === LAVIVIANE_COMPANY_ID;
 
   return (
     <>
-      <View style={[styles.headerContainer, { paddingTop: topInset }]}>
+      <View style={[styles.headerContainer, { paddingTop: topInset, backgroundColor: tenantBrand.primary }]}>
         <View style={[styles.headerInner, isRTL ? styles.rowRTL : styles.rowLTR]}>
-          {!isDesktop && (
-            <View style={styles.logoBox}>
+          {!isDesktop && isLaviviane && (
+            <View style={styles.laviLogoBox}>
+              <Image source={{ uri: "/laviviane-logo.png" }} style={styles.laviLogoImg} contentFit="contain" />
+            </View>
+          )}
+          {!isDesktop && !isLaviviane && (
+            <View style={[styles.logoBox, { borderColor: tenantBrand.accent + "80" }]}>
               <TenantLogoMark logoText={tenantBrand.logoText} primary={tenantBrand.primary} accent={tenantBrand.accent} />
             </View>
           )}
-          {!isDesktop && (
+          {!isDesktop && !isLaviviane && (
             <View style={styles.brandBlock}>
-              <Text style={styles.brandName}>{tenantBrand.name}</Text>
-              <Text style={styles.brandSub}>{PLATFORM_OWNER.nameEn} · {tenantBrand.subtitle}</Text>
+              <Text style={[styles.brandName, { color: tenantBrand.accent }]}>{tenantBrand.name}</Text>
+              <Text style={styles.brandSub}>
+                {isNamedTenant ? tenantBrand.subtitle : `${PLATFORM_OWNER.nameEn} · ${tenantBrand.subtitle}`}
+              </Text>
             </View>
           )}
           {isDesktop && <View style={{ flex: 1 }} />}
@@ -140,11 +164,11 @@ function LogoHeader({ titleKey, accentColor, isDesktop }: LogoHeaderProps) {
               )}
             </TouchableOpacity>
           )}
-          <View style={[styles.screenBadge, { backgroundColor: accentColor ?? Colors.gold }]}>
+          <View style={[styles.screenBadge, { backgroundColor: accentColor ?? tenantBrand.accent }]}>
             <Text style={styles.screenBadgeText} numberOfLines={1}>{titleKey}</Text>
           </View>
         </View>
-        <View style={styles.goldLine} />
+        <View style={[styles.goldLine, { backgroundColor: tenantBrand.accent }]} />
       </View>
       {!isDesktop && <EmployeeSelectorModal visible={showSelector} onClose={() => setShowSelector(false)} />}
     </>
@@ -208,6 +232,7 @@ function DesktopSidebar({ activePath, navigate, isRTL }: { activePath: string; n
   const isReports = activePath.includes("reports");
   const activeDept = DEPT_TABS.find(d => activePath.includes(d.name));
   const activeMore = MORE_TABS.find(m => activePath.includes(m.name));
+  const isLaviviane = company.id === LAVIVIANE_COMPANY_ID;
 
   const tenantBrand = TENANT_BRANDS[company.id] ?? {
     name: company.name || PLATFORM_OWNER.nameAr,
@@ -219,21 +244,31 @@ function DesktopSidebar({ activePath, navigate, isRTL }: { activePath: string; n
 
   const LANG_NEXT: Record<string, string> = { ar: "EN", en: "اردو", ur: "हि", hi: "বাং", bn: "ع" };
 
-  const sideStyle = isRTL
-    ? [ds.sidebar, { borderLeftWidth: 1, borderLeftColor: "rgba(255,255,255,0.08)", borderRightWidth: 0 }]
-    : [ds.sidebar, { borderRightWidth: 1, borderRightColor: "rgba(255,255,255,0.08)" }];
+  const sideStyle = [
+    ds.sidebar,
+    { backgroundColor: tenantBrand.primary },
+    isRTL
+      ? { borderLeftWidth: 1, borderLeftColor: "rgba(255,255,255,0.08)", borderRightWidth: 0 }
+      : { borderRightWidth: 1, borderRightColor: "rgba(255,255,255,0.08)" },
+  ];
 
   return (
     <>
       <View style={sideStyle}>
         {/* Brand */}
-        <View style={[ds.brand, isRTL ? ds.rowRTL : ds.rowLTR]}>
-          <TenantLogoMark logoText={tenantBrand.logoText} primary={tenantBrand.primary} accent={tenantBrand.accent} small />
-          <View style={{ flex: 1 }}>
-            <Text style={[ds.brandName, { color: tenantBrand.accent }]}>{tenantBrand.name}</Text>
-            <Text style={ds.brandSub}>{tenantBrand.subtitle}</Text>
+        {isLaviviane ? (
+          <View style={ds.laviBrand}>
+            <Image source={{ uri: "/laviviane-logo.png" }} style={ds.laviSidebarLogo} contentFit="contain" />
           </View>
-        </View>
+        ) : (
+          <View style={[ds.brand, isRTL ? ds.rowRTL : ds.rowLTR]}>
+            <TenantLogoMark logoText={tenantBrand.logoText} primary={tenantBrand.primary} accent={tenantBrand.accent} small />
+            <View style={{ flex: 1 }}>
+              <Text style={[ds.brandName, { color: tenantBrand.accent }]}>{tenantBrand.name}</Text>
+              <Text style={ds.brandSub}>{tenantBrand.subtitle}</Text>
+            </View>
+          </View>
+        )}
         <View style={ds.divider} />
 
         {/* Navigation */}
@@ -455,10 +490,12 @@ export default function TabLayout() {
 // ── Styles ─────────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  headerContainer: { backgroundColor: Colors.primary, shadowColor: "#000", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.18, shadowRadius: 8, elevation: 8 },
+  headerContainer: { shadowColor: "#000", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.18, shadowRadius: 8, elevation: 8 },
   headerInner: { alignItems: "center", paddingHorizontal: 12, paddingVertical: 10, gap: 8 },
   rowRTL: { flexDirection: "row-reverse" }, rowLTR: { flexDirection: "row" },
-  logoBox: { width: 46, height: 46, borderRadius: 10, overflow: "hidden", borderWidth: 2, borderColor: Colors.gold + "80", backgroundColor: "#fff", alignItems: "center", justifyContent: "center" },
+  logoBox: { width: 46, height: 46, borderRadius: 10, overflow: "hidden", borderWidth: 2, backgroundColor: "#fff", alignItems: "center", justifyContent: "center" },
+  laviLogoBox: { height: 46, width: 120, borderRadius: 8, overflow: "hidden", backgroundColor: "#fff", alignItems: "center", justifyContent: "center", paddingHorizontal: 4 },
+  laviLogoImg: { width: 112, height: 42 },
   fawtaraMark: { width: 31, height: 31, position: "relative" },
   markBlueStem: { position: "absolute", left: 0, top: 0, width: 10, height: 31, backgroundColor: "#132446" },
   markBlueFoot: { position: "absolute", left: 0, bottom: 0, width: 22, height: 12, backgroundColor: "#132446" },
@@ -470,7 +507,7 @@ const styles = StyleSheet.create({
   tenantLogoTextSmall: { fontSize: 18 },
   tenantLogoLine: { width: 18, height: 2, borderRadius: 2, marginTop: 1 },
   brandBlock: { gap: 1 },
-  brandName: { color: Colors.gold, fontSize: 16, fontWeight: "900", letterSpacing: 0.3, fontFamily: Platform.OS === "ios" ? "Georgia" : "serif" },
+  brandName: { fontSize: 16, fontWeight: "900", letterSpacing: 0.3, fontFamily: Platform.OS === "ios" ? "Georgia" : "serif" },
   brandSub: { color: "rgba(255,255,255,0.65)", fontSize: 9, fontWeight: "600" },
   langBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.15)", borderWidth: 1, borderColor: "rgba(255,255,255,0.3)", alignItems: "center", justifyContent: "center" },
   langBtnText: { color: "#fff", fontSize: 12, fontWeight: "800" },
@@ -483,7 +520,7 @@ const styles = StyleSheet.create({
   loginText: { color: "rgba(255,255,255,0.85)", fontSize: 11, fontWeight: "600" },
   screenBadge: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20 },
   screenBadgeText: { color: "#fff", fontSize: 11, fontWeight: "700" },
-  goldLine: { height: 2, backgroundColor: Colors.gold, opacity: 0.6 },
+  goldLine: { height: 2, opacity: 0.75 },
   bar: { flexDirection: "row", borderTopWidth: StyleSheet.hairlineWidth, zIndex: 100, overflow: "hidden" },
   nativeBar: { position: "absolute", bottom: 0, left: 0, right: 0 },
   webBar: { position: "relative", left: 0, right: 0 },
@@ -506,11 +543,13 @@ const ds = StyleSheet.create({
   root: { flex: 1 },
   rootLTR: { flexDirection: "row" },
   rootRTL: { flexDirection: "row-reverse" },
-  sidebar: { width: 220, backgroundColor: Colors.primary, flexDirection: "column" },
+  sidebar: { width: 220, flexDirection: "column" },
   content: { flex: 1, overflow: "hidden" as any },
   rowLTR: { flexDirection: "row" },
   rowRTL: { flexDirection: "row-reverse" },
   brand: { alignItems: "center", gap: 10, paddingHorizontal: 16, paddingTop: 20, paddingBottom: 14 },
+  laviBrand: { alignItems: "center", justifyContent: "center", paddingTop: 20, paddingBottom: 14, paddingHorizontal: 12 },
+  laviSidebarLogo: { width: 188, height: 72 },
   brandName: { fontSize: 15, fontWeight: "900", fontFamily: Platform.OS === "ios" ? "Georgia" : "serif" },
   brandSub: { color: "rgba(255,255,255,0.45)", fontSize: 10, marginTop: 1 },
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: "rgba(255,255,255,0.12)", marginHorizontal: 12, marginVertical: 4 },
