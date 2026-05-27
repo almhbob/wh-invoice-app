@@ -81,7 +81,7 @@ const PAYMENT_OPTIONS: { value: PaymentMethod; icon: string }[] = [
 export default function CashierScreen() {
   const insets = useSafeAreaInsets();
   const { addOrder } = useOrders();
-  const { currentEmployee } = useEmployee();
+  const { currentEmployee, setCurrentEmployee } = useEmployee();
   const { getOfferByPhone, incrementUsage } = useOffers();
   const { t } = useLang();
   const { company } = useCompany();
@@ -610,13 +610,21 @@ export default function CashierScreen() {
 
         {/* Current employee display */}
         {currentEmployee ? (
-          <View style={styles.empDisplay}>
-            <Feather name="user-check" size={14} color={Colors.success} />
-            <Text style={styles.empDisplayText}>
-              الكاشير: <Text style={{ fontWeight: "700" }}>{currentEmployee.name}</Text>
-              {"  "}
-              <Text style={{ color: Colors.textMuted }}>#{currentEmployee.employeeId}</Text>
-            </Text>
+          <View style={[styles.empDisplay, { justifyContent: "space-between" }]}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <Feather name="user-check" size={14} color={Colors.success} />
+              <Text style={styles.empDisplayText}>
+                الكاشير: <Text style={{ fontWeight: "700" }}>{currentEmployee.name}</Text>
+                {"  "}
+                <Text style={{ color: Colors.textMuted }}>#{currentEmployee.employeeId}</Text>
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => setCurrentEmployee(null)}
+              style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, backgroundColor: Colors.accent + "18" }}
+            >
+              <Text style={{ color: Colors.accent, fontSize: 11, fontWeight: "800" }}>تغيير</Text>
+            </TouchableOpacity>
           </View>
         ) : (
           <View style={[styles.empDisplay, { borderColor: Colors.accent + "40", backgroundColor: Colors.accent + "08" }]}>
