@@ -1,9 +1,11 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Feather } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import React, { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 
 import { Colors } from "@/constants/colors";
+import { LAVIVIANE_COMPANY_ID } from "@/constants/lavivianeProducts";
 import { DEFAULT_TENANT } from "@/constants/platform";
 import { tenantAccessText } from "@/constants/tenantAccessTranslations";
 import { CompanyTenant, useCompany } from "@/context/CompanyContext";
@@ -224,7 +226,63 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
     return <View style={styles.center}><ActivityIndicator color={Colors.gold} /><Text style={styles.muted}>{tx("checking")}</Text></View>;
   }
 
+  const isLaviviane = company.id === LAVIVIANE_COMPANY_ID;
+
+  const unlockLavivianeDirect = async () => {
+    setCompanyCode(LAVIVIANE_COMPANY_ID);
+    await switchCompanyById(LAVIVIANE_COMPANY_ID);
+    await AsyncStorage.setItem(ACCESS_KEY, "1");
+    setUnlocked(true);
+  };
+
   if (!unlocked) {
+    if (isLaviviane) {
+      return (
+        <ScrollView contentContainerStyle={styles.screen}>
+          <View style={styles.lavivianeGate}>
+            {/* Header */}
+            <View style={styles.laviBanner}>
+              <Image source={{ uri: "/laviviane-logo.png" }} style={styles.laviLogoImg} contentFit="contain" />
+              <Text style={styles.laviSub}>Maison de Pâtisserie</Text>
+            </View>
+
+            {/* QR Code */}
+            <View style={styles.laviQrBox}>
+              <Image source={{ uri: "/laviviane-qr.png" }} style={styles.laviQrImg} contentFit="contain" />
+              <Text style={styles.laviQrLabel}>امسح للدخول على أي جهاز</Text>
+            </View>
+
+            {/* Direct Entry */}
+            <TouchableOpacity style={styles.laviEnterBtn} onPress={unlockLavivianeDirect}>
+              <Feather name="log-in" size={18} color="#d6b56d" />
+              <Text style={styles.laviEnterText}>دخول لاففيان</Text>
+            </TouchableOpacity>
+
+            {/* Divider */}
+            <View style={styles.laviDividerRow}>
+              <View style={styles.laviDividerLine} />
+              <Text style={styles.laviDividerText}>أو أدخل كود الشركة</Text>
+              <View style={styles.laviDividerLine} />
+            </View>
+
+            <View style={{ paddingHorizontal: 20, gap: 10, paddingBottom: 20 }}>
+              <TextInput
+                style={[styles.input, { textAlign, backgroundColor: "#fefcf8" }]}
+                value={companyCode}
+                onChangeText={setCompanyCode}
+                placeholder={tx("companyCodePlaceholder")}
+                placeholderTextColor={Colors.textMuted}
+              />
+              <TouchableOpacity style={[styles.primaryBtn, { flexDirection: rowDirection }]} onPress={unlockByCode}>
+                <Feather name="log-in" size={16} color="#fff" />
+                <Text style={styles.primaryText}>{tx("loginByCode")}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </ScrollView>
+      );
+    }
+
     return (
       <ScrollView contentContainerStyle={styles.screen}>
         <View style={styles.card}>
@@ -243,6 +301,12 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
     return (
       <ScrollView contentContainerStyle={styles.screen}>
         <View style={styles.card}>
+          {isLaviviane && (
+            <View style={styles.laviBanner}>
+              <Image source={{ uri: "/laviviane-logo.png" }} style={styles.laviLogoImg} contentFit="contain" />
+              <Text style={styles.laviSub}>Maison de Pâtisserie</Text>
+            </View>
+          )}
           <TouchableOpacity style={styles.switchBtn} onPress={resetCompany}><Text style={styles.switchText}>{tx("changeCompany")}</Text></TouchableOpacity>
           <Text style={styles.title}>{tx("employeeLoginTitle")}</Text>
           <Text style={styles.subtitle}>{tx("currentCompany")}: {company.name} · {employeeCountLabel}</Text>
@@ -280,8 +344,70 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
 
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 10, backgroundColor: Colors.background },
-  screen: { flexGrow: 1, justifyContent: "center", padding: 20, backgroundColor: Colors.background },
+  screen: { flexGrow: 1, justifyContent: "center", padding: 20, backgroundColor: "#faf7f2" },
   card: { gap: 12, backgroundColor: "#fff", borderRadius: 24, padding: 18, borderWidth: 1, borderColor: Colors.border },
+
+  // Laviviane gate
+  lavivianeGate: {
+    gap: 14,
+    backgroundColor: "#fff",
+    borderRadius: 24,
+    padding: 0,
+    overflow: "hidden",
+    borderWidth: 1.5,
+    borderColor: "#2f241d",
+    shadowColor: "#2f241d",
+    shadowOpacity: 0.12,
+    shadowRadius: 20,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 8,
+  },
+  laviBanner: {
+    backgroundColor: "#2f241d",
+    alignItems: "center",
+    paddingTop: 22,
+    paddingBottom: 14,
+    paddingHorizontal: 20,
+    gap: 6,
+  },
+  laviLogoImg: { width: 180, height: 68 },
+  laviSub: { color: "#d6b56d", fontSize: 11, fontWeight: "600", letterSpacing: 2, textTransform: "uppercase" as const },
+
+  laviQrBox: {
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 20,
+  },
+  laviQrImg: {
+    width: 190,
+    height: 190,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: "#e8ddd0",
+  },
+  laviQrLabel: { color: "#7a6550", fontSize: 12, fontWeight: "700", textAlign: "center" },
+
+  laviEnterBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginHorizontal: 20,
+    backgroundColor: "#2f241d",
+    borderRadius: 14,
+    paddingVertical: 14,
+  },
+  laviEnterText: { color: "#d6b56d", fontSize: 16, fontWeight: "900" },
+
+  laviDividerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 20,
+  },
+  laviDividerLine: { flex: 1, height: 1, backgroundColor: "#e8ddd0" },
+  laviDividerText: { color: "#b8a090", fontSize: 11, fontWeight: "600" },
   title: { fontSize: 22, fontWeight: "900", color: Colors.primary, textAlign: "center" },
   subtitle: { fontSize: 13, color: Colors.textMuted, textAlign: "center", lineHeight: 21 },
   muted: { fontSize: 12, color: Colors.textMuted, textAlign: "right" },
