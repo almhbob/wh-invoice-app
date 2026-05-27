@@ -6,6 +6,7 @@ import {
   FlatList,
   Modal,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -16,7 +17,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Colors } from "@/constants/colors";
-import { LAVIVIANE_COMPANY_ID, buildLavivianeProducts } from "@/constants/lavivianeProducts";
+import { LAVIVIANE_CATEGORY_ORDER, LAVIVIANE_COMPANY_ID, buildLavivianeProducts } from "@/constants/lavivianeProducts";
 import { useCompany } from "@/context/CompanyContext";
 import { useLang } from "@/context/LanguageContext";
 import { Department, OrderItem } from "@/context/OrdersContext";
@@ -36,6 +37,19 @@ const DEPT_FILTERS: { value: Department | "all"; labelAr: string; labelEn: strin
   { value: "chocolate", labelAr: "شوكولاتة وهدايا",  labelEn: "Chocolate & Gifts",    color: Colors.chocolate },
 ];
 
+// Laviviane category colours — cycle through brand palette
+const LAVI_CATEGORY_COLORS: Record<string, string> = {
+  "New Cake Collection":      "#c0392b",
+  "Laviviane Cakes":          "#8e44ad",
+  "Celebration Bites":        "#2f241d",
+  "Mousse Cake":              "#16a085",
+  "Laviviane Bites":          "#d35400",
+  "Sandwich":                 "#27ae60",
+  "Luxury Chocolate":         "#d6b56d",
+  "Occasion Chocolate":       "#2980b9",
+  "Distributions and Gifts":  "#7f8c8d",
+};
+
 function makeOrderItemId() {
   return Date.now().toString() + Math.random().toString(36).substring(2, 8);
 }
@@ -50,12 +64,14 @@ function ProductCard({
   onAdd,
   onRemove,
   lang,
+  isLaviviane,
 }: {
   product: Product;
   qty: number;
   onAdd: () => void;
   onRemove: () => void;
   lang: string;
+  isLaviviane: boolean;
 }) {
   const deptColorMap: Record<string, string> = {
     halwa: Colors.halwa,
@@ -82,10 +98,16 @@ function ProductCard({
     cake: "layers",
   };
 
-  const deptColor = deptColorMap[product.department] ?? Colors.primary;
-  const deptLabel = lang === "ar"
-    ? (deptLabelAr[product.department] ?? product.department)
-    : (deptLabelEn[product.department] ?? product.department);
+  const deptColor = isLaviviane && product.category
+    ? (LAVI_CATEGORY_COLORS[product.category] ?? Colors.primary)
+    : (deptColorMap[product.department] ?? Colors.primary);
+
+  const badgeLabel = isLaviviane && product.category
+    ? product.category
+    : (lang === "ar"
+        ? (deptLabelAr[product.department] ?? product.department)
+        : (deptLabelEn[product.department] ?? product.department));
+
   const displayName = lang === "en" && product.nameEn ? product.nameEn : product.name;
 
   return (
@@ -96,12 +118,11 @@ function ProductCard({
         ) : (
           <View style={[styles.productImagePlaceholder, { backgroundColor: deptColor + "18" }]}>
             <Feather name={(deptIconMap[product.department] as any) ?? "tag"} size={30} color={deptColor} />
-            <Text style={[styles.placeholderLabel, { color: deptColor }]}>{deptLabel}</Text>
           </View>
         )}
 
         <View style={[styles.deptBadge, { backgroundColor: deptColor }]}>
-          <Text style={styles.deptBadgeText}>{deptLabel}</Text>
+          <Text style={styles.deptBadgeText} numberOfLines={1}>{badgeLabel}</Text>
         </View>
 
         {qty > 0 && (
@@ -123,7 +144,6 @@ function ProductCard({
         {product.description ? <Text style={styles.productDesc} numberOfLines={1}>{product.description}</Text> : null}
         <View style={styles.priceRow}>
           <Text style={styles.productPrice}>{formatPrice(product.price, lang)}</Text>
-          {product.category ? <Text style={styles.categoryText} numberOfLines={1}>{product.category}</Text> : null}
         </View>
       </View>
 
@@ -157,24 +177,30 @@ export function ProductGalleryModal({ visible, onClose, onConfirm }: Props) {
   const { lang } = useLang();
   const [search, setSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState<Department | "all">("all");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [selected, setSelected] = useState<Record<string, number>>({});
 
+  const isLaviviane = companyId === LAVIVIANE_COMPANY_ID;
   const columnCount = width >= 980 ? 4 : width >= 700 ? 3 : 2;
 
   const visibleProducts = useMemo(() => {
     if (products.length > 0) return products;
-    if (companyId === LAVIVIANE_COMPANY_ID) return buildLavivianeProducts();
+    if (isLaviviane) return buildLavivianeProducts();
     return [];
-  }, [products, companyId]);
+  }, [products, isLaviviane]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return visibleProducts.filter((p) => {
-      if (deptFilter !== "all" && p.department !== deptFilter) return false;
+      if (isLaviviane) {
+        if (categoryFilter !== "all" && p.category !== categoryFilter) return false;
+      } else {
+        if (deptFilter !== "all" && p.department !== deptFilter) return false;
+      }
       if (q && !p.name.toLowerCase().includes(q) && !(p.nameEn ?? "").toLowerCase().includes(q) && !(p.category ?? "").toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [visibleProducts, deptFilter, search]);
+  }, [visibleProducts, deptFilter, categoryFilter, search, isLaviviane]);
 
   const totalSelected = Object.values(selected).reduce((s, n) => s + n, 0);
   const totalValue = Object.entries(selected).reduce((sum, [productId, qty]) => {
@@ -215,6 +241,7 @@ export function ProductGalleryModal({ visible, onClose, onConfirm }: Props) {
     setSelected({});
     setSearch("");
     setDeptFilter("all");
+    setCategoryFilter("all");
     onClose();
   };
 
@@ -222,19 +249,30 @@ export function ProductGalleryModal({ visible, onClose, onConfirm }: Props) {
     setSelected({});
     setSearch("");
     setDeptFilter("all");
+    setCategoryFilter("all");
     onClose();
   };
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet">
       <View style={[styles.container, { paddingTop: Platform.OS === "ios" ? insets.top : 12 }]}>
+        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity style={styles.closeBtn} onPress={handleClose}>
             <Feather name="x" size={20} color={Colors.text} />
           </TouchableOpacity>
           <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>{lang === "ar" ? "اختيار المنتجات" : "Choose Products"}</Text>
-            <Text style={styles.headerSubtitle}>{lang === "ar" ? "بطاقات مرئية بالصور والسعر والكمية" : "Visual cards with image, price, and quantity"}</Text>
+            {isLaviviane ? (
+              <>
+                <Text style={[styles.headerTitle, { color: "#2f241d" }]}>LAVIVIANE</Text>
+                <Text style={styles.headerSubtitle}>اختر من كتالوج لاففيان · {visibleProducts.length} منتج</Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.headerTitle}>{lang === "ar" ? "اختيار المنتجات" : "Choose Products"}</Text>
+                <Text style={styles.headerSubtitle}>{lang === "ar" ? "بطاقات مرئية بالصور والسعر والكمية" : "Visual cards with image, price, and quantity"}</Text>
+              </>
+            )}
           </View>
           {totalSelected > 0 ? (
             <View style={styles.selectedBadge}>
@@ -243,13 +281,14 @@ export function ProductGalleryModal({ visible, onClose, onConfirm }: Props) {
           ) : <View style={{ width: 36 }} />}
         </View>
 
+        {/* Search */}
         <View style={styles.searchBox}>
           <Feather name="search" size={16} color={Colors.textMuted} />
           <TextInput
             style={styles.searchInput}
             value={search}
             onChangeText={setSearch}
-            placeholder={lang === "ar" ? "بحث بالاسم أو التصنيف..." : "Search name or category..."}
+            placeholder={lang === "ar" ? "بحث بالاسم أو الفئة..." : "Search name or category..."}
             placeholderTextColor={Colors.textMuted}
             textAlign={lang === "ar" ? "right" : "left"}
           />
@@ -260,22 +299,62 @@ export function ProductGalleryModal({ visible, onClose, onConfirm }: Props) {
           ) : null}
         </View>
 
-        <View style={styles.filterRow}>
-          {DEPT_FILTERS.map((f) => {
-            const label = lang === "ar" ? f.labelAr : f.labelEn;
-            const isActive = deptFilter === f.value;
-            return (
-              <TouchableOpacity
-                key={f.value}
-                style={[styles.filterChip, isActive && { backgroundColor: f.color, borderColor: f.color }]}
-                onPress={() => setDeptFilter(f.value as any)}
-              >
-                <Text style={[styles.filterChipText, isActive && { color: "#fff" }]}>{label}</Text>
-              </TouchableOpacity>
-            );
-          })}
-          <Text style={styles.productCount}>{filtered.length} {lang === "ar" ? "منتج" : "products"}</Text>
-        </View>
+        {/* Filters */}
+        {isLaviviane ? (
+          /* Laviviane: category filter chips (horizontal scroll) */
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.laviFilterRow}
+          >
+            <TouchableOpacity
+              style={[styles.laviChip, categoryFilter === "all" && { backgroundColor: "#2f241d", borderColor: "#2f241d" }]}
+              onPress={() => setCategoryFilter("all")}
+            >
+              <Text style={[styles.laviChipText, categoryFilter === "all" && { color: "#d6b56d" }]}>
+                الكل ({visibleProducts.length})
+              </Text>
+            </TouchableOpacity>
+            {LAVIVIANE_CATEGORY_ORDER.map((cat) => {
+              const count = visibleProducts.filter((p) => p.category === cat).length;
+              const color = LAVI_CATEGORY_COLORS[cat] ?? Colors.primary;
+              const isActive = categoryFilter === cat;
+              return (
+                <TouchableOpacity
+                  key={cat}
+                  style={[styles.laviChip, isActive && { backgroundColor: color, borderColor: color }]}
+                  onPress={() => setCategoryFilter(cat)}
+                >
+                  <Text style={[styles.laviChipText, isActive && { color: "#fff" }]} numberOfLines={1}>
+                    {cat} ({count})
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        ) : (
+          /* Other tenants: department filter */
+          <View style={styles.filterRow}>
+            {DEPT_FILTERS.map((f) => {
+              const label = lang === "ar" ? f.labelAr : f.labelEn;
+              const isActive = deptFilter === f.value;
+              return (
+                <TouchableOpacity
+                  key={f.value}
+                  style={[styles.filterChip, isActive && { backgroundColor: f.color, borderColor: f.color }]}
+                  onPress={() => setDeptFilter(f.value as any)}
+                >
+                  <Text style={[styles.filterChipText, isActive && { color: "#fff" }]}>{label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+            <Text style={styles.productCount}>{filtered.length} {lang === "ar" ? "منتج" : "products"}</Text>
+          </View>
+        )}
+
+        {isLaviviane && (
+          <Text style={styles.laviResultCount}>{filtered.length} منتج</Text>
+        )}
 
         <FlatList
           data={filtered}
@@ -291,15 +370,13 @@ export function ProductGalleryModal({ visible, onClose, onConfirm }: Props) {
               onAdd={() => add(item.id)}
               onRemove={() => remove(item.id)}
               lang={lang}
+              isLaviviane={isLaviviane}
             />
           )}
           ListEmptyComponent={
             <View style={styles.emptyBox}>
               <Feather name="shopping-bag" size={40} color={Colors.textMuted} />
               <Text style={styles.emptyText}>{lang === "ar" ? "لا توجد منتجات" : "No products found"}</Text>
-              {companyId === LAVIVIANE_COMPANY_ID ? (
-                <Text style={styles.emptyHint}>{lang === "ar" ? "جاري تحميل كتالوج Laviviane المحلي بعد تحديث النشر." : "Loading Laviviane local catalog after deployment refresh."}</Text>
-              ) : null}
             </View>
           }
           showsVerticalScrollIndicator={false}
@@ -343,6 +420,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.gold, alignItems: "center", justifyContent: "center", paddingHorizontal: 5,
   },
   selectedBadgeText: { color: "#fff", fontSize: 13, fontWeight: "900" },
+
   searchBox: {
     flexDirection: "row", alignItems: "center", gap: 10,
     marginHorizontal: 16, marginTop: 12,
@@ -351,6 +429,20 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: Colors.border,
   },
   searchInput: { flex: 1, fontSize: 14, color: Colors.text },
+
+  // Laviviane category chips
+  laviFilterRow: {
+    flexDirection: "row", alignItems: "center", gap: 8,
+    paddingHorizontal: 14, paddingVertical: 10,
+  },
+  laviChip: {
+    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
+    borderWidth: 1.5, borderColor: "#d6b56d", backgroundColor: "#fefcf8",
+  },
+  laviChipText: { fontSize: 12, fontWeight: "700", color: "#2f241d" },
+  laviResultCount: { fontSize: 11, color: Colors.textMuted, textAlign: "right", paddingHorizontal: 16, paddingBottom: 4 },
+
+  // Generic dept filter
   filterRow: {
     flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap",
     paddingHorizontal: 16, paddingVertical: 10,
@@ -361,6 +453,7 @@ const styles = StyleSheet.create({
   },
   filterChipText: { fontSize: 13, fontWeight: "700", color: Colors.textSecondary },
   productCount: { fontSize: 12, color: Colors.textMuted, marginLeft: "auto" },
+
   grid: { paddingHorizontal: 12, paddingBottom: 110 },
   columnWrapper: { gap: 12, marginBottom: 12 },
   productCard: {
@@ -373,8 +466,7 @@ const styles = StyleSheet.create({
   productImageBox: { height: 132, position: "relative", backgroundColor: Colors.surfaceSecondary },
   productImage: { width: "100%", height: "100%" },
   productImagePlaceholder: { width: "100%", height: "100%", alignItems: "center", justifyContent: "center", gap: 6 },
-  placeholderLabel: { fontSize: 11, fontWeight: "800" },
-  deptBadge: { position: "absolute", top: 8, right: 8, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10 },
+  deptBadge: { position: "absolute", top: 8, right: 8, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 10, maxWidth: "80%" },
   deptBadgeText: { color: "#fff", fontSize: 10, fontWeight: "800" },
   selectedOverlayBadge: {
     position: "absolute", left: 8, top: 8, flexDirection: "row", alignItems: "center", gap: 3,
@@ -386,9 +478,8 @@ const styles = StyleSheet.create({
   productInfo: { padding: 10, gap: 4, flex: 1 },
   productName: { fontSize: 13, fontWeight: "800", color: Colors.text, lineHeight: 18, textAlign: "right" },
   productDesc: { fontSize: 11, color: Colors.textMuted, textAlign: "right" },
-  priceRow: { flexDirection: "row-reverse", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 2 },
+  priceRow: { flexDirection: "row-reverse", alignItems: "center", marginTop: 2 },
   productPrice: { fontSize: 14, fontWeight: "900", color: Colors.gold },
-  categoryText: { flex: 1, fontSize: 10, color: Colors.textMuted, textAlign: "left" },
   addToOrderBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, marginHorizontal: 10, marginBottom: 10, paddingVertical: 9, borderRadius: 12 },
   addToOrderText: { color: "#fff", fontSize: 13, fontWeight: "800" },
   qtyRow: { flexDirection: "row", alignItems: "center", marginHorizontal: 10, marginBottom: 10, borderWidth: 1.5, borderRadius: 12, overflow: "hidden" },
@@ -396,7 +487,6 @@ const styles = StyleSheet.create({
   qtyNum: { flex: 1, textAlign: "center", fontSize: 15, fontWeight: "900" },
   emptyBox: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, paddingVertical: 80 },
   emptyText: { fontSize: 15, color: Colors.textMuted },
-  emptyHint: { maxWidth: 280, fontSize: 12, color: Colors.info, textAlign: "center", lineHeight: 18 },
   confirmBar: {
     flexDirection: "row", alignItems: "center", gap: 12,
     paddingHorizontal: 16, paddingTop: 14,

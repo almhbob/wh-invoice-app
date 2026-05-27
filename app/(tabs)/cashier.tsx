@@ -225,7 +225,7 @@ export default function CashierScreen() {
   };
 
   // ── Totals ──────────────────────────────────────────────────────────────
-  const validItems = items.filter((i) => i.name.trim());
+  const validItems = items.filter((i) => i.name.trim() && i.quantity > 0);
   const subtotal = validItems.reduce((s, i) => s + (i.price || 0) * i.quantity, 0);
   const insuranceVal = parseFloat(insuranceAmount) || 0;
   const discountVal = parseFloat(discountValue) || 0;
@@ -478,62 +478,68 @@ export default function CashierScreen() {
   const handleSubmit = async () => {
     if (!customerName.trim()) { Alert.alert("خطأ", t("errName")); return; }
     if (!customerPhone.trim()) { Alert.alert("خطأ", t("errPhone")); return; }
-    const filteredItems = items.filter((i) => i.name.trim());
+    const filteredItems = items.filter((i) => i.name.trim() && i.quantity > 0);
     if (filteredItems.length === 0) { Alert.alert("خطأ", t("errItems")); return; }
 
-    const insurance = insuranceAmount.trim() ? parseFloat(insuranceAmount) : undefined;
-    const total = grandTotal > 0 ? grandTotal : undefined;
-    const discountData: Discount | undefined =
-      discountEnabled && discountVal > 0
-        ? { type: discountType, value: discountVal, reason: discountReason.trim() }
-        : undefined;
+    const doSubmit = async () => {
+      const insurance = insuranceAmount.trim() ? parseFloat(insuranceAmount) : undefined;
+      const total = grandTotal > 0 ? grandTotal : undefined;
+      const discountData: Discount | undefined =
+        discountEnabled && discountVal > 0
+          ? { type: discountType, value: discountVal, reason: discountReason.trim() }
+          : undefined;
+
+      setIsSubmitting(true);
+      try {
+        const paidNum = amountPaidVal > 0 ? amountPaidVal : undefined;
+        const created = await addOrder({
+          customerName: customerName.trim(),
+          customerPhone: customerPhone.trim(),
+          customerPhone2: customerPhone2.trim() || undefined,
+          orderType,
+          deliveryAddress: orderType === "delivery" ? deliveryAddress.trim() || undefined : undefined,
+          receivedAt,
+          deliveryTime: deliveryDateTime || undefined,
+          insuranceAmount: insurance && !isNaN(insurance) ? insurance : undefined,
+          insurancePaymentMethod: insuranceVal > 0 ? insurancePaymentMethod : undefined,
+          totalAmount: total,
+          amountPaid: paidNum,
+          paymentMethod,
+          discount: discountData,
+          items: filteredItems,
+          notes: notes.trim() || undefined,
+          imageUri: imageUri || undefined,
+          cashierEmployee: {
+            name: currentEmployee!.name,
+            employeeId: currentEmployee!.employeeId,
+            timestamp: new Date().toISOString(),
+          },
+        });
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        if (appliedOfferId) incrementUsage(appliedOfferId).catch(() => {});
+        resetForm();
+        setReceiptOrder(created);
+      } catch {
+        Alert.alert("خطأ", t("errSend"));
+      } finally {
+        setIsSubmitting(false);
+      }
+    };
 
     if (!currentEmployee) {
-      Alert.alert(
-        "تسجيل الدخول مطلوب",
-        "يجب عليك تسجيل الدخول أولاً قبل إرسال الفاتورة. اضغط على زر الموظف في الأعلى.",
-        [{ text: "حسناً" }]
-      );
+      Alert.alert("تسجيل الدخول مطلوب", "يجب تسجيل الدخول أولاً — اضغط على زر تغيير في الأعلى.", [{ text: "حسناً" }]);
       return;
     }
 
-    setIsSubmitting(true);
-    try {
-      const paidNum = amountPaidVal > 0 ? amountPaidVal : undefined;
-      const created = await addOrder({
-        customerName: customerName.trim(),
-        customerPhone: customerPhone.trim(),
-        customerPhone2: customerPhone2.trim() || undefined,
-        orderType,
-        deliveryAddress: orderType === "delivery" ? deliveryAddress.trim() || undefined : undefined,
-        receivedAt,
-        deliveryTime: deliveryDateTime || undefined,
-        insuranceAmount: insurance && !isNaN(insurance) ? insurance : undefined,
-        insurancePaymentMethod: insuranceVal > 0 ? insurancePaymentMethod : undefined,
-        totalAmount: total,
-        amountPaid: paidNum,
-        paymentMethod,
-        discount: discountData,
-        items: filteredItems,
-        notes: notes.trim() || undefined,
-        imageUri: imageUri || undefined,
-        cashierEmployee: {
-          name: currentEmployee.name,
-          employeeId: currentEmployee.employeeId,
-          timestamp: new Date().toISOString(),
-        },
-      });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      if (appliedOfferId) {
-        incrementUsage(appliedOfferId).catch(() => {});
-      }
-      resetForm();
-      setReceiptOrder(created);
-    } catch {
-      Alert.alert("خطأ", t("errSend"));
-    } finally {
-      setIsSubmitting(false);
+    if (filteredItems.some((i) => i.price <= 0)) {
+      Alert.alert("تنبيه", "بعض الأصناف لا تحتوي على سعر — هل تريد المتابعة؟", [
+        { text: "تراجع", style: "cancel" },
+        { text: "متابعة", onPress: () => { void doSubmit(); } },
+      ]);
+      return;
     }
+
+    void doSubmit();
   };
 
   // Group items preview by dept
