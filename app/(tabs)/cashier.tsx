@@ -90,6 +90,7 @@ export default function CashierScreen() {
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerPhone2, setCustomerPhone2] = useState("");
+  const [deliveryAddress, setDeliveryAddress] = useState("");
   const [orderType, setOrderType] = useState<OrderType>("pickup");
   const [receivedAt, setReceivedAt] = useState("");
   const [deliveryDate, setDeliveryDate] = useState("");
@@ -213,7 +214,7 @@ export default function CashierScreen() {
   };
 
   const resetForm = () => {
-    setCustomerName(""); setCustomerPhone(""); setCustomerPhone2(""); setReceivedAt(formatNow());
+    setCustomerName(""); setCustomerPhone(""); setCustomerPhone2(""); setDeliveryAddress(""); setReceivedAt(formatNow());
     setOrderType("pickup"); setDeliveryDate(""); setDeliveryTime("");
     setInsuranceAmount(""); setInsurancePaymentMethod("cash");
     setPaymentMethod("cash"); setAmountPaid("");
@@ -257,6 +258,7 @@ export default function CashierScreen() {
         }`
       : "";
     const deliv = order.deliveryTime ? `\nموعد التسليم: ${order.deliveryTime}` : "";
+    const addr = order.deliveryAddress ? `\nعنوان التوصيل: ${order.deliveryAddress}` : "";
     const pm = order.paymentMethod ? `\nطريقة الدفع: ${PAYMENT_LABELS[order.paymentMethod]}` : "";
     const otype = order.orderType ? `\nنوع الطلب: ${ORDER_TYPE_LABELS[order.orderType]}` : "";
     const paid = order.amountPaid != null
@@ -276,7 +278,7 @@ export default function CashierScreen() {
       `رقم الفاتورة: #${order.orderNumber}\n` +
       `العميل: ${order.customerName}\n` +
       `الهاتف: ${order.customerPhone}${order.customerPhone2 ? ` / ${order.customerPhone2}` : ""}${otype}\n` +
-      `تاريخ الطلب: ${order.receivedAt}${deliv}\n` +
+      `تاريخ الطلب: ${order.receivedAt}${deliv}${addr}\n` +
       `━━━━━━━━━━━━━━━━\n` +
       `الأصناف:\n${itemLines}\n` +
       `━━━━━━━━━━━━━━━━\n` +
@@ -372,6 +374,11 @@ export default function CashierScreen() {
         <span>موعد التسليم</span><span style="font-weight:700">${order.deliveryTime}</span>
       </div>` : "";
 
+    const addressHtml = order.deliveryAddress ? `
+      <div style="margin:3px 0;font-size:10px">
+        <span style="color:#555">عنوان التوصيل: </span><span style="font-weight:700">${order.deliveryAddress}</span>
+      </div>` : "";
+
     const insuranceNote = order.insuranceAmount
       ? `<div style="font-size:9px;border:1px dashed #000;padding:4px 6px;margin-top:6px;border-radius:3px">⚠️ ملاحظة: مدة التأمين 3 أيام حتى استرجاع الصواني</div>` : "";
 
@@ -380,8 +387,8 @@ export default function CashierScreen() {
 
     const isLavivianeOrder = isLaviviane;
     const logoBlock = isLavivianeOrder
-      ? `<div style="font-size:22px;font-weight:900;letter-spacing:4px;font-family:Georgia,serif">LAVIVIANE</div>
-         <div style="font-size:8px;letter-spacing:2px;margin-top:2px;color:#555">MAISON DE PÂTISSERIE · FONDÉE EN 2010</div>`
+      ? `<img src="/laviviane-logo.png" alt="Laviviane" style="height:52px;max-width:180px;object-fit:contain;display:block;margin:0 auto 4px" />
+         <div style="font-size:8px;letter-spacing:2px;color:#555;text-align:center">MAISON DE PÂTISSERIE · FONDÉE EN 2010</div>`
       : `<div style="font-size:18px;font-weight:900">فاتورة</div>`;
 
     const html = `<!DOCTYPE html>
@@ -423,6 +430,7 @@ export default function CashierScreen() {
   <div class="total-line"><span style="color:#555">الهاتف</span><span>${order.customerPhone}${order.customerPhone2 ? ` / ${order.customerPhone2}` : ""}</span></div>
   <div class="total-line"><span style="color:#555">تاريخ الطلب</span><span>${order.receivedAt}</span></div>
   ${deliveryHtml}
+  ${addressHtml}
   <div class="total-line"><span style="color:#555">منشئ الطلب</span><span>${cashierHtml}</span></div>
 
   <hr class="divider-solid">
@@ -497,6 +505,7 @@ export default function CashierScreen() {
         customerPhone: customerPhone.trim(),
         customerPhone2: customerPhone2.trim() || undefined,
         orderType,
+        deliveryAddress: orderType === "delivery" ? deliveryAddress.trim() || undefined : undefined,
         receivedAt,
         deliveryTime: deliveryDateTime || undefined,
         insuranceAmount: insurance && !isNaN(insurance) ? insurance : undefined,
@@ -642,6 +651,26 @@ export default function CashierScreen() {
           ))}
         </View>
       </View>
+
+      {/* عنوان التوصيل — يظهر فقط عند اختيار توصيل */}
+      {orderType === "delivery" && (
+        <View style={styles.card}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: -2 }}>
+            <Feather name="map-pin" size={16} color={Colors.mawali} />
+            <Text style={[styles.cardTitle, { color: Colors.mawali }]}>عنوان التوصيل</Text>
+          </View>
+          <TextInput
+            style={[styles.input, { height: 72, textAlignVertical: "top" }]}
+            value={deliveryAddress}
+            onChangeText={setDeliveryAddress}
+            placeholder="الحي، الشارع، رقم المنزل أو أي تفاصيل مفيدة..."
+            placeholderTextColor={Colors.textMuted}
+            multiline
+            textAlign="right"
+            textAlignVertical="top"
+          />
+        </View>
+      )}
 
       {/* التوقيت */}
       <View style={styles.card}>
@@ -1255,6 +1284,13 @@ export default function CashierScreen() {
                     <Feather name="calendar" size={14} color={Colors.success} />
                     <Text style={styles.receiptRowLabel}>موعد التسليم</Text>
                     <Text style={[styles.receiptRowValue, { color: Colors.success }]}>{receiptOrder.deliveryTime}</Text>
+                  </View>
+                ) : null}
+                {receiptOrder.deliveryAddress ? (
+                  <View style={[styles.receiptRow, { alignItems: "flex-start" }]}>
+                    <Feather name="map-pin" size={14} color={Colors.mawali} style={{ marginTop: 2 }} />
+                    <Text style={styles.receiptRowLabel}>عنوان التوصيل</Text>
+                    <Text style={[styles.receiptRowValue, { color: Colors.mawali, flex: 1.5, flexWrap: "wrap" }]}>{receiptOrder.deliveryAddress}</Text>
                   </View>
                 ) : null}
                 {receiptOrder.paymentMethod ? (

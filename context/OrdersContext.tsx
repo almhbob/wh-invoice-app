@@ -106,6 +106,7 @@ export interface Order {
   departmentStatuses: Record<Department, OrderStatus>;
   departmentReceivers: Partial<Record<Department, EmployeeRef>>;
   orderType?: OrderType;
+  deliveryAddress?: string;
   amountPaid?: number;
   insurancePaymentMethod?: "cash" | "card";
   branchTransfer?: BranchTransfer;
