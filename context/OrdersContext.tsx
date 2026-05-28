@@ -102,6 +102,7 @@ export interface Order {
   paymentMethod?: PaymentMethod;
   discount?: Discount;
   imageUri?: string;
+  referenceImages?: string[];
   notes?: string;
   cashierEmployee?: EmployeeRef;
   departmentStatuses: Record<Department, OrderStatus>;

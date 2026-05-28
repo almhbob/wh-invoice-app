@@ -105,6 +105,7 @@ export default function CashierScreen() {
   const [items, setItems] = useState<OrderItem[]>([newItem("halwa")]);
   const [notes, setNotes] = useState("");
   const [imageUri, setImageUri] = useState<string | null>(null);
+  const [referenceImages, setReferenceImages] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showGallery, setShowGallery] = useState(false);
   const [receiptOrder, setReceiptOrder] = useState<Order | null>(null);
@@ -202,6 +203,18 @@ export default function CashierScreen() {
     if (!res.canceled) setImageUri(res.assets[0].uri);
   };
 
+  const addReferenceImage = async () => {
+    if (referenceImages.length >= 3) return;
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") { Alert.alert("إذن مطلوب", "يحتاج التطبيق للوصول إلى الصور"); return; }
+    const res = await ImagePicker.launchImageLibraryAsync({ allowsEditing: false, quality: 0.75 });
+    if (!res.canceled) setReferenceImages((prev) => [...prev, res.assets[0].uri].slice(0, 3));
+  };
+
+  const removeReferenceImage = (idx: number) => {
+    setReferenceImages((prev) => prev.filter((_, i) => i !== idx));
+  };
+
   const takePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== "granted") { Alert.alert("إذن مطلوب", "يحتاج التطبيق للوصول إلى الكاميرا"); return; }
@@ -223,7 +236,7 @@ export default function CashierScreen() {
     setOrderType("pickup"); setDeliveryDate(""); setDeliveryTime("");
     setInsuranceAmount(""); setInsurancePaymentMethod("cash");
     setPaymentMethod("cash"); setAmountPaid("");
-    setItems([newItem("halwa")]); setNotes(""); setImageUri(null);
+    setItems([newItem("halwa")]); setNotes(""); setImageUri(null); setReferenceImages([]);
     setDiscountEnabled(false); setDiscountType("percentage");
     setDiscountValue(""); setDiscountReason("");
     setDetectedOffer(null); setAppliedOfferId(null);
@@ -562,6 +575,7 @@ export default function CashierScreen() {
           items: filteredItems,
           notes: notes.trim() || undefined,
           imageUri: imageUri || undefined,
+          referenceImages: referenceImages.length > 0 ? referenceImages : undefined,
           cashierEmployee: {
             name: currentEmployee!.name,
             employeeId: currentEmployee!.employeeId,
@@ -1066,6 +1080,42 @@ export default function CashierScreen() {
           )}
         </TouchableOpacity>
       </View>
+
+      {/* صور مرجعية للكيك الإسبشل */}
+      {(cakeCount > 0 || referenceImages.length > 0) && (
+        <View style={styles.card}>
+          <View style={styles.refImgHeader}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.cardTitle}>صور مرجعية للكيك</Text>
+              <Text style={styles.refImgSub}>للكيك المخصص — حتى 3 صور مرجعية للقسم</Text>
+            </View>
+            <View style={[styles.deptPill, { backgroundColor: Colors.cake }]}>
+              <Text style={styles.deptPillText}>{referenceImages.length}/3</Text>
+            </View>
+          </View>
+
+          <View style={styles.refImgRow}>
+            {referenceImages.map((uri, idx) => (
+              <View key={idx} style={styles.refImgBox}>
+                <Image source={{ uri }} style={styles.refImgPreview} contentFit="cover" />
+                <Pressable style={styles.refImgRemove} onPress={() => removeReferenceImage(idx)} hitSlop={8}>
+                  <Feather name="x" size={13} color="#fff" />
+                </Pressable>
+                <View style={styles.refImgNum}>
+                  <Text style={styles.refImgNumText}>{idx + 1}</Text>
+                </View>
+              </View>
+            ))}
+
+            {referenceImages.length < 3 && (
+              <TouchableOpacity style={styles.refImgAdd} onPress={addReferenceImage} activeOpacity={0.8}>
+                <Feather name="camera" size={20} color={Colors.cake} />
+                <Text style={styles.refImgAddText}>إضافة{"\n"}صورة</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      )}
 
       {/* ملاحظات */}
       <View style={styles.card}>
@@ -1985,4 +2035,26 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.gold + "12", borderRadius: 8, padding: 8,
   },
   receiptInsNoteText: { fontSize: 11, color: Colors.gold, flex: 1 },
+
+  // reference images for special cake
+  refImgHeader: { flexDirection: "row", alignItems: "flex-start", gap: 10, marginBottom: 12 },
+  refImgSub: { fontSize: 11, color: Colors.textMuted, marginTop: 2 },
+  refImgRow: { flexDirection: "row", gap: 10, flexWrap: "wrap" },
+  refImgBox: { width: 96, height: 96, borderRadius: 12, overflow: "hidden", position: "relative" },
+  refImgPreview: { width: 96, height: 96 },
+  refImgRemove: {
+    position: "absolute", top: 4, right: 4,
+    backgroundColor: "rgba(0,0,0,0.55)", borderRadius: 10, padding: 3,
+  },
+  refImgNum: {
+    position: "absolute", bottom: 4, left: 4,
+    backgroundColor: Colors.cake + "cc", borderRadius: 8, paddingHorizontal: 5, paddingVertical: 1,
+  },
+  refImgNumText: { fontSize: 10, color: "#fff", fontWeight: "700" },
+  refImgAdd: {
+    width: 96, height: 96, borderRadius: 12, borderWidth: 2, borderStyle: "dashed",
+    borderColor: Colors.cake + "80", alignItems: "center", justifyContent: "center",
+    backgroundColor: Colors.cake + "08", gap: 4,
+  },
+  refImgAddText: { fontSize: 11, color: Colors.cake, fontWeight: "600", textAlign: "center" },
 });
