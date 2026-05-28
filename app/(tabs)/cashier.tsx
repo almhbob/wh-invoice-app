@@ -1336,8 +1336,13 @@ export default function CashierScreen() {
 
             {/* Success banner */}
             <View style={[styles.receiptBanner, isLaviviane && { backgroundColor: "#2f241d" }]}>
-              <View style={[styles.receiptCheckCircle, isLaviviane && { backgroundColor: "#d6b56d" }]}>
-                <Feather name="check" size={28} color="#fff" />
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 16, width: "100%" }}>
+                <View style={[styles.receiptCheckCircle, isLaviviane && { backgroundColor: "#d6b56d" }]}>
+                  <Feather name="check" size={28} color="#fff" />
+                </View>
+                {receiptQr ? (
+                  <Image source={{ uri: receiptQr }} style={styles.receiptQrImg} contentFit="contain" />
+                ) : null}
               </View>
               <Text style={styles.receiptBannerTitle}>تم الإرسال بنجاح!</Text>
               <Text style={styles.receiptBannerSub}>فاتورة #{receiptOrder.orderNumber}</Text>
@@ -1529,11 +1534,11 @@ export default function CashierScreen() {
             <View style={styles.receiptActions}>
               <TouchableOpacity
                 style={styles.printBtn}
-                onPress={() => printInvoice(receiptOrder)}
+                onPress={() => void showInlineInvoice(receiptOrder)}
                 activeOpacity={0.85}
               >
                 <Feather name="printer" size={16} color="#fff" />
-                <Text style={styles.printBtnText}>طباعة</Text>
+                <Text style={styles.printBtnText}>عرض وطباعة الفاتورة</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.whatsappBtn}
@@ -1917,6 +1922,27 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.accent + "08", borderRadius: 10,
     paddingHorizontal: 10, paddingVertical: 8, marginTop: 2,
   },
+
+  // quick date presets
+  quickDateRow: { flexDirection: "row", gap: 8, marginBottom: 4 },
+  quickDateBtn: {
+    flex: 1, paddingVertical: 8, borderRadius: 10, borderWidth: 1.5,
+    borderColor: Colors.border, backgroundColor: Colors.surfaceSecondary,
+    alignItems: "center",
+  },
+  quickDateBtnActive: { borderColor: Colors.primary, backgroundColor: Colors.primary + "14" },
+  quickDateText: { fontSize: 12, fontWeight: "600", color: Colors.textSecondary },
+  quickDateTextActive: { color: Colors.primary },
+
+  // collapsible item extras
+  itemExpandBtn: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    paddingVertical: 5, paddingHorizontal: 4,
+  },
+  itemExpandText: { fontSize: 12, color: Colors.textMuted, flex: 1 },
+
+  // receipt QR
+  receiptQrImg: { width: 70, height: 70, borderRadius: 8, borderWidth: 1, borderColor: "rgba(255,255,255,0.3)" },
 
   // receipt extras
   receiptTypeBadge: {
