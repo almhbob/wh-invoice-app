@@ -2,6 +2,7 @@ import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 
 import { Colors } from "@/constants/colors";
+import { useLang } from "@/context/LanguageContext";
 import { Order } from "@/context/OrdersContext";
 
 interface StatsBarProps {
@@ -9,19 +10,20 @@ interface StatsBarProps {
 }
 
 export function StatsBar({ orders }: StatsBarProps) {
+  const { t } = useLang();
   const pending = orders.filter((o) => o.status === "pending").length;
   const inProgress = orders.filter((o) => o.status === "in_progress").length;
   const done = orders.filter((o) => o.status === "done").length;
 
   return (
     <View style={styles.container}>
-      <StatItem label="انتظار" value={pending} color={Colors.statusPending} />
+      <StatItem label={t("waiting")} value={pending} color={Colors.statusPending} />
       <View style={styles.divider} />
-      <StatItem label="تحضير" value={inProgress} color={Colors.statusInProgress} />
+      <StatItem label={t("preparing")} value={inProgress} color={Colors.statusInProgress} />
       <View style={styles.divider} />
-      <StatItem label="تم" value={done} color={Colors.statusDone} />
+      <StatItem label={t("statusDone")} value={done} color={Colors.statusDone} />
       <View style={styles.divider} />
-      <StatItem label="المجموع" value={orders.length} color={Colors.primary} />
+      <StatItem label={t("statTotal")} value={orders.length} color={Colors.primary} />
     </View>
   );
 }

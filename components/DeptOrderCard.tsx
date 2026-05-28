@@ -7,6 +7,7 @@ import { Alert, Platform, StyleSheet, Text, TouchableOpacity, View } from "react
 import { BranchTransferModal } from "@/components/BranchTransferModal";
 import { Colors } from "@/constants/colors";
 import { ROLE_LABELS, useEmployee } from "@/context/EmployeeContext";
+import { useLang } from "@/context/LanguageContext";
 import {
   BranchTransfer,
   Department,
@@ -22,34 +23,11 @@ interface DeptOrderCardProps {
   onStatusChange: (status: OrderStatus, receiver?: EmployeeRef) => void;
 }
 
-const statusConfig: Record<
-  OrderStatus,
-  { label: string; color: string; bg: string; next?: OrderStatus; nextLabel?: string }
-> = {
-  pending: {
-    label: "انتظار",
-    color: Colors.statusPending,
-    bg: "#FEF9E7",
-    next: "in_progress",
-    nextLabel: "▶  بدء التحضير",
-  },
-  in_progress: {
-    label: "جاري التحضير",
-    color: Colors.statusInProgress,
-    bg: "#EBF5FB",
-    next: "done",
-    nextLabel: "✓  تم التسليم",
-  },
-  done: { label: "تم التسليم", color: Colors.statusDone, bg: "#E9F7EF" },
-  cancelled: { label: "ملغي", color: Colors.statusCancelled, bg: "#FDEDEC" },
-};
-
-const DEPT_LABEL: Record<Department, string> = {
-  halwa: "حلا زفة",
-  mawali: "معجنات",
-  chocolate: "شوكولاتة",
-  cake: "كيك",
-  packaging: "التغليف",
+const STATUS_META: Record<OrderStatus, { color: string; bg: string; next?: OrderStatus }> = {
+  pending:     { color: Colors.statusPending,    bg: "#FEF9E7", next: "in_progress" },
+  in_progress: { color: Colors.statusInProgress, bg: "#EBF5FB", next: "done" },
+  done:        { color: Colors.statusDone,        bg: "#E9F7EF" },
+  cancelled:   { color: Colors.statusCancelled,  bg: "#FDEDEC" },
 };
 
 function fmtTime(str: string) {
@@ -63,7 +41,30 @@ function fmtTime(str: string) {
 export function DeptOrderCard({ order, department, onStatusChange }: DeptOrderCardProps) {
   const deptItems = order.items.filter((i) => i.department === department);
   const deptStatus = order.departmentStatuses[department] ?? "pending";
-  const status = statusConfig[deptStatus];
+  const meta = STATUS_META[deptStatus];
+  const { t } = useLang();
+
+  // Translated status labels — no hardcoded Arabic
+  const statusLabel: Record<OrderStatus, string> = {
+    pending:     t("waiting"),
+    in_progress: t("preparing"),
+    done:        t("statusDone"),
+    cancelled:   t("statusCancelled"),
+  };
+  const actionLabel: Record<OrderStatus, string | undefined> = {
+    pending:     `▶  ${t("startPreparing")}`,
+    in_progress: `✓  ${t("markDelivered")}`,
+    done:        undefined,
+    cancelled:   undefined,
+  };
+  const deptLabel: Record<Department, string> = {
+    halwa:     t("deptHalwaShort"),
+    mawali:    t("deptMawaliShort"),
+    chocolate: t("deptChocolateShort"),
+    cake:      t("deptCakeShort"),
+    packaging: t("deptPackagingShort"),
+  };
+
   const DEPT_COLORS: Record<Department, string> = {
     halwa: Colors.halwa, mawali: Colors.mawali,
     chocolate: Colors.chocolate, cake: Colors.cake,
@@ -81,29 +82,29 @@ export function DeptOrderCard({ order, department, onStatusChange }: DeptOrderCa
   const canTransfer = deptStatus === "pending" || deptStatus === "in_progress";
 
   const handleStatusPress = () => {
-    if (!status.next) return;
-    if (status.next === "in_progress" && !currentEmployee) {
+    if (!meta.next) return;
+    if (meta.next === "in_progress" && !currentEmployee) {
       Alert.alert(
-        "تسجيل الدخول مطلوب",
-        "يجب عليك تسجيل الدخول أولاً لاستلام الطلب. اضغط على اسمك في الرأس.",
-        [{ text: "حسناً" }]
+        t("loginRequired") || "تسجيل الدخول مطلوب",
+        t("loginToReceive") || "يجب تسجيل الدخول أولاً لاستلام الطلب.",
+        [{ text: t("ok") || "حسناً" }]
       );
       return;
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const empRef: EmployeeRef | undefined =
-      status.next === "in_progress" && currentEmployee
+      meta.next === "in_progress" && currentEmployee
         ? {
             name: currentEmployee.name,
             employeeId: currentEmployee.employeeId,
             timestamp: new Date().toISOString(),
           }
         : undefined;
-    onStatusChange(status.next, empRef);
+    onStatusChange(meta.next, empRef);
   };
 
-  const handleTransferConfirm = async (t: BranchTransfer) => {
-    await transferToBranch(order.id, t);
+  const handleTransferConfirm = async (transfer: BranchTransfer) => {
+    await transferToBranch(order.id, transfer);
   };
 
   const DEPT_CYCLE: Record<Department, Department> = {
@@ -127,7 +128,7 @@ export function DeptOrderCard({ order, department, onStatusChange }: DeptOrderCa
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.transferBannerTitle, { color: deptColor }]}>
-                محوَّل من {DEPT_LABEL[transfer!.fromDept]}
+                محوَّل من {deptLabel[transfer!.fromDept]}
               </Text>
               <Text style={styles.transferBannerSub}>
                 {transfer!.reason}
@@ -146,7 +147,7 @@ export function DeptOrderCard({ order, department, onStatusChange }: DeptOrderCa
           <View style={styles.sentTransferRow}>
             <Feather name="share-2" size={11} color={Colors.textMuted} />
             <Text style={styles.sentTransferText}>
-              تم تحويل {transfer!.itemIds.length} صنف إلى {DEPT_LABEL[transfer!.toDept]}
+              تم تحويل {transfer!.itemIds.length} صنف إلى {deptLabel[transfer!.toDept]}
               {" · "}{transfer!.reason}
             </Text>
           </View>
@@ -156,9 +157,9 @@ export function DeptOrderCard({ order, department, onStatusChange }: DeptOrderCa
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <Text style={styles.num}>#{order.orderNumber}</Text>
-            <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
-              <View style={[styles.statusDot, { backgroundColor: status.color }]} />
-              <Text style={[styles.statusLabel, { color: status.color }]}>{status.label}</Text>
+            <View style={[styles.statusBadge, { backgroundColor: meta.bg }]}>
+              <View style={[styles.statusDot, { backgroundColor: meta.color }]} />
+              <Text style={[styles.statusLabel, { color: meta.color }]}>{statusLabel[deptStatus]}</Text>
             </View>
           </View>
           <Text style={styles.time}>{fmtTime(order.receivedAt)}</Text>
@@ -268,27 +269,27 @@ export function DeptOrderCard({ order, department, onStatusChange }: DeptOrderCa
           >
             <Feather name="share-2" size={14} color={toDeptColor} />
             <Text style={[styles.transferBtnText, { color: toDeptColor }]}>
-              تحويل لـ {DEPT_LABEL[toDept]}
+              تحويل لـ {deptLabel[toDept]}
             </Text>
           </TouchableOpacity>
         )}
 
         {/* Main action */}
-        {status.next ? (
+        {meta.next ? (
           <TouchableOpacity
-            style={[styles.actionBtn, { backgroundColor: status.color }]}
+            style={[styles.actionBtn, { backgroundColor: meta.color }]}
             onPress={handleStatusPress}
             activeOpacity={0.8}
           >
-            <Text style={styles.actionText}>{status.nextLabel}</Text>
-            {status.next === "in_progress" && !currentEmployee && (
+            <Text style={styles.actionText}>{actionLabel[deptStatus]}</Text>
+            {meta.next === "in_progress" && !currentEmployee && (
               <Text style={styles.actionSubText}>(يتطلب تسجيل دخول)</Text>
             )}
           </TouchableOpacity>
         ) : (
-          <View style={[styles.doneRow, { backgroundColor: status.bg }]}>
-            <Feather name="check-circle" size={15} color={status.color} />
-            <Text style={[styles.doneText, { color: status.color }]}>{status.label}</Text>
+          <View style={[styles.doneRow, { backgroundColor: meta.bg }]}>
+            <Feather name="check-circle" size={15} color={meta.color} />
+            <Text style={[styles.doneText, { color: meta.color }]}>{statusLabel[deptStatus]}</Text>
           </View>
         )}
       </View>

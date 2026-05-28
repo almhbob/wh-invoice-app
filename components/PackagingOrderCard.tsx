@@ -18,22 +18,22 @@ import { Department, Order, OrderStatus, useOrders } from "@/context/OrdersConte
 
 const DEPT_META: Record<
   Exclude<Department, "packaging">,
-  { label: string; color: string; bg: string }
+  { color: string; bg: string }
 > = {
-  halwa:     { label: "حلا زفة و ضيافة",  color: Colors.halwa,     bg: "#FFF5EE" },
-  mawali:    { label: "معجنات و موالح",    color: Colors.mawali,    bg: "#EAF4FB" },
-  chocolate: { label: "شوكولاتة",          color: Colors.chocolate, bg: "#FDF0E8" },
-  cake:      { label: "كيك",               color: Colors.cake,      bg: "#FDE8F5" },
+  halwa:     { color: Colors.halwa,     bg: "#FFF5EE" },
+  mawali:    { color: Colors.mawali,    bg: "#EAF4FB" },
+  chocolate: { color: Colors.chocolate, bg: "#FDF0E8" },
+  cake:      { color: Colors.cake,      bg: "#FDE8F5" },
 };
 
 const STATUS_CONFIG: Record<
   OrderStatus,
-  { label: string; nextLabel: string; nextStatus: OrderStatus | null; color: string; bg: string; icon: any }
+  { nextStatus: OrderStatus | null; color: string; bg: string; icon: any }
 > = {
-  pending:     { label: "انتظار",          nextLabel: "بدء التغليف",    nextStatus: "in_progress", color: Colors.statusPending,    bg: "#FEF9EE", icon: "clock" },
-  in_progress: { label: "جاري التغليف",   nextLabel: "تم التغليف ✓",  nextStatus: "done",        color: Colors.statusInProgress, bg: "#EAF4FB", icon: "package" },
-  done:        { label: "تم التغليف ✓",   nextLabel: "",               nextStatus: null,           color: Colors.statusDone,       bg: "#E9F7EF", icon: "check-circle" },
-  cancelled:   { label: "ملغي",           nextLabel: "",               nextStatus: null,           color: Colors.statusCancelled ?? "#E74C3C", bg: "#FDEDEC", icon: "x-circle" },
+  pending:     { nextStatus: "in_progress", color: Colors.statusPending,            bg: "#FEF9EE", icon: "clock" },
+  in_progress: { nextStatus: "done",        color: Colors.statusInProgress,         bg: "#EAF4FB", icon: "package" },
+  done:        { nextStatus: null,           color: Colors.statusDone,               bg: "#E9F7EF", icon: "check-circle" },
+  cancelled:   { nextStatus: null,           color: Colors.statusCancelled ?? "#E74C3C", bg: "#FDEDEC", icon: "x-circle" },
 };
 
 function fmtCurrency(n: number) {
@@ -71,6 +71,23 @@ export function PackagingOrderCard({ order }: Props) {
 
   const packStatus: OrderStatus = order.departmentStatuses["packaging"] ?? "pending";
   const cfg = STATUS_CONFIG[packStatus];
+
+  const deptLabel: Record<Exclude<Department, "packaging">, string> = {
+    halwa: t("deptHalwa"), mawali: t("deptMawali"),
+    chocolate: t("deptChocolate"), cake: t("deptCake"),
+  };
+  const statusLabel: Record<OrderStatus, string> = {
+    pending:     t("waiting"),
+    in_progress: t("preparing"),
+    done:        t("actionMarkPackaged"),
+    cancelled:   t("statusCancelled"),
+  };
+  const actionLabel: Record<OrderStatus, string> = {
+    pending:     t("actionStartPackaging"),
+    in_progress: t("actionMarkPackaged"),
+    done:        "",
+    cancelled:   "",
+  };
 
   const [busy, setBusy] = useState(false);
 
@@ -110,7 +127,7 @@ export function PackagingOrderCard({ order }: Props) {
       {/* ── status stripe ─────────────────────────────────────────────────── */}
       <View style={[styles.statusStripe, { backgroundColor: cfg.bg }]}>
         <Feather name={cfg.icon} size={14} color={cfg.color} />
-        <Text style={[styles.statusLabel, { color: cfg.color }]}>{cfg.label}</Text>
+        <Text style={[styles.statusLabel, { color: cfg.color }]}>{statusLabel[packStatus]}</Text>
         <View style={{ flex: 1 }} />
         <Text style={styles.orderNum}>#{order.orderNumber}</Text>
       </View>
@@ -160,7 +177,7 @@ export function PackagingOrderCard({ order }: Props) {
       {Object.entries(deptGroups).map(([dept, { meta, items }]) => (
         <View key={dept} style={[styles.deptGroup, { backgroundColor: meta.bg }]}>
           <View style={[styles.deptHeader, { backgroundColor: meta.color }]}>
-            <Text style={styles.deptHeaderLabel}>{meta.label}</Text>
+            <Text style={styles.deptHeaderLabel}>{deptLabel[dept as Exclude<Department, "packaging">]}</Text>
             <Text style={styles.deptHeaderCount}>{items.length} صنف</Text>
           </View>
 
@@ -251,7 +268,7 @@ export function PackagingOrderCard({ order }: Props) {
           ) : (
             <>
               <Feather name={cfg.nextStatus === "done" ? "check-circle" : "package"} size={16} color="#fff" />
-              <Text style={styles.actionBtnText}>{cfg.nextLabel}</Text>
+              <Text style={styles.actionBtnText}>{actionLabel[packStatus]}</Text>
             </>
           )}
         </TouchableOpacity>
@@ -261,7 +278,7 @@ export function PackagingOrderCard({ order }: Props) {
       {packStatus === "done" && (
         <View style={styles.doneStamp}>
           <Feather name="check-circle" size={13} color={Colors.statusDone} />
-          <Text style={styles.doneStampText}>تم التغليف</Text>
+          <Text style={styles.doneStampText}>{t("actionMarkPackaged")}</Text>
         </View>
       )}
     </View>

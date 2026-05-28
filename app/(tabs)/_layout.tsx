@@ -186,13 +186,13 @@ const DEPT_TABS: TabDef[] = [
 ];
 
 const MORE_TABS: TabDef[] = [
-  { name: "branch-orders",    labelKey: "طلبية الفرع",    titleKey: "طلبية الفرع",    icon: "clipboard",    sf: "list.clipboard",                   accent: Colors.gold },
-  { name: "branch-inventory", labelKey: "جرد الفرع",      titleKey: "جرد الفرع",      icon: "bar-chart-2",  sf: "chart.bar",                        accent: "#2563eb" },
-  { name: "branches",         labelKey: "الفروع",         titleKey: "إدارة الفروع",   icon: "git-branch",   sf: "building.2",                       accent: "#0d9488" },
-  { name: "customers",        labelKey: "tabCustomers",   titleKey: "titleCustomers", icon: "users",        sf: "person.2",                         accent: "#0891b2" },
-  { name: "delivery",         labelKey: "tabDelivery",    titleKey: "titleDelivery",  icon: "truck",        sf: "shippingbox.and.arrow.backward",   accent: "#0d9488" },
-  { name: "trays",            labelKey: "tabTrays",       titleKey: "titleTrays",     icon: "layers",       sf: "tray.2",                           accent: Colors.gold },
-  { name: "admin",            labelKey: "tabAdmin",       titleKey: "titleAdmin",     icon: "settings",     sf: "gearshape",                        accent: Colors.primaryLight },
+  { name: "branch-orders",    labelKey: "tabBranchOrders",    titleKey: "titleBranchOrders",    icon: "clipboard",    sf: "list.clipboard",                   accent: Colors.gold },
+  { name: "branch-inventory", labelKey: "tabBranchInventory", titleKey: "titleBranchInventory", icon: "bar-chart-2",  sf: "chart.bar",                        accent: "#2563eb" },
+  { name: "branches",         labelKey: "tabBranches",        titleKey: "titleManageBranches",  icon: "git-branch",   sf: "building.2",                       accent: "#0d9488" },
+  { name: "customers",        labelKey: "tabCustomers",       titleKey: "titleCustomers",       icon: "users",        sf: "person.2",                         accent: "#0891b2" },
+  { name: "delivery",         labelKey: "tabDelivery",        titleKey: "titleDelivery",        icon: "truck",        sf: "shippingbox.and.arrow.backward",   accent: "#0d9488" },
+  { name: "trays",            labelKey: "tabTrays",           titleKey: "titleTrays",           icon: "layers",       sf: "tray.2",                           accent: Colors.gold },
+  { name: "admin",            labelKey: "tabAdmin",           titleKey: "titleAdmin",           icon: "settings",     sf: "gearshape",                        accent: Colors.primaryLight },
 ];
 
 // ── Desktop sidebar ────────────────────────────────────────────────────────────
@@ -325,7 +325,7 @@ function DesktopSidebar({ activePath, navigate, isRTL }: { activePath: string; n
           ) : (
             <>
               <Feather name="user" size={16} color="rgba(255,255,255,0.55)" />
-              <Text style={ds.loginText}>دخول</Text>
+              <Text style={ds.loginText}>{t("loginBtn")}</Text>
             </>
           )}
         </TouchableOpacity>
@@ -444,10 +444,10 @@ const SCREEN_META: Record<string, { titleKey: string; accent: string }> = {
   packaging:        { titleKey: "titlePackaging",  accent: Colors.packaging },
   archive:          { titleKey: "titleArchive",    accent: Colors.primaryLight },
   reports:          { titleKey: "titleReports",    accent: "#8b5cf6" },
-  developer:        { titleKey: "لوحة المطور",    accent: "#7c3aed" },
-  "branch-orders":  { titleKey: "طلبية الفرع",   accent: Colors.gold },
-  "branch-inventory": { titleKey: "جرد الفرع",   accent: "#2563eb" },
-  branches:         { titleKey: "إدارة الفروع",  accent: "#0d9488" },
+  developer:        { titleKey: "titleDeveloper",      accent: "#7c3aed" },
+  "branch-orders":  { titleKey: "titleBranchOrders",   accent: Colors.gold },
+  "branch-inventory": { titleKey: "titleBranchInventory", accent: "#2563eb" },
+  branches:         { titleKey: "titleManageBranches", accent: "#0d9488" },
   customers:        { titleKey: "titleCustomers",  accent: "#0891b2" },
   delivery:         { titleKey: "titleDelivery",   accent: "#0d9488" },
   trays:            { titleKey: "titleTrays",      accent: Colors.gold },
@@ -483,10 +483,10 @@ export default function TabLayout() {
       <Tabs.Screen name="packaging"        options={{ title: t("titlePackaging"), headerShown: false }} />
       <Tabs.Screen name="archive"          options={{ title: t("titleArchive"),   headerShown: false }} />
       <Tabs.Screen name="reports"          options={{ title: t("titleReports"),   headerShown: false }} />
-      <Tabs.Screen name="developer"        options={{ href: null, title: "لوحة المطور", headerShown: false }} />
-      <Tabs.Screen name="branch-orders"    options={{ title: "طلبية الفرع",      headerShown: false }} />
-      <Tabs.Screen name="branch-inventory" options={{ title: "جرد الفرع",        headerShown: false }} />
-      <Tabs.Screen name="branches"         options={{ title: "إدارة الفروع",     headerShown: false }} />
+      <Tabs.Screen name="developer"        options={{ href: null, title: t("titleDeveloper"),      headerShown: false }} />
+      <Tabs.Screen name="branch-orders"    options={{ title: t("titleBranchOrders"),   headerShown: false }} />
+      <Tabs.Screen name="branch-inventory" options={{ title: t("titleBranchInventory"), headerShown: false }} />
+      <Tabs.Screen name="branches"         options={{ title: t("titleManageBranches"), headerShown: false }} />
       <Tabs.Screen name="customers"        options={{ title: t("titleCustomers"), headerShown: false }} />
       <Tabs.Screen name="delivery"         options={{ title: t("titleDelivery"),  headerShown: false }} />
       <Tabs.Screen name="trays"            options={{ title: t("titleTrays"),     headerShown: false }} />

@@ -11,6 +11,7 @@ import {
 } from "react-native";
 
 import { Colors } from "@/constants/colors";
+import { useLang } from "@/context/LanguageContext";
 import { Department, Order, OrderStatus } from "@/context/OrdersContext";
 
 interface OrderCardProps {
@@ -20,32 +21,6 @@ interface OrderCardProps {
   compact?: boolean;
 }
 
-const departmentLabels: Record<Department, string> = {
-  halwa: "حلا",
-  mawali: "موالح",
-};
-
-const statusConfig: Record<
-  OrderStatus,
-  { label: string; color: string; bg: string; next?: OrderStatus; nextLabel?: string }
-> = {
-  pending: {
-    label: "انتظار",
-    color: Colors.statusPending,
-    bg: "#FEF9E7",
-    next: "in_progress",
-    nextLabel: "بدء التحضير",
-  },
-  in_progress: {
-    label: "جاري التحضير",
-    color: Colors.statusInProgress,
-    bg: "#EBF5FB",
-    next: "done",
-    nextLabel: "تم التسليم",
-  },
-  done: { label: "تم التسليم", color: Colors.statusDone, bg: "#E9F7EF" },
-  cancelled: { label: "ملغي", color: Colors.statusCancelled, bg: "#FDEDEC" },
-};
 
 function fmtTime(iso: string) {
   const d = new Date(iso);
@@ -57,6 +32,17 @@ function fmtDate(iso: string) {
 }
 
 export function OrderCard({ order, onStatusChange, onPress, compact = false }: OrderCardProps) {
+  const { t } = useLang();
+  const departmentLabels: Record<Department, string> = {
+    halwa: t("deptHalwaShort"), mawali: t("deptMawaliShort"),
+    chocolate: t("deptChocolateShort"), cake: t("deptCakeShort"), packaging: t("deptPackagingShort"),
+  };
+  const statusConfig: Record<OrderStatus, { label: string; color: string; bg: string; next?: OrderStatus; nextLabel?: string }> = {
+    pending:     { label: t("waiting"),          color: Colors.statusPending,    bg: "#FEF9E7", next: "in_progress", nextLabel: t("startPreparing") },
+    in_progress: { label: t("preparing"),        color: Colors.statusInProgress, bg: "#EBF5FB", next: "done",        nextLabel: t("markDelivered") },
+    done:        { label: t("statusDone"),        color: Colors.statusDone,       bg: "#E9F7EF" },
+    cancelled:   { label: t("statusCancelled"),  color: Colors.statusCancelled,  bg: "#FDEDEC" },
+  };
   const status = statusConfig[order.status];
   const deptColor = order.department === "halwa" ? Colors.halwa : Colors.mawali;
 
