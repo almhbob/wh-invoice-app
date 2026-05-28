@@ -40,6 +40,7 @@ import {
   useOrders,
 } from "@/context/OrdersContext";
 import { Offer, normalizePhone, useOffers } from "@/context/OffersContext";
+import QRCode from "qrcode";
 
 const DEPT_OPTIONS: { value: Department; label: string; color: string }[] = [
   { value: "halwa",     label: "حلا زفة",   color: Colors.halwa },
@@ -106,6 +107,8 @@ export default function CashierScreen() {
   const [showGallery, setShowGallery] = useState(false);
   const [receiptOrder, setReceiptOrder] = useState<Order | null>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
+  const [receiptQr, setReceiptQr] = useState<string>("");
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
 
   // Discount
   const [discountEnabled, setDiscountEnabled] = useState(false);
@@ -327,7 +330,7 @@ export default function CashierScreen() {
     }
   };
 
-  const printInvoice = (order: Order) => {
+  const buildInvoiceHtml = (order: Order, qrDataUrl?: string) => {
     const itemRows = order.items.map((item) => {
       const lineTotal = item.price ? `${(item.price * item.quantity).toFixed(2)} ر.س` : "—";
       const unitPrice = item.price ? `${item.price} ر.س` : "—";
@@ -464,15 +467,63 @@ export default function CashierScreen() {
 </body>
 </html>`;
 
-    if (Platform.OS === "web" && typeof window !== "undefined") {
-      const win = window.open("", "_blank", "width=420,height=700");
-      if (win) {
-        win.document.write(html);
-        win.document.close();
-        win.focus();
-        setTimeout(() => { win.print(); }, 350);
-      }
-    }
+    const qrBlock = qrDataUrl
+      ? `<div style="text-align:center;margin:10px 0 4px">
+           <img src="${qrDataUrl}" alt="QR" style="width:90px;height:90px;" />
+           <div style="font-size:8px;color:#888;margin-top:2px">فاتورة #${order.orderNumber}</div>
+         </div>`
+      : "";
+
+    return html.replace("</body>", `${qrBlock}</body>`);
+  };
+
+  const showInlineInvoice = async (order: Order) => {
+    if (Platform.OS !== "web" || typeof document === "undefined") return;
+
+    let qrDataUrl = "";
+    try {
+      qrDataUrl = await QRCode.toDataURL(
+        `فاتورة #${order.orderNumber}\n${order.customerName}\n${order.customerPhone}\n${order.receivedAt}${order.totalAmount ? `\nالإجمالي: ${order.totalAmount.toFixed(2)} ر.س` : ""}`,
+        { width: 140, margin: 1, color: { dark: "#2f241d", light: "#ffffff" } }
+      );
+    } catch { /* skip QR on failure */ }
+
+    const html = buildInvoiceHtml(order, qrDataUrl);
+
+    document.getElementById("__inv_overlay__")?.remove();
+
+    const overlay = document.createElement("div");
+    overlay.id = "__inv_overlay__";
+    overlay.style.cssText = "position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.92);display:flex;flex-direction:column;";
+
+    const bar = document.createElement("div");
+    bar.style.cssText = "background:#1a1a1a;padding:10px 16px;display:flex;align-items:center;gap:10px;direction:rtl;flex-shrink:0;";
+
+    const title = document.createElement("span");
+    title.textContent = `فاتورة #${order.orderNumber} · ${order.customerName}`;
+    title.style.cssText = "color:#fff;font-size:14px;font-weight:700;flex:1;font-family:sans-serif;";
+
+    const printBtn = document.createElement("button");
+    printBtn.textContent = "🖨 طباعة";
+    printBtn.style.cssText = "background:#2f241d;color:#d6b56d;border:none;padding:8px 20px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:700;font-family:sans-serif;";
+    printBtn.onclick = () => frame.contentWindow?.print();
+
+    const closeBtn = document.createElement("button");
+    closeBtn.textContent = "✕ إغلاق";
+    closeBtn.style.cssText = "background:rgba(255,255,255,0.1);color:#fff;border:1px solid rgba(255,255,255,0.2);padding:8px 14px;border-radius:8px;font-size:13px;cursor:pointer;font-family:sans-serif;";
+    closeBtn.onclick = () => overlay.remove();
+
+    bar.appendChild(title);
+    bar.appendChild(printBtn);
+    bar.appendChild(closeBtn);
+
+    const frame = document.createElement("iframe");
+    frame.style.cssText = "flex:1;border:none;background:#fff;";
+    frame.srcdoc = html;
+
+    overlay.appendChild(bar);
+    overlay.appendChild(frame);
+    document.body.appendChild(overlay);
   };
 
   const handleSubmit = async () => {
@@ -517,7 +568,12 @@ export default function CashierScreen() {
         });
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
         if (appliedOfferId) incrementUsage(appliedOfferId).catch(() => {});
+        QRCode.toDataURL(
+          `فاتورة #${created.orderNumber}\n${created.customerName}\n${created.customerPhone}\n${created.receivedAt}${created.totalAmount ? `\nالإجمالي: ${created.totalAmount.toFixed(2)} ر.س` : ""}`,
+          { width: 160, margin: 1, color: { dark: "#2f241d", light: "#ffffff" } }
+        ).then(setReceiptQr).catch(() => setReceiptQr(""));
         resetForm();
+        setExpandedItems(new Set());
         setReceiptOrder(created);
       } catch {
         Alert.alert("خطأ", t("errSend"));
@@ -703,10 +759,32 @@ export default function CashierScreen() {
 
         {/* Delivery date */}
         <Text style={styles.label}>تاريخ التسليم</Text>
+        <View style={styles.quickDateRow}>
+          {[
+            { label: "اليوم", days: 0 },
+            { label: "غداً", days: 1 },
+            { label: "+يومان", days: 2 },
+            { label: "+أسبوع", days: 7 },
+          ].map(({ label, days }) => {
+            const d = new Date();
+            d.setDate(d.getDate() + days);
+            const dayNames = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
+            const val = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")} (${dayNames[d.getDay()]})`;
+            return (
+              <TouchableOpacity
+                key={label}
+                style={[styles.quickDateBtn, deliveryDate === val && styles.quickDateBtnActive]}
+                onPress={() => { Haptics.selectionAsync(); setDeliveryDate(val); }}
+              >
+                <Text style={[styles.quickDateText, deliveryDate === val && styles.quickDateTextActive]}>{label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
         <View style={[styles.input, styles.row, { gap: 8 }]}>
           <Feather name="calendar" size={15} color={Colors.textMuted} />
           <TextInput style={styles.inlineInput} value={deliveryDate} onChangeText={setDeliveryDate}
-            placeholder="مثال: 2025-06-01 (الجمعة)" placeholderTextColor={Colors.textMuted} textAlign="right" />
+            placeholder="أو اكتب يدوياً..." placeholderTextColor={Colors.textMuted} textAlign="right" />
         </View>
 
         {/* Delivery time */}
@@ -792,6 +870,19 @@ export default function CashierScreen() {
           </View>
         </View>
 
+        {/* Browse gallery button — top for speed */}
+        <TouchableOpacity
+          style={styles.galleryBtn}
+          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setShowGallery(true); }}
+          activeOpacity={0.85}
+        >
+          <Feather name="grid" size={16} color={Colors.gold} />
+          <Text style={styles.galleryBtnText}>اختر من معرض المنتجات</Text>
+          <View style={styles.galleryBtnBadge}>
+            <Feather name="arrow-left" size={14} color={Colors.gold} />
+          </View>
+        </TouchableOpacity>
+
         {/* Column headers */}
         <View style={styles.colHeaders}>
           <Text style={[styles.colLabel, { flex: 1 }]}>اسم الصنف</Text>
@@ -866,57 +957,72 @@ export default function CashierScreen() {
           );
         })}
 
-        {/* note + details per item */}
-        {items.map((item) => (
-          item.name.trim() ? (
+        {/* note + details per item — collapsible */}
+        {items.map((item) => {
+          if (!item.name.trim()) return null;
+          const isExpanded = expandedItems.has(item.id);
+          const hasContent = !!(item.note?.trim() || item.details?.trim());
+          return (
             <View key={`extra-${item.id}`} style={{ gap: 6 }}>
-              <TextInput
-                style={[styles.input, styles.noteInput]}
-                value={item.note || ""}
-                onChangeText={(v) => updateItem(item.id, "note", v)}
-                placeholder={`ملاحظة على "${item.name.trim()}" (اختياري)`}
-                placeholderTextColor={Colors.textMuted}
-                textAlign="right"
-              />
-              <View>
-                <TextInput
-                  style={[styles.input, styles.detailsInput]}
-                  value={item.details || ""}
-                  onChangeText={(v) => {
-                    const wordCount = v.trim() ? v.trim().split(/\s+/).length : 0;
-                    if (wordCount <= 50) updateItem(item.id, "details", v);
-                  }}
-                  placeholder={`تفاصيل الصنف "${item.name.trim()}" (حتى 50 كلمة)`}
-                  placeholderTextColor={Colors.textMuted}
-                  multiline
-                  textAlign="right"
-                  textAlignVertical="top"
+              <TouchableOpacity
+                style={styles.itemExpandBtn}
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  setExpandedItems((prev) => {
+                    const next = new Set(prev);
+                    next.has(item.id) ? next.delete(item.id) : next.add(item.id);
+                    return next;
+                  });
+                }}
+                activeOpacity={0.7}
+              >
+                <Feather
+                  name={isExpanded ? "chevron-up" : "chevron-down"}
+                  size={13}
+                  color={hasContent ? Colors.primary : Colors.textMuted}
                 />
-                {(item.details?.trim().length ?? 0) > 0 && (() => {
-                  const wc = item.details!.trim().split(/\s+/).length;
-                  return (
-                    <Text style={[styles.charCount, wc >= 48 && { color: wc >= 50 ? Colors.accent : Colors.warning }]}>
-                      {wc} / 50 كلمة
-                    </Text>
-                  );
-                })()}
-              </View>
+                <Text style={[styles.itemExpandText, hasContent && { color: Colors.primary }]}>
+                  {hasContent ? `تفاصيل "${item.name.trim()}"` : `+ تفاصيل / ملاحظة`}
+                </Text>
+              </TouchableOpacity>
+              {(isExpanded || hasContent) && (
+                <>
+                  <TextInput
+                    style={[styles.input, styles.noteInput]}
+                    value={item.note || ""}
+                    onChangeText={(v) => updateItem(item.id, "note", v)}
+                    placeholder={`ملاحظة على "${item.name.trim()}" (اختياري)`}
+                    placeholderTextColor={Colors.textMuted}
+                    textAlign="right"
+                  />
+                  <View>
+                    <TextInput
+                      style={[styles.input, styles.detailsInput]}
+                      value={item.details || ""}
+                      onChangeText={(v) => {
+                        const wordCount = v.trim() ? v.trim().split(/\s+/).length : 0;
+                        if (wordCount <= 50) updateItem(item.id, "details", v);
+                      }}
+                      placeholder={`تفاصيل "${item.name.trim()}" (حتى 50 كلمة)`}
+                      placeholderTextColor={Colors.textMuted}
+                      multiline
+                      textAlign="right"
+                      textAlignVertical="top"
+                    />
+                    {(item.details?.trim().length ?? 0) > 0 && (() => {
+                      const wc = item.details!.trim().split(/\s+/).length;
+                      return (
+                        <Text style={[styles.charCount, wc >= 48 && { color: wc >= 50 ? Colors.accent : Colors.warning }]}>
+                          {wc} / 50 كلمة
+                        </Text>
+                      );
+                    })()}
+                  </View>
+                </>
+              )}
             </View>
-          ) : null
-        ))}
-
-        {/* Browse gallery button */}
-        <TouchableOpacity
-          style={styles.galleryBtn}
-          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setShowGallery(true); }}
-          activeOpacity={0.85}
-        >
-          <Feather name="grid" size={16} color={Colors.gold} />
-          <Text style={styles.galleryBtnText}>اختر من معرض المنتجات</Text>
-          <View style={styles.galleryBtnBadge}>
-            <Feather name="arrow-left" size={14} color={Colors.gold} />
-          </View>
-        </TouchableOpacity>
+          );
+        })}
 
         {/* add buttons */}
         <View style={styles.addRow}>
