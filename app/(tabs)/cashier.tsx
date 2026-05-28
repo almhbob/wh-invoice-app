@@ -43,10 +43,10 @@ import { Offer, normalizePhone, useOffers } from "@/context/OffersContext";
 import QRCode from "qrcode";
 
 const DEPT_OPTIONS: { value: Department; label: string; color: string }[] = [
-  { value: "halwa",     label: "حلا زفة",   color: Colors.halwa },
-  { value: "mawali",   label: "معجنات",    color: Colors.mawali },
+  { value: "halwa",     label: "حلويات",    color: Colors.halwa },
+  { value: "mawali",   label: "موالح",     color: Colors.mawali },
   { value: "chocolate", label: "شوكولاتة", color: Colors.chocolate },
-  { value: "cake",     label: "كيك",      color: Colors.cake },
+  { value: "cake",     label: "كيك",       color: Colors.cake },
   { value: "packaging", label: "تغليف",   color: Colors.packaging },
 ];
 const DEPT_CYCLE: Partial<Record<Department, Department>> = {
@@ -844,12 +844,12 @@ export default function CashierScreen() {
           <View style={styles.deptSummary}>
             {halwaCount > 0 && (
               <View style={[styles.deptPill, { backgroundColor: Colors.halwa }]}>
-                <Text style={styles.deptPillText}>حلا زفة {halwaCount}</Text>
+                <Text style={styles.deptPillText}>حلويات {halwaCount}</Text>
               </View>
             )}
             {mawaliCount > 0 && (
               <View style={[styles.deptPill, { backgroundColor: Colors.mawali }]}>
-                <Text style={styles.deptPillText}>معجنات {mawaliCount}</Text>
+                <Text style={styles.deptPillText}>موالح {mawaliCount}</Text>
               </View>
             )}
             {chocolateCount > 0 && (
@@ -895,8 +895,11 @@ export default function CashierScreen() {
         {items.map((item, idx) => {
           const deptConf = DEPT_OPTIONS.find((d) => d.value === item.department)!;
           const lineTotal = (item.price || 0) * item.quantity;
+          const isExpanded = expandedItems.has(item.id);
+          const hasNote = !!(item.note?.trim());
           return (
-            <View key={item.id}>
+            <View key={item.id} style={styles.itemBlock}>
+              {/* ── Main row ── */}
               <View style={styles.itemRow}>
                 <TextInput
                   style={[styles.input, styles.itemName]}
@@ -906,7 +909,6 @@ export default function CashierScreen() {
                   placeholderTextColor={Colors.textMuted}
                   textAlign="right"
                 />
-                {/* price */}
                 <TextInput
                   style={[styles.input, styles.priceInput]}
                   value={item.price !== undefined ? String(item.price) : ""}
@@ -919,7 +921,6 @@ export default function CashierScreen() {
                   keyboardType="decimal-pad"
                   textAlign="center"
                 />
-                {/* qty */}
                 <View style={styles.qtyBox}>
                   <TouchableOpacity style={styles.qtyBtn}
                     onPress={() => updateItem(item.id, "quantity", Math.max(1, item.quantity - 1))}>
@@ -931,14 +932,12 @@ export default function CashierScreen() {
                     <Feather name="plus" size={12} color={Colors.primary} />
                   </TouchableOpacity>
                 </View>
-                {/* dept toggle */}
                 <TouchableOpacity
                   style={[styles.deptToggle, { backgroundColor: deptConf.color }]}
                   onPress={() => toggleDept(item.id)}
                 >
                   <Text style={styles.deptToggleText}>{deptConf.label}</Text>
                 </TouchableOpacity>
-                {/* remove */}
                 {items.length > 1 ? (
                   <TouchableOpacity onPress={() => removeItem(item.id)} hitSlop={8}>
                     <Feather name="x" size={16} color={Colors.accent} />
@@ -947,98 +946,80 @@ export default function CashierScreen() {
                   <View style={{ width: 16 }} />
                 )}
               </View>
-              {/* line total hint */}
-              {lineTotal > 0 && (
-                <Text style={styles.lineTotalHint}>
-                  {item.quantity} × {item.price} = {lineTotal.toFixed(2)} ر.س
-                </Text>
-              )}
-            </View>
-          );
-        })}
 
-        {/* note + details per item — collapsible */}
-        {items.map((item) => {
-          if (!item.name.trim()) return null;
-          const isExpanded = expandedItems.has(item.id);
-          const hasContent = !!(item.note?.trim() || item.details?.trim());
-          return (
-            <View key={`extra-${item.id}`} style={{ gap: 6 }}>
-              <TouchableOpacity
-                style={styles.itemExpandBtn}
-                onPress={() => {
-                  Haptics.selectionAsync();
-                  setExpandedItems((prev) => {
-                    const next = new Set(prev);
-                    next.has(item.id) ? next.delete(item.id) : next.add(item.id);
-                    return next;
-                  });
-                }}
-                activeOpacity={0.7}
-              >
-                <Feather
-                  name={isExpanded ? "chevron-up" : "chevron-down"}
-                  size={13}
-                  color={hasContent ? Colors.primary : Colors.textMuted}
-                />
-                <Text style={[styles.itemExpandText, hasContent && { color: Colors.primary }]}>
-                  {hasContent ? `تفاصيل "${item.name.trim()}"` : `+ تفاصيل / ملاحظة`}
-                </Text>
-              </TouchableOpacity>
-              {(isExpanded || hasContent) && (
-                <>
-                  <TextInput
-                    style={[styles.input, styles.noteInput]}
-                    value={item.note || ""}
-                    onChangeText={(v) => updateItem(item.id, "note", v)}
-                    placeholder={`ملاحظة على "${item.name.trim()}" (اختياري)`}
-                    placeholderTextColor={Colors.textMuted}
-                    textAlign="right"
-                  />
-                  <View>
-                    <TextInput
-                      style={[styles.input, styles.detailsInput]}
-                      value={item.details || ""}
-                      onChangeText={(v) => {
-                        const wordCount = v.trim() ? v.trim().split(/\s+/).length : 0;
-                        if (wordCount <= 50) updateItem(item.id, "details", v);
-                      }}
-                      placeholder={`تفاصيل "${item.name.trim()}" (حتى 50 كلمة)`}
-                      placeholderTextColor={Colors.textMuted}
-                      multiline
-                      textAlign="right"
-                      textAlignVertical="top"
+              {/* ── Sub-row: total + note toggle ── */}
+              <View style={styles.itemSubRow}>
+                {lineTotal > 0 ? (
+                  <Text style={styles.lineTotalHint}>{item.quantity} × {item.price} = {lineTotal.toFixed(2)} ر.س</Text>
+                ) : (
+                  <View style={{ flex: 1 }} />
+                )}
+                {item.name.trim() ? (
+                  <TouchableOpacity
+                    style={styles.itemNoteToggle}
+                    onPress={() => {
+                      Haptics.selectionAsync();
+                      setExpandedItems((prev) => {
+                        const next = new Set(prev);
+                        next.has(item.id) ? next.delete(item.id) : next.add(item.id);
+                        return next;
+                      });
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Feather
+                      name={isExpanded ? "chevron-up" : "message-square"}
+                      size={12}
+                      color={hasNote ? Colors.primary : Colors.textMuted}
                     />
-                    {(item.details?.trim().length ?? 0) > 0 && (() => {
-                      const wc = item.details!.trim().split(/\s+/).length;
-                      return (
-                        <Text style={[styles.charCount, wc >= 48 && { color: wc >= 50 ? Colors.accent : Colors.warning }]}>
-                          {wc} / 50 كلمة
-                        </Text>
-                      );
-                    })()}
-                  </View>
-                </>
+                    <Text style={[styles.itemNoteToggleText, hasNote && { color: Colors.primary }]}>
+                      {hasNote ? "ملاحظة ✓" : "ملاحظة"}
+                    </Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+
+              {/* ── Inline note (expanded or has content) ── */}
+              {item.name.trim() && (isExpanded || hasNote) && (
+                <TextInput
+                  style={[styles.input, styles.noteInput, { marginTop: 2 }]}
+                  value={item.note || ""}
+                  onChangeText={(v) => updateItem(item.id, "note", v)}
+                  placeholder={`ملاحظة على "${item.name.trim()}"...`}
+                  placeholderTextColor={Colors.textMuted}
+                  textAlign="right"
+                  autoFocus={isExpanded && !hasNote}
+                />
               )}
             </View>
           );
         })}
 
         {/* add buttons */}
-        <View style={styles.addRow}>
-          {DEPT_OPTIONS.map((opt) => (
-            <TouchableOpacity
-              key={opt.value}
-              style={[styles.addBtn, { borderColor: opt.color }]}
-              onPress={() => { Haptics.selectionAsync(); addItemRow(opt.value); }}
-            >
-              <Feather name="plus" size={14} color={opt.color} />
-              <Text style={[styles.addBtnText, { color: opt.color }]}>
-                إضافة صنف {opt.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        {isLaviviane ? (
+          <TouchableOpacity
+            style={styles.addBtnSingle}
+            onPress={() => { Haptics.selectionAsync(); addItemRow("cake"); }}
+          >
+            <Feather name="plus" size={14} color={Colors.primary} />
+            <Text style={styles.addBtnSingleText}>إضافة صنف يدوياً</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.addRow}>
+            {DEPT_OPTIONS.map((opt) => (
+              <TouchableOpacity
+                key={opt.value}
+                style={[styles.addBtn, { borderColor: opt.color }]}
+                onPress={() => { Haptics.selectionAsync(); addItemRow(opt.value); }}
+              >
+                <Feather name="plus" size={14} color={opt.color} />
+                <Text style={[styles.addBtnText, { color: opt.color }]}>
+                  {opt.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
       </View>
 
       {/* Gallery modal */}
@@ -1288,8 +1269,8 @@ export default function CashierScreen() {
           <Feather name="send" size={15} color={Colors.primary} />
           <Text style={styles.summaryText}>
             سيتم الإرسال إلى:{"  "}
-            {halwaCount > 0 && <Text style={{ color: Colors.halwa, fontWeight: "700" }}>حلا زفة ({halwaCount})  </Text>}
-            {mawaliCount > 0 && <Text style={{ color: Colors.mawali, fontWeight: "700" }}>معجنات ({mawaliCount})  </Text>}
+            {halwaCount > 0 && <Text style={{ color: Colors.halwa, fontWeight: "700" }}>حلويات ({halwaCount})  </Text>}
+            {mawaliCount > 0 && <Text style={{ color: Colors.mawali, fontWeight: "700" }}>موالح ({mawaliCount})  </Text>}
             {chocolateCount > 0 && <Text style={{ color: Colors.chocolate, fontWeight: "700" }}>شوكولاتة ({chocolateCount})  </Text>}
             {cakeCount > 0 && <Text style={{ color: Colors.cake, fontWeight: "700" }}>كيك ({cakeCount})  </Text>}
             {packagingCount > 0 && <Text style={{ color: Colors.packaging, fontWeight: "700" }}>تغليف ({packagingCount})</Text>}
@@ -1612,7 +1593,19 @@ const styles = StyleSheet.create({
   deptSummary: { flexDirection: "row", gap: 6 },
   deptPill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
   deptPillText: { color: "#fff", fontSize: 11, fontWeight: "700" },
+  itemBlock: { gap: 0 },
   itemRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  itemSubRow: {
+    flexDirection: "row", alignItems: "center",
+    paddingHorizontal: 2, marginTop: 2, marginBottom: 4,
+  },
+  itemNoteToggle: {
+    flexDirection: "row", alignItems: "center", gap: 4,
+    paddingHorizontal: 8, paddingVertical: 3,
+    borderRadius: 8, borderWidth: 1, borderColor: Colors.border,
+    backgroundColor: Colors.surfaceSecondary,
+  },
+  itemNoteToggleText: { fontSize: 11, color: Colors.textMuted, fontWeight: "600" },
   itemName: { flex: 1, paddingVertical: 10 },
   qtyBox: {
     flexDirection: "row", alignItems: "center", width: 80,
@@ -1629,12 +1622,18 @@ const styles = StyleSheet.create({
   noteInput: { fontSize: 12, paddingVertical: 8 },
   addRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   addBtn: {
-    flexBasis: "47%", flexGrow: 1,
+    flexBasis: "30%", flexGrow: 1,
     flexDirection: "row", alignItems: "center", justifyContent: "center",
-    gap: 5, paddingVertical: 10, borderRadius: 10, borderWidth: 1.5,
+    gap: 5, paddingVertical: 9, borderRadius: 10, borderWidth: 1.5,
     backgroundColor: Colors.surface,
   },
   addBtnText: { fontSize: 12, fontWeight: "600" },
+  addBtnSingle: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
+    paddingVertical: 10, borderRadius: 10, borderWidth: 1.5,
+    borderColor: Colors.primary + "50", backgroundColor: Colors.primary + "08",
+  },
+  addBtnSingleText: { fontSize: 13, fontWeight: "600", color: Colors.primary },
   imageArea: {
     borderWidth: 1.5, borderColor: Colors.border, borderStyle: "dashed",
     borderRadius: 12, overflow: "hidden", minHeight: 120,

@@ -234,7 +234,6 @@ export function ProductGalleryModal({ visible, onClose, onConfirm }: Props) {
           quantity: qty,
           price: prod.price,
           department: prod.department,
-          details: prod.category || prod.description || undefined,
         };
       });
     onConfirm(items);
