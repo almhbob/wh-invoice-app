@@ -107,6 +107,7 @@ export default function CashierScreen() {
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [referenceImages, setReferenceImages] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
   const [showGallery, setShowGallery] = useState(false);
   const [receiptOrder, setReceiptOrder] = useState<Order | null>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
@@ -541,77 +542,70 @@ export default function CashierScreen() {
     document.body.appendChild(overlay);
   };
 
-  const handleSubmit = async () => {
+  const doSubmit = async () => {
+    const filteredItems = items.filter((i) => i.name.trim() && i.quantity > 0);
+    const insurance = insuranceAmount.trim() ? parseFloat(insuranceAmount) : undefined;
+    const total = grandTotal > 0 ? grandTotal : undefined;
+    const discountData: Discount | undefined =
+      discountEnabled && discountVal > 0
+        ? { type: discountType, value: discountVal, reason: discountReason.trim() }
+        : undefined;
+
+    setShowPreview(false);
+    setIsSubmitting(true);
+    try {
+      const paidNum = amountPaidVal > 0 ? amountPaidVal : undefined;
+      const created = await addOrder({
+        customerName: customerName.trim(),
+        customerPhone: customerPhone.trim(),
+        customerPhone2: customerPhone2.trim() || undefined,
+        orderType,
+        deliveryAddress: orderType === "delivery" ? deliveryAddress.trim() || undefined : undefined,
+        receivedAt,
+        deliveryTime: deliveryDateTime || undefined,
+        insuranceAmount: insurance && !isNaN(insurance) ? insurance : undefined,
+        insurancePaymentMethod: insuranceVal > 0 ? insurancePaymentMethod : undefined,
+        totalAmount: total,
+        amountPaid: paidNum,
+        paymentMethod,
+        discount: discountData,
+        items: filteredItems,
+        notes: notes.trim() || undefined,
+        imageUri: imageUri || undefined,
+        referenceImages: referenceImages.length > 0 ? referenceImages : undefined,
+        cashierEmployee: {
+          name: currentEmployee!.name,
+          employeeId: currentEmployee!.employeeId,
+          timestamp: new Date().toISOString(),
+        },
+      });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      if (appliedOfferId) incrementUsage(appliedOfferId).catch(() => {});
+      QRCode.toDataURL(
+        `فاتورة #${created.orderNumber}\n${created.customerName}\n${created.customerPhone}\n${created.receivedAt}${created.totalAmount ? `\nالإجمالي: ${created.totalAmount.toFixed(2)} ر.س` : ""}`,
+        { width: 160, margin: 1, color: { dark: "#2f241d", light: "#ffffff" } }
+      ).then(setReceiptQr).catch(() => setReceiptQr(""));
+      resetForm();
+      setExpandedItems(new Set());
+      setReceiptOrder(created);
+    } catch {
+      Alert.alert("خطأ", t("errSend"));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSubmit = () => {
     if (!customerName.trim()) { Alert.alert("خطأ", t("errName")); return; }
     if (!customerPhone.trim()) { Alert.alert("خطأ", t("errPhone")); return; }
     const filteredItems = items.filter((i) => i.name.trim() && i.quantity > 0);
     if (filteredItems.length === 0) { Alert.alert("خطأ", t("errItems")); return; }
-
-    const doSubmit = async () => {
-      const insurance = insuranceAmount.trim() ? parseFloat(insuranceAmount) : undefined;
-      const total = grandTotal > 0 ? grandTotal : undefined;
-      const discountData: Discount | undefined =
-        discountEnabled && discountVal > 0
-          ? { type: discountType, value: discountVal, reason: discountReason.trim() }
-          : undefined;
-
-      setIsSubmitting(true);
-      try {
-        const paidNum = amountPaidVal > 0 ? amountPaidVal : undefined;
-        const created = await addOrder({
-          customerName: customerName.trim(),
-          customerPhone: customerPhone.trim(),
-          customerPhone2: customerPhone2.trim() || undefined,
-          orderType,
-          deliveryAddress: orderType === "delivery" ? deliveryAddress.trim() || undefined : undefined,
-          receivedAt,
-          deliveryTime: deliveryDateTime || undefined,
-          insuranceAmount: insurance && !isNaN(insurance) ? insurance : undefined,
-          insurancePaymentMethod: insuranceVal > 0 ? insurancePaymentMethod : undefined,
-          totalAmount: total,
-          amountPaid: paidNum,
-          paymentMethod,
-          discount: discountData,
-          items: filteredItems,
-          notes: notes.trim() || undefined,
-          imageUri: imageUri || undefined,
-          referenceImages: referenceImages.length > 0 ? referenceImages : undefined,
-          cashierEmployee: {
-            name: currentEmployee!.name,
-            employeeId: currentEmployee!.employeeId,
-            timestamp: new Date().toISOString(),
-          },
-        });
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-        if (appliedOfferId) incrementUsage(appliedOfferId).catch(() => {});
-        QRCode.toDataURL(
-          `فاتورة #${created.orderNumber}\n${created.customerName}\n${created.customerPhone}\n${created.receivedAt}${created.totalAmount ? `\nالإجمالي: ${created.totalAmount.toFixed(2)} ر.س` : ""}`,
-          { width: 160, margin: 1, color: { dark: "#2f241d", light: "#ffffff" } }
-        ).then(setReceiptQr).catch(() => setReceiptQr(""));
-        resetForm();
-        setExpandedItems(new Set());
-        setReceiptOrder(created);
-      } catch {
-        Alert.alert("خطأ", t("errSend"));
-      } finally {
-        setIsSubmitting(false);
-      }
-    };
-
     if (!currentEmployee) {
       Alert.alert("تسجيل الدخول مطلوب", "يجب تسجيل الدخول أولاً — اضغط على زر تغيير في الأعلى.", [{ text: "حسناً" }]);
       return;
     }
-
-    if (filteredItems.some((i) => i.price <= 0)) {
-      Alert.alert("تنبيه", "بعض الأصناف لا تحتوي على سعر — هل تريد المتابعة؟", [
-        { text: "تراجع", style: "cancel" },
-        { text: "متابعة", onPress: () => { void doSubmit(); } },
-      ]);
-      return;
-    }
-
-    void doSubmit();
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setShowPreview(true);
   };
 
   // Items sorted by department display order (cake → halwa → chocolate → mawali → packaging)
@@ -1358,6 +1352,223 @@ export default function CashierScreen() {
     </ScrollView>
     </KeyboardAvoidingView>
 
+    {/* ─── Preview Modal ──────────────────────────────────────────── */}
+    {showPreview && (
+      <Modal visible transparent animationType="slide" onRequestClose={() => setShowPreview(false)}>
+        <View style={styles.previewOverlay}>
+          <View style={styles.previewSheet}>
+            <View style={styles.previewHandle} />
+
+            {/* Header */}
+            <View style={styles.previewHeader}>
+              <TouchableOpacity style={styles.previewBackBtn} onPress={() => setShowPreview(false)}>
+                <Feather name="arrow-right" size={20} color={Colors.primary} />
+              </TouchableOpacity>
+              <Text style={styles.previewTitle}>معاينة الطلب</Text>
+              <View style={{ width: 36 }} />
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 8 }}>
+
+              {/* بيانات العميل */}
+              <View style={styles.previewSection}>
+                <View style={styles.previewSectionHeader}>
+                  <Feather name="user" size={14} color={Colors.primary} />
+                  <Text style={styles.previewSectionTitle}>بيانات العميل</Text>
+                </View>
+                <View style={styles.previewRow}>
+                  <Text style={styles.previewLabel}>الاسم</Text>
+                  <Text style={styles.previewValue}>{customerName.trim()}</Text>
+                </View>
+                <View style={styles.previewRow}>
+                  <Text style={styles.previewLabel}>الهاتف</Text>
+                  <Text style={styles.previewValue}>{customerPhone.trim()}</Text>
+                </View>
+                {customerPhone2.trim() ? (
+                  <View style={styles.previewRow}>
+                    <Text style={styles.previewLabel}>هاتف 2</Text>
+                    <Text style={styles.previewValue}>{customerPhone2.trim()}</Text>
+                  </View>
+                ) : null}
+                <View style={styles.previewRow}>
+                  <Text style={styles.previewLabel}>نوع الطلب</Text>
+                  <View style={[styles.previewTypeBadge, orderType === "delivery" && { backgroundColor: Colors.info + "18", borderColor: Colors.info + "50" }]}>
+                    <Text style={[styles.previewTypeBadgeText, orderType === "delivery" && { color: Colors.info }]}>
+                      {ORDER_TYPE_LABELS[orderType]}
+                    </Text>
+                  </View>
+                </View>
+                {orderType === "delivery" && deliveryAddress.trim() ? (
+                  <View style={styles.previewRow}>
+                    <Text style={styles.previewLabel}>العنوان</Text>
+                    <Text style={[styles.previewValue, { flex: 1, textAlign: "left", marginLeft: 8 }]}>{deliveryAddress.trim()}</Text>
+                  </View>
+                ) : null}
+                {deliveryDateTime ? (
+                  <View style={styles.previewRow}>
+                    <Text style={styles.previewLabel}>موعد التسليم</Text>
+                    <Text style={[styles.previewValue, { color: Colors.primary, fontWeight: "700" }]}>{deliveryDateTime}</Text>
+                  </View>
+                ) : null}
+              </View>
+
+              {/* الأصناف */}
+              {(() => {
+                const previewItems = items.filter((i) => i.name.trim() && i.quantity > 0);
+                return (
+                  <View style={styles.previewSection}>
+                    <View style={styles.previewSectionHeader}>
+                      <Feather name="shopping-bag" size={14} color={Colors.primary} />
+                      <Text style={styles.previewSectionTitle}>الأصناف ({previewItems.length})</Text>
+                    </View>
+                    {previewItems.map((item) => {
+                      const deptConf = DEPT_OPTIONS.find((d) => d.value === item.department)!;
+                      const lineTotal = item.price ? (item.price * item.quantity).toFixed(2) : null;
+                      return (
+                        <View key={item.id} style={styles.previewItemRow}>
+                          <View style={[styles.previewDeptDot, { backgroundColor: deptConf.color }]} />
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.previewItemName}>{item.name}</Text>
+                            {item.note ? <Text style={styles.previewItemNote}>{item.note}</Text> : null}
+                          </View>
+                          <Text style={styles.previewItemQty}>×{item.quantity}</Text>
+                          <Text style={[styles.previewItemPrice, !item.price && { color: Colors.accent }]}>
+                            {lineTotal ? `${lineTotal} ر.س` : "بدون سعر"}
+                          </Text>
+                        </View>
+                      );
+                    })}
+                    {previewItems.some((i) => !i.price) && (
+                      <View style={styles.previewWarning}>
+                        <Feather name="alert-triangle" size={13} color={Colors.warning} />
+                        <Text style={styles.previewWarningText}>بعض الأصناف بدون سعر — تأكد قبل الإرسال</Text>
+                      </View>
+                    )}
+                  </View>
+                );
+              })()}
+
+              {/* الإجمالي */}
+              {(grandTotal > 0 || discountEnabled || insuranceVal > 0) && (
+                <View style={styles.previewSection}>
+                  <View style={styles.previewSectionHeader}>
+                    <Feather name="dollar-sign" size={14} color={Colors.primary} />
+                    <Text style={styles.previewSectionTitle}>الإجمالي</Text>
+                  </View>
+                  {subtotal > 0 && (discountAmount > 0 || insuranceVal > 0) ? (
+                    <View style={styles.previewRow}>
+                      <Text style={styles.previewLabel}>المجموع</Text>
+                      <Text style={styles.previewValue}>{subtotal.toFixed(2)} ر.س</Text>
+                    </View>
+                  ) : null}
+                  {discountAmount > 0 && (
+                    <View style={styles.previewRow}>
+                      <Text style={[styles.previewLabel, { color: Colors.success }]}>
+                        خصم{discountReason.trim() ? ` (${discountReason.trim()})` : ""}
+                      </Text>
+                      <Text style={[styles.previewValue, { color: Colors.success }]}>- {discountAmount.toFixed(2)} ر.س</Text>
+                    </View>
+                  )}
+                  {insuranceVal > 0 && (
+                    <View style={styles.previewRow}>
+                      <Text style={styles.previewLabel}>تأمين الصواني</Text>
+                      <Text style={styles.previewValue}>{insuranceVal.toFixed(2)} ر.س</Text>
+                    </View>
+                  )}
+                  {grandTotal > 0 && (
+                    <View style={[styles.previewRow, styles.previewTotalRow]}>
+                      <Text style={styles.previewTotalLabel}>الإجمالي الكلي</Text>
+                      <Text style={styles.previewTotalValue}>{grandTotal.toFixed(2)} ر.س</Text>
+                    </View>
+                  )}
+                  <View style={styles.previewRow}>
+                    <Text style={styles.previewLabel}>طريقة الدفع</Text>
+                    <Text style={styles.previewValue}>{PAYMENT_LABELS[paymentMethod]}</Text>
+                  </View>
+                  {amountPaidVal > 0 && (
+                    <View style={styles.previewRow}>
+                      <Text style={styles.previewLabel}>المدفوع</Text>
+                      <Text style={styles.previewValue}>{amountPaidVal.toFixed(2)} ر.س</Text>
+                    </View>
+                  )}
+                  {remainingAmount > 0 && (
+                    <View style={styles.previewRow}>
+                      <Text style={[styles.previewLabel, { color: Colors.accent }]}>المتبقي</Text>
+                      <Text style={[styles.previewValue, { color: Colors.accent, fontWeight: "800" }]}>{remainingAmount.toFixed(2)} ر.س</Text>
+                    </View>
+                  )}
+                </View>
+              )}
+
+              {/* ملاحظات */}
+              {notes.trim() ? (
+                <View style={styles.previewSection}>
+                  <View style={styles.previewSectionHeader}>
+                    <Feather name="file-text" size={14} color={Colors.primary} />
+                    <Text style={styles.previewSectionTitle}>ملاحظات</Text>
+                  </View>
+                  <Text style={styles.previewNotes}>{notes.trim()}</Text>
+                </View>
+              ) : null}
+
+              {/* الصور المرفقة */}
+              {(imageUri || referenceImages.length > 0) && (
+                <View style={styles.previewSection}>
+                  <View style={styles.previewSectionHeader}>
+                    <Feather name="image" size={14} color={Colors.primary} />
+                    <Text style={styles.previewSectionTitle}>الصور المرفقة</Text>
+                  </View>
+                  <View style={styles.previewImgsRow}>
+                    {imageUri && (
+                      <View style={{ alignItems: "center" }}>
+                        <Image source={{ uri: imageUri }} style={styles.previewThumb} contentFit="cover" />
+                        <Text style={styles.previewThumbLabel}>صورة الطلب</Text>
+                      </View>
+                    )}
+                    {referenceImages.map((uri, i) => (
+                      <View key={i} style={{ alignItems: "center" }}>
+                        <Image source={{ uri }} style={styles.previewThumb} contentFit="cover" />
+                        <Text style={styles.previewThumbLabel}>مرجعية {i + 1}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {/* منشئ الطلب */}
+              {currentEmployee && (
+                <View style={styles.previewCashierRow}>
+                  <Feather name="user-check" size={13} color={Colors.textMuted} />
+                  <Text style={styles.previewCashierText}>
+                    المنشئ: {currentEmployee.name} #{currentEmployee.employeeId}
+                  </Text>
+                </View>
+              )}
+
+              <View style={{ height: 8 }} />
+            </ScrollView>
+
+            {/* Action buttons */}
+            <View style={styles.previewActions}>
+              <TouchableOpacity style={styles.previewEditBtn} onPress={() => setShowPreview(false)} activeOpacity={0.8}>
+                <Feather name="edit-2" size={16} color={Colors.primary} />
+                <Text style={styles.previewEditBtnText}>تعديل</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.previewConfirmBtn, isSubmitting && { opacity: 0.6 }]}
+                onPress={() => void doSubmit()}
+                disabled={isSubmitting}
+                activeOpacity={0.85}
+              >
+                <Feather name="check-circle" size={18} color="#fff" />
+                <Text style={styles.previewConfirmBtnText}>{isSubmitting ? "جاري الإرسال..." : "تأكيد وإرسال"}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    )}
+
     {/* ─── Receipt Modal ──────────────────────────────────────────── */}
     {receiptOrder && (
       <Modal
@@ -2035,6 +2246,87 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.gold + "12", borderRadius: 8, padding: 8,
   },
   receiptInsNoteText: { fontSize: 11, color: Colors.gold, flex: 1 },
+
+  // order preview modal
+  previewOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.52)", justifyContent: "flex-end" },
+  previewSheet: {
+    backgroundColor: Colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    maxHeight: "92%",
+  },
+  previewHandle: {
+    width: 40, height: 4, backgroundColor: Colors.border, borderRadius: 2,
+    alignSelf: "center", marginTop: 10, marginBottom: 4,
+  },
+  previewHeader: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingHorizontal: 18, paddingVertical: 14,
+    borderBottomWidth: 1, borderBottomColor: Colors.border,
+  },
+  previewBackBtn: {
+    width: 36, height: 36, borderRadius: 10, backgroundColor: Colors.surfaceSecondary,
+    alignItems: "center", justifyContent: "center",
+  },
+  previewTitle: { fontSize: 16, fontWeight: "800", color: Colors.primary },
+  previewSection: {
+    marginHorizontal: 14, marginTop: 10,
+    backgroundColor: Colors.surfaceSecondary, borderRadius: 14, padding: 14,
+  },
+  previewSectionHeader: { flexDirection: "row", alignItems: "center", gap: 7, marginBottom: 10 },
+  previewSectionTitle: { fontSize: 13, fontWeight: "700", color: Colors.primary },
+  previewRow: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 4,
+  },
+  previewLabel: { fontSize: 12, color: Colors.textSecondary },
+  previewValue: { fontSize: 12, fontWeight: "600", color: Colors.text },
+  previewTypeBadge: {
+    paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20,
+    backgroundColor: Colors.success + "18", borderWidth: 1, borderColor: Colors.success + "50",
+  },
+  previewTypeBadgeText: { fontSize: 11, fontWeight: "700", color: Colors.success },
+  previewItemRow: {
+    flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 6,
+    borderBottomWidth: 1, borderBottomColor: Colors.border,
+  },
+  previewDeptDot: { width: 9, height: 9, borderRadius: 5 },
+  previewItemName: { fontSize: 13, fontWeight: "600", color: Colors.text },
+  previewItemNote: { fontSize: 11, color: Colors.textMuted, fontStyle: "italic" },
+  previewItemQty: { fontSize: 12, color: Colors.textSecondary, minWidth: 26, textAlign: "center" },
+  previewItemPrice: { fontSize: 12, fontWeight: "700", color: Colors.text, minWidth: 72, textAlign: "left" },
+  previewWarning: {
+    flexDirection: "row", alignItems: "center", gap: 6, marginTop: 8,
+    backgroundColor: Colors.warning + "15", borderRadius: 8, padding: 8,
+  },
+  previewWarningText: { fontSize: 11, color: Colors.warning, fontWeight: "600" },
+  previewTotalRow: {
+    borderTopWidth: 1, borderTopColor: Colors.border, marginTop: 6, paddingTop: 8,
+  },
+  previewTotalLabel: { fontSize: 14, fontWeight: "800", color: Colors.primary },
+  previewTotalValue: { fontSize: 17, fontWeight: "900", color: Colors.primary },
+  previewNotes: { fontSize: 12, color: Colors.text, lineHeight: 18 },
+  previewImgsRow: { flexDirection: "row", gap: 10, flexWrap: "wrap" },
+  previewThumb: { width: 72, height: 72, borderRadius: 10 },
+  previewThumbLabel: { fontSize: 10, color: Colors.textMuted, textAlign: "center", marginTop: 3 },
+  previewCashierRow: {
+    flexDirection: "row", alignItems: "center", gap: 6, marginHorizontal: 14, marginTop: 10,
+  },
+  previewCashierText: { fontSize: 11, color: Colors.textMuted },
+  previewActions: {
+    flexDirection: "row", gap: 12, padding: 16, paddingBottom: 28,
+    borderTopWidth: 1, borderTopColor: Colors.border,
+  },
+  previewEditBtn: {
+    flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
+    paddingVertical: 14, borderRadius: 14,
+    borderWidth: 1.5, borderColor: Colors.primary, backgroundColor: Colors.primary + "08",
+  },
+  previewEditBtnText: { fontSize: 14, fontWeight: "700", color: Colors.primary },
+  previewConfirmBtn: {
+    flex: 2, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
+    paddingVertical: 14, borderRadius: 14, backgroundColor: Colors.success,
+    shadowColor: Colors.success, shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3, shadowRadius: 8, elevation: 5,
+  },
+  previewConfirmBtnText: { fontSize: 15, fontWeight: "800", color: "#fff" },
 
   // reference images for special cake
   refImgHeader: { flexDirection: "row", alignItems: "flex-start", gap: 10, marginBottom: 12 },
