@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { Image } from "expo-image";
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useCallback } from "react";
 import {
   FlatList,
   Modal,
@@ -63,6 +63,7 @@ function ProductCard({
   qty,
   onAdd,
   onRemove,
+  onImagePress,
   lang,
   isLaviviane,
 }: {
@@ -70,6 +71,7 @@ function ProductCard({
   qty: number;
   onAdd: () => void;
   onRemove: () => void;
+  onImagePress: (uri: string, name: string) => void;
   lang: string;
   isLaviviane: boolean;
 }) {
@@ -112,9 +114,18 @@ function ProductCard({
 
   return (
     <View style={[styles.productCard, qty > 0 && { borderColor: deptColor }, !product.isAvailable && styles.productCardUnavailable]}>
-      <View style={styles.productImageBox}>
+      <TouchableOpacity
+        style={styles.productImageBox}
+        onPress={() => product.imageUri ? onImagePress(product.imageUri, displayName) : undefined}
+        activeOpacity={product.imageUri ? 0.85 : 1}
+      >
         {product.imageUri ? (
-          <Image source={{ uri: product.imageUri }} style={styles.productImage} contentFit="cover" transition={180} />
+          <>
+            <Image source={{ uri: product.imageUri }} style={styles.productImage} contentFit="cover" transition={180} />
+            <View style={styles.imageZoomHint}>
+              <Feather name="zoom-in" size={11} color="rgba(255,255,255,0.9)" />
+            </View>
+          </>
         ) : (
           <View style={[styles.productImagePlaceholder, { backgroundColor: deptColor + "18" }]}>
             <Feather name={(deptIconMap[product.department] as any) ?? "tag"} size={30} color={deptColor} />
@@ -137,7 +148,7 @@ function ProductCard({
             <Text style={styles.unavailableText}>{lang === "ar" ? "غير متوفر" : "Unavailable"}</Text>
           </View>
         )}
-      </View>
+      </TouchableOpacity>
 
       <View style={styles.productInfo}>
         <Text style={styles.productName} numberOfLines={2}>{displayName}</Text>
@@ -179,6 +190,12 @@ export function ProductGalleryModal({ visible, onClose, onConfirm }: Props) {
   const [deptFilter, setDeptFilter] = useState<Department | "all">("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [selected, setSelected] = useState<Record<string, number>>({});
+  const [zoomedImage, setZoomedImage] = useState<{ uri: string; name: string } | null>(null);
+
+  const handleImagePress = useCallback((uri: string, name: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setZoomedImage({ uri, name });
+  }, []);
 
   const isLaviviane = companyId === LAVIVIANE_COMPANY_ID;
   const columnCount = width >= 980 ? 4 : width >= 700 ? 3 : 2;
@@ -201,6 +218,30 @@ export function ProductGalleryModal({ visible, onClose, onConfirm }: Props) {
       return true;
     });
   }, [visibleProducts, deptFilter, categoryFilter, search, isLaviviane]);
+
+  // Sorted: available first → by category order → by price asc
+  const sortedFiltered = useMemo(() => {
+    return [...filtered].sort((a, b) => {
+      if (a.isAvailable !== b.isAvailable) return a.isAvailable ? -1 : 1;
+      if (isLaviviane) {
+        const catA = LAVIVIANE_CATEGORY_ORDER.indexOf(a.category ?? "");
+        const catB = LAVIVIANE_CATEGORY_ORDER.indexOf(b.category ?? "");
+        if (catA !== catB) return catA - catB;
+      }
+      return (a.price || 0) - (b.price || 0);
+    });
+  }, [filtered, isLaviviane]);
+
+  // Grouped by category for Laviviane "all" view (no search active)
+  const groupedByCategory = useMemo(() => {
+    if (!isLaviviane || categoryFilter !== "all" || search.trim()) return null;
+    return LAVIVIANE_CATEGORY_ORDER.map((cat) => ({
+      category: cat,
+      color: LAVI_CATEGORY_COLORS[cat] ?? Colors.primary,
+      available: sortedFiltered.filter(p => p.category === cat && p.isAvailable),
+      unavailable: sortedFiltered.filter(p => p.category === cat && !p.isAvailable),
+    })).filter(g => g.available.length + g.unavailable.length > 0);
+  }, [isLaviviane, categoryFilter, search, sortedFiltered]);
 
   const totalSelected = Object.values(selected).reduce((s, n) => s + n, 0);
   const totalValue = Object.entries(selected).reduce((sum, [productId, qty]) => {
@@ -352,34 +393,102 @@ export function ProductGalleryModal({ visible, onClose, onConfirm }: Props) {
         )}
 
         {isLaviviane && (
-          <Text style={styles.laviResultCount}>{filtered.length} منتج</Text>
+          <Text style={styles.laviResultCount}>
+            {sortedFiltered.filter(p => p.isAvailable).length} متاح
+            {sortedFiltered.filter(p => !p.isAvailable).length > 0
+              ? ` · ${sortedFiltered.filter(p => !p.isAvailable).length} غير متاح` : ""}
+            {" · "}{sortedFiltered.length} إجمالاً
+          </Text>
         )}
 
-        <FlatList
-          data={filtered}
-          key={columnCount}
-          keyExtractor={(item) => item.id}
-          numColumns={columnCount}
-          columnWrapperStyle={styles.columnWrapper}
-          contentContainerStyle={styles.grid}
-          renderItem={({ item }) => (
-            <ProductCard
-              product={item}
-              qty={selected[item.id] ?? 0}
-              onAdd={() => add(item.id)}
-              onRemove={() => remove(item.id)}
-              lang={lang}
-              isLaviviane={isLaviviane}
-            />
-          )}
-          ListEmptyComponent={
-            <View style={styles.emptyBox}>
-              <Feather name="shopping-bag" size={40} color={Colors.textMuted} />
-              <Text style={styles.emptyText}>{lang === "ar" ? "لا توجد منتجات" : "No products found"}</Text>
-            </View>
-          }
-          showsVerticalScrollIndicator={false}
-        />
+        {groupedByCategory ? (
+          /* ── Laviviane "all" grouped view ── */
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.groupedContainer}>
+            {groupedByCategory.map(({ category, color, available, unavailable }) => {
+              const allProds = [...available, ...unavailable];
+              const cardW = Math.floor((width - 48) / columnCount);
+              return (
+                <View key={category} style={styles.catSection}>
+                  <View style={[styles.catSectionHeader, { borderRightColor: color }]}>
+                    <View style={[styles.catSectionDot, { backgroundColor: color }]} />
+                    <Text style={[styles.catSectionTitle, { color }]}>{category}</Text>
+                    <Text style={styles.catSectionCount}>{available.length} منتج</Text>
+                  </View>
+                  <View style={styles.catSectionGrid}>
+                    {allProds.map((p) => (
+                      <View key={p.id} style={{ width: cardW, marginBottom: 12 }}>
+                        <ProductCard
+                          product={p}
+                          qty={selected[p.id] ?? 0}
+                          onAdd={() => add(p.id)}
+                          onRemove={() => remove(p.id)}
+                          onImagePress={handleImagePress}
+                          lang={lang}
+                          isLaviviane={isLaviviane}
+                        />
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              );
+            })}
+            <View style={{ height: 110 }} />
+          </ScrollView>
+        ) : (
+          /* ── Filtered / search view ── */
+          <FlatList
+            data={sortedFiltered}
+            key={columnCount}
+            keyExtractor={(item) => item.id}
+            numColumns={columnCount}
+            columnWrapperStyle={styles.columnWrapper}
+            contentContainerStyle={styles.grid}
+            renderItem={({ item }) => (
+              <ProductCard
+                product={item}
+                qty={selected[item.id] ?? 0}
+                onAdd={() => add(item.id)}
+                onRemove={() => remove(item.id)}
+                onImagePress={handleImagePress}
+                lang={lang}
+                isLaviviane={isLaviviane}
+              />
+            )}
+            ListEmptyComponent={
+              <View style={styles.emptyBox}>
+                <Feather name="shopping-bag" size={40} color={Colors.textMuted} />
+                <Text style={styles.emptyText}>{lang === "ar" ? "لا توجد منتجات" : "No products found"}</Text>
+              </View>
+            }
+            showsVerticalScrollIndicator={false}
+          />
+        )}
+
+        {/* ── Image zoom modal ── */}
+        {zoomedImage && (
+          <Modal visible transparent animationType="fade" onRequestClose={() => setZoomedImage(null)}>
+            <TouchableOpacity
+              style={styles.zoomOverlay}
+              activeOpacity={1}
+              onPress={() => setZoomedImage(null)}
+            >
+              <View style={styles.zoomSheet}>
+                <Image
+                  source={{ uri: zoomedImage.uri }}
+                  style={styles.zoomImage}
+                  contentFit="contain"
+                />
+                <View style={styles.zoomFooter}>
+                  <Text style={styles.zoomName} numberOfLines={2}>{zoomedImage.name}</Text>
+                  <TouchableOpacity style={styles.zoomClose} onPress={() => setZoomedImage(null)}>
+                    <Feather name="x" size={16} color="#fff" />
+                    <Text style={styles.zoomCloseText}>إغلاق</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </TouchableOpacity>
+          </Modal>
+        )}
 
         {totalSelected > 0 && (
           <View style={[styles.confirmBar, { paddingBottom: insets.bottom + 12 }]}>
@@ -455,6 +564,20 @@ const styles = StyleSheet.create({
 
   grid: { paddingHorizontal: 12, paddingBottom: 110 },
   columnWrapper: { gap: 12, marginBottom: 12 },
+
+  // Grouped category sections
+  groupedContainer: { paddingHorizontal: 12, paddingTop: 4 },
+  catSection: { marginBottom: 20 },
+  catSectionHeader: {
+    flexDirection: "row", alignItems: "center", gap: 8,
+    paddingVertical: 8, paddingHorizontal: 10, marginBottom: 10,
+    borderRightWidth: 4, borderRadius: 6,
+    backgroundColor: Colors.surfaceSecondary,
+  },
+  catSectionDot: { width: 8, height: 8, borderRadius: 4 },
+  catSectionTitle: { flex: 1, fontSize: 14, fontWeight: "800", textAlign: "right" },
+  catSectionCount: { fontSize: 11, color: Colors.textMuted, fontWeight: "600" },
+  catSectionGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
   productCard: {
     flex: 1, backgroundColor: Colors.surface, borderRadius: 18,
     overflow: "hidden", borderWidth: 1.5, borderColor: "transparent",
@@ -504,4 +627,36 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3, shadowRadius: 6, elevation: 4,
   },
   confirmBtnText: { color: "#fff", fontSize: 14, fontWeight: "800" },
+
+  // Image zoom hint
+  imageZoomHint: {
+    position: "absolute", bottom: 6, left: 6,
+    backgroundColor: "rgba(0,0,0,0.45)", borderRadius: 6,
+    padding: 4,
+  },
+
+  // Image zoom overlay
+  zoomOverlay: {
+    flex: 1, backgroundColor: "rgba(0,0,0,0.92)",
+    alignItems: "center", justifyContent: "center", padding: 16,
+  },
+  zoomSheet: {
+    width: "100%", maxWidth: 480,
+    backgroundColor: "#1a1a1a", borderRadius: 20, overflow: "hidden",
+  },
+  zoomImage: { width: "100%", aspectRatio: 1 },
+  zoomFooter: {
+    flexDirection: "row", alignItems: "center", gap: 12,
+    padding: 14, backgroundColor: "#1a1a1a",
+  },
+  zoomName: {
+    flex: 1, color: "#fff", fontSize: 14, fontWeight: "700",
+    textAlign: "right",
+  },
+  zoomClose: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    backgroundColor: "rgba(255,255,255,0.12)", borderRadius: 10,
+    paddingHorizontal: 12, paddingVertical: 8,
+  },
+  zoomCloseText: { color: "#fff", fontSize: 13, fontWeight: "700" },
 });

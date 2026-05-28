@@ -52,6 +52,8 @@ const DEPT_OPTIONS: { value: Department; label: string; color: string }[] = [
 const DEPT_CYCLE: Partial<Record<Department, Department>> = {
   halwa: "mawali", mawali: "chocolate", chocolate: "cake", cake: "packaging", packaging: "halwa",
 };
+// Display order for cashier items — most important depts first
+const DEPT_DISPLAY_ORDER: Department[] = ["cake", "halwa", "chocolate", "mawali", "packaging"];
 
 function formatNow() {
   const d = new Date();
@@ -598,6 +600,11 @@ export default function CashierScreen() {
     void doSubmit();
   };
 
+  // Items sorted by department display order (cake → halwa → chocolate → mawali → packaging)
+  const displayItems = [...items].sort(
+    (a, b) => DEPT_DISPLAY_ORDER.indexOf(a.department) - DEPT_DISPLAY_ORDER.indexOf(b.department)
+  );
+
   // Group items preview by dept
   const halwaCount = items.filter((i) => i.department === "halwa" && i.name.trim()).length;
   const mawaliCount = items.filter((i) => i.department === "mawali" && i.name.trim()).length;
@@ -892,13 +899,23 @@ export default function CashierScreen() {
           <View style={{ width: 24 }} />
         </View>
 
-        {items.map((item, idx) => {
+        {(() => {
+          let lastDept = "";
+          return displayItems.map((item, idx) => {
           const deptConf = DEPT_OPTIONS.find((d) => d.value === item.department)!;
           const lineTotal = (item.price || 0) * item.quantity;
           const isExpanded = expandedItems.has(item.id);
           const hasNote = !!(item.note?.trim());
+          const showDeptSep = item.name.trim() && item.department !== lastDept;
+          if (item.name.trim()) lastDept = item.department;
           return (
             <View key={item.id} style={styles.itemBlock}>
+              {showDeptSep && cakeCount + halwaCount + chocolateCount + mawaliCount + packagingCount > 1 && (
+                <View style={[styles.deptSepLine, { borderColor: deptConf.color + "60" }]}>
+                  <View style={[styles.deptSepDot, { backgroundColor: deptConf.color }]} />
+                  <Text style={[styles.deptSepLabel, { color: deptConf.color }]}>{deptConf.label}</Text>
+                </View>
+              )}
               {/* ── Main row ── */}
               <View style={styles.itemRow}>
                 <TextInput
@@ -993,7 +1010,8 @@ export default function CashierScreen() {
               )}
             </View>
           );
-        })}
+          });
+        })()}
 
         {/* add buttons */}
         {isLaviviane ? (
@@ -1594,6 +1612,12 @@ const styles = StyleSheet.create({
   deptPill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
   deptPillText: { color: "#fff", fontSize: 11, fontWeight: "700" },
   itemBlock: { gap: 0 },
+  deptSepLine: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    borderTopWidth: 1, paddingTop: 8, marginTop: 4, marginBottom: 4,
+  },
+  deptSepDot: { width: 7, height: 7, borderRadius: 4 },
+  deptSepLabel: { fontSize: 11, fontWeight: "800", textTransform: "uppercase" as const },
   itemRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   itemSubRow: {
     flexDirection: "row", alignItems: "center",
