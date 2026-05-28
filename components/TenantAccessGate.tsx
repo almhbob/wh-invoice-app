@@ -302,10 +302,16 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
       <ScrollView contentContainerStyle={styles.screen}>
         <View style={styles.card}>
           {isLaviviane && (
-            <View style={styles.laviBanner}>
-              <Image source={{ uri: "/laviviane-logo.png" }} style={styles.laviLogoImg} contentFit="contain" />
-              <Text style={styles.laviSub}>Maison de Pâtisserie</Text>
-            </View>
+            <>
+              <View style={styles.laviBanner}>
+                <Image source={{ uri: "/laviviane-logo.png" }} style={styles.laviLogoImg} contentFit="contain" />
+                <Text style={styles.laviSub}>Maison de Pâtisserie</Text>
+              </View>
+              <View style={styles.laviQrBoxSmall}>
+                <Image source={{ uri: "/laviviane-qr.png" }} style={styles.laviQrImgSmall} contentFit="contain" />
+                <Text style={styles.laviQrLabel}>امسح للدخول على أي جهاز آخر</Text>
+              </View>
+            </>
           )}
           <TouchableOpacity style={styles.switchBtn} onPress={resetCompany}><Text style={styles.switchText}>{tx("changeCompany")}</Text></TouchableOpacity>
           <Text style={styles.title}>{tx("employeeLoginTitle")}</Text>
@@ -387,6 +393,22 @@ const styles = StyleSheet.create({
     borderColor: "#e8ddd0",
   },
   laviQrLabel: { color: "#7a6550", fontSize: 12, fontWeight: "700", textAlign: "center" },
+
+  laviQrBoxSmall: {
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e8ddd0",
+  },
+  laviQrImgSmall: {
+    width: 130,
+    height: 130,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: "#e8ddd0",
+  },
 
   laviEnterBtn: {
     flexDirection: "row",
