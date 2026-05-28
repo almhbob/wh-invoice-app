@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Laviviane — رمز الدخول</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Georgia', 'Times New Roman', serif;
+      background: #fefcf8;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .card {
+      background: #fff;
+      border: 2px solid #2f241d;
+      border-radius: 20px;
+      padding: 40px 50px;
+      max-width: 420px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 8px 40px rgba(47,36,29,0.12);
+    }
+
+    .logo-area {
+      background: #2f241d;
+      border-radius: 14px;
+      padding: 18px 24px 14px;
+      margin-bottom: 28px;
+    }
+
+    .logo-img {
+      width: 180px;
+      height: 68px;
+      object-fit: contain;
+      display: block;
+      margin: 0 auto 8px;
+    }
+
+    .logo-sub {
+      color: #d6b56d;
+      font-size: 11px;
+      letter-spacing: 2px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .title-ar {
+      color: #2f241d;
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .title-en {
+      color: #a08060;
+      font-size: 12px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      margin-bottom: 28px;
+    }
+
+    .qr-wrapper {
+      background: #fefcf8;
+      border: 1.5px solid #e8ddd0;
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 24px;
+      display: inline-block;
+    }
+
+    .qr-wrapper img {
+      width: 200px;
+      height: 200px;
+      display: block;
+    }
+
+    .instruction {
+      color: #5c4a36;
+      font-size: 14px;
+      line-height: 1.7;
+      margin-bottom: 20px;
+    }
+
+    .divider {
+      width: 60px;
+      height: 2px;
+      background: linear-gradient(90deg, #d6b56d, #2f241d);
+      border-radius: 2px;
+      margin: 0 auto 20px;
+    }
+
+    .url-box {
+      background: #f5f0ea;
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 11px;
+      color: #7a6550;
+      word-break: break-all;
+      direction: ltr;
+      text-align: center;
+      font-family: monospace;
+    }
+
+    .footer {
+      margin-top: 24px;
+      color: #b8a090;
+      font-size: 11px;
+      letter-spacing: 0.5px;
+    }
+
+    @media print {
+      body { background: #fff; padding: 0; }
+      .card {
+        box-shadow: none;
+        border-color: #2f241d;
+        max-width: 100%;
+        margin: 0;
+        border-radius: 0;
+        page-break-inside: avoid;
+      }
+      .print-btn { display: none !important; }
+    }
+
+    .print-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 20px;
+      background: #2f241d;
+      color: #d6b56d;
+      border: none;
+      border-radius: 12px;
+      padding: 12px 28px;
+      font-size: 14px;
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      transition: opacity 0.2s;
+    }
+
+    .print-btn:hover { opacity: 0.85; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo-area">
+      <img class="logo-img" src="/laviviane-logo.png" alt="Laviviane" onerror="this.style.display='none';this.nextElementSibling.style.display='block'" />
+      <div style="display:none;color:#d6b56d;font-size:22px;font-weight:700;letter-spacing:3px;font-family:Georgia,serif">LAVIVIANE</div>
+      <div class="logo-sub">Maison de Pâtisserie</div>
+    </div>
+
+    <div class="title-ar">رمز الدخول للنظام</div>
+    <div class="title-en">System Access QR Code</div>
+
+    <div class="divider"></div>
+
+    <div class="qr-wrapper">
+      <img src="/laviviane-qr.png" alt="QR Code" />
+    </div>
+
+    <p class="instruction">
+      وجّه كاميرا هاتفك نحو الرمز<br />للدخول المباشر إلى نظام لاففيان
+    </p>
+
+    <div class="url-box">wh-invoice-app-production.up.railway.app?company=laviviane-trial</div>
+
+    <div class="footer">Laviviane · Fondée en 2010 🌹</div>
+
+    <button class="print-btn" onclick="window.print()">
+      🖨️ &nbsp; طباعة الرمز
+    </button>
+  </div>
+</body>
+</html>

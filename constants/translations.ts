@@ -2,13 +2,13 @@ export type Lang = "ar" | "en" | "ur" | "hi" | "bn";
 
 const translations = {
   // ── App / Header ───────────────────────────────────────────────
-  appName:          { ar: "W&H",              en: "W&H",              ur: "W&H",              hi: "W&H",              bn: "W&H" },
-  appSub:           { ar: "كيك وشوكولاتة",    en: "Cake & Chocolate", ur: "کیک اور چاکلیٹ",   hi: "केक और चॉकलेट",    bn: "কেক এবং চকলেট" },
+  appName:          { ar: "Laviviane",         en: "Laviviane",        ur: "Laviviane",        hi: "Laviviane",        bn: "Laviviane" },
+  appSub:           { ar: "Maison de Pâtisserie", en: "Maison de Pâtisserie", ur: "Maison de Pâtisserie", hi: "Maison de Pâtisserie", bn: "Maison de Pâtisserie" },
 
   // ── Tabs ───────────────────────────────────────────────────────
   tabCashier:       { ar: "كاشير",            en: "Cashier",          ur: "کاشیر",            hi: "कैशियर",           bn: "ক্যাশিয়ার" },
-  tabHalwa:         { ar: "حلا زفة",          en: "Wedding",          ur: "حلوا",              hi: "हलवा",             bn: "হালওয়া" },
-  tabMawali:        { ar: "معجنات",           en: "Savory",           ur: "نمکین",             hi: "नमकीन",            bn: "বেকারি" },
+  tabHalwa:         { ar: "حلويات",           en: "Sweets",           ur: "حلوا",              hi: "मिठाई",            bn: "মিষ্টি" },
+  tabMawali:        { ar: "موالح",            en: "Savory",           ur: "نمکین",             hi: "नमकीन",            bn: "বেকারি" },
   tabChocolate:     { ar: "شوكولاتة",         en: "Chocolate",        ur: "چاکلیٹ",            hi: "चॉकलेट",           bn: "চকলেট" },
   tabCake:          { ar: "كيك",             en: "Cake",             ur: "کیک",               hi: "केक",              bn: "কেক" },
   tabPackaging:     { ar: "التغليف",          en: "Packaging",        ur: "پیکنگ",             hi: "पैकेजिंग",          bn: "প্যাকেজিং" },
@@ -23,8 +23,8 @@ const translations = {
 
   // ── Tab screen titles ──────────────────────────────────────────
   titleCashier:     { ar: "كاشير",            en: "Cashier",          ur: "کاشیر",            hi: "कैशियर",           bn: "ক্যাশিয়ার" },
-  titleHalwa:       { ar: "حلا زفة و ضيافة",  en: "Wedding Sweets",   ur: "حلوا زفہ و ضیافت",  hi: "शादी की मिठाई",    bn: "বিবাহের মিষ্টি" },
-  titleMawali:      { ar: "معجنات و موالح",   en: "Savory Dept.",     ur: "نمکین و پیسٹری",    hi: "नमकीन विभाग",      bn: "বেকারি বিভাগ" },
+  titleHalwa:       { ar: "قسم الحلويات",      en: "Sweets Dept.",     ur: "حلوائی قسم",         hi: "मिठाई विभाग",      bn: "মিষ্টি বিভাগ" },
+  titleMawali:      { ar: "قسم الموالح",      en: "Savory Dept.",     ur: "نمکین قسم",          hi: "नमकीन विभाग",      bn: "বেকারি বিভাগ" },
   titleChocolate:   { ar: "قسم شوكولاتة",     en: "Chocolate Dept.",  ur: "چاکلیٹ قسم",        hi: "चॉकलेट विभाग",     bn: "চকলেট বিভাগ" },
   titleCake:        { ar: "قسم الكيك",        en: "Cake Dept.",       ur: "کیک قسم",           hi: "केक विभाग",        bn: "কেক বিভাগ" },
   titlePackaging:   { ar: "قسم التغليف",      en: "Packaging Dept.",  ur: "پیکنگ قسم",         hi: "पैकेजिंग विभाग",   bn: "প্যাকেজিং বিভাগ" },
@@ -47,7 +47,7 @@ const translations = {
   // ── Role labels ────────────────────────────────────────────────
   roleLabels: {
     cashier:           { ar: "كاشيرية",        en: "Cashier",          ur: "کاشیر",            hi: "कैशियर",           bn: "ক্যাশিয়ার" },
-    halwa:             { ar: "حلا زفة",         en: "Wedding",          ur: "حلوا",              hi: "हलवा",             bn: "হালওয়া" },
+    halwa:             { ar: "حلويات",           en: "Sweets",           ur: "حلوا",              hi: "मिठाई",            bn: "মিষ্টি" },
     mawali:            { ar: "معجنات",          en: "Savory",           ur: "نمکین",             hi: "नमकीन",            bn: "বেকারি" },
     chocolate:         { ar: "شوكولاتة",        en: "Chocolate",        ur: "چاکلیٹ",            hi: "चॉकलेट",           bn: "চকলেট" },
     chocolate_print:   { ar: "شوكولاتة طباعة",  en: "Choc. Print",      ur: "چاکلیٹ پرنٹ",       hi: "चॉकलेट प्रिंट",    bn: "চকলেট প্রিন্ট" },
@@ -166,14 +166,14 @@ const translations = {
                       ur: "آپ کی تلاش سے کوئی فاتورہ نہیں ملا",
                       hi: "आपकी खोज से कोई इनवॉइस नहीं मिला",
                       bn: "আপনার খোঁজের সাথে কোনো ইনভয়েস মেলে না" },
-  deptHalwaLabel:   { ar: "قسم حلا زفة و ضيافة", en: "Wedding Sweets",   ur: "حلوا زفہ",         hi: "हलवा विभाग",        bn: "হালওয়া বিভাগ" },
-  deptMawaliLabel:  { ar: "قسم معجنات و موالح",   en: "Savory & Pastries", ur: "نمکین",           hi: "नमकीन विभाग",       bn: "বেকারি বিভাগ" },
+  deptHalwaLabel:   { ar: "قسم الحلويات",       en: "Sweets Dept.",    ur: "حلوائی قسم",        hi: "मिठाई विभाग",        bn: "মিষ্টি বিভাগ" },
+  deptMawaliLabel:  { ar: "قسم الموالح",         en: "Savory Dept.",    ur: "نمکین قسم",         hi: "नमकीन विभाग",       bn: "বেকারি বিভাগ" },
   deptChocolateLabel:{ ar: "قسم شوكولاتة",        en: "Chocolate Dept.",  ur: "چاکلیٹ",           hi: "चॉकलेट विभाग",     bn: "চকলেট বিভাগ" },
   deptCakeLabel:    { ar: "قسم الكيك",            en: "Cake Dept.",        ur: "کیک",              hi: "केक विभाग",        bn: "কেক বিভাগ" },
 
   // ── Dept screen banners (used by halwa/mawali/chocolate/cake/packaging screens) ──
-  deptHalwa:        { ar: "قسم حلا زفة و ضيافة", en: "Wedding Sweets",   ur: "حلوا و ضیافت",     hi: "हलवा और आतिथ्य",   bn: "হালওয়া ও আপ্যায়ন" },
-  deptMawali:       { ar: "قسم معجنات و موالح",   en: "Savory & Pastries", ur: "نمکین و پیسٹری",  hi: "नमकीन और पेस्ट्री", bn: "বেকারি ও নামকীন" },
+  deptHalwa:        { ar: "قسم الحلويات",       en: "Sweets Dept.",    ur: "حلوائی قسم",        hi: "मिठाई विभाग",        bn: "মিষ্টি বিভাগ" },
+  deptMawali:       { ar: "قسم الموالح",         en: "Savory Dept.",    ur: "نمکین قسم",         hi: "नमकीन विभाग",       bn: "বেকারি বিভاগ" },
   deptChocolate:    { ar: "قسم الشوكولاتة",       en: "Chocolate Dept.",  ur: "چاکلیٹ قسم",       hi: "चॉकलेट विभाग",     bn: "চকলেট বিভাগ" },
   deptCake:         { ar: "قسم الكيك",            en: "Cake Dept.",        ur: "کیک قسم",          hi: "केक विभाग",        bn: "কেক বিভাগ" },
   deptPackaging:    { ar: "قسم التغليف",          en: "Packaging Dept.",  ur: "پیکنگ قسم",         hi: "पैकेजिंग विभाग",   bn: "প্যাকেজিং বিভাগ" },
@@ -204,7 +204,7 @@ const translations = {
   packagingSubtitle:{ ar: "جميع الطلبات تمر عبر التغليف",     en: "All orders pass through packaging",      ur: "تمام آرڈر پیکنگ سے گزرتے ہیں",          hi: "सभी ऑर्डर पैकेजिंग से गुजरते हैं",       bn: "সকল অর্ডার প্যাকেজিং থেকে যায়" },
 
   enteredByShort:   { ar: "أدخله:",               en: "By:",               ur: "درج:",              hi: "द्वारा:",          bn: "দ্বারা:" },
-  receivedHalwa:    { ar: "استلم الحلا زفة:",     en: "Wedding received:", ur: "حلوا موصول:",    hi: "हलवा प्राप्त:",    bn: "হালওয়া গ্রহণ:" },
+  receivedHalwa:    { ar: "استلم الحلويات:",     en: "Sweets received:",  ur: "حلوا موصول:",    hi: "मिठाई प्राप्त:",    bn: "মিষ্টি গ্রহণ:" },
   receivedMawali:   { ar: "استلم المعجنات:",       en: "Savory received:", ur: "نمکین موصول:",   hi: "नमकीन प्राप्त:",   bn: "বেকারি গ্রহণ:" },
   receivedChocolate:{ ar: "استلم الشوكولاتة:",    en: "Chocolate received:", ur: "چاکلیٹ موصول:", hi: "चॉकलेट प्राप्त:", bn: "চকলেট গ্রহণ:" },
   receivedCake:     { ar: "استلم الكيك:",         en: "Cake received:",  ur: "کیک موصول:",       hi: "केक प्राप्त:",     bn: "কেক গ্রহণ:" },
@@ -342,12 +342,12 @@ const translations = {
   loginBtn:         { ar: "دخول",              en: "Login",            ur: "لاگ ان",             hi: "लॉगिन",            bn: "লগইন" },
 
   // ── Department screens ────────────────────────────────────────
-  deptHalwa:        { ar: "حلا زفة و ضيافة",  en: "Wedding Sweets",   ur: "حلوا زفہ و ضیافت",  hi: "शादी की मिठाई",    bn: "বিবাহের মিষ্টি" },
-  deptMawali:       { ar: "معجنات و موالح",   en: "Savory Dept.",     ur: "نمکین و پیسٹری",    hi: "नमकीन विभाग",      bn: "বেকারি বিভাগ" },
+  deptHalwa:        { ar: "قسم الحلويات",      en: "Sweets Dept.",     ur: "حلوائی قسم",         hi: "मिठाई विभाग",      bn: "মিষ্টি বিভাগ" },
+  deptMawali:       { ar: "قسم الموالح",      en: "Savory Dept.",     ur: "نمکین قسم",          hi: "नमकीन विभाग",      bn: "বেকারি বিভাগ" },
   deptChocolate:    { ar: "قسم شوكولاتة",     en: "Chocolate Dept.",  ur: "چاکلیٹ قسم",        hi: "चॉकलेट विभाग",     bn: "চকলেট বিভাগ" },
   deptCake:         { ar: "قسم الكيك",        en: "Cake Dept.",       ur: "کیک قسم",           hi: "केक विभाग",        bn: "কেক বিভাগ" },
   deptPackaging:    { ar: "قسم التغليف",      en: "Packaging Dept.",  ur: "پیکنگ قسم",         hi: "पैकेजिंग विभाग",   bn: "প্যাকেজিং বিভাগ" },
-  halwa:            { ar: "حلا زفة",          en: "Wedding Sweets",   ur: "حلوا",              hi: "हलवा",             bn: "হালওয়া" },
+  halwa:            { ar: "حلويات",           en: "Sweets",           ur: "حلوا",              hi: "मिठाई",            bn: "মিষ্টি" },
   mawali:           { ar: "معجنات",           en: "Savory",           ur: "نمکین",             hi: "नमकीन",            bn: "বেকারি" },
   chocolate:        { ar: "شوكولاتة",         en: "Chocolate",        ur: "چاکلیٹ",            hi: "चॉकलेट",           bn: "চকলেট" },
   cake:             { ar: "كيك",             en: "Cake",             ur: "کیک",               hi: "केक",              bn: "কেক" },

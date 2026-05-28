@@ -40,17 +40,20 @@ import {
   useOrders,
 } from "@/context/OrdersContext";
 import { Offer, normalizePhone, useOffers } from "@/context/OffersContext";
+import QRCode from "qrcode";
 
 const DEPT_OPTIONS: { value: Department; label: string; color: string }[] = [
-  { value: "halwa",     label: "حلا زفة",   color: Colors.halwa },
-  { value: "mawali",   label: "معجنات",    color: Colors.mawali },
+  { value: "halwa",     label: "حلويات",    color: Colors.halwa },
+  { value: "mawali",   label: "موالح",     color: Colors.mawali },
   { value: "chocolate", label: "شوكولاتة", color: Colors.chocolate },
-  { value: "cake",     label: "كيك",      color: Colors.cake },
+  { value: "cake",     label: "كيك",       color: Colors.cake },
   { value: "packaging", label: "تغليف",   color: Colors.packaging },
 ];
 const DEPT_CYCLE: Partial<Record<Department, Department>> = {
   halwa: "mawali", mawali: "chocolate", chocolate: "cake", cake: "packaging", packaging: "halwa",
 };
+// Display order for cashier items — most important depts first
+const DEPT_DISPLAY_ORDER: Department[] = ["cake", "halwa", "chocolate", "mawali", "packaging"];
 
 function formatNow() {
   const d = new Date();
@@ -81,7 +84,7 @@ const PAYMENT_OPTIONS: { value: PaymentMethod; icon: string }[] = [
 export default function CashierScreen() {
   const insets = useSafeAreaInsets();
   const { addOrder } = useOrders();
-  const { currentEmployee } = useEmployee();
+  const { currentEmployee, setCurrentEmployee } = useEmployee();
   const { getOfferByPhone, incrementUsage } = useOffers();
   const { t } = useLang();
   const { company } = useCompany();
@@ -102,10 +105,14 @@ export default function CashierScreen() {
   const [items, setItems] = useState<OrderItem[]>([newItem("halwa")]);
   const [notes, setNotes] = useState("");
   const [imageUri, setImageUri] = useState<string | null>(null);
+  const [referenceImages, setReferenceImages] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
   const [showGallery, setShowGallery] = useState(false);
   const [receiptOrder, setReceiptOrder] = useState<Order | null>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
+  const [receiptQr, setReceiptQr] = useState<string>("");
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
 
   // Discount
   const [discountEnabled, setDiscountEnabled] = useState(false);
@@ -197,6 +204,18 @@ export default function CashierScreen() {
     if (!res.canceled) setImageUri(res.assets[0].uri);
   };
 
+  const addReferenceImage = async () => {
+    if (referenceImages.length >= 3) return;
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") { Alert.alert("إذن مطلوب", "يحتاج التطبيق للوصول إلى الصور"); return; }
+    const res = await ImagePicker.launchImageLibraryAsync({ allowsEditing: false, quality: 0.75 });
+    if (!res.canceled) setReferenceImages((prev) => [...prev, res.assets[0].uri].slice(0, 3));
+  };
+
+  const removeReferenceImage = (idx: number) => {
+    setReferenceImages((prev) => prev.filter((_, i) => i !== idx));
+  };
+
   const takePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== "granted") { Alert.alert("إذن مطلوب", "يحتاج التطبيق للوصول إلى الكاميرا"); return; }
@@ -218,14 +237,14 @@ export default function CashierScreen() {
     setOrderType("pickup"); setDeliveryDate(""); setDeliveryTime("");
     setInsuranceAmount(""); setInsurancePaymentMethod("cash");
     setPaymentMethod("cash"); setAmountPaid("");
-    setItems([newItem("halwa")]); setNotes(""); setImageUri(null);
+    setItems([newItem("halwa")]); setNotes(""); setImageUri(null); setReferenceImages([]);
     setDiscountEnabled(false); setDiscountType("percentage");
     setDiscountValue(""); setDiscountReason("");
     setDetectedOffer(null); setAppliedOfferId(null);
   };
 
   // ── Totals ──────────────────────────────────────────────────────────────
-  const validItems = items.filter((i) => i.name.trim());
+  const validItems = items.filter((i) => i.name.trim() && i.quantity > 0);
   const subtotal = validItems.reduce((s, i) => s + (i.price || 0) * i.quantity, 0);
   const insuranceVal = parseFloat(insuranceAmount) || 0;
   const discountVal = parseFloat(discountValue) || 0;
@@ -327,7 +346,7 @@ export default function CashierScreen() {
     }
   };
 
-  const printInvoice = (order: Order) => {
+  const buildInvoiceHtml = (order: Order, qrDataUrl?: string) => {
     const itemRows = order.items.map((item) => {
       const lineTotal = item.price ? `${(item.price * item.quantity).toFixed(2)} ر.س` : "—";
       const unitPrice = item.price ? `${item.price} ر.س` : "—";
@@ -464,23 +483,67 @@ export default function CashierScreen() {
 </body>
 </html>`;
 
-    if (Platform.OS === "web" && typeof window !== "undefined") {
-      const win = window.open("", "_blank", "width=420,height=700");
-      if (win) {
-        win.document.write(html);
-        win.document.close();
-        win.focus();
-        setTimeout(() => { win.print(); }, 350);
-      }
-    }
+    const qrBlock = qrDataUrl
+      ? `<div style="text-align:center;margin:10px 0 4px">
+           <img src="${qrDataUrl}" alt="QR" style="width:90px;height:90px;" />
+           <div style="font-size:8px;color:#888;margin-top:2px">فاتورة #${order.orderNumber}</div>
+         </div>`
+      : "";
+
+    return html.replace("</body>", `${qrBlock}</body>`);
   };
 
-  const handleSubmit = async () => {
-    if (!customerName.trim()) { Alert.alert("خطأ", t("errName")); return; }
-    if (!customerPhone.trim()) { Alert.alert("خطأ", t("errPhone")); return; }
-    const filteredItems = items.filter((i) => i.name.trim());
-    if (filteredItems.length === 0) { Alert.alert("خطأ", t("errItems")); return; }
+  const showInlineInvoice = async (order: Order) => {
+    if (Platform.OS !== "web" || typeof document === "undefined") return;
 
+    let qrDataUrl = "";
+    try {
+      qrDataUrl = await QRCode.toDataURL(
+        `فاتورة #${order.orderNumber}\n${order.customerName}\n${order.customerPhone}\n${order.receivedAt}${order.totalAmount ? `\nالإجمالي: ${order.totalAmount.toFixed(2)} ر.س` : ""}`,
+        { width: 140, margin: 1, color: { dark: "#2f241d", light: "#ffffff" } }
+      );
+    } catch { /* skip QR on failure */ }
+
+    const html = buildInvoiceHtml(order, qrDataUrl);
+
+    document.getElementById("__inv_overlay__")?.remove();
+
+    const overlay = document.createElement("div");
+    overlay.id = "__inv_overlay__";
+    overlay.style.cssText = "position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.92);display:flex;flex-direction:column;";
+
+    const bar = document.createElement("div");
+    bar.style.cssText = "background:#1a1a1a;padding:10px 16px;display:flex;align-items:center;gap:10px;direction:rtl;flex-shrink:0;";
+
+    const title = document.createElement("span");
+    title.textContent = `فاتورة #${order.orderNumber} · ${order.customerName}`;
+    title.style.cssText = "color:#fff;font-size:14px;font-weight:700;flex:1;font-family:sans-serif;";
+
+    const printBtn = document.createElement("button");
+    printBtn.textContent = "🖨 طباعة";
+    printBtn.style.cssText = "background:#2f241d;color:#d6b56d;border:none;padding:8px 20px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:700;font-family:sans-serif;";
+    printBtn.onclick = () => frame.contentWindow?.print();
+
+    const closeBtn = document.createElement("button");
+    closeBtn.textContent = "✕ إغلاق";
+    closeBtn.style.cssText = "background:rgba(255,255,255,0.1);color:#fff;border:1px solid rgba(255,255,255,0.2);padding:8px 14px;border-radius:8px;font-size:13px;cursor:pointer;font-family:sans-serif;";
+    closeBtn.onclick = () => overlay.remove();
+
+    bar.appendChild(title);
+    bar.appendChild(printBtn);
+    bar.appendChild(closeBtn);
+
+    const frame = document.createElement("iframe");
+    frame.style.cssText = "flex:1;border:none;background:#fff;";
+    frame.srcdoc = html;
+
+    overlay.appendChild(bar);
+    overlay.appendChild(frame);
+    document.body.appendChild(overlay);
+  };
+
+  const doSubmit = async () => {
+    const filteredItems = items.filter((i) => i.name.trim() && i.quantity > 0);
     const insurance = insuranceAmount.trim() ? parseFloat(insuranceAmount) : undefined;
     const total = grandTotal > 0 ? grandTotal : undefined;
     const discountData: Discount | undefined =
@@ -488,15 +551,7 @@ export default function CashierScreen() {
         ? { type: discountType, value: discountVal, reason: discountReason.trim() }
         : undefined;
 
-    if (!currentEmployee) {
-      Alert.alert(
-        "تسجيل الدخول مطلوب",
-        "يجب عليك تسجيل الدخول أولاً قبل إرسال الفاتورة. اضغط على زر الموظف في الأعلى.",
-        [{ text: "حسناً" }]
-      );
-      return;
-    }
-
+    setShowPreview(false);
     setIsSubmitting(true);
     try {
       const paidNum = amountPaidVal > 0 ? amountPaidVal : undefined;
@@ -517,17 +572,21 @@ export default function CashierScreen() {
         items: filteredItems,
         notes: notes.trim() || undefined,
         imageUri: imageUri || undefined,
+        referenceImages: referenceImages.length > 0 ? referenceImages : undefined,
         cashierEmployee: {
-          name: currentEmployee.name,
-          employeeId: currentEmployee.employeeId,
+          name: currentEmployee!.name,
+          employeeId: currentEmployee!.employeeId,
           timestamp: new Date().toISOString(),
         },
       });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      if (appliedOfferId) {
-        incrementUsage(appliedOfferId).catch(() => {});
-      }
+      if (appliedOfferId) incrementUsage(appliedOfferId).catch(() => {});
+      QRCode.toDataURL(
+        `فاتورة #${created.orderNumber}\n${created.customerName}\n${created.customerPhone}\n${created.receivedAt}${created.totalAmount ? `\nالإجمالي: ${created.totalAmount.toFixed(2)} ر.س` : ""}`,
+        { width: 160, margin: 1, color: { dark: "#2f241d", light: "#ffffff" } }
+      ).then(setReceiptQr).catch(() => setReceiptQr(""));
       resetForm();
+      setExpandedItems(new Set());
       setReceiptOrder(created);
     } catch {
       Alert.alert("خطأ", t("errSend"));
@@ -535,6 +594,24 @@ export default function CashierScreen() {
       setIsSubmitting(false);
     }
   };
+
+  const handleSubmit = () => {
+    if (!customerName.trim()) { Alert.alert("خطأ", t("errName")); return; }
+    if (!customerPhone.trim()) { Alert.alert("خطأ", t("errPhone")); return; }
+    const filteredItems = items.filter((i) => i.name.trim() && i.quantity > 0);
+    if (filteredItems.length === 0) { Alert.alert("خطأ", t("errItems")); return; }
+    if (!currentEmployee) {
+      Alert.alert("تسجيل الدخول مطلوب", "يجب تسجيل الدخول أولاً — اضغط على زر تغيير في الأعلى.", [{ text: "حسناً" }]);
+      return;
+    }
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setShowPreview(true);
+  };
+
+  // Items sorted by department display order (cake → halwa → chocolate → mawali → packaging)
+  const displayItems = [...items].sort(
+    (a, b) => DEPT_DISPLAY_ORDER.indexOf(a.department) - DEPT_DISPLAY_ORDER.indexOf(b.department)
+  );
 
   // Group items preview by dept
   const halwaCount = items.filter((i) => i.department === "halwa" && i.name.trim()).length;
@@ -610,13 +687,21 @@ export default function CashierScreen() {
 
         {/* Current employee display */}
         {currentEmployee ? (
-          <View style={styles.empDisplay}>
-            <Feather name="user-check" size={14} color={Colors.success} />
-            <Text style={styles.empDisplayText}>
-              الكاشير: <Text style={{ fontWeight: "700" }}>{currentEmployee.name}</Text>
-              {"  "}
-              <Text style={{ color: Colors.textMuted }}>#{currentEmployee.employeeId}</Text>
-            </Text>
+          <View style={[styles.empDisplay, { justifyContent: "space-between" }]}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+              <Feather name="user-check" size={14} color={Colors.success} />
+              <Text style={styles.empDisplayText}>
+                الكاشير: <Text style={{ fontWeight: "700" }}>{currentEmployee.name}</Text>
+                {"  "}
+                <Text style={{ color: Colors.textMuted }}>#{currentEmployee.employeeId}</Text>
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => setCurrentEmployee(null)}
+              style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, backgroundColor: Colors.accent + "18" }}
+            >
+              <Text style={{ color: Colors.accent, fontSize: 11, fontWeight: "800" }}>تغيير</Text>
+            </TouchableOpacity>
           </View>
         ) : (
           <View style={[styles.empDisplay, { borderColor: Colors.accent + "40", backgroundColor: Colors.accent + "08" }]}>
@@ -689,10 +774,32 @@ export default function CashierScreen() {
 
         {/* Delivery date */}
         <Text style={styles.label}>تاريخ التسليم</Text>
+        <View style={styles.quickDateRow}>
+          {[
+            { label: "اليوم", days: 0 },
+            { label: "غداً", days: 1 },
+            { label: "+يومان", days: 2 },
+            { label: "+أسبوع", days: 7 },
+          ].map(({ label, days }) => {
+            const d = new Date();
+            d.setDate(d.getDate() + days);
+            const dayNames = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
+            const val = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")} (${dayNames[d.getDay()]})`;
+            return (
+              <TouchableOpacity
+                key={label}
+                style={[styles.quickDateBtn, deliveryDate === val && styles.quickDateBtnActive]}
+                onPress={() => { Haptics.selectionAsync(); setDeliveryDate(val); }}
+              >
+                <Text style={[styles.quickDateText, deliveryDate === val && styles.quickDateTextActive]}>{label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
         <View style={[styles.input, styles.row, { gap: 8 }]}>
           <Feather name="calendar" size={15} color={Colors.textMuted} />
           <TextInput style={styles.inlineInput} value={deliveryDate} onChangeText={setDeliveryDate}
-            placeholder="مثال: 2025-06-01 (الجمعة)" placeholderTextColor={Colors.textMuted} textAlign="right" />
+            placeholder="أو اكتب يدوياً..." placeholderTextColor={Colors.textMuted} textAlign="right" />
         </View>
 
         {/* Delivery time */}
@@ -752,12 +859,12 @@ export default function CashierScreen() {
           <View style={styles.deptSummary}>
             {halwaCount > 0 && (
               <View style={[styles.deptPill, { backgroundColor: Colors.halwa }]}>
-                <Text style={styles.deptPillText}>حلا زفة {halwaCount}</Text>
+                <Text style={styles.deptPillText}>حلويات {halwaCount}</Text>
               </View>
             )}
             {mawaliCount > 0 && (
               <View style={[styles.deptPill, { backgroundColor: Colors.mawali }]}>
-                <Text style={styles.deptPillText}>معجنات {mawaliCount}</Text>
+                <Text style={styles.deptPillText}>موالح {mawaliCount}</Text>
               </View>
             )}
             {chocolateCount > 0 && (
@@ -778,120 +885,7 @@ export default function CashierScreen() {
           </View>
         </View>
 
-        {/* Column headers */}
-        <View style={styles.colHeaders}>
-          <Text style={[styles.colLabel, { flex: 1 }]}>اسم الصنف</Text>
-          <Text style={[styles.colLabel, { width: 66 }]}>السعر</Text>
-          <Text style={[styles.colLabel, { width: 74 }]}>الكمية</Text>
-          <Text style={[styles.colLabel, { width: 52 }]}>القسم</Text>
-          <View style={{ width: 24 }} />
-        </View>
-
-        {items.map((item, idx) => {
-          const deptConf = DEPT_OPTIONS.find((d) => d.value === item.department)!;
-          const lineTotal = (item.price || 0) * item.quantity;
-          return (
-            <View key={item.id}>
-              <View style={styles.itemRow}>
-                <TextInput
-                  style={[styles.input, styles.itemName]}
-                  value={item.name}
-                  onChangeText={(v) => updateItem(item.id, "name", v)}
-                  placeholder={`صنف ${idx + 1}`}
-                  placeholderTextColor={Colors.textMuted}
-                  textAlign="right"
-                />
-                {/* price */}
-                <TextInput
-                  style={[styles.input, styles.priceInput]}
-                  value={item.price !== undefined ? String(item.price) : ""}
-                  onChangeText={(v) => {
-                    const n = parseFloat(v);
-                    updateItem(item.id, "price", isNaN(n) ? undefined : n);
-                  }}
-                  placeholder="0"
-                  placeholderTextColor={Colors.textMuted}
-                  keyboardType="decimal-pad"
-                  textAlign="center"
-                />
-                {/* qty */}
-                <View style={styles.qtyBox}>
-                  <TouchableOpacity style={styles.qtyBtn}
-                    onPress={() => updateItem(item.id, "quantity", Math.max(1, item.quantity - 1))}>
-                    <Feather name="minus" size={12} color={Colors.primary} />
-                  </TouchableOpacity>
-                  <Text style={styles.qtyVal}>{item.quantity}</Text>
-                  <TouchableOpacity style={styles.qtyBtn}
-                    onPress={() => updateItem(item.id, "quantity", item.quantity + 1)}>
-                    <Feather name="plus" size={12} color={Colors.primary} />
-                  </TouchableOpacity>
-                </View>
-                {/* dept toggle */}
-                <TouchableOpacity
-                  style={[styles.deptToggle, { backgroundColor: deptConf.color }]}
-                  onPress={() => toggleDept(item.id)}
-                >
-                  <Text style={styles.deptToggleText}>{deptConf.label}</Text>
-                </TouchableOpacity>
-                {/* remove */}
-                {items.length > 1 ? (
-                  <TouchableOpacity onPress={() => removeItem(item.id)} hitSlop={8}>
-                    <Feather name="x" size={16} color={Colors.accent} />
-                  </TouchableOpacity>
-                ) : (
-                  <View style={{ width: 16 }} />
-                )}
-              </View>
-              {/* line total hint */}
-              {lineTotal > 0 && (
-                <Text style={styles.lineTotalHint}>
-                  {item.quantity} × {item.price} = {lineTotal.toFixed(2)} ر.س
-                </Text>
-              )}
-            </View>
-          );
-        })}
-
-        {/* note + details per item */}
-        {items.map((item) => (
-          item.name.trim() ? (
-            <View key={`extra-${item.id}`} style={{ gap: 6 }}>
-              <TextInput
-                style={[styles.input, styles.noteInput]}
-                value={item.note || ""}
-                onChangeText={(v) => updateItem(item.id, "note", v)}
-                placeholder={`ملاحظة على "${item.name.trim()}" (اختياري)`}
-                placeholderTextColor={Colors.textMuted}
-                textAlign="right"
-              />
-              <View>
-                <TextInput
-                  style={[styles.input, styles.detailsInput]}
-                  value={item.details || ""}
-                  onChangeText={(v) => {
-                    const wordCount = v.trim() ? v.trim().split(/\s+/).length : 0;
-                    if (wordCount <= 50) updateItem(item.id, "details", v);
-                  }}
-                  placeholder={`تفاصيل الصنف "${item.name.trim()}" (حتى 50 كلمة)`}
-                  placeholderTextColor={Colors.textMuted}
-                  multiline
-                  textAlign="right"
-                  textAlignVertical="top"
-                />
-                {(item.details?.trim().length ?? 0) > 0 && (() => {
-                  const wc = item.details!.trim().split(/\s+/).length;
-                  return (
-                    <Text style={[styles.charCount, wc >= 48 && { color: wc >= 50 ? Colors.accent : Colors.warning }]}>
-                      {wc} / 50 كلمة
-                    </Text>
-                  );
-                })()}
-              </View>
-            </View>
-          ) : null
-        ))}
-
-        {/* Browse gallery button */}
+        {/* Browse gallery button — top for speed */}
         <TouchableOpacity
           style={styles.galleryBtn}
           onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setShowGallery(true); }}
@@ -904,21 +898,154 @@ export default function CashierScreen() {
           </View>
         </TouchableOpacity>
 
-        {/* add buttons */}
-        <View style={styles.addRow}>
-          {DEPT_OPTIONS.map((opt) => (
-            <TouchableOpacity
-              key={opt.value}
-              style={[styles.addBtn, { borderColor: opt.color }]}
-              onPress={() => { Haptics.selectionAsync(); addItemRow(opt.value); }}
-            >
-              <Feather name="plus" size={14} color={opt.color} />
-              <Text style={[styles.addBtnText, { color: opt.color }]}>
-                إضافة صنف {opt.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
+        {/* Column headers */}
+        <View style={styles.colHeaders}>
+          <Text style={[styles.colLabel, { flex: 1 }]}>اسم الصنف</Text>
+          <Text style={[styles.colLabel, { width: 66 }]}>السعر</Text>
+          <Text style={[styles.colLabel, { width: 74 }]}>الكمية</Text>
+          <Text style={[styles.colLabel, { width: 52 }]}>القسم</Text>
+          <View style={{ width: 24 }} />
         </View>
+
+        {(() => {
+          let lastDept = "";
+          return displayItems.map((item, idx) => {
+          const deptConf = DEPT_OPTIONS.find((d) => d.value === item.department)!;
+          const lineTotal = (item.price || 0) * item.quantity;
+          const isExpanded = expandedItems.has(item.id);
+          const hasNote = !!(item.note?.trim());
+          const showDeptSep = item.name.trim() && item.department !== lastDept;
+          if (item.name.trim()) lastDept = item.department;
+          return (
+            <View key={item.id} style={styles.itemBlock}>
+              {showDeptSep && cakeCount + halwaCount + chocolateCount + mawaliCount + packagingCount > 1 && (
+                <View style={[styles.deptSepLine, { borderColor: deptConf.color + "60" }]}>
+                  <View style={[styles.deptSepDot, { backgroundColor: deptConf.color }]} />
+                  <Text style={[styles.deptSepLabel, { color: deptConf.color }]}>{deptConf.label}</Text>
+                </View>
+              )}
+              {/* ── Main row ── */}
+              <View style={styles.itemRow}>
+                <TextInput
+                  style={[styles.input, styles.itemName]}
+                  value={item.name}
+                  onChangeText={(v) => updateItem(item.id, "name", v)}
+                  placeholder={`صنف ${idx + 1}`}
+                  placeholderTextColor={Colors.textMuted}
+                  textAlign="right"
+                />
+                <TextInput
+                  style={[styles.input, styles.priceInput]}
+                  value={item.price !== undefined ? String(item.price) : ""}
+                  onChangeText={(v) => {
+                    const n = parseFloat(v);
+                    updateItem(item.id, "price", isNaN(n) ? undefined : n);
+                  }}
+                  placeholder="0"
+                  placeholderTextColor={Colors.textMuted}
+                  keyboardType="decimal-pad"
+                  textAlign="center"
+                />
+                <View style={styles.qtyBox}>
+                  <TouchableOpacity style={styles.qtyBtn}
+                    onPress={() => updateItem(item.id, "quantity", Math.max(1, item.quantity - 1))}>
+                    <Feather name="minus" size={12} color={Colors.primary} />
+                  </TouchableOpacity>
+                  <Text style={styles.qtyVal}>{item.quantity}</Text>
+                  <TouchableOpacity style={styles.qtyBtn}
+                    onPress={() => updateItem(item.id, "quantity", item.quantity + 1)}>
+                    <Feather name="plus" size={12} color={Colors.primary} />
+                  </TouchableOpacity>
+                </View>
+                <TouchableOpacity
+                  style={[styles.deptToggle, { backgroundColor: deptConf.color }]}
+                  onPress={() => toggleDept(item.id)}
+                >
+                  <Text style={styles.deptToggleText}>{deptConf.label}</Text>
+                </TouchableOpacity>
+                {items.length > 1 ? (
+                  <TouchableOpacity onPress={() => removeItem(item.id)} hitSlop={8}>
+                    <Feather name="x" size={16} color={Colors.accent} />
+                  </TouchableOpacity>
+                ) : (
+                  <View style={{ width: 16 }} />
+                )}
+              </View>
+
+              {/* ── Sub-row: total + note toggle ── */}
+              <View style={styles.itemSubRow}>
+                {lineTotal > 0 ? (
+                  <Text style={styles.lineTotalHint}>{item.quantity} × {item.price} = {lineTotal.toFixed(2)} ر.س</Text>
+                ) : (
+                  <View style={{ flex: 1 }} />
+                )}
+                {item.name.trim() ? (
+                  <TouchableOpacity
+                    style={styles.itemNoteToggle}
+                    onPress={() => {
+                      Haptics.selectionAsync();
+                      setExpandedItems((prev) => {
+                        const next = new Set(prev);
+                        next.has(item.id) ? next.delete(item.id) : next.add(item.id);
+                        return next;
+                      });
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Feather
+                      name={isExpanded ? "chevron-up" : "message-square"}
+                      size={12}
+                      color={hasNote ? Colors.primary : Colors.textMuted}
+                    />
+                    <Text style={[styles.itemNoteToggleText, hasNote && { color: Colors.primary }]}>
+                      {hasNote ? "ملاحظة ✓" : "ملاحظة"}
+                    </Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+
+              {/* ── Inline note (expanded or has content) ── */}
+              {item.name.trim() && (isExpanded || hasNote) && (
+                <TextInput
+                  style={[styles.input, styles.noteInput, { marginTop: 2 }]}
+                  value={item.note || ""}
+                  onChangeText={(v) => updateItem(item.id, "note", v)}
+                  placeholder={`ملاحظة على "${item.name.trim()}"...`}
+                  placeholderTextColor={Colors.textMuted}
+                  textAlign="right"
+                  autoFocus={isExpanded && !hasNote}
+                />
+              )}
+            </View>
+          );
+          });
+        })()}
+
+        {/* add buttons */}
+        {isLaviviane ? (
+          <TouchableOpacity
+            style={styles.addBtnSingle}
+            onPress={() => { Haptics.selectionAsync(); addItemRow("cake"); }}
+          >
+            <Feather name="plus" size={14} color={Colors.primary} />
+            <Text style={styles.addBtnSingleText}>إضافة صنف يدوياً</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.addRow}>
+            {DEPT_OPTIONS.map((opt) => (
+              <TouchableOpacity
+                key={opt.value}
+                style={[styles.addBtn, { borderColor: opt.color }]}
+                onPress={() => { Haptics.selectionAsync(); addItemRow(opt.value); }}
+              >
+                <Feather name="plus" size={14} color={opt.color} />
+                <Text style={[styles.addBtnText, { color: opt.color }]}>
+                  {opt.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
       </View>
 
       {/* Gallery modal */}
@@ -947,6 +1074,42 @@ export default function CashierScreen() {
           )}
         </TouchableOpacity>
       </View>
+
+      {/* صور مرجعية للكيك الإسبشل */}
+      {(cakeCount > 0 || referenceImages.length > 0) && (
+        <View style={styles.card}>
+          <View style={styles.refImgHeader}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.cardTitle}>صور مرجعية للكيك</Text>
+              <Text style={styles.refImgSub}>للكيك المخصص — حتى 3 صور مرجعية للقسم</Text>
+            </View>
+            <View style={[styles.deptPill, { backgroundColor: Colors.cake }]}>
+              <Text style={styles.deptPillText}>{referenceImages.length}/3</Text>
+            </View>
+          </View>
+
+          <View style={styles.refImgRow}>
+            {referenceImages.map((uri, idx) => (
+              <View key={idx} style={styles.refImgBox}>
+                <Image source={{ uri }} style={styles.refImgPreview} contentFit="cover" />
+                <Pressable style={styles.refImgRemove} onPress={() => removeReferenceImage(idx)} hitSlop={8}>
+                  <Feather name="x" size={13} color="#fff" />
+                </Pressable>
+                <View style={styles.refImgNum}>
+                  <Text style={styles.refImgNumText}>{idx + 1}</Text>
+                </View>
+              </View>
+            ))}
+
+            {referenceImages.length < 3 && (
+              <TouchableOpacity style={styles.refImgAdd} onPress={addReferenceImage} activeOpacity={0.8}>
+                <Feather name="camera" size={20} color={Colors.cake} />
+                <Text style={styles.refImgAddText}>إضافة{"\n"}صورة</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      )}
 
       {/* ملاحظات */}
       <View style={styles.card}>
@@ -1168,8 +1331,8 @@ export default function CashierScreen() {
           <Feather name="send" size={15} color={Colors.primary} />
           <Text style={styles.summaryText}>
             سيتم الإرسال إلى:{"  "}
-            {halwaCount > 0 && <Text style={{ color: Colors.halwa, fontWeight: "700" }}>حلا زفة ({halwaCount})  </Text>}
-            {mawaliCount > 0 && <Text style={{ color: Colors.mawali, fontWeight: "700" }}>معجنات ({mawaliCount})  </Text>}
+            {halwaCount > 0 && <Text style={{ color: Colors.halwa, fontWeight: "700" }}>حلويات ({halwaCount})  </Text>}
+            {mawaliCount > 0 && <Text style={{ color: Colors.mawali, fontWeight: "700" }}>موالح ({mawaliCount})  </Text>}
             {chocolateCount > 0 && <Text style={{ color: Colors.chocolate, fontWeight: "700" }}>شوكولاتة ({chocolateCount})  </Text>}
             {cakeCount > 0 && <Text style={{ color: Colors.cake, fontWeight: "700" }}>كيك ({cakeCount})  </Text>}
             {packagingCount > 0 && <Text style={{ color: Colors.packaging, fontWeight: "700" }}>تغليف ({packagingCount})</Text>}
@@ -1188,6 +1351,223 @@ export default function CashierScreen() {
       </TouchableOpacity>
     </ScrollView>
     </KeyboardAvoidingView>
+
+    {/* ─── Preview Modal ──────────────────────────────────────────── */}
+    {showPreview && (
+      <Modal visible transparent animationType="slide" onRequestClose={() => setShowPreview(false)}>
+        <View style={styles.previewOverlay}>
+          <View style={styles.previewSheet}>
+            <View style={styles.previewHandle} />
+
+            {/* Header */}
+            <View style={styles.previewHeader}>
+              <TouchableOpacity style={styles.previewBackBtn} onPress={() => setShowPreview(false)}>
+                <Feather name="arrow-right" size={20} color={Colors.primary} />
+              </TouchableOpacity>
+              <Text style={styles.previewTitle}>معاينة الطلب</Text>
+              <View style={{ width: 36 }} />
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 8 }}>
+
+              {/* بيانات العميل */}
+              <View style={styles.previewSection}>
+                <View style={styles.previewSectionHeader}>
+                  <Feather name="user" size={14} color={Colors.primary} />
+                  <Text style={styles.previewSectionTitle}>بيانات العميل</Text>
+                </View>
+                <View style={styles.previewRow}>
+                  <Text style={styles.previewLabel}>الاسم</Text>
+                  <Text style={styles.previewValue}>{customerName.trim()}</Text>
+                </View>
+                <View style={styles.previewRow}>
+                  <Text style={styles.previewLabel}>الهاتف</Text>
+                  <Text style={styles.previewValue}>{customerPhone.trim()}</Text>
+                </View>
+                {customerPhone2.trim() ? (
+                  <View style={styles.previewRow}>
+                    <Text style={styles.previewLabel}>هاتف 2</Text>
+                    <Text style={styles.previewValue}>{customerPhone2.trim()}</Text>
+                  </View>
+                ) : null}
+                <View style={styles.previewRow}>
+                  <Text style={styles.previewLabel}>نوع الطلب</Text>
+                  <View style={[styles.previewTypeBadge, orderType === "delivery" && { backgroundColor: Colors.info + "18", borderColor: Colors.info + "50" }]}>
+                    <Text style={[styles.previewTypeBadgeText, orderType === "delivery" && { color: Colors.info }]}>
+                      {ORDER_TYPE_LABELS[orderType]}
+                    </Text>
+                  </View>
+                </View>
+                {orderType === "delivery" && deliveryAddress.trim() ? (
+                  <View style={styles.previewRow}>
+                    <Text style={styles.previewLabel}>العنوان</Text>
+                    <Text style={[styles.previewValue, { flex: 1, textAlign: "left", marginLeft: 8 }]}>{deliveryAddress.trim()}</Text>
+                  </View>
+                ) : null}
+                {deliveryDateTime ? (
+                  <View style={styles.previewRow}>
+                    <Text style={styles.previewLabel}>موعد التسليم</Text>
+                    <Text style={[styles.previewValue, { color: Colors.primary, fontWeight: "700" }]}>{deliveryDateTime}</Text>
+                  </View>
+                ) : null}
+              </View>
+
+              {/* الأصناف */}
+              {(() => {
+                const previewItems = items.filter((i) => i.name.trim() && i.quantity > 0);
+                return (
+                  <View style={styles.previewSection}>
+                    <View style={styles.previewSectionHeader}>
+                      <Feather name="shopping-bag" size={14} color={Colors.primary} />
+                      <Text style={styles.previewSectionTitle}>الأصناف ({previewItems.length})</Text>
+                    </View>
+                    {previewItems.map((item) => {
+                      const deptConf = DEPT_OPTIONS.find((d) => d.value === item.department)!;
+                      const lineTotal = item.price ? (item.price * item.quantity).toFixed(2) : null;
+                      return (
+                        <View key={item.id} style={styles.previewItemRow}>
+                          <View style={[styles.previewDeptDot, { backgroundColor: deptConf.color }]} />
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.previewItemName}>{item.name}</Text>
+                            {item.note ? <Text style={styles.previewItemNote}>{item.note}</Text> : null}
+                          </View>
+                          <Text style={styles.previewItemQty}>×{item.quantity}</Text>
+                          <Text style={[styles.previewItemPrice, !item.price && { color: Colors.accent }]}>
+                            {lineTotal ? `${lineTotal} ر.س` : "بدون سعر"}
+                          </Text>
+                        </View>
+                      );
+                    })}
+                    {previewItems.some((i) => !i.price) && (
+                      <View style={styles.previewWarning}>
+                        <Feather name="alert-triangle" size={13} color={Colors.warning} />
+                        <Text style={styles.previewWarningText}>بعض الأصناف بدون سعر — تأكد قبل الإرسال</Text>
+                      </View>
+                    )}
+                  </View>
+                );
+              })()}
+
+              {/* الإجمالي */}
+              {(grandTotal > 0 || discountEnabled || insuranceVal > 0) && (
+                <View style={styles.previewSection}>
+                  <View style={styles.previewSectionHeader}>
+                    <Feather name="dollar-sign" size={14} color={Colors.primary} />
+                    <Text style={styles.previewSectionTitle}>الإجمالي</Text>
+                  </View>
+                  {subtotal > 0 && (discountAmount > 0 || insuranceVal > 0) ? (
+                    <View style={styles.previewRow}>
+                      <Text style={styles.previewLabel}>المجموع</Text>
+                      <Text style={styles.previewValue}>{subtotal.toFixed(2)} ر.س</Text>
+                    </View>
+                  ) : null}
+                  {discountAmount > 0 && (
+                    <View style={styles.previewRow}>
+                      <Text style={[styles.previewLabel, { color: Colors.success }]}>
+                        خصم{discountReason.trim() ? ` (${discountReason.trim()})` : ""}
+                      </Text>
+                      <Text style={[styles.previewValue, { color: Colors.success }]}>- {discountAmount.toFixed(2)} ر.س</Text>
+                    </View>
+                  )}
+                  {insuranceVal > 0 && (
+                    <View style={styles.previewRow}>
+                      <Text style={styles.previewLabel}>تأمين الصواني</Text>
+                      <Text style={styles.previewValue}>{insuranceVal.toFixed(2)} ر.س</Text>
+                    </View>
+                  )}
+                  {grandTotal > 0 && (
+                    <View style={[styles.previewRow, styles.previewTotalRow]}>
+                      <Text style={styles.previewTotalLabel}>الإجمالي الكلي</Text>
+                      <Text style={styles.previewTotalValue}>{grandTotal.toFixed(2)} ر.س</Text>
+                    </View>
+                  )}
+                  <View style={styles.previewRow}>
+                    <Text style={styles.previewLabel}>طريقة الدفع</Text>
+                    <Text style={styles.previewValue}>{PAYMENT_LABELS[paymentMethod]}</Text>
+                  </View>
+                  {amountPaidVal > 0 && (
+                    <View style={styles.previewRow}>
+                      <Text style={styles.previewLabel}>المدفوع</Text>
+                      <Text style={styles.previewValue}>{amountPaidVal.toFixed(2)} ر.س</Text>
+                    </View>
+                  )}
+                  {remainingAmount > 0 && (
+                    <View style={styles.previewRow}>
+                      <Text style={[styles.previewLabel, { color: Colors.accent }]}>المتبقي</Text>
+                      <Text style={[styles.previewValue, { color: Colors.accent, fontWeight: "800" }]}>{remainingAmount.toFixed(2)} ر.س</Text>
+                    </View>
+                  )}
+                </View>
+              )}
+
+              {/* ملاحظات */}
+              {notes.trim() ? (
+                <View style={styles.previewSection}>
+                  <View style={styles.previewSectionHeader}>
+                    <Feather name="file-text" size={14} color={Colors.primary} />
+                    <Text style={styles.previewSectionTitle}>ملاحظات</Text>
+                  </View>
+                  <Text style={styles.previewNotes}>{notes.trim()}</Text>
+                </View>
+              ) : null}
+
+              {/* الصور المرفقة */}
+              {(imageUri || referenceImages.length > 0) && (
+                <View style={styles.previewSection}>
+                  <View style={styles.previewSectionHeader}>
+                    <Feather name="image" size={14} color={Colors.primary} />
+                    <Text style={styles.previewSectionTitle}>الصور المرفقة</Text>
+                  </View>
+                  <View style={styles.previewImgsRow}>
+                    {imageUri && (
+                      <View style={{ alignItems: "center" }}>
+                        <Image source={{ uri: imageUri }} style={styles.previewThumb} contentFit="cover" />
+                        <Text style={styles.previewThumbLabel}>صورة الطلب</Text>
+                      </View>
+                    )}
+                    {referenceImages.map((uri, i) => (
+                      <View key={i} style={{ alignItems: "center" }}>
+                        <Image source={{ uri }} style={styles.previewThumb} contentFit="cover" />
+                        <Text style={styles.previewThumbLabel}>مرجعية {i + 1}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {/* منشئ الطلب */}
+              {currentEmployee && (
+                <View style={styles.previewCashierRow}>
+                  <Feather name="user-check" size={13} color={Colors.textMuted} />
+                  <Text style={styles.previewCashierText}>
+                    المنشئ: {currentEmployee.name} #{currentEmployee.employeeId}
+                  </Text>
+                </View>
+              )}
+
+              <View style={{ height: 8 }} />
+            </ScrollView>
+
+            {/* Action buttons */}
+            <View style={styles.previewActions}>
+              <TouchableOpacity style={styles.previewEditBtn} onPress={() => setShowPreview(false)} activeOpacity={0.8}>
+                <Feather name="edit-2" size={16} color={Colors.primary} />
+                <Text style={styles.previewEditBtnText}>تعديل</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.previewConfirmBtn, isSubmitting && { opacity: 0.6 }]}
+                onPress={() => void doSubmit()}
+                disabled={isSubmitting}
+                activeOpacity={0.85}
+              >
+                <Feather name="check-circle" size={18} color="#fff" />
+                <Text style={styles.previewConfirmBtnText}>{isSubmitting ? "جاري الإرسال..." : "تأكيد وإرسال"}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    )}
 
     {/* ─── Receipt Modal ──────────────────────────────────────────── */}
     {receiptOrder && (
@@ -1216,8 +1596,13 @@ export default function CashierScreen() {
 
             {/* Success banner */}
             <View style={[styles.receiptBanner, isLaviviane && { backgroundColor: "#2f241d" }]}>
-              <View style={[styles.receiptCheckCircle, isLaviviane && { backgroundColor: "#d6b56d" }]}>
-                <Feather name="check" size={28} color="#fff" />
+              <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 16, width: "100%" }}>
+                <View style={[styles.receiptCheckCircle, isLaviviane && { backgroundColor: "#d6b56d" }]}>
+                  <Feather name="check" size={28} color="#fff" />
+                </View>
+                {receiptQr ? (
+                  <Image source={{ uri: receiptQr }} style={styles.receiptQrImg} contentFit="contain" />
+                ) : null}
               </View>
               <Text style={styles.receiptBannerTitle}>تم الإرسال بنجاح!</Text>
               <Text style={styles.receiptBannerSub}>فاتورة #{receiptOrder.orderNumber}</Text>
@@ -1409,11 +1794,11 @@ export default function CashierScreen() {
             <View style={styles.receiptActions}>
               <TouchableOpacity
                 style={styles.printBtn}
-                onPress={() => printInvoice(receiptOrder)}
+                onPress={() => void showInlineInvoice(receiptOrder)}
                 activeOpacity={0.85}
               >
                 <Feather name="printer" size={16} color="#fff" />
-                <Text style={styles.printBtnText}>طباعة</Text>
+                <Text style={styles.printBtnText}>عرض وطباعة الفاتورة</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.whatsappBtn}
@@ -1487,7 +1872,25 @@ const styles = StyleSheet.create({
   deptSummary: { flexDirection: "row", gap: 6 },
   deptPill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
   deptPillText: { color: "#fff", fontSize: 11, fontWeight: "700" },
+  itemBlock: { gap: 0 },
+  deptSepLine: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    borderTopWidth: 1, paddingTop: 8, marginTop: 4, marginBottom: 4,
+  },
+  deptSepDot: { width: 7, height: 7, borderRadius: 4 },
+  deptSepLabel: { fontSize: 11, fontWeight: "800", textTransform: "uppercase" as const },
   itemRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  itemSubRow: {
+    flexDirection: "row", alignItems: "center",
+    paddingHorizontal: 2, marginTop: 2, marginBottom: 4,
+  },
+  itemNoteToggle: {
+    flexDirection: "row", alignItems: "center", gap: 4,
+    paddingHorizontal: 8, paddingVertical: 3,
+    borderRadius: 8, borderWidth: 1, borderColor: Colors.border,
+    backgroundColor: Colors.surfaceSecondary,
+  },
+  itemNoteToggleText: { fontSize: 11, color: Colors.textMuted, fontWeight: "600" },
   itemName: { flex: 1, paddingVertical: 10 },
   qtyBox: {
     flexDirection: "row", alignItems: "center", width: 80,
@@ -1504,12 +1907,18 @@ const styles = StyleSheet.create({
   noteInput: { fontSize: 12, paddingVertical: 8 },
   addRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   addBtn: {
-    flexBasis: "47%", flexGrow: 1,
+    flexBasis: "30%", flexGrow: 1,
     flexDirection: "row", alignItems: "center", justifyContent: "center",
-    gap: 5, paddingVertical: 10, borderRadius: 10, borderWidth: 1.5,
+    gap: 5, paddingVertical: 9, borderRadius: 10, borderWidth: 1.5,
     backgroundColor: Colors.surface,
   },
   addBtnText: { fontSize: 12, fontWeight: "600" },
+  addBtnSingle: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
+    paddingVertical: 10, borderRadius: 10, borderWidth: 1.5,
+    borderColor: Colors.primary + "50", backgroundColor: Colors.primary + "08",
+  },
+  addBtnSingleText: { fontSize: 13, fontWeight: "600", color: Colors.primary },
   imageArea: {
     borderWidth: 1.5, borderColor: Colors.border, borderStyle: "dashed",
     borderRadius: 12, overflow: "hidden", minHeight: 120,
@@ -1798,6 +2207,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10, paddingVertical: 8, marginTop: 2,
   },
 
+  // quick date presets
+  quickDateRow: { flexDirection: "row", gap: 8, marginBottom: 4 },
+  quickDateBtn: {
+    flex: 1, paddingVertical: 8, borderRadius: 10, borderWidth: 1.5,
+    borderColor: Colors.border, backgroundColor: Colors.surfaceSecondary,
+    alignItems: "center",
+  },
+  quickDateBtnActive: { borderColor: Colors.primary, backgroundColor: Colors.primary + "14" },
+  quickDateText: { fontSize: 12, fontWeight: "600", color: Colors.textSecondary },
+  quickDateTextActive: { color: Colors.primary },
+
+  // collapsible item extras
+  itemExpandBtn: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    paddingVertical: 5, paddingHorizontal: 4,
+  },
+  itemExpandText: { fontSize: 12, color: Colors.textMuted, flex: 1 },
+
+  // receipt QR
+  receiptQrImg: { width: 70, height: 70, borderRadius: 8, borderWidth: 1, borderColor: "rgba(255,255,255,0.3)" },
+
   // receipt extras
   receiptTypeBadge: {
     flexDirection: "row", alignItems: "center", gap: 8,
@@ -1816,4 +2246,107 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.gold + "12", borderRadius: 8, padding: 8,
   },
   receiptInsNoteText: { fontSize: 11, color: Colors.gold, flex: 1 },
+
+  // order preview modal
+  previewOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.52)", justifyContent: "flex-end" },
+  previewSheet: {
+    backgroundColor: Colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    maxHeight: "92%",
+  },
+  previewHandle: {
+    width: 40, height: 4, backgroundColor: Colors.border, borderRadius: 2,
+    alignSelf: "center", marginTop: 10, marginBottom: 4,
+  },
+  previewHeader: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingHorizontal: 18, paddingVertical: 14,
+    borderBottomWidth: 1, borderBottomColor: Colors.border,
+  },
+  previewBackBtn: {
+    width: 36, height: 36, borderRadius: 10, backgroundColor: Colors.surfaceSecondary,
+    alignItems: "center", justifyContent: "center",
+  },
+  previewTitle: { fontSize: 16, fontWeight: "800", color: Colors.primary },
+  previewSection: {
+    marginHorizontal: 14, marginTop: 10,
+    backgroundColor: Colors.surfaceSecondary, borderRadius: 14, padding: 14,
+  },
+  previewSectionHeader: { flexDirection: "row", alignItems: "center", gap: 7, marginBottom: 10 },
+  previewSectionTitle: { fontSize: 13, fontWeight: "700", color: Colors.primary },
+  previewRow: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 4,
+  },
+  previewLabel: { fontSize: 12, color: Colors.textSecondary },
+  previewValue: { fontSize: 12, fontWeight: "600", color: Colors.text },
+  previewTypeBadge: {
+    paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20,
+    backgroundColor: Colors.success + "18", borderWidth: 1, borderColor: Colors.success + "50",
+  },
+  previewTypeBadgeText: { fontSize: 11, fontWeight: "700", color: Colors.success },
+  previewItemRow: {
+    flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 6,
+    borderBottomWidth: 1, borderBottomColor: Colors.border,
+  },
+  previewDeptDot: { width: 9, height: 9, borderRadius: 5 },
+  previewItemName: { fontSize: 13, fontWeight: "600", color: Colors.text },
+  previewItemNote: { fontSize: 11, color: Colors.textMuted, fontStyle: "italic" },
+  previewItemQty: { fontSize: 12, color: Colors.textSecondary, minWidth: 26, textAlign: "center" },
+  previewItemPrice: { fontSize: 12, fontWeight: "700", color: Colors.text, minWidth: 72, textAlign: "left" },
+  previewWarning: {
+    flexDirection: "row", alignItems: "center", gap: 6, marginTop: 8,
+    backgroundColor: Colors.warning + "15", borderRadius: 8, padding: 8,
+  },
+  previewWarningText: { fontSize: 11, color: Colors.warning, fontWeight: "600" },
+  previewTotalRow: {
+    borderTopWidth: 1, borderTopColor: Colors.border, marginTop: 6, paddingTop: 8,
+  },
+  previewTotalLabel: { fontSize: 14, fontWeight: "800", color: Colors.primary },
+  previewTotalValue: { fontSize: 17, fontWeight: "900", color: Colors.primary },
+  previewNotes: { fontSize: 12, color: Colors.text, lineHeight: 18 },
+  previewImgsRow: { flexDirection: "row", gap: 10, flexWrap: "wrap" },
+  previewThumb: { width: 72, height: 72, borderRadius: 10 },
+  previewThumbLabel: { fontSize: 10, color: Colors.textMuted, textAlign: "center", marginTop: 3 },
+  previewCashierRow: {
+    flexDirection: "row", alignItems: "center", gap: 6, marginHorizontal: 14, marginTop: 10,
+  },
+  previewCashierText: { fontSize: 11, color: Colors.textMuted },
+  previewActions: {
+    flexDirection: "row", gap: 12, padding: 16, paddingBottom: 28,
+    borderTopWidth: 1, borderTopColor: Colors.border,
+  },
+  previewEditBtn: {
+    flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
+    paddingVertical: 14, borderRadius: 14,
+    borderWidth: 1.5, borderColor: Colors.primary, backgroundColor: Colors.primary + "08",
+  },
+  previewEditBtnText: { fontSize: 14, fontWeight: "700", color: Colors.primary },
+  previewConfirmBtn: {
+    flex: 2, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
+    paddingVertical: 14, borderRadius: 14, backgroundColor: Colors.success,
+    shadowColor: Colors.success, shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3, shadowRadius: 8, elevation: 5,
+  },
+  previewConfirmBtnText: { fontSize: 15, fontWeight: "800", color: "#fff" },
+
+  // reference images for special cake
+  refImgHeader: { flexDirection: "row", alignItems: "flex-start", gap: 10, marginBottom: 12 },
+  refImgSub: { fontSize: 11, color: Colors.textMuted, marginTop: 2 },
+  refImgRow: { flexDirection: "row", gap: 10, flexWrap: "wrap" },
+  refImgBox: { width: 96, height: 96, borderRadius: 12, overflow: "hidden", position: "relative" },
+  refImgPreview: { width: 96, height: 96 },
+  refImgRemove: {
+    position: "absolute", top: 4, right: 4,
+    backgroundColor: "rgba(0,0,0,0.55)", borderRadius: 10, padding: 3,
+  },
+  refImgNum: {
+    position: "absolute", bottom: 4, left: 4,
+    backgroundColor: Colors.cake + "cc", borderRadius: 8, paddingHorizontal: 5, paddingVertical: 1,
+  },
+  refImgNumText: { fontSize: 10, color: "#fff", fontWeight: "700" },
+  refImgAdd: {
+    width: 96, height: 96, borderRadius: 12, borderWidth: 2, borderStyle: "dashed",
+    borderColor: Colors.cake + "80", alignItems: "center", justifyContent: "center",
+    backgroundColor: Colors.cake + "08", gap: 4,
+  },
+  refImgAddText: { fontSize: 11, color: Colors.cake, fontWeight: "600", textAlign: "center" },
 });
