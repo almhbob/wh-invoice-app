@@ -67,7 +67,7 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
   const textAlign = isRTL ? "right" : "left";
   const rowDirection = isRTL ? "row-reverse" : "row";
   const { company, setCompany, switchCompanyById } = useCompany();
-  const { employees, currentEmployee, setCurrentEmployee, addEmployee, isLoading } = useEmployee();
+  const { employees, currentEmployee, setCurrentEmployee, checkAndLogin, addEmployee, isLoading } = useEmployee();
   const [ready, setReady] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
   const [companyCode, setCompanyCode] = useState("");
@@ -180,7 +180,21 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    await setCurrentEmployee(found);
+    const result = await checkAndLogin(found);
+    if (result === "conflict") {
+      Alert.alert(
+        "مسجل دخول من جهاز آخر",
+        `"${found.name}" مسجل الدخول حالياً على جهاز آخر. هل تريد تسجيل الدخول وإزالة الجهاز الآخر؟`,
+        [
+          { text: "إلغاء", style: "cancel" },
+          {
+            text: "تسجيل الدخول وإزالة الجهاز الآخر",
+            style: "destructive",
+            onPress: () => void checkAndLogin(found, true),
+          },
+        ]
+      );
+    }
   };
 
   const createOwner = async () => {

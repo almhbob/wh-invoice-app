@@ -4,15 +4,18 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDoc,
   onSnapshot,
   orderBy,
   query,
+  setDoc,
 } from "firebase/firestore";
 import React, {
   createContext,
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react";
 
@@ -23,6 +26,21 @@ import {
 } from "@/constants/branchSupervisorPermissions";
 import { useCompany } from "@/context/CompanyContext";
 import { db } from "@/lib/firebase";
+
+// Persistent unique ID for this browser/device — used to detect duplicate sessions
+function getOrCreateDeviceId(): string {
+  const KEY = "@wh_device_id";
+  if (typeof localStorage !== "undefined") {
+    let id = localStorage.getItem(KEY);
+    if (!id) {
+      id = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      localStorage.setItem(KEY, id);
+    }
+    return id;
+  }
+  return `native-${Math.random().toString(36).slice(2)}`;
+}
+const MY_DEVICE_ID = getOrCreateDeviceId();
 
 export type EmployeeRole = "cashier" | "halwa" | "mawali" | "chocolate" | "cake" | "packaging" | "admin" | "branch_supervisor" | "dept_supervisor" | "guest";
 
@@ -49,6 +67,7 @@ interface EmployeeContextType {
   setCurrentEmployee: (emp: Employee | null) => void;
   addEmployee: (data: Omit<Employee, "id" | "createdAt" | "companyId">) => Promise<Employee>;
   removeEmployee: (id: string) => Promise<void>;
+  checkAndLogin: (emp: Employee, forceKick?: boolean) => Promise<"ok" | "conflict">;
   isLoading: boolean;
 }
 
@@ -117,9 +136,11 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [currentEmployee, setCurrentEmployeeState] = useState<Employee | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const currentEmployeeRef = useRef<Employee | null>(null);
 
   const employeesCollection = useCallback(() => collection(db, "companies", companyId, "employees"), [companyId]);
   const employeeDoc = useCallback((id: string) => doc(db, "companies", companyId, "employees", id), [companyId]);
+  const activeSessionRef = useCallback((empId: string) => doc(db, "companies", companyId, "activeSessions", empId), [companyId]);
   const sessionKey = `${SESSION_KEY_PREFIX}_${companyId}`;
   const sessionEmployeeKey = `${SESSION_EMPLOYEE_KEY_PREFIX}_${companyId}`;
 
@@ -205,6 +226,8 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
   const setCurrentEmployee = useCallback(async (emp: Employee | null) => {
     const allowedEmployee = emp?.status === "suspended" ? null : emp;
     const withLoginTime = allowedEmployee ? { ...allowedEmployee, lastLoginAt: new Date().toISOString() } : null;
+    const prev = currentEmployeeRef.current;
+    currentEmployeeRef.current = withLoginTime;
     setCurrentEmployeeState(withLoginTime);
     if (withLoginTime) {
       setEmployees((existing) => mergeSessionIntoEmployees(existing, withLoginTime));
@@ -213,12 +236,72 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
       if (withLoginTime) {
         await AsyncStorage.setItem(sessionKey, withLoginTime.id);
         await AsyncStorage.setItem(sessionEmployeeKey, JSON.stringify(withLoginTime));
+        // Write active session to Firestore (non-blocking)
+        if (!withLoginTime.isLocalFallback && !(withLoginTime as Record<string, unknown>).isLocalBootstrap) {
+          setDoc(activeSessionRef(withLoginTime.employeeId), {
+            deviceId: MY_DEVICE_ID,
+            employeeId: withLoginTime.employeeId,
+            employeeName: withLoginTime.name,
+            companyId,
+            loggedInAt: new Date().toISOString(),
+          }).catch(() => {});
+        }
       } else {
         await AsyncStorage.removeItem(sessionKey);
         await AsyncStorage.removeItem(sessionEmployeeKey);
+        // Delete session only if it's ours
+        if (prev && !prev.isLocalFallback && !(prev as Record<string, unknown>).isLocalBootstrap) {
+          getDoc(activeSessionRef(prev.employeeId)).then((snap) => {
+            if (snap.exists() && snap.data().deviceId === MY_DEVICE_ID) {
+              deleteDoc(activeSessionRef(prev.employeeId)).catch(() => {});
+            }
+          }).catch(() => {});
+        }
       }
     } catch {}
-  }, [sessionKey, sessionEmployeeKey]);
+  }, [sessionKey, sessionEmployeeKey, companyId, activeSessionRef]);
+
+  // Watch active session — if another device logs in as the same employee, force logout
+  useEffect(() => {
+    if (!currentEmployee || currentEmployee.isLocalFallback || (currentEmployee as Record<string, unknown>).isLocalBootstrap) return;
+    const ref = activeSessionRef(currentEmployee.employeeId);
+    const empName = currentEmployee.name;
+    const unsub = onSnapshot(ref, (snap) => {
+      if (!snap.exists()) return;
+      const data = snap.data() as { deviceId?: string };
+      if (data.deviceId && data.deviceId !== MY_DEVICE_ID) {
+        currentEmployeeRef.current = null;
+        setCurrentEmployeeState(null);
+        AsyncStorage.removeItem(sessionKey).catch(() => {});
+        AsyncStorage.removeItem(sessionEmployeeKey).catch(() => {});
+        Alert.alert(
+          "تسجيل دخول من جهاز آخر",
+          `تم تسجيل دخول "${empName}" من جهاز آخر. سيتم تسجيل خروجك تلقائياً.`,
+          [{ text: "حسناً" }]
+        );
+      }
+    }, () => {}); // ignore Firestore errors silently
+    return () => unsub();
+  }, [currentEmployee?.id, currentEmployee?.employeeId, activeSessionRef, sessionKey, sessionEmployeeKey]);
+
+  const checkAndLogin = useCallback(async (emp: Employee, forceKick = false): Promise<"ok" | "conflict"> => {
+    if (emp.isLocalFallback || (emp as Record<string, unknown>).isLocalBootstrap) {
+      await setCurrentEmployee(emp);
+      return "ok";
+    }
+    if (!forceKick) {
+      try {
+        const snap = await getDoc(activeSessionRef(emp.employeeId));
+        if (snap.exists() && (snap.data() as { deviceId?: string }).deviceId !== MY_DEVICE_ID) {
+          return "conflict";
+        }
+      } catch {
+        // Firestore unavailable — allow login
+      }
+    }
+    await setCurrentEmployee(emp);
+    return "ok";
+  }, [activeSessionRef, setCurrentEmployee]);
 
   useEffect(() => {
     if (!currentEmployee) return;
@@ -270,7 +353,7 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
   );
 
   return (
-    <EmployeeContext.Provider value={{ employees, currentEmployee, setCurrentEmployee, addEmployee, removeEmployee, isLoading }}>
+    <EmployeeContext.Provider value={{ employees, currentEmployee, setCurrentEmployee, addEmployee, removeEmployee, checkAndLogin, isLoading }}>
       {children}
     </EmployeeContext.Provider>
   );
