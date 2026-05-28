@@ -3,7 +3,7 @@ import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import * as Linking from "expo-linking";
 import { Image } from "expo-image";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -42,13 +42,7 @@ import {
 import { Offer, normalizePhone, useOffers } from "@/context/OffersContext";
 import QRCode from "qrcode";
 
-const DEPT_OPTIONS: { value: Department; label: string; color: string }[] = [
-  { value: "halwa",     label: "حلويات",    color: Colors.halwa },
-  { value: "mawali",   label: "موالح",     color: Colors.mawali },
-  { value: "chocolate", label: "شوكولاتة", color: Colors.chocolate },
-  { value: "cake",     label: "كيك",       color: Colors.cake },
-  { value: "packaging", label: "تغليف",   color: Colors.packaging },
-];
+
 const DEPT_CYCLE: Partial<Record<Department, Department>> = {
   halwa: "mawali", mawali: "chocolate", chocolate: "cake", cake: "packaging", packaging: "halwa",
 };
@@ -87,6 +81,13 @@ export default function CashierScreen() {
   const { currentEmployee, setCurrentEmployee } = useEmployee();
   const { getOfferByPhone, incrementUsage } = useOffers();
   const { t } = useLang();
+  const DEPT_OPTIONS = useMemo(() => [
+    { value: "halwa" as Department,     label: t("deptHalwaShort"),     color: Colors.halwa },
+    { value: "mawali" as Department,    label: t("deptMawaliShort"),    color: Colors.mawali },
+    { value: "chocolate" as Department, label: t("deptChocolateShort"), color: Colors.chocolate },
+    { value: "cake" as Department,      label: t("deptCakeShort"),      color: Colors.cake },
+    { value: "packaging" as Department, label: t("deptPackagingShort"), color: Colors.packaging },
+  ], [t]);
   const { company } = useCompany();
   const isLaviviane = company.id === LAVIVIANE_COMPANY_ID;
 
@@ -199,7 +200,7 @@ export default function CashierScreen() {
 
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") { Alert.alert("إذن مطلوب", "يحتاج التطبيق للوصول إلى الصور"); return; }
+    if (status !== "granted") { Alert.alert(t("permRequired"), "يحتاج التطبيق للوصول إلى الصور"); return; }
     const res = await ImagePicker.launchImageLibraryAsync({ allowsEditing: true, quality: 0.8 });
     if (!res.canceled) setImageUri(res.assets[0].uri);
   };
@@ -207,7 +208,7 @@ export default function CashierScreen() {
   const addReferenceImage = async () => {
     if (referenceImages.length >= 3) return;
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") { Alert.alert("إذن مطلوب", "يحتاج التطبيق للوصول إلى الصور"); return; }
+    if (status !== "granted") { Alert.alert(t("permRequired"), "يحتاج التطبيق للوصول إلى الصور"); return; }
     const res = await ImagePicker.launchImageLibraryAsync({ allowsEditing: false, quality: 0.75 });
     if (!res.canceled) setReferenceImages((prev) => [...prev, res.assets[0].uri].slice(0, 3));
   };
@@ -218,16 +219,16 @@ export default function CashierScreen() {
 
   const takePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== "granted") { Alert.alert("إذن مطلوب", "يحتاج التطبيق للوصول إلى الكاميرا"); return; }
+    if (status !== "granted") { Alert.alert(t("permRequired"), "يحتاج التطبيق للوصول إلى الكاميرا"); return; }
     const res = await ImagePicker.launchCameraAsync({ allowsEditing: true, quality: 0.8 });
     if (!res.canceled) setImageUri(res.assets[0].uri);
   };
 
   const handleImagePress = () => {
     if (Platform.OS === "web") { pickImage(); return; }
-    Alert.alert("إضافة صورة", "اختر مصدر الصورة", [
-      { text: "الكاميرا", onPress: takePhoto },
-      { text: "معرض الصور", onPress: pickImage },
+    Alert.alert(t("addPhotoLabel"), t("chooseSource"), [
+      { text: t("camera"), onPress: takePhoto },
+      { text: t("photoGallery"), onPress: pickImage },
       { text: "إلغاء", style: "cancel" },
     ]);
   };
@@ -637,13 +638,13 @@ export default function CashierScreen() {
     >
       {/* بيانات العميل */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>بيانات العميل</Text>
+        <Text style={styles.cardTitle}>{t("customerData")}</Text>
 
-        <Text style={styles.label}>اسم العميل *</Text>
+        <Text style={styles.label}>{t("customerName")} *</Text>
         <TextInput style={styles.input} value={customerName} onChangeText={setCustomerName}
           placeholder="أدخل اسم العميل" placeholderTextColor={Colors.textMuted} textAlign="right" />
 
-        <Text style={styles.label}>رقم الهاتف *</Text>
+        <Text style={styles.label}>{t("customerPhone")} *</Text>
         <View style={styles.row}>
           <TextInput style={[styles.input, { flex: 1 }]} value={customerPhone}
             onChangeText={setCustomerPhone} placeholder="05XXXXXXXX"
@@ -653,7 +654,7 @@ export default function CashierScreen() {
           </View>
         </View>
 
-        <Text style={styles.label}>رقم الهاتف 2 (اختياري)</Text>
+        <Text style={styles.label}>{t("customerPhone2")} {t("optional")}</Text>
         <View style={styles.row}>
           <TextInput style={[styles.input, { flex: 1 }]} value={customerPhone2}
             onChangeText={setCustomerPhone2} placeholder="05XXXXXXXX"
@@ -670,7 +671,7 @@ export default function CashierScreen() {
               <Feather name="gift" size={18} color="#fff" />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.offerBannerTitle}>عرض خاص مُفعَّل تلقائياً ✓</Text>
+              <Text style={styles.offerBannerTitle}>{t("autoActivatedOffer")}</Text>
               <Text style={styles.offerBannerSub}>
                 {detectedOffer.discountType === "percentage"
                   ? `خصم ${detectedOffer.discountValue}%`
@@ -680,7 +681,7 @@ export default function CashierScreen() {
               </Text>
             </View>
             <View style={styles.offerBannerBadge}>
-              <Text style={styles.offerBannerBadgeText}>مفعّل</Text>
+              <Text style={styles.offerBannerBadgeText}>{t("activatedLabel")}</Text>
             </View>
           </View>
         )}
@@ -700,7 +701,7 @@ export default function CashierScreen() {
               onPress={() => setCurrentEmployee(null)}
               style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10, backgroundColor: Colors.accent + "18" }}
             >
-              <Text style={{ color: Colors.accent, fontSize: 11, fontWeight: "800" }}>تغيير</Text>
+              <Text style={{ color: Colors.accent, fontSize: 11, fontWeight: "800" }}>{t("switchBtn")}</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -742,13 +743,13 @@ export default function CashierScreen() {
         <View style={styles.card}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: -2 }}>
             <Feather name="map-pin" size={16} color={Colors.mawali} />
-            <Text style={[styles.cardTitle, { color: Colors.mawali }]}>عنوان التوصيل</Text>
+            <Text style={[styles.cardTitle, { color: Colors.mawali }]}>{t("deliveryAddressLabel")}</Text>
           </View>
           <TextInput
             style={[styles.input, { height: 72, textAlignVertical: "top" }]}
             value={deliveryAddress}
             onChangeText={setDeliveryAddress}
-            placeholder="الحي، الشارع، رقم المنزل أو أي تفاصيل مفيدة..."
+            placeholder={t("addressPh")}
             placeholderTextColor={Colors.textMuted}
             multiline
             textAlign="right"
@@ -759,27 +760,27 @@ export default function CashierScreen() {
 
       {/* التوقيت */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>التوقيت والتأمين</Text>
+        <Text style={styles.cardTitle}>{t("timingAndInsurance")}</Text>
 
         {/* Order date/time (auto) */}
-        <Text style={styles.label}>تاريخ ووقت الطلب</Text>
+        <Text style={styles.label}>{t("orderDateTime")}</Text>
         <View style={[styles.input, styles.row, { gap: 8 }]}>
           <Feather name="clock" size={15} color={Colors.primary} />
           <Text style={styles.autoText}>{receivedAt}</Text>
           <View style={styles.autoBadge}>
             <Feather name="zap" size={11} color={Colors.success} />
-            <Text style={styles.autoBadgeText}>تلقائي</Text>
+            <Text style={styles.autoBadgeText}>{t("autoLabel")}</Text>
           </View>
         </View>
 
         {/* Delivery date */}
-        <Text style={styles.label}>تاريخ التسليم</Text>
+        <Text style={styles.label}>{t("delivDateLabel")}</Text>
         <View style={styles.quickDateRow}>
           {[
-            { label: "اليوم", days: 0 },
-            { label: "غداً", days: 1 },
-            { label: "+يومان", days: 2 },
-            { label: "+أسبوع", days: 7 },
+            { label: t("today"), days: 0 },
+            { label: t("tomorrow"), days: 1 },
+            { label: t("twoDaysBtn"), days: 2 },
+            { label: t("oneWeekBtn"), days: 7 },
           ].map(({ label, days }) => {
             const d = new Date();
             d.setDate(d.getDate() + days);
@@ -803,7 +804,7 @@ export default function CashierScreen() {
         </View>
 
         {/* Delivery time */}
-        <Text style={styles.label}>وقت التسليم</Text>
+        <Text style={styles.label}>{t("delivTimeLabel")}</Text>
         <View style={[styles.input, styles.row, { gap: 8 }]}>
           <Feather name="watch" size={15} color={Colors.textMuted} />
           <TextInput style={styles.inlineInput} value={deliveryTime} onChangeText={setDeliveryTime}
@@ -812,9 +813,9 @@ export default function CashierScreen() {
         </View>
 
         {/* Insurance */}
-        <Text style={styles.label}>مبلغ تأمين الصواني</Text>
+        <Text style={styles.label}>{t("trayInsAmount")}</Text>
         <View style={[styles.input, styles.row, { gap: 8 }]}>
-          <Text style={styles.currency}>ر.س</Text>
+          <Text style={styles.currency}>{t("sar")}</Text>
           <TextInput style={[styles.inlineInput, { fontWeight: "600", color: Colors.primary }]}
             value={insuranceAmount} onChangeText={setInsuranceAmount}
             placeholder="0.00" placeholderTextColor={Colors.textMuted}
@@ -824,7 +825,7 @@ export default function CashierScreen() {
         {/* Insurance payment method (only when insurance > 0) */}
         {insuranceVal > 0 && (
           <>
-            <Text style={styles.label}>طريقة دفع التأمين</Text>
+            <Text style={styles.label}>{t("insPayMethod")}</Text>
             <View style={styles.insPayRow}>
               {(["cash", "card"] as const).map((m) => (
                 <TouchableOpacity
@@ -838,14 +839,14 @@ export default function CashierScreen() {
                     color={insurancePaymentMethod === m ? "#fff" : Colors.textSecondary}
                   />
                   <Text style={[styles.insPayBtnText, insurancePaymentMethod === m && styles.insPayBtnTextActive]}>
-                    {m === "cash" ? "كاش" : "شبكة"}
+                    {m === "cash" ? t("paidCash") : t("paidCard")}
                   </Text>
                 </TouchableOpacity>
               ))}
             </View>
             <View style={styles.insNote}>
               <Feather name="info" size={12} color={Colors.gold} />
-              <Text style={styles.insNoteText}>مدة التأمين 3 أيام حتى استرجاع الصواني</Text>
+              <Text style={styles.insNoteText}>{t("trayInsNote")}</Text>
             </View>
           </>
         )}
@@ -854,32 +855,32 @@ export default function CashierScreen() {
       {/* الأصناف */}
       <View style={styles.card}>
         <View style={styles.cardHeader}>
-          <Text style={styles.cardTitle}>الأصناف</Text>
+          <Text style={styles.cardTitle}>{t("itemsSection")}</Text>
           {/* dept summary */}
           <View style={styles.deptSummary}>
             {halwaCount > 0 && (
               <View style={[styles.deptPill, { backgroundColor: Colors.halwa }]}>
-                <Text style={styles.deptPillText}>حلويات {halwaCount}</Text>
+                <Text style={styles.deptPillText}>{t("deptHalwaShort")} {halwaCount}</Text>
               </View>
             )}
             {mawaliCount > 0 && (
               <View style={[styles.deptPill, { backgroundColor: Colors.mawali }]}>
-                <Text style={styles.deptPillText}>موالح {mawaliCount}</Text>
+                <Text style={styles.deptPillText}>{t("deptMawaliShort")} {mawaliCount}</Text>
               </View>
             )}
             {chocolateCount > 0 && (
               <View style={[styles.deptPill, { backgroundColor: Colors.chocolate }]}>
-                <Text style={styles.deptPillText}>شوكولاتة {chocolateCount}</Text>
+                <Text style={styles.deptPillText}>{t("deptChocolateShort")} {chocolateCount}</Text>
               </View>
             )}
             {cakeCount > 0 && (
               <View style={[styles.deptPill, { backgroundColor: Colors.cake }]}>
-                <Text style={styles.deptPillText}>كيك {cakeCount}</Text>
+                <Text style={styles.deptPillText}>{t("deptCakeShort")} {cakeCount}</Text>
               </View>
             )}
             {packagingCount > 0 && (
               <View style={[styles.deptPill, { backgroundColor: Colors.packaging }]}>
-                <Text style={styles.deptPillText}>تغليف {packagingCount}</Text>
+                <Text style={styles.deptPillText}>{t("deptPackagingShort")} {packagingCount}</Text>
               </View>
             )}
           </View>
@@ -892,7 +893,7 @@ export default function CashierScreen() {
           activeOpacity={0.85}
         >
           <Feather name="grid" size={16} color={Colors.gold} />
-          <Text style={styles.galleryBtnText}>اختر من معرض المنتجات</Text>
+          <Text style={styles.galleryBtnText}>{t("browseProductGallery")}</Text>
           <View style={styles.galleryBtnBadge}>
             <Feather name="arrow-left" size={14} color={Colors.gold} />
           </View>
@@ -900,10 +901,10 @@ export default function CashierScreen() {
 
         {/* Column headers */}
         <View style={styles.colHeaders}>
-          <Text style={[styles.colLabel, { flex: 1 }]}>اسم الصنف</Text>
-          <Text style={[styles.colLabel, { width: 66 }]}>السعر</Text>
-          <Text style={[styles.colLabel, { width: 74 }]}>الكمية</Text>
-          <Text style={[styles.colLabel, { width: 52 }]}>القسم</Text>
+          <Text style={[styles.colLabel, { flex: 1 }]}>{t("itemNameCol")}</Text>
+          <Text style={[styles.colLabel, { width: 66 }]}>{t("priceCol")}</Text>
+          <Text style={[styles.colLabel, { width: 74 }]}>{t("qtyCol")}</Text>
+          <Text style={[styles.colLabel, { width: 52 }]}>{t("deptCol")}</Text>
           <View style={{ width: 24 }} />
         </View>
 
@@ -998,7 +999,7 @@ export default function CashierScreen() {
                       color={hasNote ? Colors.primary : Colors.textMuted}
                     />
                     <Text style={[styles.itemNoteToggleText, hasNote && { color: Colors.primary }]}>
-                      {hasNote ? "ملاحظة ✓" : "ملاحظة"}
+                      {hasNote ? `${t("noteLabel")} ✓` : t("noteLabel")}
                     </Text>
                   </TouchableOpacity>
                 ) : null}
@@ -1057,7 +1058,7 @@ export default function CashierScreen() {
 
       {/* صورة */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>صورة الطلب</Text>
+        <Text style={styles.cardTitle}>{t("orderImageLabel")}</Text>
         <TouchableOpacity style={styles.imageArea} onPress={handleImagePress} activeOpacity={0.8}>
           {imageUri ? (
             <>
@@ -1069,7 +1070,7 @@ export default function CashierScreen() {
           ) : (
             <View style={styles.imgPlaceholder}>
               <Feather name="camera" size={26} color={Colors.textMuted} />
-              <Text style={styles.imgPlaceholderText}>اضغط لإضافة صورة</Text>
+              <Text style={styles.imgPlaceholderText}>{t("tapToAddImage")}</Text>
             </View>
           )}
         </TouchableOpacity>
@@ -1080,8 +1081,8 @@ export default function CashierScreen() {
         <View style={styles.card}>
           <View style={styles.refImgHeader}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.cardTitle}>صور مرجعية للكيك</Text>
-              <Text style={styles.refImgSub}>للكيك المخصص — حتى 3 صور مرجعية للقسم</Text>
+              <Text style={styles.cardTitle}>{t("refImagesLabel")}</Text>
+              <Text style={styles.refImgSub}>{t("refImagesSub")}</Text>
             </View>
             <View style={[styles.deptPill, { backgroundColor: Colors.cake }]}>
               <Text style={styles.deptPillText}>{referenceImages.length}/3</Text>
@@ -1113,7 +1114,7 @@ export default function CashierScreen() {
 
       {/* ملاحظات */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>ملاحظات عامة</Text>
+        <Text style={styles.cardTitle}>{t("generalNotes")}</Text>
         <TextInput
           style={[styles.input, { height: 75, textAlignVertical: "top" }]}
           value={notes} onChangeText={setNotes}
@@ -1134,11 +1135,11 @@ export default function CashierScreen() {
               <Feather name="tag" size={15} color={discountEnabled ? "#fff" : Colors.textSecondary} />
             </View>
             <View>
-              <Text style={styles.cardTitle}>الخصومات والعروض</Text>
+              <Text style={styles.cardTitle}>{t("discountsOffers")}</Text>
               <Text style={styles.discountSubtitle}>
                 {discountEnabled
-                  ? (discountAmount > 0 ? `خصم ${discountAmount.toFixed(2)} ر.س` : "حدد قيمة الخصم")
-                  : "اضغط لتفعيل الخصم"}
+                  ? (discountAmount > 0 ? `${t("discount")} ${discountAmount.toFixed(2)} ر.س` : t("setDiscountVal"))
+                  : t("tapToDiscount")}
               </Text>
             </View>
           </View>
@@ -1181,12 +1182,12 @@ export default function CashierScreen() {
                 textAlign="right"
               />
               <View style={styles.discountUnit}>
-                <Text style={styles.discountUnitText}>{discountType === "percentage" ? "%" : "ر.س"}</Text>
+                <Text style={styles.discountUnitText}>{discountType === "percentage" ? "%" : t("sar")}</Text>
               </View>
             </View>
 
             {/* Reason presets */}
-            <Text style={[styles.label, { marginTop: 4 }]}>سبب الخصم</Text>
+            <Text style={[styles.label, { marginTop: 4 }]}>{t("discountReason")}</Text>
             <View style={styles.discountPresets}>
               {DISCOUNT_REASON_PRESETS.map((preset) => (
                 <TouchableOpacity
@@ -1214,7 +1215,7 @@ export default function CashierScreen() {
 
       {/* طريقة الدفع */}
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>طريقة الدفع</Text>
+        <Text style={styles.cardTitle}>{t("paymentMethod")}</Text>
         <View style={styles.paymentRow}>
           {PAYMENT_OPTIONS.map((opt) => (
             <TouchableOpacity
@@ -1245,7 +1246,7 @@ export default function CashierScreen() {
       {hasPrices && (
         <View style={styles.totalCard}>
           <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>المجموع الفرعي</Text>
+            <Text style={styles.totalLabel}>{t("subtotal")}</Text>
             <Text style={styles.totalValue}>{subtotal.toFixed(2)} ر.س</Text>
           </View>
           {discountAmount > 0 && (
@@ -1266,7 +1267,7 @@ export default function CashierScreen() {
               <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
                 <Feather name="shield" size={12} color={Colors.gold} />
                 <Text style={styles.totalLabel}>
-                  تأمين الصواني ({insurancePaymentMethod === "cash" ? "كاش" : "شبكة"})
+                  {t("trayInsurance")} ({insurancePaymentMethod === "cash" ? t("paidCash") : t("paidCard")})
                 </Text>
               </View>
               <Text style={[styles.totalValue, { color: Colors.gold }]}>
@@ -1275,7 +1276,7 @@ export default function CashierScreen() {
             </View>
           )}
           <View style={[styles.totalRow, styles.grandTotalRow]}>
-            <Text style={styles.grandTotalLabel}>الإجمالي الكلي</Text>
+            <Text style={styles.grandTotalLabel}>{t("grandTotalAll")}</Text>
             <Text style={styles.grandTotalValue}>{grandTotal.toFixed(2)} ر.س</Text>
           </View>
 
@@ -1284,9 +1285,9 @@ export default function CashierScreen() {
 
           {/* Amount paid */}
           <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>المبلغ المدفوع</Text>
+            <Text style={styles.totalLabel}>{t("paidAmount")}</Text>
             <View style={styles.paidInputRow}>
-              <Text style={styles.currency}>ر.س</Text>
+              <Text style={styles.currency}>{t("sar")}</Text>
               <TextInput
                 style={styles.paidInput}
                 value={amountPaid}
@@ -1312,7 +1313,7 @@ export default function CashierScreen() {
                   styles.grandTotalLabel,
                   { color: remainingAmount === 0 ? Colors.success : Colors.accent }
                 ]}>
-                  {remainingAmount === 0 ? "مُسدَّد بالكامل" : "المتبقي"}
+                  {remainingAmount === 0 ? t("fullyPaid") : t("remaining")}
                 </Text>
               </View>
               {remainingAmount > 0 && (
@@ -1330,12 +1331,12 @@ export default function CashierScreen() {
         <View style={styles.summaryCard}>
           <Feather name="send" size={15} color={Colors.primary} />
           <Text style={styles.summaryText}>
-            سيتم الإرسال إلى:{"  "}
-            {halwaCount > 0 && <Text style={{ color: Colors.halwa, fontWeight: "700" }}>حلويات ({halwaCount})  </Text>}
-            {mawaliCount > 0 && <Text style={{ color: Colors.mawali, fontWeight: "700" }}>موالح ({mawaliCount})  </Text>}
-            {chocolateCount > 0 && <Text style={{ color: Colors.chocolate, fontWeight: "700" }}>شوكولاتة ({chocolateCount})  </Text>}
-            {cakeCount > 0 && <Text style={{ color: Colors.cake, fontWeight: "700" }}>كيك ({cakeCount})  </Text>}
-            {packagingCount > 0 && <Text style={{ color: Colors.packaging, fontWeight: "700" }}>تغليف ({packagingCount})</Text>}
+            {t("willSendTo")}{"  "}
+            {halwaCount > 0 && <Text style={{ color: Colors.halwa, fontWeight: "700" }}>{t("deptHalwaShort")} ({halwaCount})  </Text>}
+            {mawaliCount > 0 && <Text style={{ color: Colors.mawali, fontWeight: "700" }}>{t("deptMawaliShort")} ({mawaliCount})  </Text>}
+            {chocolateCount > 0 && <Text style={{ color: Colors.chocolate, fontWeight: "700" }}>{t("deptChocolateShort")} ({chocolateCount})  </Text>}
+            {cakeCount > 0 && <Text style={{ color: Colors.cake, fontWeight: "700" }}>{t("deptCakeShort")} ({cakeCount})  </Text>}
+            {packagingCount > 0 && <Text style={{ color: Colors.packaging, fontWeight: "700" }}>{t("deptPackagingShort")} ({packagingCount})</Text>}
           </Text>
         </View>
       )}
@@ -1347,7 +1348,7 @@ export default function CashierScreen() {
         activeOpacity={0.85}
       >
         <Feather name="send" size={20} color="#fff" />
-        <Text style={styles.submitText}>{isSubmitting ? "جاري الإرسال..." : "إرسال الفاتورة"}</Text>
+        <Text style={styles.submitText}>{isSubmitting ? t("sending") : t("submitInvoice")}</Text>
       </TouchableOpacity>
     </ScrollView>
     </KeyboardAvoidingView>
@@ -1364,7 +1365,7 @@ export default function CashierScreen() {
               <TouchableOpacity style={styles.previewBackBtn} onPress={() => setShowPreview(false)}>
                 <Feather name="arrow-right" size={20} color={Colors.primary} />
               </TouchableOpacity>
-              <Text style={styles.previewTitle}>معاينة الطلب</Text>
+              <Text style={styles.previewTitle}>{t("previewOrder")}</Text>
               <View style={{ width: 36 }} />
             </View>
 
@@ -1374,24 +1375,24 @@ export default function CashierScreen() {
               <View style={styles.previewSection}>
                 <View style={styles.previewSectionHeader}>
                   <Feather name="user" size={14} color={Colors.primary} />
-                  <Text style={styles.previewSectionTitle}>بيانات العميل</Text>
+                  <Text style={styles.previewSectionTitle}>{t("customerData")}</Text>
                 </View>
                 <View style={styles.previewRow}>
-                  <Text style={styles.previewLabel}>الاسم</Text>
+                  <Text style={styles.previewLabel}>{t("nameLabel")}</Text>
                   <Text style={styles.previewValue}>{customerName.trim()}</Text>
                 </View>
                 <View style={styles.previewRow}>
-                  <Text style={styles.previewLabel}>الهاتف</Text>
+                  <Text style={styles.previewLabel}>{t("phoneLabel")}</Text>
                   <Text style={styles.previewValue}>{customerPhone.trim()}</Text>
                 </View>
                 {customerPhone2.trim() ? (
                   <View style={styles.previewRow}>
-                    <Text style={styles.previewLabel}>هاتف 2</Text>
+                    <Text style={styles.previewLabel}>{t("phone2Label")}</Text>
                     <Text style={styles.previewValue}>{customerPhone2.trim()}</Text>
                   </View>
                 ) : null}
                 <View style={styles.previewRow}>
-                  <Text style={styles.previewLabel}>نوع الطلب</Text>
+                  <Text style={styles.previewLabel}>{t("orderTypeLabel")}</Text>
                   <View style={[styles.previewTypeBadge, orderType === "delivery" && { backgroundColor: Colors.info + "18", borderColor: Colors.info + "50" }]}>
                     <Text style={[styles.previewTypeBadgeText, orderType === "delivery" && { color: Colors.info }]}>
                       {ORDER_TYPE_LABELS[orderType]}
@@ -1400,13 +1401,13 @@ export default function CashierScreen() {
                 </View>
                 {orderType === "delivery" && deliveryAddress.trim() ? (
                   <View style={styles.previewRow}>
-                    <Text style={styles.previewLabel}>العنوان</Text>
+                    <Text style={styles.previewLabel}>{t("addressLabel")}</Text>
                     <Text style={[styles.previewValue, { flex: 1, textAlign: "left", marginLeft: 8 }]}>{deliveryAddress.trim()}</Text>
                   </View>
                 ) : null}
                 {deliveryDateTime ? (
                   <View style={styles.previewRow}>
-                    <Text style={styles.previewLabel}>موعد التسليم</Text>
+                    <Text style={styles.previewLabel}>{t("delivSchedule")}</Text>
                     <Text style={[styles.previewValue, { color: Colors.primary, fontWeight: "700" }]}>{deliveryDateTime}</Text>
                   </View>
                 ) : null}
@@ -1419,7 +1420,7 @@ export default function CashierScreen() {
                   <View style={styles.previewSection}>
                     <View style={styles.previewSectionHeader}>
                       <Feather name="shopping-bag" size={14} color={Colors.primary} />
-                      <Text style={styles.previewSectionTitle}>الأصناف ({previewItems.length})</Text>
+                      <Text style={styles.previewSectionTitle}>{t("itemsSection")} ({previewItems.length})</Text>
                     </View>
                     {previewItems.map((item) => {
                       const deptConf = DEPT_OPTIONS.find((d) => d.value === item.department)!;
@@ -1433,7 +1434,7 @@ export default function CashierScreen() {
                           </View>
                           <Text style={styles.previewItemQty}>×{item.quantity}</Text>
                           <Text style={[styles.previewItemPrice, !item.price && { color: Colors.accent }]}>
-                            {lineTotal ? `${lineTotal} ر.س` : "بدون سعر"}
+                            {lineTotal ? `${lineTotal} ر.س` : t("noPrice")}
                           </Text>
                         </View>
                       );
@@ -1441,7 +1442,7 @@ export default function CashierScreen() {
                     {previewItems.some((i) => !i.price) && (
                       <View style={styles.previewWarning}>
                         <Feather name="alert-triangle" size={13} color={Colors.warning} />
-                        <Text style={styles.previewWarningText}>بعض الأصناف بدون سعر — تأكد قبل الإرسال</Text>
+                        <Text style={styles.previewWarningText}>{t("someNoPriceWarn")}</Text>
                       </View>
                     )}
                   </View>
@@ -1453,11 +1454,11 @@ export default function CashierScreen() {
                 <View style={styles.previewSection}>
                   <View style={styles.previewSectionHeader}>
                     <Feather name="dollar-sign" size={14} color={Colors.primary} />
-                    <Text style={styles.previewSectionTitle}>الإجمالي</Text>
+                    <Text style={styles.previewSectionTitle}>{t("previewTotalLabel")}</Text>
                   </View>
                   {subtotal > 0 && (discountAmount > 0 || insuranceVal > 0) ? (
                     <View style={styles.previewRow}>
-                      <Text style={styles.previewLabel}>المجموع</Text>
+                      <Text style={styles.previewLabel}>{t("previewSubtotal")}</Text>
                       <Text style={styles.previewValue}>{subtotal.toFixed(2)} ر.س</Text>
                     </View>
                   ) : null}
@@ -1471,29 +1472,29 @@ export default function CashierScreen() {
                   )}
                   {insuranceVal > 0 && (
                     <View style={styles.previewRow}>
-                      <Text style={styles.previewLabel}>تأمين الصواني</Text>
+                      <Text style={styles.previewLabel}>{t("trayInsurance")}</Text>
                       <Text style={styles.previewValue}>{insuranceVal.toFixed(2)} ر.س</Text>
                     </View>
                   )}
                   {grandTotal > 0 && (
                     <View style={[styles.previewRow, styles.previewTotalRow]}>
-                      <Text style={styles.previewTotalLabel}>الإجمالي الكلي</Text>
+                      <Text style={styles.previewTotalLabel}>{t("grandTotalAll")}</Text>
                       <Text style={styles.previewTotalValue}>{grandTotal.toFixed(2)} ر.س</Text>
                     </View>
                   )}
                   <View style={styles.previewRow}>
-                    <Text style={styles.previewLabel}>طريقة الدفع</Text>
+                    <Text style={styles.previewLabel}>{t("paymentMethod")}</Text>
                     <Text style={styles.previewValue}>{PAYMENT_LABELS[paymentMethod]}</Text>
                   </View>
                   {amountPaidVal > 0 && (
                     <View style={styles.previewRow}>
-                      <Text style={styles.previewLabel}>المدفوع</Text>
+                      <Text style={styles.previewLabel}>{t("paidShort")}</Text>
                       <Text style={styles.previewValue}>{amountPaidVal.toFixed(2)} ر.س</Text>
                     </View>
                   )}
                   {remainingAmount > 0 && (
                     <View style={styles.previewRow}>
-                      <Text style={[styles.previewLabel, { color: Colors.accent }]}>المتبقي</Text>
+                      <Text style={[styles.previewLabel, { color: Colors.accent }]}>{t("remaining")}</Text>
                       <Text style={[styles.previewValue, { color: Colors.accent, fontWeight: "800" }]}>{remainingAmount.toFixed(2)} ر.س</Text>
                     </View>
                   )}
@@ -1505,7 +1506,7 @@ export default function CashierScreen() {
                 <View style={styles.previewSection}>
                   <View style={styles.previewSectionHeader}>
                     <Feather name="file-text" size={14} color={Colors.primary} />
-                    <Text style={styles.previewSectionTitle}>ملاحظات</Text>
+                    <Text style={styles.previewSectionTitle}>{t("notesSection")}</Text>
                   </View>
                   <Text style={styles.previewNotes}>{notes.trim()}</Text>
                 </View>
@@ -1516,19 +1517,19 @@ export default function CashierScreen() {
                 <View style={styles.previewSection}>
                   <View style={styles.previewSectionHeader}>
                     <Feather name="image" size={14} color={Colors.primary} />
-                    <Text style={styles.previewSectionTitle}>الصور المرفقة</Text>
+                    <Text style={styles.previewSectionTitle}>{t("attachedImages")}</Text>
                   </View>
                   <View style={styles.previewImgsRow}>
                     {imageUri && (
                       <View style={{ alignItems: "center" }}>
                         <Image source={{ uri: imageUri }} style={styles.previewThumb} contentFit="cover" />
-                        <Text style={styles.previewThumbLabel}>صورة الطلب</Text>
+                        <Text style={styles.previewThumbLabel}>{t("orderImageLabel")}</Text>
                       </View>
                     )}
                     {referenceImages.map((uri, i) => (
                       <View key={i} style={{ alignItems: "center" }}>
                         <Image source={{ uri }} style={styles.previewThumb} contentFit="cover" />
-                        <Text style={styles.previewThumbLabel}>مرجعية {i + 1}</Text>
+                        <Text style={styles.previewThumbLabel}>{t("refThumbLabel")} {i + 1}</Text>
                       </View>
                     ))}
                   </View>
@@ -1552,7 +1553,7 @@ export default function CashierScreen() {
             <View style={styles.previewActions}>
               <TouchableOpacity style={styles.previewEditBtn} onPress={() => setShowPreview(false)} activeOpacity={0.8}>
                 <Feather name="edit-2" size={16} color={Colors.primary} />
-                <Text style={styles.previewEditBtnText}>تعديل</Text>
+                <Text style={styles.previewEditBtnText}>{t("edit")}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.previewConfirmBtn, isSubmitting && { opacity: 0.6 }]}
@@ -1561,7 +1562,7 @@ export default function CashierScreen() {
                 activeOpacity={0.85}
               >
                 <Feather name="check-circle" size={18} color="#fff" />
-                <Text style={styles.previewConfirmBtnText}>{isSubmitting ? "جاري الإرسال..." : "تأكيد وإرسال"}</Text>
+                <Text style={styles.previewConfirmBtnText}>{isSubmitting ? t("sending") : t("confirmSend")}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1604,8 +1605,8 @@ export default function CashierScreen() {
                   <Image source={{ uri: receiptQr }} style={styles.receiptQrImg} contentFit="contain" />
                 ) : null}
               </View>
-              <Text style={styles.receiptBannerTitle}>تم الإرسال بنجاح!</Text>
-              <Text style={styles.receiptBannerSub}>فاتورة #{receiptOrder.orderNumber}</Text>
+              <Text style={styles.receiptBannerTitle}>{t("sentSuccess")}</Text>
+              <Text style={styles.receiptBannerSub}>{t("invoiceNum")}{receiptOrder.orderNumber}</Text>
             </View>
 
             <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, gap: 12 }}>
@@ -1631,15 +1632,15 @@ export default function CashierScreen() {
 
               {/* Customer / creator info */}
               <View style={styles.receiptCard}>
-                <Text style={styles.receiptSectionTitle}>بيانات العميل ومنشئ الطلب</Text>
+                <Text style={styles.receiptSectionTitle}>{t("customerAndCreator")}</Text>
                 <View style={styles.receiptRow}>
                   <Feather name="user" size={14} color={Colors.textMuted} />
-                  <Text style={styles.receiptRowLabel}>العميل</Text>
+                  <Text style={styles.receiptRowLabel}>{t("customerLabel")}</Text>
                   <Text style={styles.receiptRowValue}>{receiptOrder.customerName}</Text>
                 </View>
                 <View style={styles.receiptRow}>
                   <Feather name="phone" size={14} color={Colors.textMuted} />
-                  <Text style={styles.receiptRowLabel}>الهاتف</Text>
+                  <Text style={styles.receiptRowLabel}>{t("phoneLabel")}</Text>
                   <Text style={styles.receiptRowValue}>
                     {receiptOrder.customerPhone}
                     {receiptOrder.customerPhone2 ? `\n${receiptOrder.customerPhone2}` : ""}
@@ -1648,7 +1649,7 @@ export default function CashierScreen() {
                 {receiptOrder.cashierEmployee && (
                   <View style={styles.receiptRow}>
                     <Feather name="edit-3" size={14} color={Colors.gold} />
-                    <Text style={styles.receiptRowLabel}>منشئ الطلب</Text>
+                    <Text style={styles.receiptRowLabel}>{t("creatorLabel")}</Text>
                     <Text style={[styles.receiptRowValue, { color: Colors.primary }]}>
                       {receiptOrder.cashierEmployee.name} #{receiptOrder.cashierEmployee.employeeId}
                     </Text>
@@ -1658,30 +1659,30 @@ export default function CashierScreen() {
 
               {/* Timing */}
               <View style={styles.receiptCard}>
-                <Text style={styles.receiptSectionTitle}>التوقيت</Text>
+                <Text style={styles.receiptSectionTitle}>{t("timingSection")}</Text>
                 <View style={styles.receiptRow}>
                   <Feather name="clock" size={14} color={Colors.textMuted} />
-                  <Text style={styles.receiptRowLabel}>تاريخ الطلب</Text>
+                  <Text style={styles.receiptRowLabel}>{t("orderDateLabel")}</Text>
                   <Text style={styles.receiptRowValue}>{receiptOrder.receivedAt}</Text>
                 </View>
                 {receiptOrder.deliveryTime ? (
                   <View style={styles.receiptRow}>
                     <Feather name="calendar" size={14} color={Colors.success} />
-                    <Text style={styles.receiptRowLabel}>موعد التسليم</Text>
+                    <Text style={styles.receiptRowLabel}>{t("delivSchedule")}</Text>
                     <Text style={[styles.receiptRowValue, { color: Colors.success }]}>{receiptOrder.deliveryTime}</Text>
                   </View>
                 ) : null}
                 {receiptOrder.deliveryAddress ? (
                   <View style={[styles.receiptRow, { alignItems: "flex-start" }]}>
                     <Feather name="map-pin" size={14} color={Colors.mawali} style={{ marginTop: 2 }} />
-                    <Text style={styles.receiptRowLabel}>عنوان التوصيل</Text>
+                    <Text style={styles.receiptRowLabel}>{t("deliveryAddressLabel")}</Text>
                     <Text style={[styles.receiptRowValue, { color: Colors.mawali, flex: 1.5, flexWrap: "wrap" }]}>{receiptOrder.deliveryAddress}</Text>
                   </View>
                 ) : null}
                 {receiptOrder.paymentMethod ? (
                   <View style={styles.receiptRow}>
                     <Feather name="credit-card" size={14} color={Colors.textMuted} />
-                    <Text style={styles.receiptRowLabel}>طريقة الدفع</Text>
+                    <Text style={styles.receiptRowLabel}>{t("paymentMethod")}</Text>
                     <Text style={styles.receiptRowValue}>{PAYMENT_LABELS[receiptOrder.paymentMethod]}</Text>
                   </View>
                 ) : null}
@@ -1689,7 +1690,7 @@ export default function CashierScreen() {
 
               {/* Items */}
               <View style={styles.receiptCard}>
-                <Text style={styles.receiptSectionTitle}>الأصناف والتفاصيل</Text>
+                <Text style={styles.receiptSectionTitle}>{t("itemsDetails")}</Text>
                 {receiptOrder.items.map((item) => (
                   <View key={item.id}>
                     <View style={styles.receiptItemRow}>
@@ -1729,7 +1730,7 @@ export default function CashierScreen() {
                 )}
                 {receiptOrder.totalAmount ? (
                   <View style={[styles.receiptItemRow, styles.receiptTotalRow]}>
-                    <Text style={styles.receiptTotalLabel}>الإجمالي الكلي</Text>
+                    <Text style={styles.receiptTotalLabel}>{t("grandTotalAll")}</Text>
                     <Text style={styles.receiptTotalAmount}>
                       {receiptOrder.totalAmount.toFixed(2)} ر.س
                     </Text>
@@ -1740,17 +1741,17 @@ export default function CashierScreen() {
               {/* Insurance */}
               {receiptOrder.insuranceAmount ? (
                 <View style={[styles.receiptCard, { borderColor: Colors.gold + "40", borderWidth: 1 }]}>
-                  <Text style={styles.receiptSectionTitle}>تأمين الصواني</Text>
+                  <Text style={styles.receiptSectionTitle}>{t("trayInsurance")}</Text>
                   <View style={styles.receiptRow}>
                     <Feather name="shield" size={14} color={Colors.gold} />
-                    <Text style={styles.receiptRowLabel}>المبلغ</Text>
+                    <Text style={styles.receiptRowLabel}>{t("amountLabel")}</Text>
                     <Text style={[styles.receiptRowValue, { color: Colors.gold }]}>
-                      {receiptOrder.insuranceAmount.toFixed(2)} ر.س ({receiptOrder.insurancePaymentMethod === "card" ? "شبكة" : "كاش"})
+                      {receiptOrder.insuranceAmount.toFixed(2)} {t("sar")} ({receiptOrder.insurancePaymentMethod === "card" ? t("paidCard") : t("paidCash")})
                     </Text>
                   </View>
                   <View style={styles.receiptInsNote}>
                     <Feather name="info" size={12} color={Colors.gold} />
-                    <Text style={styles.receiptInsNoteText}>مدة التأمين 3 أيام حتى استرجاع الصواني</Text>
+                    <Text style={styles.receiptInsNoteText}>{t("trayInsNote")}</Text>
                   </View>
                 </View>
               ) : null}
@@ -1758,10 +1759,10 @@ export default function CashierScreen() {
               {/* Financial summary */}
               {receiptOrder.amountPaid != null && (
                 <View style={styles.receiptCard}>
-                  <Text style={styles.receiptSectionTitle}>الحساب</Text>
+                  <Text style={styles.receiptSectionTitle}>{t("accountSection")}</Text>
                   <View style={styles.receiptRow}>
                     <Feather name="dollar-sign" size={14} color={Colors.success} />
-                    <Text style={styles.receiptRowLabel}>المبلغ المدفوع</Text>
+                    <Text style={styles.receiptRowLabel}>{t("paidAmount")}</Text>
                     <Text style={[styles.receiptRowValue, { color: Colors.success }]}>
                       {receiptOrder.amountPaid.toFixed(2)} ر.س
                     </Text>
@@ -1776,11 +1777,11 @@ export default function CashierScreen() {
                       <Text style={[styles.receiptTotalLabel, {
                         color: receiptOrder.amountPaid >= receiptOrder.totalAmount ? Colors.success : Colors.accent
                       }]}>
-                        {receiptOrder.amountPaid >= receiptOrder.totalAmount ? "مُسدَّد بالكامل" : "المتبقي"}
+                        {receiptOrder.amountPaid >= receiptOrder.totalAmount ? t("fullyPaid") : t("remaining")}
                       </Text>
                       {receiptOrder.amountPaid < receiptOrder.totalAmount && (
                         <Text style={[styles.receiptTotalAmount, { color: Colors.accent }]}>
-                          {(receiptOrder.totalAmount - receiptOrder.amountPaid).toFixed(2)} ر.س
+                          {(receiptOrder.totalAmount - receiptOrder.amountPaid).toFixed(2)} {t("sar")}
                         </Text>
                       )}
                     </View>
@@ -1798,7 +1799,7 @@ export default function CashierScreen() {
                 activeOpacity={0.85}
               >
                 <Feather name="printer" size={16} color="#fff" />
-                <Text style={styles.printBtnText}>عرض وطباعة الفاتورة</Text>
+                <Text style={styles.printBtnText}>{t("printInvoice")}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.whatsappBtn}
@@ -1813,7 +1814,7 @@ export default function CashierScreen() {
                 activeOpacity={0.85}
               >
                 <Feather name="share-2" size={16} color={Colors.primary} />
-                <Text style={styles.shareBtnText}>مشاركة</Text>
+                <Text style={styles.shareBtnText}>{t("shareLabel")}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.aiBtn, isAiLoading && { opacity: 0.7 }]}

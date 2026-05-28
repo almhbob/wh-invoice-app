@@ -128,16 +128,16 @@ export function DeptOrderCard({ order, department, onStatusChange }: DeptOrderCa
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[styles.transferBannerTitle, { color: deptColor }]}>
-                محوَّل من {deptLabel[transfer!.fromDept]}
+                {t("transferredFrom")} {deptLabel[transfer!.fromDept]}
               </Text>
               <Text style={styles.transferBannerSub}>
                 {transfer!.reason}
                 {transfer!.note ? `  ·  ${transfer!.note}` : ""}
-                {transfer!.transferredBy ? `  ·  بواسطة: ${transfer!.transferredBy.name}` : ""}
+                {transfer!.transferredBy ? `  ·  ${t("priceReqBy")} ${transfer!.transferredBy.name}` : ""}
               </Text>
             </View>
             <View style={[styles.newBadge, { backgroundColor: deptColor }]}>
-              <Text style={styles.newBadgeText}>جديد</Text>
+              <Text style={styles.newBadgeText}>{t("newBadge")}</Text>
             </View>
           </View>
         )}
@@ -147,7 +147,7 @@ export function DeptOrderCard({ order, department, onStatusChange }: DeptOrderCa
           <View style={styles.sentTransferRow}>
             <Feather name="share-2" size={11} color={Colors.textMuted} />
             <Text style={styles.sentTransferText}>
-              تم تحويل {transfer!.itemIds.length} صنف إلى {deptLabel[transfer!.toDept]}
+              {t("transferToLabel")} ({transfer!.itemIds.length} {t("invItem")}) → {deptLabel[transfer!.toDept]}
               {" · "}{transfer!.reason}
             </Text>
           </View>
@@ -182,7 +182,7 @@ export function DeptOrderCard({ order, department, onStatusChange }: DeptOrderCa
 
         {/* Items for this dept */}
         <View style={styles.itemsBox}>
-          <Text style={styles.itemsTitle}>الأصناف</Text>
+          <Text style={styles.itemsTitle}>{t("itemsSection")}</Text>
           {deptItems.map((item, idx) => (
             <View key={idx} style={styles.itemRow}>
               <View style={[styles.bullet, { backgroundColor: deptColor }]} />
@@ -203,7 +203,7 @@ export function DeptOrderCard({ order, department, onStatusChange }: DeptOrderCa
             {order.deliveryTime ? (
               <View style={styles.infoItem}>
                 <Feather name="clock" size={12} color={Colors.success} />
-                <Text style={styles.metaText}>تسليم: {order.deliveryTime}</Text>
+                <Text style={styles.metaText}>{t("deliveryLabel")} {order.deliveryTime}</Text>
               </View>
             ) : null}
             {order.insuranceAmount != null ? (
@@ -222,7 +222,7 @@ export function DeptOrderCard({ order, department, onStatusChange }: DeptOrderCa
           {order.cashierEmployee && (
             <View style={styles.trailRow}>
               <Feather name="edit-3" size={12} color={Colors.gold} />
-              <Text style={styles.trailLabel}>أدخل الطلب:</Text>
+              <Text style={styles.trailLabel}>{t("enteredOrder")}</Text>
               <Text style={styles.trailName}>{order.cashierEmployee.name}</Text>
               <Text style={styles.trailId}>#{order.cashierEmployee.employeeId}</Text>
             </View>
@@ -230,7 +230,7 @@ export function DeptOrderCard({ order, department, onStatusChange }: DeptOrderCa
           {receiver ? (
             <View style={styles.trailRow}>
               <Feather name="check-square" size={12} color={deptColor} />
-              <Text style={styles.trailLabel}>استلم في القسم:</Text>
+              <Text style={styles.trailLabel}>{t("receivedAtDept")}</Text>
               <Text style={[styles.trailName, { color: deptColor }]}>{receiver.name}</Text>
               <Text style={styles.trailId}>#{receiver.employeeId}</Text>
             </View>
@@ -238,9 +238,7 @@ export function DeptOrderCard({ order, department, onStatusChange }: DeptOrderCa
             currentEmployee ? (
               <View style={styles.trailRow}>
                 <Feather name="user-check" size={12} color={Colors.textMuted} />
-                <Text style={[styles.trailLabel, { color: Colors.textMuted }]}>
-                  سيُسجَّل باسمك عند الاستلام
-                </Text>
+                <Text style={[styles.trailLabel, { color: Colors.textMuted }]}>{t("willRecordOnReceive")}</Text>
               </View>
             ) : null
           )}
@@ -269,7 +267,7 @@ export function DeptOrderCard({ order, department, onStatusChange }: DeptOrderCa
           >
             <Feather name="share-2" size={14} color={toDeptColor} />
             <Text style={[styles.transferBtnText, { color: toDeptColor }]}>
-              تحويل لـ {deptLabel[toDept]}
+              {t("transferToLabel")} {deptLabel[toDept]}
             </Text>
           </TouchableOpacity>
         )}
@@ -283,7 +281,7 @@ export function DeptOrderCard({ order, department, onStatusChange }: DeptOrderCa
           >
             <Text style={styles.actionText}>{actionLabel[deptStatus]}</Text>
             {meta.next === "in_progress" && !currentEmployee && (
-              <Text style={styles.actionSubText}>(يتطلب تسجيل دخول)</Text>
+              <Text style={styles.actionSubText}>({t("requiresLogin")})</Text>
             )}
           </TouchableOpacity>
         ) : (

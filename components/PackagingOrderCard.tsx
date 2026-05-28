@@ -178,7 +178,7 @@ export function PackagingOrderCard({ order }: Props) {
         <View key={dept} style={[styles.deptGroup, { backgroundColor: meta.bg }]}>
           <View style={[styles.deptHeader, { backgroundColor: meta.color }]}>
             <Text style={styles.deptHeaderLabel}>{deptLabel[dept as Exclude<Department, "packaging">]}</Text>
-            <Text style={styles.deptHeaderCount}>{items.length} صنف</Text>
+            <Text style={styles.deptHeaderCount}>{items.length} {t("invItem")}</Text>
           </View>
 
           {items.map((item, idx) => (
@@ -201,36 +201,36 @@ export function PackagingOrderCard({ order }: Props) {
       {/* ── financial summary ─────────────────────────────────────────────── */}
       <View style={styles.financialBox}>
         <View style={styles.finRow}>
-          <Text style={styles.finLabel}>المجموع الجزئي</Text>
+          <Text style={styles.finLabel}>{t("subtotal")}</Text>
           <Text style={styles.finValue}>{fmtCurrency(subtotal)}</Text>
         </View>
         {discount > 0 && (
           <View style={styles.finRow}>
-            <Text style={[styles.finLabel, { color: Colors.statusDone }]}>الخصم</Text>
+            <Text style={[styles.finLabel, { color: Colors.statusDone }]}>{t("discount")}</Text>
             <Text style={[styles.finValue, { color: Colors.statusDone }]}>- {fmtCurrency(discount)}</Text>
           </View>
         )}
         {insurance > 0 && (
           <View style={styles.finRow}>
             <Text style={styles.finLabel}>
-              {"التأمين" + (order.insurancePaymentMethod ? ` (${order.insurancePaymentMethod === "cash" ? "نقداً" : "شبكة"})` : "")}
+              {t("insurance_short") + (order.insurancePaymentMethod ? ` (${order.insurancePaymentMethod === "cash" ? t("paidCash") : t("paidCard")})` : "")}
             </Text>
             <Text style={styles.finValue}>+ {fmtCurrency(insurance)}</Text>
           </View>
         )}
         <View style={[styles.finRow, styles.finTotalRow]}>
-          <Text style={styles.finTotalLabel}>الإجمالي</Text>
+          <Text style={styles.finTotalLabel}>{t("grandTotal")}</Text>
           <Text style={styles.finTotalValue}>{fmtCurrency(total)}</Text>
         </View>
         {paid > 0 && (
           <View style={styles.finRow}>
-            <Text style={[styles.finLabel, { color: Colors.statusDone }]}>المدفوع</Text>
+            <Text style={[styles.finLabel, { color: Colors.statusDone }]}>{t("paidShort")}</Text>
             <Text style={[styles.finValue, { color: Colors.statusDone }]}>{fmtCurrency(paid)}</Text>
           </View>
         )}
         {remaining > 0 && (
           <View style={styles.finRow}>
-            <Text style={[styles.finLabel, { color: Colors.statusPending }]}>المتبقي</Text>
+            <Text style={[styles.finLabel, { color: Colors.statusPending }]}>{t("remainingAmt")}</Text>
             <Text style={[styles.finValue, { color: Colors.statusPending }]}>{fmtCurrency(remaining)}</Text>
           </View>
         )}
@@ -241,8 +241,7 @@ export function PackagingOrderCard({ order }: Props) {
         <View style={styles.insuranceNoteBox}>
           <Feather name="shield" size={13} color={Colors.gold} />
           <Text style={styles.insuranceNoteText}>
-            {"التأمين: " + fmtCurrency(insurance) + " — " +
-              (order.insurancePaymentMethod === "cash" ? "سيُدفع نقداً" : "سيُدفع بالشبكة")}
+            {t("insurance_short") + ": " + fmtCurrency(insurance) + " — " + (order.insurancePaymentMethod === "cash" ? t("willPayCash") : t("willPayCard"))}
           </Text>
         </View>
       )}

@@ -7,6 +7,7 @@ import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View 
 import { Colors } from "@/constants/colors";
 import { useCompany } from "@/context/CompanyContext";
 import { useEmployee } from "@/context/EmployeeContext";
+import { useLang } from "@/context/LanguageContext";
 import { Product, useProducts } from "@/context/ProductsContext";
 
 interface InventoryEntryDraft {
@@ -60,12 +61,12 @@ interface BranchInventoryAudit {
   createdAt: string;
 }
 
-const DEPT_META: Record<string, { label: string; color: string }> = {
-  cake:      { label: "كيك",       color: Colors.cake },
-  halwa:     { label: "حلويات",    color: Colors.halwa },
-  mawali:    { label: "موالح",     color: Colors.mawali },
-  chocolate: { label: "شوكولاتة", color: Colors.chocolate },
-  packaging: { label: "تغليف",    color: Colors.packaging },
+const DEPT_META: Record<string, { color: string }> = {
+  cake:      { color: Colors.cake },
+  halwa:     { color: Colors.halwa },
+  mawali:    { color: Colors.mawali },
+  chocolate: { color: Colors.chocolate },
+  packaging: { color: Colors.packaging },
 };
 const DEPT_ORDER = ["cake", "halwa", "mawali", "chocolate", "packaging"];
 
@@ -120,6 +121,13 @@ export function BranchInventoryAuditPanel() {
   const { companyId, company } = useCompany();
   const { currentEmployee } = useEmployee();
   const { products, isLoading } = useProducts();
+  const { t } = useLang();
+
+  const deptLabel: Record<string, string> = {
+    cake: t("deptCakeShort"), halwa: t("deptHalwaShort"),
+    mawali: t("deptMawaliShort"), chocolate: t("deptChocolateShort"),
+    packaging: t("deptPackagingShort"),
+  };
   const [branchName, setBranchName]   = useState(company.name);
   const [auditDate, setAuditDate]     = useState(todayISO());
   const [search, setSearch]           = useState("");
@@ -161,12 +169,12 @@ export function BranchInventoryAuditPanel() {
     DEPT_ORDER.forEach((dept) => {
       const deptProducts = visibleProducts.filter((p) => p.department === dept);
       if (deptProducts.length > 0) {
-        const meta = DEPT_META[dept] ?? { label: dept, color: Colors.textMuted };
-        groups.push({ dept, ...meta, products: deptProducts });
+        const meta = DEPT_META[dept] ?? { color: Colors.textMuted };
+        groups.push({ dept, label: deptLabel[dept] ?? dept, ...meta, products: deptProducts });
       }
     });
     const remaining = visibleProducts.filter((p) => !DEPT_ORDER.includes(p.department));
-    if (remaining.length > 0) groups.push({ dept: "other", label: "أخرى", color: Colors.textMuted, products: remaining });
+    if (remaining.length > 0) groups.push({ dept: "other", label: t("invOtherDept"), color: Colors.textMuted, products: remaining });
     return groups;
   }, [visibleProducts]);
 
@@ -188,8 +196,8 @@ export function BranchInventoryAuditPanel() {
   };
 
   const saveAudit = async () => {
-    if (!branchName.trim()) { Alert.alert("مطلوب", "أدخل اسم الفرع قبل حفظ الجرد."); return; }
-    if (!activeRows.length) { Alert.alert("لا توجد بيانات", "أدخل بيانات جرد لمنتج واحد على الأقل."); return; }
+    if (!branchName.trim()) { Alert.alert(t("branchNamePh"), t("branchNamePh") + "..."); return; }
+    if (!activeRows.length) { Alert.alert(t("invRecord"), t("invNoMatch")); return; }
     const activeTotals = sumRows(activeRows);
     const audit: BranchInventoryAudit = {
       id: `inventory-audit-${Date.now()}`,
@@ -199,7 +207,7 @@ export function BranchInventoryAuditPanel() {
     };
     await persistAudits([audit, ...savedAudits].slice(0, 60));
     clearDraft();
-    Alert.alert("تم حفظ الجرد", "تم حفظ جرد الفرع اليومي بنجاح.");
+    Alert.alert(t("invSave"), t("invSavedLocally"));
   };
 
   const duplicateAudit = (audit: BranchInventoryAudit) => {
@@ -238,41 +246,41 @@ export function BranchInventoryAuditPanel() {
           <View style={[styles.stockPill, { backgroundColor: isAvailable ? Colors.success + "18" : Colors.accent + "12" }]}>
             <View style={[styles.stockDot, { backgroundColor: isAvailable ? Colors.success : Colors.accent }]} />
             <Text style={[styles.stockPillText, { color: isAvailable ? Colors.success : Colors.accent }]}>
-              {isAvailable ? "متوفر" : "خلصان"}
+              {isAvailable ? t("invAvailable") : t("invOutOfStock")}
             </Text>
           </View>
         </View>
 
         {/* ── Fields row 1: بداية / وارد / بيع / مرتجع ── */}
         <View style={styles.fieldsRow}>
-          <AuditField label="بداية"   value={draft.opening}  onChange={(v) => updateDraft(product.id, "opening", v)} />
-          <AuditField label="وارد"    value={draft.received} onChange={(v) => updateDraft(product.id, "received", v)} color={Colors.info} />
-          <AuditField label="بيع"     value={draft.sold}     onChange={(v) => updateDraft(product.id, "sold", v)}     color={Colors.primary} />
-          <AuditField label="مرتجع"   value={draft.returned} onChange={(v) => updateDraft(product.id, "returned", v)} color={Colors.warning} />
+          <AuditField label={t("invOpening")}   value={draft.opening}  onChange={(v) => updateDraft(product.id, "opening", v)} />
+          <AuditField label={t("invIncoming")}    value={draft.received} onChange={(v) => updateDraft(product.id, "received", v)} color={Colors.info} />
+          <AuditField label={t("invSold")}     value={draft.sold}     onChange={(v) => updateDraft(product.id, "sold", v)}     color={Colors.primary} />
+          <AuditField label={t("invReturned")}   value={draft.returned} onChange={(v) => updateDraft(product.id, "returned", v)} color={Colors.warning} />
         </View>
 
         {/* ── Fields row 2: إكسباير / تالف / الفعلي ── */}
         <View style={styles.fieldsRow}>
-          <AuditField label="إكسباير" value={draft.expired}  onChange={(v) => updateDraft(product.id, "expired", v)}  color={Colors.gold} />
-          <AuditField label="تالف"    value={draft.damaged}  onChange={(v) => updateDraft(product.id, "damaged", v)}   color={Colors.accent} />
+          <AuditField label={t("invExpired")} value={draft.expired}  onChange={(v) => updateDraft(product.id, "expired", v)}  color={Colors.gold} />
+          <AuditField label={t("invDamaged")}    value={draft.damaged}  onChange={(v) => updateDraft(product.id, "damaged", v)}   color={Colors.accent} />
           <View style={{ flex: 1 }} />
-          <AuditField label="الفعلي"  value={draft.counted}  onChange={(v) => updateDraft(product.id, "counted", v)}   color={deptColor} highlight />
+          <AuditField label={t("invActual")}  value={draft.counted}  onChange={(v) => updateDraft(product.id, "counted", v)}   color={deptColor} highlight />
         </View>
 
         {/* ── Computed summary ── */}
         <View style={styles.summaryStrip}>
           <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>المفترض</Text>
+            <Text style={styles.summaryLabel}>{t("invExpected")}</Text>
             <Text style={styles.summaryValue}>{row.expected}</Text>
           </View>
           <View style={styles.summaryDivider} />
           <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>الفعلي</Text>
+            <Text style={styles.summaryLabel}>{t("invActual")}</Text>
             <Text style={styles.summaryValue}>{row.counted}</Text>
           </View>
           <View style={styles.summaryDivider} />
           <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>الفرق</Text>
+            <Text style={styles.summaryLabel}>{t("invVariance")}</Text>
             <View style={[styles.variancePill, { backgroundColor: varianceColor + "18" }]}>
               <Text style={[styles.varianceText, { color: varianceColor }]}>
                 {row.variance > 0 ? `+${row.variance}` : row.variance}
@@ -286,7 +294,7 @@ export function BranchInventoryAuditPanel() {
           style={styles.noteInput}
           value={draft.note || ""}
           onChangeText={(v) => updateDraft(product.id, "note", v)}
-          placeholder="ملاحظة أو سبب الفرق..."
+          placeholder={t("varNotePh")}
           placeholderTextColor={Colors.textMuted}
           textAlign="right"
         />
@@ -302,28 +310,28 @@ export function BranchInventoryAuditPanel() {
           <Feather name="bar-chart-2" size={20} color={Colors.primary} />
         </View>
         <View style={{ flex: 1, gap: 3 }}>
-          <Text style={styles.title}>جرد الفرع اليومي</Text>
-          <Text style={styles.subtitle}>تابع المتوفر والخلصان وسجل البيع والمرتجع والإكسباير والفرق.</Text>
+          <Text style={styles.title}>{t("invTitle")}</Text>
+          <Text style={styles.subtitle}>{t("invSubtitle")}</Text>
         </View>
       </View>
 
       {/* ── Metrics ── */}
       <View style={styles.metricsRow}>
-        <MetricBox label="متوفر"   value={totals.availableItems}  color={Colors.success} />
-        <MetricBox label="خلصان"   value={totals.outOfStockItems} color={Colors.accent} />
-        <MetricBox label="بيع"     value={totals.sold}            color={Colors.primary} />
-        <MetricBox label="مرتجع"   value={totals.returned}        color={Colors.info} />
+        <MetricBox label={t("invAvailable")}   value={totals.availableItems}  color={Colors.success} />
+        <MetricBox label={t("invOutOfStock")}   value={totals.outOfStockItems} color={Colors.accent} />
+        <MetricBox label={t("invSold")}     value={totals.sold}            color={Colors.primary} />
+        <MetricBox label={t("invReturned")}   value={totals.returned}        color={Colors.info} />
       </View>
       <View style={styles.metricsRow}>
-        <MetricBox label="إكسباير" value={totals.expired}  color={Colors.gold} />
-        <MetricBox label="تالف"    value={totals.damaged}  color={Colors.accent} />
-        <MetricBox label="فعلي"    value={totals.counted}  color={Colors.success} />
-        <MetricBox label="فرق"     value={totals.variance} color={totals.variance === 0 ? Colors.success : Colors.accent} />
+        <MetricBox label={t("invExpired")} value={totals.expired}  color={Colors.gold} />
+        <MetricBox label={t("invDamaged")}    value={totals.damaged}  color={Colors.accent} />
+        <MetricBox label={t("invActual")}    value={totals.counted}  color={Colors.success} />
+        <MetricBox label={t("invVariance")}     value={totals.variance} color={totals.variance === 0 ? Colors.success : Colors.accent} />
       </View>
 
       {/* ── Form inputs ── */}
       <View style={styles.formGrid}>
-        <TextInput style={styles.input} value={branchName} onChangeText={setBranchName} placeholder="اسم الفرع" placeholderTextColor={Colors.textMuted} textAlign="right" />
+        <TextInput style={styles.input} value={branchName} onChangeText={setBranchName} placeholder={t("branchNamePh")} placeholderTextColor={Colors.textMuted} textAlign="right" />
         <TextInput style={[styles.input, { maxWidth: 130 }]} value={auditDate} onChangeText={setAuditDate} placeholder="YYYY-MM-DD" placeholderTextColor={Colors.textMuted} textAlign="center" />
       </View>
 
@@ -334,7 +342,7 @@ export function BranchInventoryAuditPanel() {
           style={styles.searchInput}
           value={search}
           onChangeText={setSearch}
-          placeholder="بحث عن منتج..."
+          placeholder={t("searchProducts")}
           placeholderTextColor={Colors.textMuted}
           textAlign="right"
         />
@@ -349,7 +357,7 @@ export function BranchInventoryAuditPanel() {
         {(["all", "available", "out", "variance"] as const).map((f) => (
           <FilterChip
             key={f}
-            label={{ all: "الكل", available: "متوفر", out: "خلصان", variance: "فيه فرق" }[f]}
+            label={{ all: t("statusAll"), available: t("invAvailable"), out: t("invOutOfStock"), variance: t("invFilterVariance") }[f]}
             active={quickFilter === f}
             onPress={() => setQuickFilter(f)}
           />
@@ -358,15 +366,15 @@ export function BranchInventoryAuditPanel() {
 
       {/* ── Product list grouped by dept ── */}
       <View style={styles.productsHeader}>
-        <Text style={styles.sectionTitle}>سجل الجرد</Text>
-        <Text style={styles.smallText}>{isLoading ? "جاري التحميل..." : `${visibleProducts.length} منتج`}</Text>
+        <Text style={styles.sectionTitle}>{t("invRecord")}</Text>
+        <Text style={styles.smallText}>{isLoading ? t("loading") : `${visibleProducts.length} ${t("invProduct")}`}</Text>
       </View>
 
       <ScrollView style={styles.productsList} nestedScrollEnabled showsVerticalScrollIndicator={false}>
         {groupedProducts.length === 0 ? (
           <View style={styles.emptyBox}>
             <Feather name="inbox" size={28} color={Colors.textMuted} />
-            <Text style={styles.emptyText}>لا توجد منتجات مطابقة.</Text>
+            <Text style={styles.emptyText}>{t("invNoMatch")}</Text>
           </View>
         ) : (
           groupedProducts.map(({ dept, label, color, products: deptProducts }) => {
@@ -381,19 +389,19 @@ export function BranchInventoryAuditPanel() {
                     <View style={styles.deptHeaderTitleRow}>
                       <View style={[styles.deptHeaderDot, { backgroundColor: color }]} />
                       <Text style={[styles.deptHeaderTitle, { color }]}>{label}</Text>
-                      <Text style={styles.deptHeaderCount}>{deptProducts.length} صنف</Text>
+                      <Text style={styles.deptHeaderCount}>{deptProducts.length} {t("invItem")}</Text>
                     </View>
                   </View>
                   {(deptCounted > 0 || deptVariance !== 0) && (
                     <View style={styles.deptHeaderStats}>
                       {deptCounted > 0 && (
                         <Text style={[styles.deptStatChip, { color: Colors.success, backgroundColor: Colors.success + "12" }]}>
-                          فعلي {deptCounted}
+                          {t("invActual")} {deptCounted}
                         </Text>
                       )}
                       {deptVariance !== 0 && (
                         <Text style={[styles.deptStatChip, { color: deptVariance < 0 ? Colors.accent : Colors.warning, backgroundColor: (deptVariance < 0 ? Colors.accent : Colors.warning) + "12" }]}>
-                          فرق {deptVariance > 0 ? `+${deptVariance}` : deptVariance}
+                          {t("invVariance")} {deptVariance > 0 ? `+${deptVariance}` : deptVariance}
                         </Text>
                       )}
                     </View>
@@ -412,18 +420,18 @@ export function BranchInventoryAuditPanel() {
       <View style={styles.actionsRow}>
         <TouchableOpacity style={styles.secondaryBtn} onPress={clearDraft} activeOpacity={0.85}>
           <Feather name="refresh-cw" size={15} color={Colors.primary} />
-          <Text style={styles.secondaryBtnText}>تفريغ</Text>
+          <Text style={styles.secondaryBtnText}>{t("invClear")}</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.primaryBtn} onPress={saveAudit} activeOpacity={0.85}>
           <Feather name="save" size={15} color="#fff" />
-          <Text style={styles.primaryBtnText}>حفظ جرد اليوم</Text>
+          <Text style={styles.primaryBtnText}>{t("invSave")}</Text>
         </TouchableOpacity>
       </View>
 
       {/* ── History ── */}
       <View style={styles.historyHeader}>
-        <Text style={styles.sectionTitle}>آخر الجرد</Text>
-        <Text style={styles.smallText}>{loaded ? "محفوظ محليًا" : "جاري التحميل..."}</Text>
+        <Text style={styles.sectionTitle}>{t("invLastRecord")}</Text>
+        <Text style={styles.smallText}>{loaded ? t("invSavedLocally") : t("loading")}</Text>
       </View>
 
       {savedAudits.slice(0, 8).map((audit) => (
@@ -431,21 +439,21 @@ export function BranchInventoryAuditPanel() {
           <View style={styles.auditTopRow}>
             <View style={{ flex: 1 }}>
               <Text style={styles.auditTitle}>{audit.branchName}</Text>
-              <Text style={styles.auditMeta}>{audit.auditDate} · {audit.rows.length} منتج · {audit.createdBy || "—"}</Text>
+              <Text style={styles.auditMeta}>{audit.auditDate} · {audit.rows.length} {t("invProduct")} · {audit.createdBy || "—"}</Text>
             </View>
             <View style={[styles.auditBadge, { backgroundColor: (audit.totals.variance === 0 ? Colors.success : Colors.accent) + "18" }]}>
               <Text style={[styles.auditBadgeText, { color: audit.totals.variance === 0 ? Colors.success : Colors.accent }]}>
-                فرق {audit.totals.variance > 0 ? `+${audit.totals.variance}` : audit.totals.variance}
+                {t("invVariance")} {audit.totals.variance > 0 ? `+${audit.totals.variance}` : audit.totals.variance}
               </Text>
             </View>
           </View>
           <Text style={styles.auditSummary}>
-            بيع {audit.totals.sold} · مرتجع {audit.totals.returned} · إكسباير {audit.totals.expired} · خلصان {audit.totals.outOfStockItems}
+            {t("invSold")} {audit.totals.sold} · {t("invReturned")} {audit.totals.returned} · {t("invExpired")} {audit.totals.expired} · {t("invOutOfStock")} {audit.totals.outOfStockItems}
           </Text>
           <View style={styles.auditActions}>
             <TouchableOpacity style={styles.miniBtn} onPress={() => duplicateAudit(audit)}>
               <Feather name="copy" size={12} color={Colors.primary} />
-              <Text style={styles.miniBtnText}>فتح كبداية اليوم</Text>
+              <Text style={styles.miniBtnText}>{t("invSetAsOpening")}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.deleteMiniBtn} onPress={() => removeAudit(audit.id)}>
               <Feather name="trash-2" size={13} color={Colors.accent} />
