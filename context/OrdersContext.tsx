@@ -14,6 +14,7 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react";
 
@@ -141,13 +142,40 @@ interface OrdersContextType {
 
 const OrdersContext = createContext<OrdersContextType | undefined>(undefined);
 
-// Local counter fallback key (used if Firestore is unreachable)
 const LOCAL_COUNTER_KEY = "@order_counter_v4_fallback";
+const LOCAL_ORDERS_KEY = "@orders_local_v2";
+
+function localOrdersKey(companyId: string) {
+  return `${LOCAL_ORDERS_KEY}_${companyId}`;
+}
+
+function removeUndefined(obj: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined));
+}
+
+async function readLocalOrders(companyId: string): Promise<Order[]> {
+  try {
+    const raw = await AsyncStorage.getItem(localOrdersKey(companyId));
+    return raw ? (JSON.parse(raw) as Order[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+async function writeLocalOrders(companyId: string, orders: Order[]): Promise<void> {
+  try {
+    await AsyncStorage.setItem(localOrdersKey(companyId), JSON.stringify(orders));
+  } catch {
+    // ignore storage errors
+  }
+}
 
 export function OrdersProvider({ children }: { children: React.ReactNode }) {
   const { companyId } = useCompany();
   const [allOrders, setAllOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  // Track whether Firestore has ever succeeded for this companyId
+  const firestoreAlive = useRef(false);
 
   const orders        = allOrders.filter(o => !o.deleted);
   const deletedOrders = allOrders.filter(o =>  o.deleted);
@@ -156,13 +184,29 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
   const orderDoc = useCallback((id: string) => doc(db, "companies", companyId, "orders", id), [companyId]);
   const counterDoc = useCallback(() => doc(db, "companies", companyId, "counters", "orders"), [companyId]);
 
+  // Load local orders first, then subscribe to Firestore
   useEffect(() => {
+    let mounted = true;
+    firestoreAlive.current = false;
     setIsLoading(true);
     setAllOrders([]);
+
+    // 1. Load from local storage immediately
+    readLocalOrders(companyId).then((local) => {
+      if (!mounted) return;
+      if (local.length > 0) {
+        setAllOrders(local);
+      }
+      setIsLoading(false);
+    });
+
+    // 2. Subscribe to Firestore in background; if it responds, use it as source of truth
     const q = query(ordersCollection(), orderBy("createdAt", "desc"));
     const unsub = onSnapshot(
       q,
       (snapshot) => {
+        if (!mounted) return;
+        firestoreAlive.current = true;
         const loaded: Order[] = snapshot.docs.map((d) => ({
           id: d.id,
           companyId,
@@ -170,27 +214,36 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
         }));
         setAllOrders(loaded);
         setIsLoading(false);
+        // Cache Firestore data locally for offline use
+        writeLocalOrders(companyId, loaded);
       },
       (err) => {
-        console.error("Firestore tenant orders error:", err);
-        setIsLoading(false);
+        console.warn("Firestore orders unavailable, using local data:", err.code);
+        if (mounted) setIsLoading(false);
       }
     );
-    return () => unsub();
+
+    return () => {
+      mounted = false;
+      unsub();
+    };
   }, [companyId, ordersCollection]);
 
-  const getNextOrderNumber = async (): Promise<number> => {
+  const getNextOrderNumber = useCallback(async (): Promise<number> => {
     try {
       const counterRef = counterDoc();
       let next = 1;
-      await runTransaction(db, async (txn) => {
-        const snap = await txn.get(counterRef);
-        next = snap.exists() ? (snap.data().value as number) + 1 : 1;
-        txn.set(counterRef, { value: next, companyId, updatedAt: new Date().toISOString() });
-      });
+      // Timeout after 4 s so we don't block the UI
+      await Promise.race([
+        runTransaction(db, async (txn) => {
+          const snap = await txn.get(counterRef);
+          next = snap.exists() ? (snap.data().value as number) + 1 : 1;
+          txn.set(counterRef, { value: next, companyId, updatedAt: new Date().toISOString() });
+        }),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error("counter-timeout")), 4000)),
+      ]);
       return next;
     } catch {
-      // Fallback to local counter
       const key = `${LOCAL_COUNTER_KEY}_${companyId}`;
       const stored = await AsyncStorage.getItem(key);
       const current = stored ? parseInt(stored, 10) : 0;
@@ -198,7 +251,7 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
       await AsyncStorage.setItem(key, next.toString());
       return next;
     }
-  };
+  }, [companyId, counterDoc]);
 
   const addOrder = useCallback(
     async (
@@ -208,12 +261,15 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
       const now = new Date().toISOString();
 
       const depts = new Set(orderData.items.map((i) => i.department));
-      depts.add("packaging"); // every order always routed to packaging
+      depts.add("packaging");
       const departmentStatuses = {} as Record<Department, OrderStatus>;
       depts.forEach((d) => { departmentStatuses[d] = "pending"; });
 
-      const firestoreData = {
+      const localId = `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+      const newOrder: Order = {
         ...orderData,
+        id: localId,
         companyId,
         orderNumber,
         departmentStatuses,
@@ -222,91 +278,143 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
         updatedAt: now,
       };
 
-      // Remove undefined fields (Firestore doesn't support undefined)
-      const clean = Object.fromEntries(
-        Object.entries(firestoreData).filter(([, v]) => v !== undefined)
-      );
+      // Save locally and update state immediately — UI unblocked
+      setAllOrders((prev) => [newOrder, ...prev]);
+      const localOrders = await readLocalOrders(companyId);
+      await writeLocalOrders(companyId, [newOrder, ...localOrders]);
 
-      const ref = await addDoc(ordersCollection(), clean);
-      return { id: ref.id, ...(firestoreData as Omit<Order, "id">) };
+      // Attempt Firestore write in background
+      const clean = removeUndefined({
+        ...orderData,
+        companyId,
+        orderNumber,
+        departmentStatuses,
+        departmentReceivers: {},
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      addDoc(ordersCollection(), clean)
+        .then((ref) => {
+          const withRealId: Order = { ...newOrder, id: ref.id };
+          setAllOrders((prev) => prev.map((o) => o.id === localId ? withRealId : o));
+          readLocalOrders(companyId).then((saved) =>
+            writeLocalOrders(companyId, saved.map((o) => o.id === localId ? withRealId : o))
+          );
+        })
+        .catch((err) => {
+          console.warn("Firestore addOrder failed, order kept locally:", err?.code ?? err?.message);
+        });
+
+      return newOrder;
     },
-    [companyId, ordersCollection]
+    [companyId, ordersCollection, getNextOrderNumber]
   );
 
   const updateDepartmentStatus = useCallback(
     async (id: string, department: Department, status: OrderStatus, receiver?: EmployeeRef) => {
-      const order = orders.find((o) => o.id === id);
-      if (!order) return;
+      setAllOrders((prev) =>
+        prev.map((o) => {
+          if (o.id !== id) return o;
+          const newReceivers = { ...o.departmentReceivers };
+          if (status === "in_progress" && receiver && !newReceivers[department]) {
+            newReceivers[department] = receiver;
+          }
+          const updated = {
+            ...o,
+            departmentStatuses: { ...o.departmentStatuses, [department]: status },
+            departmentReceivers: newReceivers,
+            updatedAt: new Date().toISOString(),
+          };
+          return updated;
+        })
+      );
 
+      // Update AsyncStorage
+      readLocalOrders(companyId).then((saved) => {
+        const updated = saved.map((o) => {
+          if (o.id !== id) return o;
+          const newReceivers = { ...o.departmentReceivers };
+          if (status === "in_progress" && receiver && !newReceivers[department]) {
+            newReceivers[department] = receiver;
+          }
+          return { ...o, departmentStatuses: { ...o.departmentStatuses, [department]: status }, departmentReceivers: newReceivers, updatedAt: new Date().toISOString() };
+        });
+        writeLocalOrders(companyId, updated);
+      });
+
+      // Try Firestore (non-blocking)
+      const order = allOrders.find((o) => o.id === id);
+      if (!order || id.startsWith("local-")) return;
       const newReceivers = { ...order.departmentReceivers };
       if (status === "in_progress" && receiver && !newReceivers[department]) {
         newReceivers[department] = receiver;
       }
-
-      await updateDoc(orderDoc(id), {
+      updateDoc(orderDoc(id), {
         [`departmentStatuses.${department}`]: status,
         departmentReceivers: newReceivers,
         companyId,
         updatedAt: new Date().toISOString(),
-      });
+      }).catch((err) => console.warn("Firestore updateStatus failed:", err?.code));
     },
-    [companyId, orderDoc, orders]
+    [companyId, orderDoc, allOrders]
   );
 
   const transferToBranch = useCallback(
     async (orderId: string, transfer: BranchTransfer) => {
-      const order = orders.find((o) => o.id === orderId);
+      setAllOrders((prev) =>
+        prev.map((o) => {
+          if (o.id !== orderId) return o;
+          const updatedItems = o.items.map((item) =>
+            transfer.itemIds.includes(item.id) ? { ...item, department: transfer.toDept } : item
+          );
+          const updatedStatuses = { ...o.departmentStatuses };
+          if (!updatedStatuses[transfer.toDept]) updatedStatuses[transfer.toDept] = "pending";
+          return { ...o, items: updatedItems, departmentStatuses: updatedStatuses, branchTransfer: transfer, updatedAt: new Date().toISOString() };
+        })
+      );
+
+      if (orderId.startsWith("local-")) return;
+      const order = allOrders.find((o) => o.id === orderId);
       if (!order) return;
-
-      // Move the selected items to the target department
       const updatedItems = order.items.map((item) =>
-        transfer.itemIds.includes(item.id)
-          ? { ...item, department: transfer.toDept }
-          : item
+        transfer.itemIds.includes(item.id) ? { ...item, department: transfer.toDept } : item
       );
-
-      // Ensure target dept has a status entry
       const updatedStatuses = { ...order.departmentStatuses };
-      if (!updatedStatuses[transfer.toDept]) {
-        updatedStatuses[transfer.toDept] = "pending";
-      }
-
-      const clean = Object.fromEntries(
-        Object.entries({
-          items: updatedItems,
-          departmentStatuses: updatedStatuses,
-          branchTransfer: transfer,
-          companyId,
-          updatedAt: new Date().toISOString(),
-        }).filter(([, v]) => v !== undefined)
-      );
-
-      await updateDoc(orderDoc(orderId), clean);
+      if (!updatedStatuses[transfer.toDept]) updatedStatuses[transfer.toDept] = "pending";
+      const clean = removeUndefined({ items: updatedItems, departmentStatuses: updatedStatuses, branchTransfer: transfer, companyId, updatedAt: new Date().toISOString() });
+      updateDoc(orderDoc(orderId), clean).catch((err) => console.warn("Firestore transfer failed:", err?.code));
     },
-    [companyId, orderDoc, orders]
+    [companyId, orderDoc, allOrders]
   );
 
   const deleteOrder = useCallback(async (
     id: string,
     deletedBy?: { name: string; employeeId: string }
   ) => {
-    await updateDoc(orderDoc(id), {
-      deleted:   true,
-      deletedAt: new Date().toISOString(),
-      deletedBy: deletedBy ?? null,
-      companyId,
-      updatedAt: new Date().toISOString(),
-    });
+    const now = new Date().toISOString();
+    setAllOrders((prev) =>
+      prev.map((o) => o.id === id ? { ...o, deleted: true, deletedAt: now, deletedBy: deletedBy ?? null, updatedAt: now } : o)
+    );
+    readLocalOrders(companyId).then((saved) =>
+      writeLocalOrders(companyId, saved.map((o) => o.id === id ? { ...o, deleted: true, deletedAt: now, deletedBy: deletedBy ?? null, updatedAt: now } : o))
+    );
+    if (id.startsWith("local-")) return;
+    updateDoc(orderDoc(id), { deleted: true, deletedAt: now, deletedBy: deletedBy ?? null, companyId, updatedAt: now })
+      .catch((err) => console.warn("Firestore delete failed:", err?.code));
   }, [companyId, orderDoc]);
 
   const restoreOrder = useCallback(async (id: string) => {
-    await updateDoc(orderDoc(id), {
-      deleted:   false,
-      deletedAt: null,
-      deletedBy: null,
-      companyId,
-      updatedAt: new Date().toISOString(),
-    });
+    const now = new Date().toISOString();
+    setAllOrders((prev) =>
+      prev.map((o) => o.id === id ? { ...o, deleted: false, deletedAt: undefined, deletedBy: null, updatedAt: now } : o)
+    );
+    readLocalOrders(companyId).then((saved) =>
+      writeLocalOrders(companyId, saved.map((o) => o.id === id ? { ...o, deleted: false, deletedAt: undefined, deletedBy: null, updatedAt: now } : o))
+    );
+    if (id.startsWith("local-")) return;
+    updateDoc(orderDoc(id), { deleted: false, deletedAt: null, deletedBy: null, companyId, updatedAt: now })
+      .catch((err) => console.warn("Firestore restore failed:", err?.code));
   }, [companyId, orderDoc]);
 
   const getOrdersForDepartment = useCallback(
@@ -315,7 +423,6 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
         .filter((o) => {
           const status = o.departmentStatuses[department];
           if (!status || status === "cancelled") return false;
-          // packaging receives ALL orders (no item tagging required)
           if (department === "packaging") return true;
           return o.items.some((i) => i.department === department);
         })
