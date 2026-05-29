@@ -28,4 +28,12 @@ if (fs.existsSync(outputDir)) {
 
 console.log("Building production Expo web export...");
 run("pnpm", ["exec", "expo", "export", "--platform", "web", "--output-dir", "static-build"]);
+
+// Copy Cloudflare Pages routing files into the output directory
+for (const file of ["_redirects", "_headers"]) {
+  const src = path.join(projectRoot, file);
+  const dest = path.join(outputDir, file);
+  if (fs.existsSync(src)) fs.copyFileSync(src, dest);
+}
+
 console.log("Build complete: static-build/");
