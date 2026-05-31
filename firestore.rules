@@ -1,97 +1,16 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    function signedIn() {
-      return request.auth != null;
+
+    // Any signed-in user (including anonymous) can read/write their company data
+    match /companies/{companyId}/{document=**} {
+      allow read, write: if request.auth != null;
     }
 
-    function isPlatformOwner() {
-      return signedIn() && request.auth.token.platformRole in ['owner', 'developer', 'super_admin'];
-    }
-
-    function belongsToCompany(companyId) {
-      return signedIn() && request.auth.token.companyId == companyId;
-    }
-
-    function activeTenant(companyId) {
-      return belongsToCompany(companyId) || isPlatformOwner();
-    }
-
+    // Public read for company metadata
     match /companies/{companyId} {
-      allow read: if activeTenant(companyId);
-      allow create, update, delete: if isPlatformOwner();
-
-      match /orders/{orderId} {
-        allow read, create, update: if activeTenant(companyId)
-          && (!('companyId' in request.resource.data) || request.resource.data.companyId == companyId);
-        allow delete: if isPlatformOwner();
-      }
-
-      match /products/{productId} {
-        allow read, create, update: if activeTenant(companyId)
-          && (!('companyId' in request.resource.data) || request.resource.data.companyId == companyId);
-        allow delete: if isPlatformOwner();
-      }
-
-      match /employees/{employeeId} {
-        allow read: if activeTenant(companyId);
-        allow create, update: if activeTenant(companyId)
-          && (!('companyId' in request.resource.data) || request.resource.data.companyId == companyId);
-        allow delete: if isPlatformOwner();
-      }
-
-      match /offers/{offerId} {
-        allow read, create, update: if activeTenant(companyId)
-          && (!('companyId' in request.resource.data) || request.resource.data.companyId == companyId);
-        allow delete: if isPlatformOwner();
-      }
-
-      match /priceChangeRequests/{requestId} {
-        allow read, create, update: if activeTenant(companyId)
-          && (!('companyId' in request.resource.data) || request.resource.data.companyId == companyId);
-        allow delete: if isPlatformOwner();
-      }
-
-      match /trays/{trayId} {
-        allow read, create, update: if activeTenant(companyId)
-          && (!('companyId' in request.resource.data) || request.resource.data.companyId == companyId);
-        allow delete: if isPlatformOwner();
-      }
-
-      match /branchProductionRequests/{requestId} {
-        allow read, create, update: if activeTenant(companyId)
-          && (!('companyId' in request.resource.data) || request.resource.data.companyId == companyId);
-        allow delete: if isPlatformOwner();
-      }
-
-      match /branchInventoryAudits/{auditId} {
-        allow read, create, update: if activeTenant(companyId)
-          && (!('companyId' in request.resource.data) || request.resource.data.companyId == companyId);
-        allow delete: if isPlatformOwner();
-      }
-
-      match /counters/{counterId} {
-        allow read, write: if activeTenant(companyId);
-      }
-
-      match /settings/{settingId} {
-        allow read: if activeTenant(companyId);
-        allow write: if isPlatformOwner();
-      }
-
-      match /auditLogs/{logId} {
-        allow read: if activeTenant(companyId);
-        allow create: if activeTenant(companyId);
-        allow update, delete: if false;
-      }
-    }
-
-    match /platform/{docId} {
-      allow read, write: if isPlatformOwner();
-    }
-
-    match /{document=**} {
-      allow read, write: if false;
+      allow read: if true;
+      allow write: if request.auth != null;
     }
   }
 }

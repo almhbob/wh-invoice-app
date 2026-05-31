@@ -97,12 +97,27 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
   const productDoc = useCallback((id: string) => doc(db, "companies", companyId, "products", id), [companyId]);
 
   useEffect(() => {
+    let mounted = true;
+    let resolved = false;
     setIsLoading(true);
     setProducts([]);
+
+    // Fallback timer: if Firestore doesn't respond in 4 s (e.g. anonymous auth
+    // is disabled or network is slow) load hardcoded products immediately.
+    const timer = setTimeout(() => {
+      if (!mounted || resolved) return;
+      resolved = true;
+      setProducts(sortProducts(fallbackProducts(companyId)));
+      setIsLoading(false);
+    }, 4000);
+
     const q = query(productsCollection(), orderBy("createdAt", "asc"));
     const unsub = onSnapshot(
       q,
       (snapshot) => {
+        if (!mounted) return;
+        resolved = true;
+        clearTimeout(timer);
         const loaded: Product[] = snapshot.docs.map((d) => ({
           id: d.id,
           companyId,
@@ -113,12 +128,15 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
         setIsLoading(false);
       },
       (err) => {
+        if (!mounted) return;
+        resolved = true;
+        clearTimeout(timer);
         console.error("Firestore tenant products error:", err);
         setProducts(sortProducts(fallbackProducts(companyId)));
         setIsLoading(false);
       }
     );
-    return () => unsub();
+    return () => { mounted = false; clearTimeout(timer); unsub(); };
   }, [companyId, productsCollection]);
 
   const addProduct = useCallback(
