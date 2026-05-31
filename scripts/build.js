@@ -105,6 +105,44 @@ if (urlReplacements.length > 0) {
   console.log("JS bundle patching complete.");
 }
 
+// Inject Firebase credentials into JS bundle if Metro failed to inline EXPO_PUBLIC_* vars.
+// Metro replaces them with `void 0` when the env loader can't read .env files in some CI
+// environments. We patch the exact placeholder object the compiled firebase.ts produces.
+const fbApiKey       = process.env.EXPO_PUBLIC_FIREBASE_API_KEY;
+const fbAuthDomain   = process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN;
+const fbProjectId    = process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID;
+const fbBucket       = process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET;
+const fbSenderId     = process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID;
+const fbAppId        = process.env.EXPO_PUBLIC_FIREBASE_APP_ID;
+
+if (fbApiKey && fbAuthDomain && fbProjectId && fbBucket && fbSenderId && fbAppId) {
+  const fbPlaceholder =
+    "{apiKey:void 0,authDomain:void 0,projectId:void 0,storageBucket:void 0,messagingSenderId:void 0,appId:void 0}";
+  const fbReal =
+    `{apiKey:"${fbApiKey}",authDomain:"${fbAuthDomain}",projectId:"${fbProjectId}",storageBucket:"${fbBucket}",messagingSenderId:"${fbSenderId}",appId:"${fbAppId}"}`;
+
+  let patched = false;
+  function patchFirebase(dir) {
+    if (!fs.existsSync(dir)) return;
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const fullPath = path.join(dir, entry.name);
+      if (entry.isDirectory()) { patchFirebase(fullPath); continue; }
+      if (!entry.isFile() || !entry.name.endsWith(".js")) continue;
+      const content = fs.readFileSync(fullPath, "utf8");
+      if (content.includes(fbPlaceholder)) {
+        fs.writeFileSync(fullPath, content.split(fbPlaceholder).join(fbReal), "utf8");
+        patched = true;
+        console.log(`  Firebase config injected into ${entry.name}`);
+      }
+    }
+  }
+  console.log("Injecting Firebase credentials into JS bundle...");
+  patchFirebase(outputDir);
+  if (!patched) console.warn("  Warning: Firebase placeholder not found — credentials may already be inlined.");
+} else {
+  console.warn("Firebase env vars not set — app will run in bootstrap/demo mode.");
+}
+
 // Inject @font-face CSS into index.html as an additional safety net
 const indexPath = path.join(outputDir, "index.html");
 if (fs.existsSync(indexPath)) {
