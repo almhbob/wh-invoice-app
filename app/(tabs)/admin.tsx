@@ -50,6 +50,9 @@ const ROLE_COLORS: Record<EmployeeRole, string> = {
   cake: Colors.cake,
   packaging: Colors.packaging,
   admin: Colors.primaryLight,
+  branch_supervisor: "#0d9488",
+  dept_supervisor: "#0891b2",
+  guest: Colors.textMuted,
 };
 const ROLE_ICONS: Record<EmployeeRole, any> = {
   cashier: "dollar-sign",
@@ -59,6 +62,9 @@ const ROLE_ICONS: Record<EmployeeRole, any> = {
   cake: "layers",
   packaging: "box",
   admin: "shield",
+  branch_supervisor: "git-branch",
+  dept_supervisor: "users",
+  guest: "user",
 };
 const ALL_ROLES: EmployeeRole[] = ["cashier", "halwa", "mawali", "chocolate", "cake", "packaging", "admin"];
 
