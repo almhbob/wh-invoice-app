@@ -40,6 +40,7 @@ import {
   useOrders,
 } from "@/context/OrdersContext";
 import { Offer, normalizePhone, useOffers } from "@/context/OffersContext";
+import { DeliveryDatePicker, DeliveryTimePicker } from "@/components/DeliveryDateTimePicker";
 import QRCode from "qrcode";
 
 
@@ -775,42 +776,37 @@ export default function CashierScreen() {
 
         {/* Delivery date */}
         <Text style={styles.label}>{t("delivDateLabel")}</Text>
-        <View style={styles.quickDateRow}>
-          {[
-            { label: t("today"), days: 0 },
-            { label: t("tomorrow"), days: 1 },
-            { label: t("twoDaysBtn"), days: 2 },
-            { label: t("oneWeekBtn"), days: 7 },
-          ].map(({ label, days }) => {
-            const d = new Date();
-            d.setDate(d.getDate() + days);
-            const dayNames = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
-            const val = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")} (${dayNames[d.getDay()]})`;
-            return (
-              <TouchableOpacity
-                key={label}
-                style={[styles.quickDateBtn, deliveryDate === val && styles.quickDateBtnActive]}
-                onPress={() => { Haptics.selectionAsync(); setDeliveryDate(val); }}
-              >
-                <Text style={[styles.quickDateText, deliveryDate === val && styles.quickDateTextActive]}>{label}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-        <View style={[styles.input, styles.row, { gap: 8 }]}>
-          <Feather name="calendar" size={15} color={Colors.textMuted} />
-          <TextInput style={styles.inlineInput} value={deliveryDate} onChangeText={setDeliveryDate}
-            placeholder="أو اكتب يدوياً..." placeholderTextColor={Colors.textMuted} textAlign="right" />
-        </View>
+        <DeliveryDatePicker
+          value={deliveryDate}
+          onChange={(iso, label) => setDeliveryDate(iso)}
+          accentColor={Colors.primary}
+        />
+        {deliveryDate ? (
+          <View style={styles.selectedValueRow}>
+            <Feather name="calendar" size={13} color={Colors.primary} />
+            <Text style={styles.selectedValueText}>{deliveryDate}</Text>
+            <TouchableOpacity onPress={() => setDeliveryDate("")}>
+              <Feather name="x" size={14} color={Colors.textMuted} />
+            </TouchableOpacity>
+          </View>
+        ) : null}
 
         {/* Delivery time */}
-        <Text style={styles.label}>{t("delivTimeLabel")}</Text>
-        <View style={[styles.input, styles.row, { gap: 8 }]}>
-          <Feather name="watch" size={15} color={Colors.textMuted} />
-          <TextInput style={styles.inlineInput} value={deliveryTime} onChangeText={setDeliveryTime}
-            placeholder="مثال: 14:30" placeholderTextColor={Colors.textMuted}
-            keyboardType="numbers-and-punctuation" textAlign="right" />
-        </View>
+        <Text style={[styles.label, { marginTop: 12 }]}>{t("delivTimeLabel")}</Text>
+        <DeliveryTimePicker
+          value={deliveryTime}
+          onChange={setDeliveryTime}
+          accentColor={Colors.primary}
+        />
+        {deliveryTime ? (
+          <View style={styles.selectedValueRow}>
+            <Feather name="clock" size={13} color={Colors.primary} />
+            <Text style={styles.selectedValueText}>{deliveryTime}</Text>
+            <TouchableOpacity onPress={() => setDeliveryTime("")}>
+              <Feather name="x" size={14} color={Colors.textMuted} />
+            </TouchableOpacity>
+          </View>
+        ) : null}
 
         {/* Insurance */}
         <Text style={styles.label}>{t("trayInsAmount")}</Text>
@@ -1866,6 +1862,11 @@ const styles = StyleSheet.create({
   autoText: { flex: 1, fontSize: 14, color: Colors.primary, fontWeight: "600", textAlign: "right" },
   autoBadge: { flexDirection: "row", alignItems: "center", gap: 3 },
   autoBadgeText: { fontSize: 11, color: Colors.success, fontWeight: "600" },
+  selectedValueRow: {
+    flexDirection: "row", alignItems: "center", gap: 8, marginTop: 8,
+    backgroundColor: Colors.primary + "12", borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8,
+  },
+  selectedValueText: { flex: 1, fontSize: 13, fontWeight: "700", color: Colors.primary, textAlign: "right" },
   inlineInput: { flex: 1, fontSize: 14, color: Colors.text, textAlign: "right" },
   currency: { fontSize: 13, color: Colors.textSecondary, fontWeight: "600" },
   colHeaders: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: -4 },
