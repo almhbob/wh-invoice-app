@@ -1,19 +1,25 @@
-import React from "react";
+import React, { useCallback } from "react";
 import { FlatList, RefreshControl, StyleSheet, Text, View } from "react-native";
 
+import { DeptOrderCard } from "@/components/DeptOrderCard";
 import { EmptyState } from "@/components/EmptyState";
-import { PackagingOrderCard } from "@/components/PackagingOrderCard";
 import { Colors } from "@/constants/colors";
 import { useLang } from "@/context/LanguageContext";
-import { useOrders } from "@/context/OrdersContext";
+import { EmployeeRef, Order, OrderStatus, useOrders } from "@/context/OrdersContext";
 
 export default function PackagingScreen() {
-  const { getOrdersForDepartment, isLoading } = useOrders();
+  const { getOrdersForDepartment, updateDepartmentStatus, isLoading } = useOrders();
   const { t } = useLang();
 
   const orders = getOrdersForDepartment("packaging");
   const pendingCount    = orders.filter((o) => o.departmentStatuses["packaging"] === "pending").length;
   const inProgressCount = orders.filter((o) => o.departmentStatuses["packaging"] === "in_progress").length;
+
+  const handleStatus = useCallback(
+    (order: Order, status: OrderStatus, receiver?: EmployeeRef) =>
+      updateDepartmentStatus(order.id, "packaging", status, receiver),
+    [updateDepartmentStatus]
+  );
 
   return (
     <View style={styles.container}>
@@ -44,7 +50,13 @@ export default function PackagingScreen() {
         data={orders}
         keyExtractor={(item) => item.id}
         contentContainerStyle={[styles.list, orders.length === 0 && { flex: 1 }]}
-        renderItem={({ item }) => <PackagingOrderCard order={item} />}
+        renderItem={({ item }) => (
+          <DeptOrderCard
+            order={item}
+            department="packaging"
+            onStatusChange={(status, receiver) => handleStatus(item, status, receiver)}
+          />
+        )}
         ListEmptyComponent={
           <EmptyState icon="box" title={t("noOrdersNow")} subtitle={t("packagingSubtitle")} />
         }
