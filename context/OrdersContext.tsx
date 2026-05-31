@@ -120,6 +120,8 @@ export interface Order {
   trayReturned?: boolean;
   trayReturnedAt?: string;
   trayReturnedBy?: { name: string; employeeId: string };
+  deliveryStatus?: "pending" | "delivered";
+  deliveryDeliveredAt?: string;
 }
 
 interface OrdersContextType {
@@ -141,6 +143,7 @@ interface OrdersContextType {
   deleteOrder: (id: string, deletedBy?: { name: string; employeeId: string }) => Promise<void>;
   restoreOrder: (id: string) => Promise<void>;
   markTrayReturned: (orderId: string, employee?: { name: string; employeeId: string }) => Promise<void>;
+  updateDeliveryStatus: (orderId: string, status: "pending" | "delivered") => Promise<void>;
   getOrdersForDepartment: (department: Department) => Order[];
   isLoading: boolean;
 }
@@ -458,6 +461,21 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
     [companyId, orderDoc]
   );
 
+  const updateDeliveryStatus = useCallback(
+    async (orderId: string, status: "pending" | "delivered") => {
+      const now = new Date().toISOString();
+      const patch = { deliveryStatus: status, deliveryDeliveredAt: status === "delivered" ? now : undefined, updatedAt: now };
+      setAllOrders((prev) => prev.map((o) => o.id !== orderId ? o : { ...o, ...patch }));
+      readLocalOrders(companyId).then((saved) =>
+        writeLocalOrders(companyId, saved.map((o) => o.id !== orderId ? o : { ...o, ...patch }))
+      );
+      if (orderId.startsWith("local-")) return;
+      updateDoc(orderDoc(orderId), { deliveryStatus: status, deliveryDeliveredAt: status === "delivered" ? now : null, companyId, updatedAt: now })
+        .catch((err) => console.warn("Firestore updateDeliveryStatus failed:", err?.code));
+    },
+    [companyId, orderDoc]
+  );
+
   const getOrdersForDepartment = useCallback(
     (department: Department) => {
       return orders
@@ -483,6 +501,7 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
         deleteOrder,
         restoreOrder,
         markTrayReturned,
+        updateDeliveryStatus,
         getOrdersForDepartment,
         isLoading,
       }}

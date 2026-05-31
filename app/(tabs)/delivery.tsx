@@ -18,14 +18,14 @@ function fmtCurrency(n: number) {
   return n.toLocaleString("ar-SA", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ر.س";
 }
 
-function isFullyDone(order: Order): boolean {
-  return Object.values(order.departmentStatuses).every((s) => s === "done" || s === "cancelled");
+function isDelivered(order: Order): boolean {
+  return order.deliveryStatus === "delivered";
 }
 
-function DeliveryCard({ order }: { order: Order }) {
+function DeliveryCard({ order, onMarkDelivered }: { order: Order; onMarkDelivered: (id: string) => void }) {
   const { t, lang } = useLang();
-  const done = isFullyDone(order);
-  const accentColor = done ? "#16a34a" : Colors.gold;
+  const delivered = isDelivered(order);
+  const accentColor = delivered ? "#16a34a" : Colors.gold;
 
   return (
     <View style={[styles.card, { borderLeftColor: accentColor }]}>
@@ -36,7 +36,7 @@ function DeliveryCard({ order }: { order: Order }) {
         </View>
         <View style={[styles.statusBadge, { backgroundColor: accentColor + "20" }]}>
           <Text style={[styles.statusText, { color: accentColor }]}>
-            {done ? t("delDelivered") : t("delPending")}
+            {delivered ? "✓ " + t("delDelivered") : t("delPending")}
           </Text>
         </View>
       </View>
@@ -70,13 +70,24 @@ function DeliveryCard({ order }: { order: Order }) {
           <Text style={styles.notesText}>{order.notes}</Text>
         </View>
       ) : null}
+
+      {!delivered && (
+        <TouchableOpacity
+          style={styles.deliverBtn}
+          onPress={() => onMarkDelivered(order.id)}
+          activeOpacity={0.8}
+        >
+          <Feather name="check-circle" size={15} color="#fff" />
+          <Text style={styles.deliverBtnText}>{t("markDelivered")}</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
 
 export default function DeliveryScreen() {
   const { t } = useLang();
-  const { orders } = useOrders();
+  const { orders, updateDeliveryStatus } = useOrders();
   const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<"all" | "pending" | "done">("all");
 
@@ -86,13 +97,13 @@ export default function DeliveryScreen() {
   );
 
   const filtered = useMemo(() => {
-    if (tab === "pending") return deliveryOrders.filter((o) => !isFullyDone(o));
-    if (tab === "done") return deliveryOrders.filter((o) => isFullyDone(o));
+    if (tab === "pending") return deliveryOrders.filter((o) => !isDelivered(o));
+    if (tab === "done") return deliveryOrders.filter((o) => isDelivered(o));
     return deliveryOrders;
   }, [deliveryOrders, tab]);
 
-  const pendingCount = deliveryOrders.filter((o) => !isFullyDone(o)).length;
-  const doneCount = deliveryOrders.filter((o) => isFullyDone(o)).length;
+  const pendingCount = deliveryOrders.filter((o) => !isDelivered(o)).length;
+  const doneCount = deliveryOrders.filter((o) => isDelivered(o)).length;
 
   const TABS = [
     { key: "all" as const,     label: t("delAllOrders"),  count: deliveryOrders.length },
@@ -143,7 +154,9 @@ export default function DeliveryScreen() {
             <Text style={styles.emptyText}>{t("delNoOrders")}</Text>
           </View>
         }
-        renderItem={({ item }) => <DeliveryCard order={item} />}
+        renderItem={({ item }) => (
+          <DeliveryCard order={item} onMarkDelivered={(id) => updateDeliveryStatus(id, "delivered")} />
+        )}
       />
     </View>
   );
@@ -184,4 +197,10 @@ const styles = StyleSheet.create({
   notesText: { flex: 1, fontSize: 12, color: Colors.textSecondary, lineHeight: 18 },
   emptyState: { alignItems: "center", paddingTop: 60, gap: 12 },
   emptyText: { fontSize: 15, color: Colors.textMuted },
+  deliverBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
+    marginTop: 12, paddingVertical: 10, borderRadius: 10,
+    backgroundColor: "#16a34a",
+  },
+  deliverBtnText: { color: "#fff", fontSize: 13, fontWeight: "700" },
 });
