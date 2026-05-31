@@ -10,15 +10,16 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Colors } from "@/constants/colors";
+import { useEmployee } from "@/context/EmployeeContext";
 import { useLang } from "@/context/LanguageContext";
 import { useOrders } from "@/context/OrdersContext";
 import { fmtCurrency, fmtDate } from "@/utils/dateUtils";
 
 export default function TraysScreen() {
   const { t, lang } = useLang();
-  const { orders } = useOrders();
+  const { orders, markTrayReturned } = useOrders();
+  const { currentEmployee } = useEmployee();
   const insets = useSafeAreaInsets();
-  const [returnedIds, setReturnedIds] = useState<Set<string>>(new Set());
   const [tab, setTab] = useState<"pending" | "returned">("pending");
 
   const trayOrders = useMemo(
@@ -26,19 +27,20 @@ export default function TraysScreen() {
     [orders]
   );
 
-  const pending = trayOrders.filter((o) => !returnedIds.has(o.id));
-  const returned = trayOrders.filter((o) => returnedIds.has(o.id));
+  const pending = trayOrders.filter((o) => !o.trayReturned);
+  const returned = trayOrders.filter((o) => o.trayReturned);
   const totalInsurance = trayOrders.reduce((s, o) => s + (o.insuranceAmount ?? 0), 0);
   const pendingInsurance = pending.reduce((s, o) => s + (o.insuranceAmount ?? 0), 0);
 
   const displayed = tab === "pending" ? pending : returned;
 
-  const toggleReturn = (id: string) => {
-    setReturnedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
+  const handleMarkReturned = (id: string) => {
+    markTrayReturned(
+      id,
+      currentEmployee
+        ? { name: currentEmployee.name, employeeId: currentEmployee.employeeId }
+        : undefined
+    );
   };
 
   const TABS = [
@@ -98,7 +100,7 @@ export default function TraysScreen() {
           </View>
         }
         renderItem={({ item: order }) => {
-          const isReturned = returnedIds.has(order.id);
+          const isReturned = !!order.trayReturned;
           return (
             <View style={[styles.card, { borderLeftColor: isReturned ? "#16a34a" : Colors.gold }]}>
               <View style={styles.cardHeader}>
@@ -127,7 +129,7 @@ export default function TraysScreen() {
 
               <TouchableOpacity
                 style={[styles.returnBtn, isReturned && styles.returnBtnDone]}
-                onPress={() => toggleReturn(order.id)}
+                onPress={() => !isReturned && handleMarkReturned(order.id)}
                 activeOpacity={0.8}
               >
                 <Feather name={isReturned ? "check-circle" : "rotate-ccw"} size={14} color={isReturned ? "#16a34a" : Colors.primary} />

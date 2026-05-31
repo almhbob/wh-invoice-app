@@ -117,6 +117,9 @@ export interface Order {
   deleted?: boolean;
   deletedAt?: string;
   deletedBy?: { name: string; employeeId: string } | null;
+  trayReturned?: boolean;
+  trayReturnedAt?: string;
+  trayReturnedBy?: { name: string; employeeId: string };
 }
 
 interface OrdersContextType {
@@ -137,6 +140,7 @@ interface OrdersContextType {
   ) => Promise<void>;
   deleteOrder: (id: string, deletedBy?: { name: string; employeeId: string }) => Promise<void>;
   restoreOrder: (id: string) => Promise<void>;
+  markTrayReturned: (orderId: string, employee?: { name: string; employeeId: string }) => Promise<void>;
   getOrdersForDepartment: (department: Department) => Order[];
   isLoading: boolean;
 }
@@ -418,6 +422,42 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
       .catch((err) => console.warn("Firestore restore failed:", err?.code));
   }, [companyId, orderDoc]);
 
+  const markTrayReturned = useCallback(
+    async (orderId: string, employee?: { name: string; employeeId: string }) => {
+      const now = new Date().toISOString();
+      setAllOrders((prev) =>
+        prev.map((o) =>
+          o.id !== orderId
+            ? o
+            : { ...o, trayReturned: true, trayReturnedAt: now, trayReturnedBy: employee ?? undefined, updatedAt: now }
+        )
+      );
+
+      // Update AsyncStorage
+      readLocalOrders(companyId).then((saved) =>
+        writeLocalOrders(
+          companyId,
+          saved.map((o) =>
+            o.id !== orderId
+              ? o
+              : { ...o, trayReturned: true, trayReturnedAt: now, trayReturnedBy: employee ?? undefined, updatedAt: now }
+          )
+        )
+      );
+
+      // Try Firestore (non-blocking)
+      if (orderId.startsWith("local-")) return;
+      updateDoc(orderDoc(orderId), {
+        trayReturned: true,
+        trayReturnedAt: now,
+        trayReturnedBy: employee ?? null,
+        companyId,
+        updatedAt: now,
+      }).catch((err) => console.warn("Firestore markTrayReturned failed:", err?.code));
+    },
+    [companyId, orderDoc]
+  );
+
   const getOrdersForDepartment = useCallback(
     (department: Department) => {
       return orders
@@ -442,6 +482,7 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
         transferToBranch,
         deleteOrder,
         restoreOrder,
+        markTrayReturned,
         getOrdersForDepartment,
         isLoading,
       }}
