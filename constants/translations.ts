@@ -394,6 +394,9 @@ const translations = {
   willRecordOnReceive:{ ar: "سيُسجَّل باسمك عند الاستلام", en: "Will record on receive",   ur: "وصولی پر ریکارڈ ہوگا", hi: "प्राप्ति पर रिकॉर्ड", bn: "গ্রহণে রেকর্ড হবে" },
   transferToLabel:    { ar: "تحويل لـ",                 en: "Transfer to",                 ur: "منتقل کریں",          hi: "को ट्रांसफर",        bn: "এতে ট্রান্সফার" },
   requiresLogin:      { ar: "يتطلب تسجيل دخول",         en: "Requires login",              ur: "لاگ ان ضروری",        hi: "लॉगिन आवश्यक",      bn: "লগইন প্রয়োজন" },
+  loginRequired:      { ar: "تسجيل الدخول مطلوب",       en: "Login Required",              ur: "لاگ ان ضروری",        hi: "लॉगिन आवश्यक",      bn: "লগইন প্রয়োজন" },
+  loginToReceive:     { ar: "يجب تسجيل الدخول أولاً لاستلام الطلب.", en: "You must log in first to receive the order.", ur: "آرڈر وصول کرنے کے لیے پہلے لاگ ان کریں۔", hi: "ऑर्डर प्राप्त करने के लिए पहले लॉगिन करें।", bn: "অর্ডার গ্রহণ করতে প্রথমে লগইন করুন।" },
+  ok:                 { ar: "حسناً",                    en: "OK",                          ur: "ٹھیک ہے",             hi: "ठीक है",             bn: "ঠিক আছে" },
 
   // ── Cashier screen ────────────────────────────────────────────────────
   fullyPaid:          { ar: "مُسدَّد بالكامل",              en: "Fully Paid",                  ur: "مکمل ادا",            hi: "पूरा भुगतान",        bn: "সম্পূর্ণ পরিশোধিত" },

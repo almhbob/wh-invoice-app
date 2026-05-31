@@ -251,7 +251,7 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
         await AsyncStorage.removeItem(sessionKey);
         await AsyncStorage.removeItem(sessionEmployeeKey);
         // Delete session only if it's ours
-        if (prev && !prev.isLocalFallback && !(prev as Record<string, unknown>).isLocalBootstrap) {
+        if (prev && !prev.isLocalFallback && !((prev as unknown) as Record<string, unknown>).isLocalBootstrap) {
           getDoc(activeSessionRef(prev.employeeId)).then((snap) => {
             if (snap.exists() && snap.data().deviceId === MY_DEVICE_ID) {
               deleteDoc(activeSessionRef(prev.employeeId)).catch(() => {});
@@ -264,7 +264,7 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
 
   // Watch active session — if another device logs in as the same employee, force logout
   useEffect(() => {
-    if (!currentEmployee || currentEmployee.isLocalFallback || (currentEmployee as Record<string, unknown>).isLocalBootstrap) return;
+    if (!currentEmployee || currentEmployee.isLocalFallback || ((currentEmployee as unknown) as Record<string, unknown>).isLocalBootstrap) return;
     const ref = activeSessionRef(currentEmployee.employeeId);
     const empName = currentEmployee.name;
     const unsub = onSnapshot(ref, (snap) => {
@@ -286,7 +286,7 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
   }, [currentEmployee?.id, currentEmployee?.employeeId, activeSessionRef, sessionKey, sessionEmployeeKey]);
 
   const checkAndLogin = useCallback(async (emp: Employee, forceKick = false): Promise<"ok" | "conflict"> => {
-    if (emp.isLocalFallback || (emp as Record<string, unknown>).isLocalBootstrap) {
+    if (emp.isLocalFallback || ((emp as unknown) as Record<string, unknown>).isLocalBootstrap) {
       await setCurrentEmployee(emp);
       return "ok";
     }
