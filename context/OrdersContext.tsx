@@ -122,6 +122,7 @@ export interface Order {
   trayReturnedBy?: { name: string; employeeId: string };
   deliveryStatus?: "pending" | "delivered";
   deliveryDeliveredAt?: string;
+  deliveryDriver?: { name: string; employeeId: string; assignedAt?: string };
 }
 
 interface OrdersContextType {
@@ -144,6 +145,7 @@ interface OrdersContextType {
   restoreOrder: (id: string) => Promise<void>;
   markTrayReturned: (orderId: string, employee?: { name: string; employeeId: string }) => Promise<void>;
   updateDeliveryStatus: (orderId: string, status: "pending" | "delivered") => Promise<void>;
+  assignDeliveryDriver: (orderId: string, driver: { name: string; employeeId: string }) => Promise<void>;
   getOrdersForDepartment: (department: Department) => Order[];
   isLoading: boolean;
 }
@@ -476,6 +478,21 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
     [companyId, orderDoc]
   );
 
+  const assignDeliveryDriver = useCallback(
+    async (orderId: string, driver: { name: string; employeeId: string }) => {
+      const now = new Date().toISOString();
+      const patch = { deliveryDriver: { ...driver, assignedAt: now }, updatedAt: now };
+      setAllOrders((prev) => prev.map((o) => o.id !== orderId ? o : { ...o, ...patch }));
+      readLocalOrders(companyId).then((saved) =>
+        writeLocalOrders(companyId, saved.map((o) => o.id !== orderId ? o : { ...o, ...patch }))
+      );
+      if (orderId.startsWith("local-")) return;
+      updateDoc(orderDoc(orderId), { deliveryDriver: { ...driver, assignedAt: now }, companyId, updatedAt: now })
+        .catch((err) => console.warn("Firestore assignDeliveryDriver failed:", err?.code));
+    },
+    [companyId, orderDoc]
+  );
+
   const getOrdersForDepartment = useCallback(
     (department: Department) => {
       return orders
@@ -502,6 +519,7 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
         restoreOrder,
         markTrayReturned,
         updateDeliveryStatus,
+        assignDeliveryDriver,
         getOrdersForDepartment,
         isLoading,
       }}
