@@ -1,4 +1,6 @@
 import { Feather } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
+import * as Linking from "expo-linking";
 import React, { useMemo, useState } from "react";
 import {
   FlatList,
@@ -14,6 +16,13 @@ import { useEmployee } from "@/context/EmployeeContext";
 import { useLang } from "@/context/LanguageContext";
 import { useOrders } from "@/context/OrdersContext";
 import { fmtCurrency, fmtDate } from "@/utils/dateUtils";
+
+function openWhatsApp(phone: string, message?: string) {
+  const raw = phone.replace(/\D/g, "");
+  const intl = raw.startsWith("0") ? "966" + raw.slice(1) : raw;
+  const text = message ? `?text=${encodeURIComponent(message)}` : "";
+  Linking.openURL(`https://wa.me/${intl}${text}`).catch(() => {});
+}
 
 export default function TraysScreen() {
   const { t, lang } = useLang();
@@ -117,8 +126,24 @@ export default function TraysScreen() {
               <View style={styles.customerRow}>
                 <Feather name="user" size={13} color={Colors.primary} />
                 <Text style={styles.customerName}>{order.customerName}</Text>
-                <Feather name="phone" size={12} color={Colors.textMuted} />
                 <Text style={styles.customerPhone}>{order.customerPhone}</Text>
+                <TouchableOpacity
+                  style={[styles.quickBtn, { backgroundColor: "#16a34a18" }]}
+                  onPress={() => { Haptics.selectionAsync(); Linking.openURL(`tel:${order.customerPhone.replace(/\D/g, "")}`); }}
+                >
+                  <Feather name="phone" size={13} color="#16a34a" />
+                </TouchableOpacity>
+                {!isReturned && (
+                  <TouchableOpacity
+                    style={[styles.quickBtn, { backgroundColor: "#25D36618" }]}
+                    onPress={() => {
+                      Haptics.selectionAsync();
+                      openWhatsApp(order.customerPhone, `أهلاً ${order.customerName}، نذكّركم بإعادة الصينية الخاصة بطلب #${order.orderNumber}. شكراً لكم 🙏`);
+                    }}
+                  >
+                    <Feather name="message-circle" size={13} color="#25D366" />
+                  </TouchableOpacity>
+                )}
               </View>
 
               {order.insurancePaymentMethod && (
@@ -181,7 +206,11 @@ const styles = StyleSheet.create({
   amountText: { fontSize: 13, fontWeight: "700", color: Colors.gold },
   customerRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 6 },
   customerName: { flex: 1, fontSize: 14, fontWeight: "700", color: Colors.text },
-  customerPhone: { fontSize: 13, color: Colors.textMuted },
+  customerPhone: { fontSize: 12, color: Colors.textMuted },
+  quickBtn: {
+    width: 32, height: 32, borderRadius: 10,
+    alignItems: "center", justifyContent: "center",
+  },
   payMethod: { fontSize: 11, color: Colors.textSecondary, marginBottom: 10 },
   returnBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,

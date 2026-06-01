@@ -1,6 +1,8 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { addDoc, collection } from "firebase/firestore";
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { useCompany } from "@/context/CompanyContext";
+import { db } from "@/lib/firebase";
 
 export interface ShiftSummary {
   orderCount: number;
@@ -79,9 +81,11 @@ export function ShiftProvider({ children }: { children: React.ReactNode }) {
         notes,
         summary,
       };
-      const updated = [shift, ...closedShifts].slice(0, 90); // keep last 90 shifts
+      const updated = [shift, ...closedShifts].slice(0, 90);
       setClosedShifts(updated);
       await AsyncStorage.setItem(shiftKey(companyId), JSON.stringify(updated));
+      // Non-blocking Firestore sync
+      addDoc(collection(db, "companies", companyId, "closedShifts"), shift).catch(() => {});
       return shift;
     },
     [companyId, closedShifts]
