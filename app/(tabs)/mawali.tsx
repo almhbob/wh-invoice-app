@@ -1,11 +1,13 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useState } from "react";
 import { FlatList, RefreshControl, StyleSheet, Text, View } from "react-native";
 
 import { DeptOrderCard } from "@/components/DeptOrderCard";
 import { EmptyState } from "@/components/EmptyState";
+import { NewOrderBanner } from "@/components/NewOrderBanner";
 import { Colors } from "@/constants/colors";
 import { useLang } from "@/context/LanguageContext";
 import { EmployeeRef, Order, OrderStatus, useOrders } from "@/context/OrdersContext";
+import { useNewOrderAlert } from "@/hooks/useNewOrderAlert";
 
 export default function MawaliScreen() {
   const { getOrdersForDepartment, updateDepartmentStatus, isLoading } = useOrders();
@@ -13,6 +15,9 @@ export default function MawaliScreen() {
   const orders = getOrdersForDepartment("mawali");
   const pendingCount = orders.filter((o) => o.departmentStatuses["mawali"] === "pending").length;
   const inProgressCount = orders.filter((o) => o.departmentStatuses["mawali"] === "in_progress").length;
+
+  const [showBanner, setShowBanner] = useState(false);
+  useNewOrderAlert(pendingCount, () => setShowBanner(true));
 
   const handleStatus = useCallback(
     (order: Order, status: OrderStatus, receiver?: EmployeeRef) =>
@@ -22,6 +27,7 @@ export default function MawaliScreen() {
 
   return (
     <View style={styles.container}>
+      <NewOrderBanner visible={showBanner} count={pendingCount} accentColor={Colors.mawali} onDismiss={() => setShowBanner(false)} />
       <View style={[styles.deptBanner, { backgroundColor: Colors.mawali }]}>
         <Text style={styles.bannerTitle}>{t("deptMawali")}</Text>
         <View style={styles.bannerStats}>

@@ -1,8 +1,10 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useState } from "react";
 import { FlatList, RefreshControl, StyleSheet, Text, View } from "react-native";
 
 import { DeptOrderCard } from "@/components/DeptOrderCard";
 import { EmptyState } from "@/components/EmptyState";
+import { NewOrderBanner } from "@/components/NewOrderBanner";
+import { useNewOrderAlert } from "@/hooks/useNewOrderAlert";
 import { Colors } from "@/constants/colors";
 import { useLang } from "@/context/LanguageContext";
 import { EmployeeRef, Order, OrderStatus, useOrders } from "@/context/OrdersContext";
@@ -15,6 +17,9 @@ export default function PackagingScreen() {
   const pendingCount    = orders.filter((o) => o.departmentStatuses["packaging"] === "pending").length;
   const inProgressCount = orders.filter((o) => o.departmentStatuses["packaging"] === "in_progress").length;
 
+  const [showBanner, setShowBanner] = useState(false);
+  useNewOrderAlert(pendingCount, () => setShowBanner(true));
+
   const handleStatus = useCallback(
     (order: Order, status: OrderStatus, receiver?: EmployeeRef) =>
       updateDepartmentStatus(order.id, "packaging", status, receiver),
@@ -23,6 +28,7 @@ export default function PackagingScreen() {
 
   return (
     <View style={styles.container}>
+      <NewOrderBanner visible={showBanner} count={pendingCount} accentColor={Colors.packaging} onDismiss={() => setShowBanner(false)} />
       {/* dept banner */}
       <View style={[styles.banner, { backgroundColor: Colors.packaging }]}>
         <Text style={styles.bannerTitle}>{t("deptPackaging")}</Text>
