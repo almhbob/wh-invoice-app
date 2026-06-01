@@ -100,11 +100,12 @@ function callPhone(phone: string) {
   Linking.openURL(`tel:${phone.replace(/\D/g, "")}`);
 }
 
-function openWhatsApp(phone: string) {
+function openWhatsApp(phone: string, message?: string) {
   const raw = phone.replace(/\D/g, "");
   const intl = raw.startsWith("0") ? "966" + raw.slice(1) : raw;
-  Linking.openURL(`whatsapp://send?phone=${intl}`).catch(() =>
-    Linking.openURL(`https://wa.me/${intl}`)
+  const text = message ? `&text=${encodeURIComponent(message)}` : "";
+  Linking.openURL(`whatsapp://send?phone=${intl}${text}`).catch(() =>
+    Linking.openURL(`https://wa.me/${intl}${message ? `?text=${encodeURIComponent(message)}` : ""}`)
   );
 }
 
@@ -415,6 +416,24 @@ function DeliveryCard({
         <Feather name="chevron-left" size={14} color={Colors.textMuted} />
       </TouchableOpacity>
 
+      {/* WhatsApp ready notification */}
+      {!delivered && ready && (
+        <TouchableOpacity
+          style={styles.waReadyBtn}
+          onPress={() => {
+            Haptics.selectionAsync();
+            openWhatsApp(
+              order.customerPhone,
+              `أهلاً ${order.customerName}، طلبك رقم #${order.orderNumber} جاهز وفي طريقه إليك! 🎉`
+            );
+          }}
+          activeOpacity={0.8}
+        >
+          <Feather name="message-circle" size={15} color="#fff" />
+          <Text style={styles.waReadyBtnText}>WhatsApp — طلبك جاهز</Text>
+        </TouchableOpacity>
+      )}
+
       {/* Mark delivered */}
       {!delivered && (
         <TouchableOpacity
@@ -695,6 +714,16 @@ const styles = StyleSheet.create({
   driverUnassignedText: {
     flex: 1, fontSize: 13, color: Colors.textMuted, fontStyle: "italic",
   },
+
+  // WhatsApp ready button
+  waReadyBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
+    marginTop: 10, paddingVertical: 11, borderRadius: 12,
+    backgroundColor: "#25D366",
+    shadowColor: "#25D366", shadowOpacity: 0.25, shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 }, elevation: 3,
+  },
+  waReadyBtnText: { color: "#fff", fontSize: 13, fontWeight: "800" },
 
   // Deliver button
   deliverBtn: {
