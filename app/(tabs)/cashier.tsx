@@ -44,6 +44,7 @@ import { DeliveryDateTimePicker } from "@/components/DeliveryDateTimePicker";
 import { DailyClosingModal } from "@/components/DailyClosingModal";
 import { canDo, ROLE_CAN_CLOSE_SHIFT } from "@/constants/rbac";
 import { useShift } from "@/context/ShiftContext";
+import { consumePendingClone } from "@/stores/cloneOrder";
 import QRCode from "qrcode";
 
 
@@ -153,6 +154,20 @@ export default function CashierScreen() {
 
   useEffect(() => {
     setReceivedAt(formatNow());
+    const clone = consumePendingClone();
+    if (clone) {
+      setCustomerName(clone.customerName ?? "");
+      setCustomerPhone(clone.customerPhone ?? "");
+      if (clone.customerPhone2) setCustomerPhone2(clone.customerPhone2);
+      if (clone.deliveryAddress) setDeliveryAddress(clone.deliveryAddress);
+      setOrderType(clone.orderType ?? "pickup");
+      setItems(clone.items.map((i) => ({
+        ...i,
+        id: Date.now().toString() + Math.random().toString(36).slice(2),
+      })));
+      if (clone.notes) setNotes(clone.notes);
+      if (clone.paymentMethod) setPaymentMethod(clone.paymentMethod);
+    }
   }, []);
 
   // Auto-detect offer when phone changes
@@ -625,6 +640,7 @@ export default function CashierScreen() {
   const handleSubmit = () => {
     if (!customerName.trim()) { Alert.alert("خطأ", t("errName")); return; }
     if (!customerPhone.trim()) { Alert.alert("خطأ", t("errPhone")); return; }
+    if (orderType === "delivery" && !deliveryAddress.trim()) { Alert.alert("خطأ", t("errDelivAddress")); return; }
     const filteredItems = items.filter((i) => i.name.trim() && i.quantity > 0);
     if (filteredItems.length === 0) { Alert.alert("خطأ", t("errItems")); return; }
     if (!currentEmployee) {

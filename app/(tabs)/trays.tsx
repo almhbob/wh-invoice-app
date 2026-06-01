@@ -110,16 +110,26 @@ export default function TraysScreen() {
         }
         renderItem={({ item: order }) => {
           const isReturned = !!order.trayReturned;
+          const daysSince = Math.floor((Date.now() - new Date(order.createdAt).getTime()) / 86400000);
+          const isOverdue = !isReturned && daysSince > 3;
           return (
-            <View style={[styles.card, { borderLeftColor: isReturned ? "#16a34a" : Colors.gold }]}>
+            <View style={[styles.card, { borderLeftColor: isOverdue ? Colors.accent : isReturned ? "#16a34a" : Colors.gold }]}>
               <View style={styles.cardHeader}>
                 <View>
                   <Text style={styles.orderNum}>#{order.orderNumber}</Text>
                   <Text style={styles.orderDate}>{fmtDate(order.createdAt, lang)}</Text>
                 </View>
-                <View style={[styles.amountBadge, { backgroundColor: Colors.gold + "20" }]}>
-                  <Feather name="shield" size={12} color={Colors.gold} />
-                  <Text style={styles.amountText}>{fmtCurrency(order.insuranceAmount ?? 0)}</Text>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  {isOverdue && (
+                    <View style={styles.overdueBadge}>
+                      <Feather name="alert-circle" size={11} color="#fff" />
+                      <Text style={styles.overdueText}>{t("trayOverdue")} {daysSince} {t("trayOverdueDays")}</Text>
+                    </View>
+                  )}
+                  <View style={[styles.amountBadge, { backgroundColor: Colors.gold + "20" }]}>
+                    <Feather name="shield" size={12} color={Colors.gold} />
+                    <Text style={styles.amountText}>{fmtCurrency(order.insuranceAmount ?? 0)}</Text>
+                  </View>
                 </View>
               </View>
 
@@ -204,6 +214,8 @@ const styles = StyleSheet.create({
   orderDate: { fontSize: 11, color: Colors.textMuted, marginTop: 2 },
   amountBadge: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
   amountText: { fontSize: 13, fontWeight: "700", color: Colors.gold },
+  overdueBadge: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 20, backgroundColor: Colors.accent },
+  overdueText: { fontSize: 11, fontWeight: "700", color: "#fff" },
   customerRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 6 },
   customerName: { flex: 1, fontSize: 14, fontWeight: "700", color: Colors.text },
   customerPhone: { fontSize: 12, color: Colors.textMuted },

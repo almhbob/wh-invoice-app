@@ -114,6 +114,7 @@ const translations = {
   errPhone:         { ar: "أدخل رقم الهاتف",  en: "Enter phone number", ur: "فون نمبر درج کریں",  hi: "फोन नंबर दर्ज करें",   bn: "ফোন নম্বর লিখুন" },
   errItems:         { ar: "أضف صنفاً واحداً على الأقل", en: "Add at least one item", ur: "کم از کم ایک آئٹم شامل کریں", hi: "कम से कम एक वस्तु जोड़ें", bn: "কমপক্ষে একটি আইটেম যোগ করুন" },
   errSend:          { ar: "فشل الإرسال، حاول مجدداً", en: "Send failed, retry", ur: "بھیجنا ناکام، دوبارہ کوشش کریں", hi: "भेजने में विफल, पुनः प्रयास करें", bn: "পাঠাতে ব্যর্থ, আবার চেষ্টা করুন" },
+  errDelivAddress:  { ar: "أدخل عنوان التوصيل", en: "Enter delivery address", ur: "ڈیلیوری پتہ درج کریں", hi: "डिलीवरी पता दर्ज करें", bn: "ডেলিভারি ঠিকানা লিখুন" },
 
   // ── Order statuses ─────────────────────────────────────────────
   statusPending:    { ar: "معلق",             en: "Pending",          ur: "زیر التواء",         hi: "प्रतीक्षा",         bn: "অপেক্ষা" },
@@ -147,6 +148,7 @@ const translations = {
                       bn: "নম্বর, নাম, ফোন বা আইটেম দিয়ে খুঁজুন..." },
   archivePrint:     { ar: "طباعة الفاتورة",   en: "Print Invoice",    ur: "انوائس پرنٹ کریں",  hi: "चालान प्रिंट करें", bn: "ইনভয়েস প্রিন্ট করুন" },
   archiveDelete:    { ar: "نقل إلى المحذوفات", en: "Move to Trash",   ur: "ردی میں بھیجیں",    hi: "ट्रैश में ले जाएं",  bn: "ট্র্যাশে নিন" },
+  archiveRepeat:    { ar: "كرر الطلبية",       en: "Repeat Order",     ur: "آرڈر دہرائیں",       hi: "ऑर्डर दोहराएं",     bn: "অর্ডার পুনরাবৃত্তি" },
   archiveRestore:   { ar: "استعادة الطلب",    en: "Restore Order",    ur: "آرڈر بحال کریں",    hi: "ऑर्डर वापस करें",   bn: "অর্ডার ফেরান" },
   archiveAll:       { ar: "الكل",             en: "All",              ur: "سب",                 hi: "सभी",              bn: "সব" },
   archiveToday:     { ar: "اليوم",            en: "Today",            ur: "آج",                 hi: "आज",               bn: "আজ" },
@@ -256,7 +258,10 @@ const translations = {
   repFilterToday:   { ar: "اليوم",             en: "Today",            ur: "آج",                 hi: "आज",               bn: "আজ" },
   repFilterWeek:    { ar: "هذا الأسبوع",       en: "This Week",        ur: "اس ہفتے",            hi: "इस सप्ताह",         bn: "এই সপ্তাহ" },
   repFilterMonth:   { ar: "هذا الشهر",         en: "This Month",       ur: "اس مہینے",           hi: "इस महीने",          bn: "এই মাস" },
-  repCash:          { ar: "نقداً",             en: "Cash",             ur: "نقد",                hi: "नकद",              bn: "নগদ" },
+  repFilterCustom:  { ar: "مخصص",              en: "Custom",           ur: "کسٹم",               hi: "कस्टम",             bn: "কাস্টম" },
+  repFrom:          { ar: "من:",               en: "From:",            ur: "سے:",                 hi: "से:",               bn: "থেকে:" },
+  repTo:            { ar: "إلى:",              en: "To:",              ur: "تک:",                 hi: "तक:",               bn: "পর্যন্ত:" },
+  repCash:          { ar: "نقداً",             en: "Cash",             ur: "نقد",                hi: "नकد",              bn: "নগদ" },
   repCard:          { ar: "بطاقة",             en: "Card",             ur: "کارڈ",               hi: "कार्ड",            bn: "কার্ড" },
   repTransfer:      { ar: "تحويل",             en: "Transfer",         ur: "ٹرانسفر",            hi: "ट्रांसफर",          bn: "ট্রান্সফার" },
   repUnits:         { ar: "وحدة",              en: "units",            ur: "یونٹ",               hi: "यूनिट",            bn: "একক" },
@@ -307,6 +312,8 @@ const translations = {
   traysMarkRet:     { ar: "تم استرداد الصينية", en: "Mark Returned",   ur: "واپس نشان لگائیں",   hi: "वापस चिह्नित करें", bn: "ফেরত চিহ্নিত করুন" },
   traysInsAmt:      { ar: "مبلغ التأمين:",     en: "Insurance:",       ur: "ضمانت:",             hi: "बीमा:",            bn: "জামানত:" },
   traysNoData:      { ar: "لا توجد صواني",     en: "No trays tracked", ur: "کوئی ٹرے نہیں",      hi: "कोई ट्रे नहीं",    bn: "কোনো ট্রে নেই" },
+  trayOverdue:      { ar: "متأخر",             en: "Overdue",          ur: "مدت گزری",            hi: "अतिदेय",            bn: "মেয়াদোত্তীর্ণ" },
+  trayOverdueDays:  { ar: "يوم",               en: "day(s)",           ur: "دن",                  hi: "दिन",              bn: "দিন" },
 
   // ── Feature flags (Admin) ─────────────────────────────────────
   featuresTitle:    { ar: "إعدادات الأقسام",  en: "Dept. Settings",   ur: "شعبہ ترتیبات",       hi: "विभाग सेटिंग्स",   bn: "বিভাগ সেটিংস" },

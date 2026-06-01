@@ -1,4 +1,6 @@
 import { Feather } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
+import { router } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
   Alert,
@@ -18,6 +20,7 @@ import { useLang } from "@/context/LanguageContext";
 import { useEmployee } from "@/context/EmployeeContext";
 import { Department, Order, OrderStatus, PAYMENT_LABELS, useOrders } from "@/context/OrdersContext";
 import { fmtDate } from "@/utils/dateUtils";
+import { setPendingClone } from "@/stores/cloneOrder";
 
 const DEPT_META: Record<string, { label: string; shortLabel: string; color: string }> = {
   halwa:     { label: "قسم الحلا",      shortLabel: "حلا",      color: Colors.halwa },
@@ -36,8 +39,8 @@ const DEPT_FILTERS: { value: Department | "all"; label: string }[] = [
   { value: "packaging", label: "تغليف" },
 ];
 
-function ArchiveCard({ order, canDelete, canEdit, onDelete, onEdit }: { order: Order; canDelete?: boolean; canEdit?: boolean; onDelete?: (o: Order) => void; onEdit?: (o: Order) => void }) {
-  const { lang } = useLang();
+function ArchiveCard({ order, canDelete, canEdit, onDelete, onEdit, onRepeat }: { order: Order; canDelete?: boolean; canEdit?: boolean; onDelete?: (o: Order) => void; onEdit?: (o: Order) => void; onRepeat?: (o: Order) => void }) {
+  const { t, lang } = useLang();
   const depts = [...new Set(order.items.map((i) => i.department))] as Department[];
 
   return (
@@ -180,6 +183,18 @@ function ArchiveCard({ order, canDelete, canEdit, onDelete, onEdit }: { order: O
           </View>
         )}
       </View>
+
+      {/* Repeat order button */}
+      {onRepeat && (
+        <TouchableOpacity
+          style={styles.repeatBtn}
+          onPress={() => { Haptics.selectionAsync(); onRepeat(order); }}
+          activeOpacity={0.8}
+        >
+          <Feather name="copy" size={13} color={Colors.primary} />
+          <Text style={styles.repeatBtnText}>{t("archiveRepeat")}</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -294,6 +309,11 @@ export default function ArchiveScreen() {
         },
       ]
     );
+  };
+
+  const handleRepeat = (order: Order) => {
+    setPendingClone(order);
+    router.navigate("/(tabs)/cashier" as any);
   };
 
   return (
@@ -411,6 +431,7 @@ export default function ArchiveScreen() {
                 canEdit={canEdit}
                 onDelete={handleDelete}
                 onEdit={setEditingOrder}
+                onRepeat={handleRepeat}
               />
             )}
             ListEmptyComponent={
@@ -452,6 +473,12 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary, borderRadius: 10, paddingVertical: 10, marginTop: 4,
   },
   restoreBtnText: { color: "#fff", fontSize: 13, fontWeight: "700" },
+  repeatBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
+    paddingVertical: 8, borderRadius: 10, borderWidth: 1.5,
+    borderColor: Colors.primary + "50", backgroundColor: Colors.primary + "08",
+  },
+  repeatBtnText: { fontSize: 13, fontWeight: "700", color: Colors.primary },
   searchRow: {
     flexDirection: "row", alignItems: "center", gap: 10,
     marginHorizontal: 16, marginTop: 12,

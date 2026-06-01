@@ -6,6 +6,7 @@ import {
   Share,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -18,7 +19,7 @@ import { fmtCurrency } from "@/utils/dateUtils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Filter = "today" | "week" | "month" | "all";
+type Filter = "today" | "week" | "month" | "all" | "custom";
 type Tab = "revenue" | "products" | "cashier" | "delivery";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -749,6 +750,8 @@ export default function ReportsScreen() {
 
   const [filter, setFilter] = useState<Filter>("month");
   const [activeTab, setActiveTab] = useState<Tab>("revenue");
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
 
   const TAB_ITEMS: { key: Tab; label: string; icon: string }[] = [
     { key: "revenue",  label: t("repTabRevenue"),  icon: "trending-up" },
@@ -757,16 +760,24 @@ export default function ReportsScreen() {
     { key: "delivery", label: t("repTabDelivery"), icon: "truck" },
   ];
 
-  const filtered = useMemo(
-    () => orders.filter((o) => isInFilter(o.createdAt, filter)),
-    [orders, filter]
-  );
+  const filtered = useMemo(() => {
+    if (filter === "custom") {
+      return orders.filter((o) => {
+        const d = o.createdAt.slice(0, 10);
+        if (customFrom && d < customFrom) return false;
+        if (customTo && d > customTo) return false;
+        return true;
+      });
+    }
+    return orders.filter((o) => isInFilter(o.createdAt, filter));
+  }, [orders, filter, customFrom, customTo]);
 
   const FILTERS: { key: Filter; label: string }[] = [
-    { key: "today", label: t("repFilterToday") },
-    { key: "week",  label: t("repFilterWeek") },
-    { key: "month", label: t("repFilterMonth") },
-    { key: "all",   label: t("repFilterAll") },
+    { key: "today",  label: t("repFilterToday") },
+    { key: "week",   label: t("repFilterWeek") },
+    { key: "month",  label: t("repFilterMonth") },
+    { key: "all",    label: t("repFilterAll") },
+    { key: "custom", label: t("repFilterCustom") },
   ];
 
   function handleFilterChange(key: Filter) {
@@ -880,6 +891,31 @@ export default function ReportsScreen() {
         ))}
       </View>
 
+      {/* Custom date range inputs */}
+      {filter === "custom" && (
+        <View style={styles.customRangeRow}>
+          <Feather name="calendar" size={14} color={Colors.textMuted} />
+          <Text style={styles.customRangeLabel}>{t("repFrom")}</Text>
+          <TextInput
+            style={styles.customRangeInput}
+            value={customFrom}
+            onChangeText={setCustomFrom}
+            placeholder="2025-01-01"
+            placeholderTextColor={Colors.textMuted}
+            keyboardType="numeric"
+          />
+          <Text style={styles.customRangeLabel}>{t("repTo")}</Text>
+          <TextInput
+            style={styles.customRangeInput}
+            value={customTo}
+            onChangeText={setCustomTo}
+            placeholder="2025-12-31"
+            placeholderTextColor={Colors.textMuted}
+            keyboardType="numeric"
+          />
+        </View>
+      )}
+
       {/* Tab bar */}
       <View style={styles.tabBar}>
         {TAB_ITEMS.map((tab) => (
@@ -984,6 +1020,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     flexWrap: "wrap",
+  },
+  customRangeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    flexWrap: "wrap",
+  },
+  customRangeLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: Colors.textSecondary,
+  },
+  customRangeInput: {
+    flex: 1,
+    minWidth: 100,
+    maxWidth: 130,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    fontSize: 13,
+    color: Colors.text,
   },
   filterBtn: {
     paddingHorizontal: 14,
