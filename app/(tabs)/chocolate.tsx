@@ -10,7 +10,7 @@ import { useLang } from "@/context/LanguageContext";
 import { EmployeeRef, Order, OrderStatus, useOrders } from "@/context/OrdersContext";
 
 export default function ChocolateScreen() {
-  const { getOrdersForDepartment, updateDepartmentStatus, isLoading } = useOrders();
+  const { getOrdersForDepartment, updateDepartmentStatus, isLoading, refreshOrders } = useOrders();
   const { t } = useLang();
   const orders = getOrdersForDepartment("chocolate");
   const pendingCount = orders.filter((o) => o.departmentStatuses["chocolate"] === "pending").length;
@@ -63,7 +63,7 @@ export default function ChocolateScreen() {
         ListEmptyComponent={
           <EmptyState icon="box" title={t("noOrdersNow")} subtitle={t("chocolateSubtitle")} />
         }
-        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => {}} />}
+        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refreshOrders} />}
         showsVerticalScrollIndicator={false}
       />
     </View>

@@ -10,7 +10,7 @@ import { EmployeeRef, Order, OrderStatus, useOrders } from "@/context/OrdersCont
 import { useNewOrderAlert } from "@/hooks/useNewOrderAlert";
 
 export default function MawaliScreen() {
-  const { getOrdersForDepartment, updateDepartmentStatus, isLoading } = useOrders();
+  const { getOrdersForDepartment, updateDepartmentStatus, isLoading, refreshOrders } = useOrders();
   const { t } = useLang();
   const orders = getOrdersForDepartment("mawali");
   const pendingCount = orders.filter((o) => o.departmentStatuses["mawali"] === "pending").length;
@@ -63,7 +63,7 @@ export default function MawaliScreen() {
         ListEmptyComponent={
           <EmptyState icon="package" title={t("noOrdersNow")} subtitle={t("mawaliSubtitle")} />
         }
-        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => {}} />}
+        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refreshOrders} />}
         showsVerticalScrollIndicator={false}
       />
     </View>

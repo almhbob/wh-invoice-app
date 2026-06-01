@@ -43,6 +43,7 @@ import { Offer, normalizePhone, useOffers } from "@/context/OffersContext";
 import { DeliveryDatePicker, DeliveryTimePicker } from "@/components/DeliveryDateTimePicker";
 import { DailyClosingModal } from "@/components/DailyClosingModal";
 import { canDo, ROLE_CAN_CLOSE_SHIFT } from "@/constants/rbac";
+import { useShift } from "@/context/ShiftContext";
 import QRCode from "qrcode";
 
 
@@ -121,6 +122,7 @@ export default function CashierScreen() {
   // Daily closing modal
   const [showClosing, setShowClosing] = useState(false);
   const canCloseShift = canDo(currentEmployee?.role, ROLE_CAN_CLOSE_SHIFT);
+  const { lastClosed } = useShift();
 
   // Today's summary (for cashier strip)
   const todayOrders = useMemo(() => {
@@ -128,6 +130,15 @@ export default function CashierScreen() {
     return orders.filter((o) => o.createdAt?.slice(0, 10) === today);
   }, [orders]);
   const todayTotal = todayOrders.reduce((s, o) => s + (o.totalAmount ?? 0), 0);
+
+  // Customer auto-fill: find a previous order matching the entered phone
+  const suggestedCustomer = useMemo(() => {
+    const digits = customerPhone.replace(/\D/g, "");
+    if (digits.length < 9) return null;
+    if (customerName.trim()) return null; // already has a name
+    const match = orders.find((o) => o.customerPhone.replace(/\D/g, "") === digits);
+    return match ? { name: match.customerName, phone2: match.customerPhone2, address: match.deliveryAddress } : null;
+  }, [customerPhone, customerName, orders]);
 
   // Discount
   const [discountEnabled, setDiscountEnabled] = useState(false);
@@ -670,6 +681,18 @@ export default function CashierScreen() {
           </Text>
           <Text style={styles.todayStripLabel}>ر.س اليوم</Text>
         </View>
+        {lastClosed && (
+          <>
+            <View style={styles.todayStripDivider} />
+            <View style={styles.todayStripLeft}>
+              <Feather name="moon" size={11} color="rgba(255,255,255,0.6)" />
+              <Text style={styles.todayStripLastShiftTime}>
+                {new Date(lastClosed.closedAt).toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit" })}
+              </Text>
+              <Text style={styles.todayStripLabel}>{t("shiftLastClosed")}</Text>
+            </View>
+          </>
+        )}
         {canCloseShift && (
           <TouchableOpacity
             style={styles.closeShiftBtn}
@@ -699,6 +722,26 @@ export default function CashierScreen() {
             <Feather name="phone" size={18} color={Colors.primary} />
           </View>
         </View>
+
+        {/* Customer auto-fill suggestion */}
+        {suggestedCustomer && (
+          <TouchableOpacity
+            style={styles.autoFillChip}
+            onPress={() => {
+              Haptics.selectionAsync();
+              setCustomerName(suggestedCustomer.name);
+              if (suggestedCustomer.phone2) setCustomerPhone2(suggestedCustomer.phone2);
+              if (suggestedCustomer.address) setDeliveryAddress(suggestedCustomer.address);
+            }}
+            activeOpacity={0.8}
+          >
+            <Feather name="user-check" size={13} color={Colors.primary} />
+            <Text style={styles.autoFillText}>
+              استخدم: <Text style={{ fontWeight: "800" }}>{suggestedCustomer.name}</Text>
+            </Text>
+            <Feather name="chevron-left" size={13} color={Colors.primary} />
+          </TouchableOpacity>
+        )}
 
         <Text style={styles.label}>{t("customerPhone2")} {t("optional")}</Text>
         <View style={styles.row}>
@@ -1901,7 +1944,16 @@ const styles = StyleSheet.create({
   todayStripLeft: { alignItems: "center", gap: 1 },
   todayStripCount: { fontSize: 18, fontWeight: "900", color: "#fff" },
   todayStripLabel: { fontSize: 10, color: "rgba(255,255,255,0.65)" },
+  todayStripLastShiftTime: { fontSize: 13, fontWeight: "700", color: "#fff" },
   todayStripDivider: { width: 1, height: 30, backgroundColor: "rgba(255,255,255,0.2)" },
+  autoFillChip: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 10,
+    backgroundColor: Colors.primary + "12",
+    borderWidth: 1.5, borderColor: Colors.primary + "40",
+    marginBottom: 4,
+  },
+  autoFillText: { flex: 1, fontSize: 13, color: Colors.primary },
   closeShiftBtn: {
     marginLeft: "auto" as any, flexDirection: "row", alignItems: "center", gap: 6,
     backgroundColor: Colors.gold, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8,

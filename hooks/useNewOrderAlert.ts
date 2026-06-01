@@ -1,5 +1,6 @@
 import * as Haptics from "expo-haptics";
 import { useEffect, useRef } from "react";
+import { Platform, Vibration } from "react-native";
 
 /**
  * Fires a haptic + vibration alert when the number of pending orders for a
@@ -23,8 +24,8 @@ export function useNewOrderAlert(
     }
 
     if (pendingCount > prevRef.current) {
-      // New order(s) arrived
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      if (Platform.OS !== "web") Vibration.vibrate([0, 120, 80, 120]);
       onNew?.();
     }
 

@@ -10,7 +10,7 @@ import { EmployeeRef, Order, OrderStatus, useOrders } from "@/context/OrdersCont
 import { useNewOrderAlert } from "@/hooks/useNewOrderAlert";
 
 export default function HalwaScreen() {
-  const { getOrdersForDepartment, updateDepartmentStatus, isLoading } = useOrders();
+  const { getOrdersForDepartment, updateDepartmentStatus, isLoading, refreshOrders } = useOrders();
   const { t } = useLang();
   const orders = getOrdersForDepartment("halwa");
   const pendingCount = orders.filter((o) => o.departmentStatuses["halwa"] === "pending").length;
@@ -69,7 +69,7 @@ export default function HalwaScreen() {
         ListEmptyComponent={
           <EmptyState icon="coffee" title={t("noOrdersNow")} subtitle={t("halwaSubtitle")} />
         }
-        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => {}} />}
+        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refreshOrders} />}
         showsVerticalScrollIndicator={false}
       />
     </View>

@@ -148,6 +148,7 @@ interface OrdersContextType {
   assignDeliveryDriver: (orderId: string, driver: { name: string; employeeId: string }) => Promise<void>;
   updateOrder: (id: string, patch: Partial<Omit<Order, "id" | "companyId" | "orderNumber" | "createdAt">>) => Promise<void>;
   getOrdersForDepartment: (department: Department) => Order[];
+  refreshOrders: () => void;
   isLoading: boolean;
 }
 
@@ -185,7 +186,7 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
   const { companyId } = useCompany();
   const [allOrders, setAllOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  // Track whether Firestore has ever succeeded for this companyId
+  const [refreshTick, setRefreshTick] = useState(0);
   const firestoreAlive = useRef(false);
 
   const orders        = allOrders.filter(o => !o.deleted);
@@ -238,7 +239,12 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
       mounted = false;
       unsub();
     };
-  }, [companyId, ordersCollection]);
+  }, [companyId, ordersCollection, refreshTick]);
+
+  const refreshOrders = useCallback(() => {
+    setIsLoading(true);
+    setRefreshTick((t) => t + 1);
+  }, []);
 
   const getNextOrderNumber = useCallback(async (): Promise<number> => {
     try {
@@ -547,6 +553,7 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
         assignDeliveryDriver,
         updateOrder,
         getOrdersForDepartment,
+        refreshOrders,
         isLoading,
       }}
     >

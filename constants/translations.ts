@@ -270,7 +270,7 @@ const translations = {
   custHistory:      { ar: "سجل المشتريات",     en: "Purchase History", ur: "خریداری کی تاریخ",  hi: "खरीद इतिहास",      bn: "ক্রয় ইতিহাস" },
   custNoOrders:     { ar: "لا توجد طلبات",     en: "No orders yet",    ur: "ابھی کوئی آرڈر نہیں", hi: "अभी कोई ऑर्डर नहीं", bn: "এখনো কোনো অর্ডার নেই" },
   custAllCustomers: { ar: "جميع العملاء",      en: "All Customers",    ur: "تمام صارفین",        hi: "सभी ग्राहक",        bn: "সব গ্রাহক" },
-  custFrequent:     { ar: "عملاء متكررون",     en: "Frequent",         ur: "باقاعدہ صارفین",     hi: "नियमित ग्राहक",    bn: "নিয়মিত গ্রাহক" },
+  custFrequent:     { ar: "متكررون",           en: "Frequent",         ur: "بار بار آنے والے",   hi: "नियमित",           bn: "নিয়মিত" },
 
   // ── Delivery ──────────────────────────────────────────────────
   delAllOrders:     { ar: "جميع التوصيل",      en: "All Deliveries",   ur: "تمام ڈیلیوری",       hi: "सभी डिलीवरी",      bn: "সব ডেলিভারি" },
@@ -508,6 +508,38 @@ const translations = {
 
   // ── Ready for delivery ────────────────────────────────────
   readyForDelivery:   { ar: "جاهز للتوصيل",      en: "Ready to Ship",     ur: "ترسیل کے لیے تیار", hi: "डिलीवरी के लिए तैयार", bn: "ডেলিভারির জন্য প্রস্তুত" },
+
+  // ── Reports – extra tab/section keys ─────────────────────
+  repTabRevenue:      { ar: "الإيرادات",           en: "Revenue",              ur: "آمدنی",                  hi: "राजस्व",              bn: "রাজস্ব" },
+  repTabProducts:     { ar: "المنتجات",            en: "Products",             ur: "مصنوعات",                hi: "उत्पाद",              bn: "পণ্য" },
+  repTabCashier:      { ar: "الكاشير",             en: "Cashier",              ur: "کیشیئر",                 hi: "कैशियर",              bn: "ক্যাশিয়ার" },
+  repTabDelivery:     { ar: "التوصيل",             en: "Delivery",             ur: "ڈیلیوری",                hi: "डिलीवरी",             bn: "ডেলিভারি" },
+  repDelivVsPickup:   { ar: "التوصيل مقابل الاستلام", en: "Delivery vs Pickup", ur: "ڈیلیوری بمقابلہ پک اپ", hi: "डिलीवरी बनाम पिकअप", bn: "ডেলিভারি বনাম পিকআপ" },
+  repTopByQty:        { ar: "أكثر الأصناف مبيعاً (الكمية)", en: "Top Items by Qty", ur: "مقدار کے لحاظ سے اعلیٰ", hi: "मात्रा के अनुसार शीर्ष", bn: "পরিমাণ অনুযায়ী শীর্ষ পণ্য" },
+  repTopByRevenue:    { ar: "أكثر الأصناف إيراداً", en: "Top Items by Revenue", ur: "آمدنی کے لحاظ سے اعلیٰ", hi: "राजस्व के अनुसार शीर्ष", bn: "আয় অনুযায়ী শীর্ষ পণ্য" },
+  repDeptVolume:      { ar: "حجم الطلبات حسب القسم", en: "Dept Order Volume",  ur: "قسم کے مطابق آرڈر حجم", hi: "विभाग अनुसार ऑर्डर मात्रा", bn: "বিভাগ অনুযায়ী অর্ডার পরিমাণ" },
+  repCashierCount:    { ar: "عدد الكاشيرات",       en: "Cashier Count",        ur: "کیشیئر تعداد",           hi: "कैशियर संख्या",        bn: "ক্যাশিয়ার সংখ্যা" },
+  repTopPerformer:    { ar: "الأعلى أداءً",        en: "Top Performer",        ur: "بہترین کارکردگی",        hi: "शीर्ष प्रदर्शक",       bn: "শীর্ষ পারফর্মার" },
+  repCashierPerf:     { ar: "أداء الكاشيرات",      en: "Cashier Performance",  ur: "کیشیئر کارکردگی",       hi: "कैशियर प्रदर्शन",      bn: "ক্যাশিয়ার পারফরম্যান্স" },
+  repDelivCount:      { ar: "طلبات التوصيل",       en: "Delivery Orders",      ur: "ڈیلیوری آرڈرز",         hi: "डिलीवरी ऑर्डर",        bn: "ডেলিভারি অর্ডার" },
+  repPickupCount:     { ar: "طلبات الاستلام",      en: "Pickup Orders",        ur: "پک اپ آرڈرز",           hi: "पिकअप ऑर्डर",          bn: "পিকআপ অর্ডার" },
+  repCompRate:        { ar: "نسبة الإنجاز",        en: "Completion Rate",      ur: "تکمیل کی شرح",          hi: "पूर्णता दर",            bn: "সমাপ্তির হার" },
+  repDelivRevenue:    { ar: "إيرادات التوصيل",     en: "Delivery Revenue",     ur: "ڈیلیوری آمدنی",         hi: "डिलीवरी राजस्व",       bn: "ডেলিভারি আয়" },
+  repAvgDelivTime:    { ar: "متوسط وقت التوصيل",   en: "Avg Delivery Time",    ur: "اوسط ڈیلیوری وقت",     hi: "औसत डिलीवरी समय",      bn: "গড় ডেলিভারি সময়" },
+  repDelivStatus:     { ar: "حالة طلبات التوصيل",  en: "Delivery Order Status", ur: "ڈیلیوری آرڈر کی حالت", hi: "डिलीवरी ऑर्डर स्थिति", bn: "ডেলিভারি অর্ডার স্ট্যাটাস" },
+  repDriverPerf:      { ar: "أداء السائقين",       en: "Driver Performance",   ur: "ڈرائیور کارکردگی",      hi: "ड्राइवर प्रदर्शन",      bn: "ড্রাইভার পারফরম্যান্স" },
+  repUnknown:         { ar: "غير معروف",           en: "Unknown",              ur: "نامعلوم",                hi: "अज्ञात",                bn: "অজানা" },
+  repUnassigned:      { ar: "غير معين",            en: "Unassigned",           ur: "غیر تفویض",             hi: "असाइन नहीं",            bn: "অনির্ধারিত" },
+  repTotalDiscounts:  { ar: "إجمالي الخصومات",     en: "Total Discounts",      ur: "کل چھوٹ",               hi: "कुल छूट",               bn: "মোট ছাড়" },
+
+  // ── Customers – extra keys ────────────────────────────────
+  custAll:            { ar: "الكل",               en: "All",                  ur: "سب",                     hi: "सभी",                  bn: "সব" },
+  custTotalCustomers: { ar: "إجمالي العملاء",     en: "Total Customers",      ur: "کل گاہک",                hi: "कुल ग्राहक",            bn: "মোট গ্রাহক" },
+  custVIPCount:       { ar: "عملاء VIP",          en: "VIP Customers",        ur: "VIP گاہک",               hi: "VIP ग्राहक",            bn: "VIP গ্রাহক" },
+  custRevenue:        { ar: "إجمالي الإيرادات",   en: "Total Revenue",        ur: "کل آمدنی",               hi: "कुल राजस्व",            bn: "মোট আয়" },
+  custDelivered:      { ar: "مسلَّم",             en: "Delivered",            ur: "تحویل شدہ",              hi: "वितरित",                bn: "ডেলিভারড" },
+  custFrom:           { ar: "من",                 en: "of",                   ur: "میں سے",                 hi: "में से",                bn: "এর মধ্যে" },
+  custOrderSingular:  { ar: "طلب",                en: "order",                ur: "آرڈر",                   hi: "ऑर्डर",                 bn: "অর্ডার" },
 } as const;
 
 export type TranslationKey = keyof typeof translations;

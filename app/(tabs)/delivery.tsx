@@ -9,6 +9,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -184,7 +185,15 @@ function DriverModal({
   onAssign: (id: string, driver: { name: string; employeeId: string }) => void;
 }) {
   const { employees } = useEmployee();
-  const active = employees.filter((e) => e.status !== "suspended");
+  const [driverSearch, setDriverSearch] = useState("");
+  const active = employees
+    .filter((e) => e.status !== "suspended")
+    .filter((e) =>
+      driverSearch.trim()
+        ? e.name.toLowerCase().includes(driverSearch.trim().toLowerCase()) ||
+          e.employeeId.includes(driverSearch.trim())
+        : true
+    );
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -192,6 +201,24 @@ function DriverModal({
         <Pressable style={styles.modalSheet} onPress={() => {}}>
           <View style={styles.modalHandle} />
           <Text style={styles.modalTitle}>اختر السائق</Text>
+
+          {/* Search */}
+          <View style={styles.driverSearchRow}>
+            <Feather name="search" size={15} color={Colors.textMuted} />
+            <TextInput
+              style={styles.driverSearchInput}
+              value={driverSearch}
+              onChangeText={setDriverSearch}
+              placeholder="ابحث باسم السائق..."
+              placeholderTextColor={Colors.textMuted}
+              textAlign="right"
+            />
+            {driverSearch.length > 0 && (
+              <TouchableOpacity onPress={() => setDriverSearch("")}>
+                <Feather name="x" size={14} color={Colors.textMuted} />
+              </TouchableOpacity>
+            )}
+          </View>
 
           {currentDriver && (
             <View style={styles.currentDriverRow}>
@@ -756,6 +783,15 @@ const styles = StyleSheet.create({
     fontSize: 17, fontWeight: "800", color: Colors.primary,
     textAlign: "center", paddingVertical: 12,
     borderBottomWidth: 1, borderBottomColor: Colors.border,
+  },
+  driverSearchRow: {
+    flexDirection: "row", alignItems: "center", gap: 8,
+    marginHorizontal: 16, marginTop: 10, paddingHorizontal: 12, paddingVertical: 8,
+    backgroundColor: Colors.background, borderRadius: 12,
+    borderWidth: 1, borderColor: Colors.border,
+  },
+  driverSearchInput: {
+    flex: 1, fontSize: 14, color: Colors.text,
   },
   currentDriverRow: {
     flexDirection: "row", alignItems: "center", gap: 8,

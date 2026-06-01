@@ -37,12 +37,6 @@ const DEPT_META: Record<string, { label: string; color: string }> = {
   packaging: { label: "تغليف",     color: Colors.packaging },
 };
 
-const TAB_ITEMS: { key: Tab; label: string; icon: string }[] = [
-  { key: "revenue",  label: "الإيرادات",  icon: "trending-up" },
-  { key: "products", label: "المنتجات",   icon: "package" },
-  { key: "cashier",  label: "الكاشير",    icon: "user-check" },
-  { key: "delivery", label: "التوصيل",    icon: "truck" },
-];
 
 // ─── Helper: date filter ──────────────────────────────────────────────────────
 
@@ -177,12 +171,14 @@ function CashierRow({
   orderCount,
   revenue,
   avg,
+  tFn,
 }: {
   rank: number;
   name: string;
   orderCount: number;
   revenue: number;
   avg: number;
+  tFn: (key: import("@/constants/translations").TranslationKey) => string;
 }) {
   return (
     <View style={styles.cashierRow}>
@@ -192,7 +188,7 @@ function CashierRow({
       <View style={{ flex: 1 }}>
         <Text style={styles.cashierName}>{name}</Text>
         <Text style={styles.cashierSub}>
-          {orderCount} طلب · متوسط {fmtCurrency(avg)}
+          {orderCount} {tFn("custOrderSingular")} · {tFn("repAvgOrder")} {fmtCurrency(avg)}
         </Text>
       </View>
       <Text style={styles.cashierRevenue}>{fmtCurrency(revenue)}</Text>
@@ -205,11 +201,13 @@ function DriverRow({
   name,
   orderCount,
   delivered,
+  tFn,
 }: {
   rank: number;
   name: string;
   orderCount: number;
   delivered: number;
+  tFn: (key: import("@/constants/translations").TranslationKey) => string;
 }) {
   return (
     <View style={styles.cashierRow}>
@@ -219,11 +217,11 @@ function DriverRow({
       <View style={{ flex: 1 }}>
         <Text style={styles.cashierName}>{name}</Text>
         <Text style={styles.cashierSub}>
-          {delivered} مسلّم من {orderCount}
+          {delivered} {tFn("custDelivered")} {tFn("custFrom")} {orderCount}
         </Text>
       </View>
       <Text style={[styles.cashierRevenue, { color: Colors.info }]}>
-        {orderCount} طلب
+        {orderCount} {tFn("custOrderSingular")}
       </Text>
     </View>
   );
@@ -236,6 +234,7 @@ function RevenueTab({
 }: {
   filtered: ReturnType<typeof useOrders>["orders"];
 }) {
+  const { t } = useLang();
   const totalRevenue = filtered.reduce((s, o) => s + (o.totalAmount ?? 0), 0);
   const orderCount   = filtered.length;
   const avgOrder     = orderCount > 0 ? totalRevenue / orderCount : 0;
@@ -285,9 +284,9 @@ function RevenueTab({
 
   const paymentTotal = Object.values(byPayment).reduce((s, v) => s + v, 0);
   const paymentLabels: Record<string, string> = {
-    cash: "نقداً",
-    card: "بطاقة",
-    transfer: "تحويل",
+    cash: t("repCash"),
+    card: t("repCard"),
+    transfer: t("repTransfer"),
   };
 
   return (
@@ -296,25 +295,25 @@ function RevenueTab({
       <View style={styles.kpiGrid}>
         <StatCard
           icon="trending-up"
-          label="إجمالي الإيرادات"
+          label={t("repTotalRevenue")}
           value={fmtCurrency(totalRevenue)}
           color={Colors.primary}
         />
         <StatCard
           icon="shopping-bag"
-          label="عدد الطلبات"
+          label={t("repTotalOrdersNum")}
           value={String(orderCount)}
           color={Colors.gold}
         />
         <StatCard
           icon="bar-chart-2"
-          label="متوسط الطلب"
+          label={t("repAvgOrder")}
           value={fmtCurrency(avgOrder)}
           color={Colors.packaging}
         />
         <StatCard
           icon="tag"
-          label="إجمالي الخصومات"
+          label={t("repTotalDiscounts")}
           value={fmtCurrency(totalDiscounts)}
           color={Colors.accent}
         />
@@ -323,7 +322,7 @@ function RevenueTab({
       {/* Revenue by department */}
       {byDept.length > 0 && (
         <View style={styles.card}>
-          <SectionHeader title="الإيرادات حسب القسم" />
+          <SectionHeader title={t("repByDept")} />
           {byDept.map(([dept, rev]) => (
             <BarRow
               key={dept}
@@ -339,7 +338,7 @@ function RevenueTab({
 
       {/* Payment methods */}
       <View style={styles.card}>
-        <SectionHeader title="طرق الدفع" />
+        <SectionHeader title={t("repByPayment")} />
         {Object.entries(byPayment)
           .filter(([, v]) => v > 0)
           .map(([pm, val]) => (
@@ -358,18 +357,18 @@ function RevenueTab({
 
       {/* Delivery vs Pickup */}
       <View style={styles.card}>
-        <SectionHeader title="التوصيل مقابل الاستلام" />
+        <SectionHeader title={t("repDelivVsPickup")} />
         <View style={styles.splitRow}>
           <View style={[styles.splitCard, { borderColor: Colors.info }]}>
             <Feather name="truck" size={20} color={Colors.info} />
             <Text style={styles.splitCount}>{deliveryCount}</Text>
-            <Text style={styles.splitLabel}>توصيل</Text>
+            <Text style={styles.splitLabel}>{t("delivery")}</Text>
             <Text style={styles.splitRev}>{fmtCurrency(deliveryRev)}</Text>
           </View>
           <View style={[styles.splitCard, { borderColor: Colors.success }]}>
             <Feather name="shopping-bag" size={20} color={Colors.success} />
             <Text style={styles.splitCount}>{pickupCount}</Text>
-            <Text style={styles.splitLabel}>استلام</Text>
+            <Text style={styles.splitLabel}>{t("pickup")}</Text>
             <Text style={styles.splitRev}>{fmtCurrency(pickupRev)}</Text>
           </View>
         </View>
@@ -385,6 +384,7 @@ function ProductsTab({
 }: {
   filtered: ReturnType<typeof useOrders>["orders"];
 }) {
+  const { t } = useLang();
   const topByQty = useMemo(() => {
     const map: Record<string, number> = {};
     filtered.forEach((o) =>
@@ -427,7 +427,7 @@ function ProductsTab({
       {/* Top products by quantity */}
       {topByQty.length > 0 ? (
         <View style={styles.card}>
-          <SectionHeader title="أكثر الأصناف مبيعاً (الكمية)" />
+          <SectionHeader title={t("repTopByQty")} />
           {topByQty.map(([name, qty], idx) => (
             <View key={name} style={styles.prodRow}>
               <Text style={styles.prodRank}>#{idx + 1}</Text>
@@ -458,7 +458,7 @@ function ProductsTab({
       {/* Top products by revenue */}
       {topByRev.length > 0 && (
         <View style={styles.card}>
-          <SectionHeader title="أكثر الأصناف إيراداً" />
+          <SectionHeader title={t("repTopByRevenue")} />
           {topByRev.map(([name, rev]) => (
             <BarRow
               key={name}
@@ -475,7 +475,7 @@ function ProductsTab({
       {/* Department order volume */}
       {deptVolume.length > 0 && (
         <View style={styles.card}>
-          <SectionHeader title="حجم الطلبات حسب القسم" />
+          <SectionHeader title={t("repDeptVolume")} />
           {deptVolume.map(([dept, counts]) => (
             <View key={dept} style={styles.deptVolumeRow}>
               <View
@@ -533,10 +533,11 @@ function CashierTab({
 }: {
   filtered: ReturnType<typeof useOrders>["orders"];
 }) {
+  const { t } = useLang();
   const cashierStats = useMemo(() => {
     const map: Record<string, { orderCount: number; revenue: number }> = {};
     filtered.forEach((o) => {
-      const name = o.cashierEmployee?.name ?? "غير معروف";
+      const name = o.cashierEmployee?.name ?? t("repUnknown");
       if (!map[name]) map[name] = { orderCount: 0, revenue: 0 };
       map[name].orderCount++;
       map[name].revenue += o.totalAmount ?? 0;
@@ -567,22 +568,22 @@ function CashierTab({
       <View style={styles.kpiGrid}>
         <StatCard
           icon="users"
-          label="عدد الكاشيرات"
+          label={t("repCashierCount")}
           value={String(cashierStats.length)}
           color={Colors.purple}
         />
         <StatCard
           icon="award"
-          label="الأعلى أداءً"
+          label={t("repTopPerformer")}
           value={topCashier.name}
           color={Colors.gold}
-          sub={`${topCashier.orderCount} طلب`}
+          sub={`${topCashier.orderCount} ${t("custOrderSingular")}`}
         />
       </View>
 
       {/* Cashier list */}
       <View style={styles.card}>
-        <SectionHeader title="أداء الكاشيرات" />
+        <SectionHeader title={t("repCashierPerf")} />
         {cashierStats.map((c, idx) => (
           <CashierRow
             key={c.name}
@@ -591,6 +592,7 @@ function CashierTab({
             orderCount={c.orderCount}
             revenue={c.revenue}
             avg={c.avg}
+            tFn={t}
           />
         ))}
       </View>
@@ -605,6 +607,7 @@ function DeliveryTab({
 }: {
   filtered: ReturnType<typeof useOrders>["orders"];
 }) {
+  const { t } = useLang();
   const deliveryOrders = filtered.filter((o) => o.orderType === "delivery");
   const pickupOrders   = filtered.filter((o) => o.orderType !== "delivery");
 
@@ -627,7 +630,7 @@ function DeliveryTab({
   const driverStats = useMemo(() => {
     const map: Record<string, { orderCount: number; delivered: number }> = {};
     deliveryOrders.forEach((o) => {
-      const name = o.deliveryDriver?.name ?? "غير معين";
+      const name = o.deliveryDriver?.name ?? t("repUnassigned");
       if (!map[name]) map[name] = { orderCount: 0, delivered: 0 };
       map[name].orderCount++;
       if (o.deliveryStatus === "delivered") map[name].delivered++;
@@ -658,26 +661,26 @@ function DeliveryTab({
       <View style={styles.kpiGrid}>
         <StatCard
           icon="truck"
-          label="طلبات التوصيل"
+          label={t("repDelivCount")}
           value={String(deliveryOrders.length)}
           color={Colors.info}
         />
         <StatCard
           icon="shopping-bag"
-          label="طلبات الاستلام"
+          label={t("repPickupCount")}
           value={String(pickupOrders.length)}
           color={Colors.success}
         />
         <StatCard
           icon="check-circle"
-          label="نسبة الإنجاز"
+          label={t("repCompRate")}
           value={`${completionRate}%`}
           color={Colors.statusDone}
-          sub={`${deliveredCount} مسلّم`}
+          sub={`${deliveredCount} ${t("custDelivered")}`}
         />
         <StatCard
           icon="dollar-sign"
-          label="إيرادات التوصيل"
+          label={t("repDelivRevenue")}
           value={fmtCurrency(deliveryRevenue)}
           color={Colors.gold}
         />
@@ -686,7 +689,7 @@ function DeliveryTab({
       {/* Avg delivery time */}
       {avgDeliveryTime !== null && (
         <View style={styles.card}>
-          <SectionHeader title="متوسط وقت التوصيل" />
+          <SectionHeader title={t("repAvgDelivTime")} />
           <View style={styles.avgTimeRow}>
             <Feather name="clock" size={28} color={Colors.info} />
             <Text style={styles.avgTimeValue}>{avgDeliveryTime} دقيقة</Text>
@@ -696,17 +699,17 @@ function DeliveryTab({
 
       {/* Pending vs Delivered */}
       <View style={styles.card}>
-        <SectionHeader title="حالة طلبات التوصيل" />
+        <SectionHeader title={t("repDelivStatus")} />
         <View style={styles.splitRow}>
           <View style={[styles.splitCard, { borderColor: Colors.statusDone }]}>
             <Feather name="check-circle" size={20} color={Colors.statusDone} />
             <Text style={styles.splitCount}>{deliveredCount}</Text>
-            <Text style={styles.splitLabel}>مسلّم</Text>
+            <Text style={styles.splitLabel}>{t("custDelivered")}</Text>
           </View>
           <View style={[styles.splitCard, { borderColor: Colors.statusPending }]}>
             <Feather name="clock" size={20} color={Colors.statusPending} />
             <Text style={styles.splitCount}>{pendingDelivery}</Text>
-            <Text style={styles.splitLabel}>قيد التسليم</Text>
+            <Text style={styles.splitLabel}>{t("statusPending")}</Text>
           </View>
         </View>
       </View>
@@ -714,7 +717,7 @@ function DeliveryTab({
       {/* Driver performance */}
       {driverStats.length > 0 && (
         <View style={styles.card}>
-          <SectionHeader title="أداء السائقين" />
+          <SectionHeader title={t("repDriverPerf")} />
           {driverStats.map((d, idx) => (
             <DriverRow
               key={d.name}
@@ -722,6 +725,7 @@ function DeliveryTab({
               name={d.name}
               orderCount={d.orderCount}
               delivered={d.delivered}
+              tFn={t}
             />
           ))}
         </View>
@@ -745,6 +749,13 @@ export default function ReportsScreen() {
 
   const [filter, setFilter] = useState<Filter>("month");
   const [activeTab, setActiveTab] = useState<Tab>("revenue");
+
+  const TAB_ITEMS: { key: Tab; label: string; icon: string }[] = [
+    { key: "revenue",  label: t("repTabRevenue"),  icon: "trending-up" },
+    { key: "products", label: t("repTabProducts"), icon: "package" },
+    { key: "cashier",  label: t("repTabCashier"),  icon: "user-check" },
+    { key: "delivery", label: t("repTabDelivery"), icon: "truck" },
+  ];
 
   const filtered = useMemo(
     () => orders.filter((o) => isInFilter(o.createdAt, filter)),
@@ -835,7 +846,7 @@ export default function ReportsScreen() {
     <View style={[styles.root, { paddingTop: insets.top }]}>
       {/* Header row */}
       <View style={styles.headerRow}>
-        <Text style={styles.screenTitle}>التقارير</Text>
+        <Text style={styles.screenTitle}>{t("titleReports")}</Text>
         <TouchableOpacity
           style={styles.shareBtn}
           onPress={handleShare}
@@ -912,7 +923,7 @@ export default function ReportsScreen() {
         {filtered.length === 0 && (
           <View style={styles.emptyState}>
             <Feather name="bar-chart-2" size={48} color={Colors.textMuted} />
-            <Text style={styles.emptyStateText}>لا توجد بيانات</Text>
+            <Text style={styles.emptyStateText}>{t("repNoData")}</Text>
           </View>
         )}
 

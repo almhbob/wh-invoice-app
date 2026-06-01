@@ -10,7 +10,7 @@ import { useLang } from "@/context/LanguageContext";
 import { EmployeeRef, Order, OrderStatus, useOrders } from "@/context/OrdersContext";
 
 export default function CakeScreen() {
-  const { getOrdersForDepartment, updateDepartmentStatus, isLoading } = useOrders();
+  const { getOrdersForDepartment, updateDepartmentStatus, isLoading, refreshOrders } = useOrders();
   const { t } = useLang();
   const orders = getOrdersForDepartment("cake");
   const pendingCount = orders.filter((o) => o.departmentStatuses["cake"] === "pending").length;
@@ -63,7 +63,7 @@ export default function CakeScreen() {
         ListEmptyComponent={
           <EmptyState icon="layers" title={t("noOrdersNow")} subtitle={t("cakeSubtitle")} />
         }
-        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => {}} />}
+        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refreshOrders} />}
         showsVerticalScrollIndicator={false}
       />
     </View>
