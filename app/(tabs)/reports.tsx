@@ -1,7 +1,11 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import * as Print from "expo-print";
+import * as Sharing from "expo-sharing";
 import React, { useMemo, useState } from "react";
 import {
+  Alert,
+  Platform,
   ScrollView,
   Share,
   StyleSheet,
@@ -853,18 +857,100 @@ export default function ReportsScreen() {
     }
   }
 
+  async function handlePrintPDF() {
+    Haptics.selectionAsync();
+    const totalRevenue = filtered.reduce((s, o) => s + (o.totalAmount ?? 0), 0);
+    const orderCount = filtered.length;
+    const byPayment: Record<string, number> = { cash: 0, card: 0, transfer: 0 };
+    filtered.forEach((o) => { byPayment[o.paymentMethod ?? "cash"] = (byPayment[o.paymentMethod ?? "cash"] ?? 0) + (o.totalAmount ?? 0); });
+    const qtyMap: Record<string, number> = {};
+    filtered.forEach((o) => o.items.forEach((item) => { qtyMap[item.name] = (qtyMap[item.name] ?? 0) + item.quantity; }));
+    const topProducts = Object.entries(qtyMap).sort((a, b) => b[1] - a[1]).slice(0, 15);
+    const cashierMap: Record<string, number> = {};
+    filtered.forEach((o) => { const n = o.cashierEmployee?.name ?? "غير معروف"; cashierMap[n] = (cashierMap[n] ?? 0) + 1; });
+    const topCashiers = Object.entries(cashierMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    const deliveryCount = filtered.filter((o) => o.orderType === "delivery").length;
+    const label = filterLabel(filter);
+    const dateStr = new Date().toLocaleDateString("ar-SA");
+    const avg = orderCount > 0 ? fmtCurrency(totalRevenue / orderCount) : "—";
+
+    const html = `<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head><meta charset="utf-8"><title>تقرير ${label}</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:Tahoma,Arial,sans-serif;direction:rtl;padding:32px;color:#1a1a2e;background:#fff;font-size:13px}
+  h1{font-size:22px;color:#b8860b;text-align:center;margin-bottom:4px;letter-spacing:1px}
+  .brand{text-align:center;color:#888;font-size:12px;margin-bottom:6px}
+  .period{text-align:center;font-size:13px;font-weight:700;color:#1a1a2e;margin-bottom:24px}
+  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:28px}
+  .card{background:#fdf8f0;border-radius:10px;padding:14px 16px;border-right:4px solid #b8860b}
+  .card-val{font-size:20px;font-weight:900;color:#1a1a2e}
+  .card-lbl{font-size:11px;color:#999;margin-top:3px}
+  h2{font-size:14px;color:#b8860b;margin:24px 0 10px;padding-bottom:5px;border-bottom:2px solid #b8860b33}
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th{background:#b8860b;color:#fff;padding:9px 12px;text-align:right;font-weight:700}
+  td{padding:8px 12px;border-bottom:1px solid #eee}
+  tr:nth-child(even) td{background:#fafafa}
+  .pay-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee}
+  .pay-lbl{color:#555}
+  .pay-val{font-weight:700;color:#1a1a2e}
+  .footer{margin-top:32px;text-align:center;font-size:10px;color:#bbb}
+  @media print{body{padding:16px}}
+</style></head>
+<body>
+  <h1>Laviviane — Maison de Pâtisserie</h1>
+  <p class="brand">تقرير مبيعات</p>
+  <p class="period">${label} · ${dateStr}</p>
+  <div class="cards">
+    <div class="card"><div class="card-val">${fmtCurrency(totalRevenue)}</div><div class="card-lbl">إجمالي الإيرادات</div></div>
+    <div class="card"><div class="card-val">${orderCount}</div><div class="card-lbl">عدد الطلبات</div></div>
+    <div class="card"><div class="card-val">${avg}</div><div class="card-lbl">متوسط الطلب</div></div>
+  </div>
+  <h2>طريقة الدفع</h2>
+  <div class="pay-row"><span class="pay-lbl">نقد</span><span class="pay-val">${fmtCurrency(byPayment.cash ?? 0)}</span></div>
+  <div class="pay-row"><span class="pay-lbl">شبكة (بطاقة)</span><span class="pay-val">${fmtCurrency(byPayment.card ?? 0)}</span></div>
+  <div class="pay-row"><span class="pay-lbl">تحويل بنكي</span><span class="pay-val">${fmtCurrency(byPayment.transfer ?? 0)}</span></div>
+  <div class="pay-row"><span class="pay-lbl">توصيل / استلام</span><span class="pay-val">${deliveryCount} توصيل · ${orderCount - deliveryCount} استلام</span></div>
+  ${topProducts.length > 0 ? `
+  <h2>أعلى المنتجات مبيعاً</h2>
+  <table><tr><th>#</th><th>المنتج</th><th>الكمية</th></tr>
+  ${topProducts.map(([n, q], i) => `<tr><td>${i + 1}</td><td>${n}</td><td>${q} وحدة</td></tr>`).join("")}
+  </table>` : ""}
+  ${topCashiers.length > 0 ? `
+  <h2>أداء الكاشيرين</h2>
+  <table><tr><th>#</th><th>الموظف</th><th>الطلبات</th></tr>
+  ${topCashiers.map(([n, c], i) => `<tr><td>${i + 1}</td><td>${n}</td><td>${c} طلب</td></tr>`).join("")}
+  </table>` : ""}
+  <p class="footer">أُنشئ بواسطة تطبيق فوترة · ${new Date().toLocaleString("ar-SA")}</p>
+</body></html>`;
+
+    if (Platform.OS === "web") {
+      const win = window.open("", "_blank");
+      if (win) { win.document.write(html); win.document.close(); setTimeout(() => win.print(), 300); }
+      return;
+    }
+    try {
+      const { uri } = await Print.printToFileAsync({ html, base64: false });
+      await Sharing.shareAsync(uri, { mimeType: "application/pdf", dialogTitle: `تقرير ${label}` });
+    } catch {
+      Alert.alert("خطأ", "تعذّر إنشاء PDF");
+    }
+  }
+
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
       {/* Header row */}
       <View style={styles.headerRow}>
         <Text style={styles.screenTitle}>{t("titleReports")}</Text>
-        <TouchableOpacity
-          style={styles.shareBtn}
-          onPress={handleShare}
-          activeOpacity={0.75}
-        >
-          <Feather name="share-2" size={18} color={Colors.primary} />
-        </TouchableOpacity>
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          <TouchableOpacity style={styles.shareBtn} onPress={handlePrintPDF} activeOpacity={0.75}>
+            <Feather name="file-text" size={18} color={Colors.primary} />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.shareBtn} onPress={handleShare} activeOpacity={0.75}>
+            <Feather name="share-2" size={18} color={Colors.primary} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Time filter pills */}

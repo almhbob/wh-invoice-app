@@ -18,9 +18,13 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
+
 import { Colors } from "@/constants/colors";
+import { useCompany } from "@/context/CompanyContext";
 import { useLang } from "@/context/LanguageContext";
 import { Product, ProductDept, useProducts } from "@/context/ProductsContext";
+import { storage } from "@/lib/firebase";
 
 interface Props {
   visible: boolean;
@@ -42,9 +46,21 @@ const CATEGORY_SUGGESTIONS: Record<ProductDept, string[]> = {
   cake:      ["مقاس 15 سم", "مقاس 25 سم"],
 };
 
+async function uploadProductImage(uri: string, companyId: string): Promise<string> {
+  if (uri.startsWith("https://") || uri.startsWith("http://")) return uri;
+  const ext = uri.includes("png") ? "png" : "jpg";
+  const filename = `${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+  const path = storageRef(storage, `product-images/${companyId}/${filename}`);
+  const response = await fetch(uri);
+  const blob = await response.blob();
+  await uploadBytes(path, blob, { contentType: `image/${ext}` });
+  return getDownloadURL(path);
+}
+
 export function ProductManagerModal({ visible, product, onClose }: Props) {
   const insets = useSafeAreaInsets();
   const { addProduct, updateProduct } = useProducts();
+  const { companyId } = useCompany();
   const { lang } = useLang();
   const isEdit = !!product;
 
@@ -131,6 +147,14 @@ export function ProductManagerModal({ visible, product, onClose }: Props) {
     }
     setSaving(true);
     try {
+      let finalImageUri = imageUri;
+      if (imageUri && !imageUri.startsWith("https://") && !imageUri.startsWith("http://")) {
+        try {
+          finalImageUri = await uploadProductImage(imageUri, companyId);
+        } catch {
+          // Keep local URI if upload fails — image shows in current session
+        }
+      }
       const data = {
         name: name.trim(),
         nameEn: nameEn.trim() || undefined,
@@ -139,7 +163,7 @@ export function ProductManagerModal({ visible, product, onClose }: Props) {
         category: category.trim(),
         sortOrder: Number(sortOrder) || 1,
         description: description.trim() || undefined,
-        imageUri: imageUri || undefined,
+        imageUri: finalImageUri || undefined,
         isAvailable,
       };
       if (isEdit && product) {
