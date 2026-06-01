@@ -334,8 +334,8 @@ export default function CustomersScreen() {
   }, [customers, search, tab]);
 
   const tabs: { key: TabKey; label: string }[] = [
-    { key: "all", label: "الكل" },
-    { key: "frequent", label: "متكررون" },
+    { key: "all", label: t("custAll") },
+    { key: "frequent", label: t("custFrequent") },
     { key: "vip", label: "⭐ VIP" },
   ];
 
@@ -344,19 +344,19 @@ export default function CustomersScreen() {
       {/* ── Stats Header ── */}
       <View style={styles.statsRow}>
         <StatCard
-          label="إجمالي العملاء"
+          label={t("custTotalCustomers")}
           value={String(totalCustomers)}
           icon="👥"
           accent={Colors.primary}
         />
         <StatCard
-          label="عملاء VIP"
+          label={t("custVIPCount")}
           value={String(vipCount)}
           icon="⭐"
           accent={Colors.gold}
         />
         <StatCard
-          label="إجمالي الإيرادات"
+          label={t("custRevenue")}
           value={fmtCurrency(totalRevenue)}
           icon="💰"
           accent={Colors.success}
