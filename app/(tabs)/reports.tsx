@@ -351,7 +351,7 @@ function RevenueTab({
             />
           ))}
         {paymentTotal === 0 && (
-          <Text style={styles.emptyText}>لا توجد بيانات</Text>
+          <Text style={styles.emptyText}>{t("repNoData")}</Text>
         )}
       </View>
 
@@ -445,13 +445,13 @@ function ProductsTab({
                   />
                 </View>
               </View>
-              <Text style={styles.prodQty}>{qty} وحدة</Text>
+              <Text style={styles.prodQty}>{qty} {t("repUnits")}</Text>
             </View>
           ))}
         </View>
       ) : (
         <View style={styles.card}>
-          <Text style={styles.emptyText}>لا توجد بيانات</Text>
+          <Text style={styles.emptyText}>{t("repNoData")}</Text>
         </View>
       )}
 
@@ -509,15 +509,15 @@ function ProductsTab({
           <View style={styles.deptVolumeLegend}>
             <View style={styles.legendItem}>
               <View style={[styles.legendDot, { backgroundColor: Colors.statusPending }]} />
-              <Text style={styles.legendText}>انتظار</Text>
+              <Text style={styles.legendText}>{t("statusWaiting")}</Text>
             </View>
             <View style={styles.legendItem}>
               <View style={[styles.legendDot, { backgroundColor: Colors.statusInProgress }]} />
-              <Text style={styles.legendText}>جاري</Text>
+              <Text style={styles.legendText}>{t("statusInProgress")}</Text>
             </View>
             <View style={styles.legendItem}>
               <View style={[styles.legendDot, { backgroundColor: Colors.statusDone }]} />
-              <Text style={styles.legendText}>مكتمل</Text>
+              <Text style={styles.legendText}>{t("statusCompleted")}</Text>
             </View>
           </View>
         </View>
@@ -555,7 +555,7 @@ function CashierTab({
   if (cashierStats.length === 0) {
     return (
       <View style={styles.card}>
-        <Text style={styles.emptyText}>لا توجد بيانات</Text>
+        <Text style={styles.emptyText}>{t("repNoData")}</Text>
       </View>
     );
   }
@@ -733,7 +733,7 @@ function DeliveryTab({
 
       {deliveryOrders.length === 0 && (
         <View style={styles.card}>
-          <Text style={styles.emptyText}>لا توجد طلبات توصيل</Text>
+          <Text style={styles.emptyText}>{t("delNoOrders")}</Text>
         </View>
       )}
     </>
