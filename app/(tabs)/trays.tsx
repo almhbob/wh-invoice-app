@@ -3,6 +3,7 @@ import * as Haptics from "expo-haptics";
 import * as Linking from "expo-linking";
 import React, { useMemo, useState } from "react";
 import {
+  Alert,
   FlatList,
   StyleSheet,
   Text,
@@ -30,6 +31,7 @@ export default function TraysScreen() {
   const { currentEmployee } = useEmployee();
   const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<"pending" | "returned">("pending");
+  const [returningId, setReturningId] = useState<string | null>(null);
 
   const trayOrders = useMemo(
     () => orders.filter((o) => o.insuranceAmount && o.insuranceAmount > 0),
@@ -43,12 +45,30 @@ export default function TraysScreen() {
 
   const displayed = tab === "pending" ? pending : returned;
 
-  const handleMarkReturned = (id: string) => {
-    markTrayReturned(
-      id,
-      currentEmployee
-        ? { name: currentEmployee.name, employeeId: currentEmployee.employeeId }
-        : undefined
+  const handleMarkReturned = (id: string, orderNum?: number, customerName?: string) => {
+    Alert.alert(
+      t("traysMarkRet"),
+      `${customerName ?? ""} — #${orderNum ?? ""}`,
+      [
+        { text: t("cancel"), style: "cancel" },
+        {
+          text: t("traysMarkRet"),
+          onPress: async () => {
+            setReturningId(id);
+            try {
+              await markTrayReturned(
+                id,
+                currentEmployee
+                  ? { name: currentEmployee.name, employeeId: currentEmployee.employeeId }
+                  : undefined
+              );
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            } finally {
+              setReturningId(null);
+            }
+          },
+        },
+      ]
     );
   };
 
@@ -163,13 +183,14 @@ export default function TraysScreen() {
               )}
 
               <TouchableOpacity
-                style={[styles.returnBtn, isReturned && styles.returnBtnDone]}
-                onPress={() => !isReturned && handleMarkReturned(order.id)}
+                style={[styles.returnBtn, isReturned && styles.returnBtnDone, returningId === order.id && { opacity: 0.6 }]}
+                onPress={() => !isReturned && returningId !== order.id && handleMarkReturned(order.id, order.orderNumber, order.customerName)}
                 activeOpacity={0.8}
+                disabled={isReturned || returningId === order.id}
               >
-                <Feather name={isReturned ? "check-circle" : "rotate-ccw"} size={14} color={isReturned ? "#16a34a" : Colors.primary} />
+                <Feather name={isReturned ? "check-circle" : returningId === order.id ? "loader" : "rotate-ccw"} size={14} color={isReturned ? "#16a34a" : Colors.primary} />
                 <Text style={[styles.returnBtnText, isReturned && { color: "#16a34a" }]}>
-                  {isReturned ? t("traysReturned2") : t("traysMarkRet")}
+                  {returningId === order.id ? "..." : isReturned ? t("traysReturned2") : t("traysMarkRet")}
                 </Text>
               </TouchableOpacity>
             </View>

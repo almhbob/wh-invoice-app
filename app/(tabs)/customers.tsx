@@ -176,14 +176,14 @@ function CustomerHistoryModal({
             <Text style={[styles.modalStatValue, { color: Colors.gold }]}>
               {fmtCurrency(customer.totalSpent)}
             </Text>
-            <Text style={styles.modalStatLabel}>إجمالي الإنفاق</Text>
+            <Text style={styles.modalStatLabel}>{t("custTotalSpent")}</Text>
           </View>
           <View style={styles.modalStatDivider} />
           <View style={styles.modalStatItem}>
             <Text style={[styles.modalStatValue, { color: Colors.success }]}>
               {totalItems}
             </Text>
-            <Text style={styles.modalStatLabel}>إجمالي القطع</Text>
+            <Text style={styles.modalStatLabel}>{t("custTotalItems")}</Text>
           </View>
         </View>
 
@@ -191,7 +191,7 @@ function CustomerHistoryModal({
         <View style={styles.favDeptRow}>
           <Feather name="star" size={13} color={Colors.gold} />
           <Text style={styles.favDeptText}>
-            القسم المفضل:{" "}
+            {t("custFavDept")}:{" "}
             <Text style={{ fontWeight: "700", color: Colors.text }}>
               {favDept}
             </Text>
@@ -209,7 +209,7 @@ function CustomerHistoryModal({
             activeOpacity={0.8}
           >
             <Feather name="phone" size={16} color="#fff" />
-            <Text style={styles.contactBtnText}>اتصال</Text>
+            <Text style={styles.contactBtnText}>{t("custCall")}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -221,7 +221,7 @@ function CustomerHistoryModal({
             activeOpacity={0.8}
           >
             <Feather name="message-circle" size={16} color="#fff" />
-            <Text style={styles.contactBtnText}>واتساب</Text>
+            <Text style={styles.contactBtnText}>{t("custWhatsappBtn")}</Text>
           </TouchableOpacity>
         </View>
 

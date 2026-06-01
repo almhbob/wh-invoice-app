@@ -547,6 +547,20 @@ const translations = {
   custDelivered:      { ar: "مسلَّم",             en: "Delivered",            ur: "تحویل شدہ",              hi: "वितरित",                bn: "ডেলিভারড" },
   custFrom:           { ar: "من",                 en: "of",                   ur: "میں سے",                 hi: "में से",                bn: "এর মধ্যে" },
   custOrderSingular:  { ar: "طلب",                en: "order",                ur: "آرڈر",                   hi: "ऑर्डर",                 bn: "অর্ডার" },
+  custTotalItems:     { ar: "إجمالي القطع",       en: "Total Items",          ur: "کل اشیاء",               hi: "कुल मद",                bn: "মোট আইটেম" },
+  custFavDept:        { ar: "القسم المفضل",       en: "Favorite Dept",        ur: "پسندیدہ قسم",            hi: "पसंदीदा विभाग",         bn: "পছন্দের বিভাগ" },
+  custCall:           { ar: "اتصال",              en: "Call",                 ur: "کال کریں",               hi: "कॉल करें",              bn: "কল করুন" },
+  custWhatsappBtn:    { ar: "واتساب",             en: "WhatsApp",             ur: "واٹس ایپ",               hi: "व्हाट्सएप",             bn: "হোয়াটসঅ্যাপ" },
+
+  delAssignDriverHint:{ ar: "اضغط لإسناد سائق",  en: "Tap to assign driver", ur: "ڈرائیور تفویض کریں",    hi: "चालक नियुक्त करने के लिए टैप करें", bn: "চালক নিযুক্ত করতে ট্যাপ করুন" },
+  delDriverLabel:     { ar: "السائق:",            en: "Driver:",              ur: "ڈرائیور:",               hi: "चालक:",                 bn: "চালক:" },
+  delCurrentDriver:   { ar: "السائق الحالي:",     en: "Current driver:",      ur: "موجودہ ڈرائیور:",        hi: "वर्तमान चालक:",         bn: "বর্তমান চালক:" },
+  delRemoveDriver:    { ar: "إلغاء الإسناد",      en: "Remove Driver",        ur: "ڈرائیور ہٹائیں",         hi: "चालक हटाएं",            bn: "চালক সরান" },
+  delChooseDriver:    { ar: "اختر السائق",        en: "Choose Driver",        ur: "ڈرائیور منتخب کریں",    hi: "चालक चुनें",            bn: "চালক বেছে নিন" },
+  delSearchDriver:    { ar: "ابحث باسم السائق...", en: "Search driver...",    ur: "ڈرائیور تلاش کریں...", hi: "चालक खोजें...",          bn: "চালক খুঁজুন..." },
+  delAllTotal:        { ar: "الإجمالي",           en: "Total",                ur: "کل",                     hi: "कुल",                   bn: "মোট" },
+  delSortByTime:      { ar: "حسب الوقت",          en: "By time",              ur: "وقت کے مطابق",           hi: "समय के अनुसार",          bn: "সময় অনুযায়ী" },
+  delSortByDate:      { ar: "حسب التاريخ",        en: "By date",              ur: "تاریخ کے مطابق",         hi: "तारीख के अनुसार",        bn: "তারিখ অনুযায়ী" },
 } as const;
 
 export type TranslationKey = keyof typeof translations;
