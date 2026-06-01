@@ -40,7 +40,7 @@ import {
   useOrders,
 } from "@/context/OrdersContext";
 import { Offer, normalizePhone, useOffers } from "@/context/OffersContext";
-import { DeliveryDatePicker, DeliveryTimePicker } from "@/components/DeliveryDateTimePicker";
+import { DeliveryDateTimePicker } from "@/components/DeliveryDateTimePicker";
 import { DailyClosingModal } from "@/components/DailyClosingModal";
 import { canDo, ROLE_CAN_CLOSE_SHIFT } from "@/constants/rbac";
 import { useShift } from "@/context/ShiftContext";
@@ -103,6 +103,7 @@ export default function CashierScreen() {
   const [receivedAt, setReceivedAt] = useState("");
   const [deliveryDate, setDeliveryDate] = useState("");
   const [deliveryTime, setDeliveryTime] = useState("");
+  const [dateTimePickerOpen, setDateTimePickerOpen] = useState(false);
   const [insuranceAmount, setInsuranceAmount] = useState("");
   const [insurancePaymentMethod, setInsurancePaymentMethod] = useState<"cash" | "card">("cash");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
@@ -862,39 +863,18 @@ export default function CashierScreen() {
           </View>
         </View>
 
-        {/* Delivery date */}
+        {/* Delivery date + time — compact modal picker */}
         <Text style={styles.label}>{t("delivDateLabel")}</Text>
-        <DeliveryDatePicker
-          value={deliveryDate}
-          onChange={(iso, label) => setDeliveryDate(iso)}
+        <DeliveryDateTimePicker
+          dateValue={deliveryDate}
+          timeValue={deliveryTime}
+          onDateChange={setDeliveryDate}
+          onTimeChange={setDeliveryTime}
           accentColor={Colors.primary}
+          open={dateTimePickerOpen}
+          onOpen={() => setDateTimePickerOpen(true)}
+          onClose={() => setDateTimePickerOpen(false)}
         />
-        {deliveryDate ? (
-          <View style={styles.selectedValueRow}>
-            <Feather name="calendar" size={13} color={Colors.primary} />
-            <Text style={styles.selectedValueText}>{deliveryDate}</Text>
-            <TouchableOpacity onPress={() => setDeliveryDate("")}>
-              <Feather name="x" size={14} color={Colors.textMuted} />
-            </TouchableOpacity>
-          </View>
-        ) : null}
-
-        {/* Delivery time */}
-        <Text style={[styles.label, { marginTop: 12 }]}>{t("delivTimeLabel")}</Text>
-        <DeliveryTimePicker
-          value={deliveryTime}
-          onChange={setDeliveryTime}
-          accentColor={Colors.primary}
-        />
-        {deliveryTime ? (
-          <View style={styles.selectedValueRow}>
-            <Feather name="clock" size={13} color={Colors.primary} />
-            <Text style={styles.selectedValueText}>{deliveryTime}</Text>
-            <TouchableOpacity onPress={() => setDeliveryTime("")}>
-              <Feather name="x" size={14} color={Colors.textMuted} />
-            </TouchableOpacity>
-          </View>
-        ) : null}
 
         {/* Insurance */}
         <Text style={styles.label}>{t("trayInsAmount")}</Text>
