@@ -224,8 +224,8 @@ export function ProductGalleryModal({ visible, onClose, onConfirm }: Props) {
     return [...filtered].sort((a, b) => {
       if (a.isAvailable !== b.isAvailable) return a.isAvailable ? -1 : 1;
       if (isLaviviane) {
-        const catA = LAVIVIANE_CATEGORY_ORDER.indexOf(a.category ?? "");
-        const catB = LAVIVIANE_CATEGORY_ORDER.indexOf(b.category ?? "");
+        const catA = LAVIVIANE_CATEGORY_ORDER.indexOf((a.category ?? "") as any);
+        const catB = LAVIVIANE_CATEGORY_ORDER.indexOf((b.category ?? "") as any);
         if (catA !== catB) return catA - catB;
       }
       return (a.price || 0) - (b.price || 0);

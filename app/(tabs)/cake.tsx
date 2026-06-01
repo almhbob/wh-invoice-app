@@ -1,18 +1,23 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useState } from "react";
 import { FlatList, RefreshControl, StyleSheet, Text, View } from "react-native";
 
 import { DeptOrderCard } from "@/components/DeptOrderCard";
 import { EmptyState } from "@/components/EmptyState";
+import { NewOrderBanner } from "@/components/NewOrderBanner";
+import { useNewOrderAlert } from "@/hooks/useNewOrderAlert";
 import { Colors } from "@/constants/colors";
 import { useLang } from "@/context/LanguageContext";
 import { EmployeeRef, Order, OrderStatus, useOrders } from "@/context/OrdersContext";
 
 export default function CakeScreen() {
-  const { getOrdersForDepartment, updateDepartmentStatus, isLoading } = useOrders();
+  const { getOrdersForDepartment, updateDepartmentStatus, isLoading, refreshOrders } = useOrders();
   const { t } = useLang();
   const orders = getOrdersForDepartment("cake");
   const pendingCount = orders.filter((o) => o.departmentStatuses["cake"] === "pending").length;
   const inProgressCount = orders.filter((o) => o.departmentStatuses["cake"] === "in_progress").length;
+
+  const [showBanner, setShowBanner] = useState(false);
+  useNewOrderAlert(pendingCount, () => setShowBanner(true));
 
   const handleStatus = useCallback(
     (order: Order, status: OrderStatus, receiver?: EmployeeRef) =>
@@ -22,6 +27,7 @@ export default function CakeScreen() {
 
   return (
     <View style={styles.container}>
+      <NewOrderBanner visible={showBanner} count={pendingCount} accentColor={Colors.cake} onDismiss={() => setShowBanner(false)} />
       <View style={[styles.deptBanner, { backgroundColor: Colors.cake }]}>
         <Text style={styles.bannerTitle}>{t("deptCake")}</Text>
         <View style={styles.bannerStats}>
@@ -57,7 +63,7 @@ export default function CakeScreen() {
         ListEmptyComponent={
           <EmptyState icon="layers" title={t("noOrdersNow")} subtitle={t("cakeSubtitle")} />
         }
-        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => {}} />}
+        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refreshOrders} />}
         showsVerticalScrollIndicator={false}
       />
     </View>

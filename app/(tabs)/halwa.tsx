@@ -1,18 +1,23 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useState } from "react";
 import { FlatList, RefreshControl, StyleSheet, Text, View } from "react-native";
 
 import { DeptOrderCard } from "@/components/DeptOrderCard";
 import { EmptyState } from "@/components/EmptyState";
+import { NewOrderBanner } from "@/components/NewOrderBanner";
 import { Colors } from "@/constants/colors";
 import { useLang } from "@/context/LanguageContext";
 import { EmployeeRef, Order, OrderStatus, useOrders } from "@/context/OrdersContext";
+import { useNewOrderAlert } from "@/hooks/useNewOrderAlert";
 
 export default function HalwaScreen() {
-  const { getOrdersForDepartment, updateDepartmentStatus, isLoading } = useOrders();
+  const { getOrdersForDepartment, updateDepartmentStatus, isLoading, refreshOrders } = useOrders();
   const { t } = useLang();
   const orders = getOrdersForDepartment("halwa");
   const pendingCount = orders.filter((o) => o.departmentStatuses["halwa"] === "pending").length;
   const inProgressCount = orders.filter((o) => o.departmentStatuses["halwa"] === "in_progress").length;
+
+  const [showBanner, setShowBanner] = useState(false);
+  useNewOrderAlert(pendingCount, () => setShowBanner(true));
 
   const handleStatus = useCallback(
     (order: Order, status: OrderStatus, receiver?: EmployeeRef) =>
@@ -22,6 +27,13 @@ export default function HalwaScreen() {
 
   return (
     <View style={styles.container}>
+      <NewOrderBanner
+        visible={showBanner}
+        count={pendingCount}
+        accentColor={Colors.halwa}
+        onDismiss={() => setShowBanner(false)}
+      />
+
       <View style={[styles.deptBanner, { backgroundColor: Colors.halwa }]}>
         <Text style={styles.bannerTitle}>{t("deptHalwa")}</Text>
         <View style={styles.bannerStats}>
@@ -57,7 +69,7 @@ export default function HalwaScreen() {
         ListEmptyComponent={
           <EmptyState icon="coffee" title={t("noOrdersNow")} subtitle={t("halwaSubtitle")} />
         }
-        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => {}} />}
+        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refreshOrders} />}
         showsVerticalScrollIndicator={false}
       />
     </View>

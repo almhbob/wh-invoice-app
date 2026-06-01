@@ -43,8 +43,27 @@ export function OrderCard({ order, onStatusChange, onPress, compact = false }: O
     done:        { label: t("statusDone"),        color: Colors.statusDone,       bg: "#E9F7EF" },
     cancelled:   { label: t("statusCancelled"),  color: Colors.statusCancelled,  bg: "#FDEDEC" },
   };
-  const status = statusConfig[order.status];
-  const deptColor = order.department === "halwa" ? Colors.halwa : Colors.mawali;
+  // Derive an overall status from departmentStatuses
+  const statusValues = Object.values(order.departmentStatuses) as OrderStatus[];
+  const overallStatus: OrderStatus = statusValues.includes("cancelled")
+    ? "cancelled"
+    : statusValues.includes("pending")
+    ? "pending"
+    : statusValues.includes("in_progress")
+    ? "in_progress"
+    : "done";
+  const status = statusConfig[overallStatus];
+
+  // Derive a primary department from the first item
+  const primaryDept = order.items[0]?.department ?? "halwa";
+  const DEPT_COLORS: Record<Department, string> = {
+    halwa: Colors.halwa,
+    mawali: Colors.mawali,
+    chocolate: Colors.chocolate,
+    cake: Colors.cake,
+    packaging: Colors.packaging,
+  };
+  const deptColor = DEPT_COLORS[primaryDept] ?? Colors.halwa;
 
   const handleStatusPress = () => {
     if (status.next && onStatusChange) {
@@ -63,7 +82,7 @@ export function OrderCard({ order, onStatusChange, onPress, compact = false }: O
             <Text style={styles.orderNum}>#{order.orderNumber}</Text>
             <View style={[styles.deptBadge, { backgroundColor: deptColor + "20" }]}>
               <Text style={[styles.deptText, { color: deptColor }]}>
-                {departmentLabels[order.department]}
+                {departmentLabels[primaryDept]}
               </Text>
             </View>
           </View>

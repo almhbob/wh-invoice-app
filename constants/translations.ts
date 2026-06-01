@@ -270,7 +270,7 @@ const translations = {
   custHistory:      { ar: "سجل المشتريات",     en: "Purchase History", ur: "خریداری کی تاریخ",  hi: "खरीद इतिहास",      bn: "ক্রয় ইতিহাস" },
   custNoOrders:     { ar: "لا توجد طلبات",     en: "No orders yet",    ur: "ابھی کوئی آرڈر نہیں", hi: "अभी कोई ऑर्डर नहीं", bn: "এখনো কোনো অর্ডার নেই" },
   custAllCustomers: { ar: "جميع العملاء",      en: "All Customers",    ur: "تمام صارفین",        hi: "सभी ग्राहक",        bn: "সব গ্রাহক" },
-  custFrequent:     { ar: "عملاء متكررون",     en: "Frequent",         ur: "باقاعدہ صارفین",     hi: "नियमित ग्राहक",    bn: "নিয়মিত গ্রাহক" },
+  custFrequent:     { ar: "متكررون",           en: "Frequent",         ur: "بار بار آنے والے",   hi: "नियमित",           bn: "নিয়মিত" },
 
   // ── Delivery ──────────────────────────────────────────────────
   delAllOrders:     { ar: "جميع التوصيل",      en: "All Deliveries",   ur: "تمام ڈیلیوری",       hi: "सभी डिलीवरी",      bn: "সব ডেলিভারি" },
@@ -282,6 +282,20 @@ const translations = {
   delTotal:         { ar: "المبلغ:",           en: "Amount:",          ur: "رقم:",               hi: "राशि:",            bn: "পরিমাণ:" },
   delNoOrders:      { ar: "لا توجد طلبات توصيل", en: "No delivery orders", ur: "کوئی ڈیلیوری آرڈر نہیں", hi: "कोई डिलीवरी ऑर्डर नहीं", bn: "কোনো ডেলিভারি অর্ডার নেই" },
   delOrdersCount:   { ar: "طلب توصيل",         en: "delivery order(s)", ur: "ڈیلیوری آرڈر",      hi: "डिलीवरी ऑर्डर",   bn: "ডেলিভারি অর্ডার" },
+  delDriver:        { ar: "السائق",             en: "Driver",           ur: "ڈرائیور",            hi: "चालक",             bn: "চালক" },
+  delAssignDriver:  { ar: "إسناد سائق",         en: "Assign Driver",    ur: "ڈرائیور تفویض کریں", hi: "चालक नियुक्त करें", bn: "চালক নিযুক্ত করুন" },
+  delNoDriver:      { ar: "غير مسند",           en: "Unassigned",       ur: "غیر تفویض",          hi: "अनिर्धारित",        bn: "অনির্ধারিত" },
+  delAddress:       { ar: "عنوان التوصيل",      en: "Delivery Address", ur: "ڈیلیوری پتہ",        hi: "डिलीवरी पता",       bn: "ডেলিভারি ঠিকানা" },
+  delOpenMap:       { ar: "فتح الخريطة",        en: "Open Map",         ur: "نقشہ کھولیں",        hi: "नक्शा खोलें",       bn: "মানচিত্র খুলুন" },
+  delCall:          { ar: "اتصال",              en: "Call",             ur: "کال",                hi: "कॉल",              bn: "কল" },
+  delTodayCount:    { ar: "طلبات اليوم",        en: "Today",            ur: "آج کے آرڈر",         hi: "आज के ऑर्डर",       bn: "আজকের অর্ডার" },
+  delRevenue:       { ar: "إجمالي التوصيل",     en: "Del. Revenue",     ur: "ڈیلیوری آمدنی",      hi: "डिलीवरी आय",        bn: "ডেলিভারি আয়" },
+  delCompletionRate:{ ar: "نسبة الإنجاز",       en: "Completion",       ur: "تکمیل کی شرح",       hi: "पूर्णता दर",        bn: "সম্পূর্ণতার হার" },
+  delOverdue:       { ar: "متأخر",              en: "Overdue",          ur: "مدت گزری",            hi: "अतिदेय",            bn: "মেয়াদোত্তীর্ণ" },
+  delUrgent:        { ar: "عاجل",               en: "Urgent",           ur: "فوری",               hi: "अत्यावश्यक",        bn: "জরুরি" },
+  delSelectDriver:  { ar: "اختر السائق",        en: "Select Driver",    ur: "ڈرائیور منتخب کریں", hi: "चालक चुनें",        bn: "চালক নির্বাচন করুন" },
+  delSortTime:      { ar: "ترتيب حسب الوقت",   en: "Sort by Time",     ur: "وقت کے مطابق ترتیب", hi: "समय के अनुसार",      bn: "সময় অনুযায়ী" },
+  delSortDate:      { ar: "ترتيب حسب التاريخ", en: "Sort by Date",     ur: "تاریخ کے مطابق ترتیب", hi: "तारीख के अनुसार",   bn: "তারিখ অনুযায়ী" },
 
   // ── Trays ─────────────────────────────────────────────────────
   traysTitle:       { ar: "صواني التأمين",     en: "Insurance Trays",  ur: "ضمانتی ٹرے",         hi: "बीमा ट्रे",        bn: "জামানত ট্রে" },
@@ -394,6 +408,9 @@ const translations = {
   willRecordOnReceive:{ ar: "سيُسجَّل باسمك عند الاستلام", en: "Will record on receive",   ur: "وصولی پر ریکارڈ ہوگا", hi: "प्राप्ति पर रिकॉर्ड", bn: "গ্রহণে রেকর্ড হবে" },
   transferToLabel:    { ar: "تحويل لـ",                 en: "Transfer to",                 ur: "منتقل کریں",          hi: "को ट्रांसफर",        bn: "এতে ট্রান্সফার" },
   requiresLogin:      { ar: "يتطلب تسجيل دخول",         en: "Requires login",              ur: "لاگ ان ضروری",        hi: "लॉगिन आवश्यक",      bn: "লগইন প্রয়োজন" },
+  loginRequired:      { ar: "تسجيل الدخول مطلوب",       en: "Login Required",              ur: "لاگ ان ضروری",        hi: "लॉगिन आवश्यक",      bn: "লগইন প্রয়োজন" },
+  loginToReceive:     { ar: "يجب تسجيل الدخول أولاً لاستلام الطلب.", en: "You must log in first to receive the order.", ur: "آرڈر وصول کرنے کے لیے پہلے لاگ ان کریں۔", hi: "ऑर्डर प्राप्त करने के लिए पहले लॉगिन करें।", bn: "অর্ডার গ্রহণ করতে প্রথমে লগইন করুন।" },
+  ok:                 { ar: "حسناً",                    en: "OK",                          ur: "ٹھیک ہے",             hi: "ठीक है",             bn: "ঠিক আছে" },
 
   // ── Cashier screen ────────────────────────────────────────────────────
   fullyPaid:          { ar: "مُسدَّد بالكامل",              en: "Fully Paid",                  ur: "مکمل ادا",            hi: "पूरा भुगतान",        bn: "সম্পূর্ণ পরিশোধিত" },
@@ -466,6 +483,63 @@ const translations = {
   accountSection:     { ar: "الحساب",                       en: "Account",                     ur: "حساب",                hi: "खाता",               bn: "হিসাব" },
   printInvoice:       { ar: "عرض وطباعة الفاتورة",         en: "Print Invoice",               ur: "انوائس پرنٹ کریں",    hi: "चालान प्रिंट करें",  bn: "ইনভয়েস প্রিন্ট করুন" },
   shareLabel:         { ar: "مشاركة",                       en: "Share",                       ur: "شیئر",                hi: "साझा करें",          bn: "শেয়ার" },
+
+  // ── Daily Shift Closing ───────────────────────────────────
+  shiftClose:         { ar: "إغلاق اليومية",     en: "Close Shift",       ur: "شفٹ بند کریں",      hi: "शिफ्ट बंद करें",     bn: "শিফট বন্ধ করুন" },
+  shiftReport:        { ar: "تقرير Z",            en: "Z-Report",          ur: "زیڈ رپورٹ",         hi: "Z-रिपोर्ट",          bn: "Z-রিপোর্ট" },
+  shiftShareReport:   { ar: "مشاركة التقرير",     en: "Share Report",      ur: "رپورٹ شیئر کریں",   hi: "रिपोर्ट साझा करें",  bn: "রিপোর্ট শেয়ার করুন" },
+  shiftClosedBy:      { ar: "أُغلق بواسطة",       en: "Closed By",         ur: "بند کیا گیا",        hi: "बंद किया",           bn: "বন্ধ করেছেন" },
+  shiftPeriod:        { ar: "فترة الوردية",       en: "Shift Period",      ur: "شفٹ کا دورانیہ",    hi: "शिफ्ट अवधि",         bn: "শিফটের মেয়াদ" },
+  shiftCash:          { ar: "نقداً",              en: "Cash",              ur: "نقد",                hi: "नकद",                bn: "নগদ" },
+  shiftCard:          { ar: "شبكة",               en: "Card",              ur: "کارڈ",               hi: "कार्ड",              bn: "কার্ড" },
+  shiftTransfer:      { ar: "تحويل",              en: "Transfer",          ur: "ٹرانسفر",            hi: "ट्रांसफर",           bn: "ট্রান্সফার" },
+  shiftNotes:         { ar: "ملاحظات الإغلاق",    en: "Closing Notes",     ur: "اختتامی نوٹس",       hi: "समापन नोट्स",        bn: "সমাপনী নোট" },
+  shiftTodaySummary:  { ar: "ملخص اليوم",         en: "Today's Summary",   ur: "آج کا خلاصہ",        hi: "आज का सारांश",       bn: "আজকের সারসংক্ষেপ" },
+  shiftOrdersToday:   { ar: "طلبات اليوم",        en: "Today's Orders",    ur: "آج کے آرڈر",         hi: "आज के ऑर्डर",        bn: "আজকের অর্ডার" },
+  shiftLastClosed:    { ar: "آخر إغلاق",          en: "Last Closed",       ur: "آخری اختتام",        hi: "अंतिम बंद",          bn: "শেষ বন্ধ" },
+
+  // ── Edit Order ────────────────────────────────────────────
+  editOrder:          { ar: "تعديل الفاتورة",     en: "Edit Order",        ur: "آرڈر ترمیم کریں",   hi: "ऑर्डर संपादित करें", bn: "অর্ডার সম্পাদনা" },
+  editSave:           { ar: "حفظ التعديلات",      en: "Save Changes",      ur: "تبدیلیاں محفوظ کریں", hi: "बदलाव सहेजें",      bn: "পরিবর্তন সংরক্ষণ" },
+  editItems:          { ar: "الأصناف",            en: "Items",             ur: "اشیاء",              hi: "वस्तुएं",            bn: "আইটেম" },
+  editAddItem:        { ar: "إضافة صنف",          en: "Add Item",          ur: "آئٹم شامل کریں",    hi: "आइटम जोड़ें",        bn: "আইটেম যোগ করুন" },
+  editAccessDenied:   { ar: "غير مصرح",           en: "Access Denied",     ur: "اجازت نہیں",         hi: "अनुमति नहीं",        bn: "অনুমতি নেই" },
+  editAccessMsg:      { ar: "هذه الصفحة للمدراء فقط", en: "Admins only",   ur: "صرف منتظمین کے لیے", hi: "केवल व्यवस्थापक",   bn: "শুধুমাত্র অ্যাডমিন" },
+
+  // ── Ready for delivery ────────────────────────────────────
+  readyForDelivery:   { ar: "جاهز للتوصيل",      en: "Ready to Ship",     ur: "ترسیل کے لیے تیار", hi: "डिलीवरी के लिए तैयार", bn: "ডেলিভারির জন্য প্রস্তুত" },
+
+  // ── Reports – extra tab/section keys ─────────────────────
+  repTabRevenue:      { ar: "الإيرادات",           en: "Revenue",              ur: "آمدنی",                  hi: "राजस्व",              bn: "রাজস্ব" },
+  repTabProducts:     { ar: "المنتجات",            en: "Products",             ur: "مصنوعات",                hi: "उत्पाद",              bn: "পণ্য" },
+  repTabCashier:      { ar: "الكاشير",             en: "Cashier",              ur: "کیشیئر",                 hi: "कैशियर",              bn: "ক্যাশিয়ার" },
+  repTabDelivery:     { ar: "التوصيل",             en: "Delivery",             ur: "ڈیلیوری",                hi: "डिलीवरी",             bn: "ডেলিভারি" },
+  repDelivVsPickup:   { ar: "التوصيل مقابل الاستلام", en: "Delivery vs Pickup", ur: "ڈیلیوری بمقابلہ پک اپ", hi: "डिलीवरी बनाम पिकअप", bn: "ডেলিভারি বনাম পিকআপ" },
+  repTopByQty:        { ar: "أكثر الأصناف مبيعاً (الكمية)", en: "Top Items by Qty", ur: "مقدار کے لحاظ سے اعلیٰ", hi: "मात्रा के अनुसार शीर्ष", bn: "পরিমাণ অনুযায়ী শীর্ষ পণ্য" },
+  repTopByRevenue:    { ar: "أكثر الأصناف إيراداً", en: "Top Items by Revenue", ur: "آمدنی کے لحاظ سے اعلیٰ", hi: "राजस्व के अनुसार शीर्ष", bn: "আয় অনুযায়ী শীর্ষ পণ্য" },
+  repDeptVolume:      { ar: "حجم الطلبات حسب القسم", en: "Dept Order Volume",  ur: "قسم کے مطابق آرڈر حجم", hi: "विभाग अनुसार ऑर्डर मात्रा", bn: "বিভাগ অনুযায়ী অর্ডার পরিমাণ" },
+  repCashierCount:    { ar: "عدد الكاشيرات",       en: "Cashier Count",        ur: "کیشیئر تعداد",           hi: "कैशियर संख्या",        bn: "ক্যাশিয়ার সংখ্যা" },
+  repTopPerformer:    { ar: "الأعلى أداءً",        en: "Top Performer",        ur: "بہترین کارکردگی",        hi: "शीर्ष प्रदर्शक",       bn: "শীর্ষ পারফর্মার" },
+  repCashierPerf:     { ar: "أداء الكاشيرات",      en: "Cashier Performance",  ur: "کیشیئر کارکردگی",       hi: "कैशियर प्रदर्शन",      bn: "ক্যাশিয়ার পারফরম্যান্স" },
+  repDelivCount:      { ar: "طلبات التوصيل",       en: "Delivery Orders",      ur: "ڈیلیوری آرڈرز",         hi: "डिलीवरी ऑर्डर",        bn: "ডেলিভারি অর্ডার" },
+  repPickupCount:     { ar: "طلبات الاستلام",      en: "Pickup Orders",        ur: "پک اپ آرڈرز",           hi: "पिकअप ऑर्डर",          bn: "পিকআপ অর্ডার" },
+  repCompRate:        { ar: "نسبة الإنجاز",        en: "Completion Rate",      ur: "تکمیل کی شرح",          hi: "पूर्णता दर",            bn: "সমাপ্তির হার" },
+  repDelivRevenue:    { ar: "إيرادات التوصيل",     en: "Delivery Revenue",     ur: "ڈیلیوری آمدنی",         hi: "डिलीवरी राजस्व",       bn: "ডেলিভারি আয়" },
+  repAvgDelivTime:    { ar: "متوسط وقت التوصيل",   en: "Avg Delivery Time",    ur: "اوسط ڈیلیوری وقت",     hi: "औसत डिलीवरी समय",      bn: "গড় ডেলিভারি সময়" },
+  repDelivStatus:     { ar: "حالة طلبات التوصيل",  en: "Delivery Order Status", ur: "ڈیلیوری آرڈر کی حالت", hi: "डिलीवरी ऑर्डर स्थिति", bn: "ডেলিভারি অর্ডার স্ট্যাটাস" },
+  repDriverPerf:      { ar: "أداء السائقين",       en: "Driver Performance",   ur: "ڈرائیور کارکردگی",      hi: "ड्राइवर प्रदर्शन",      bn: "ড্রাইভার পারফরম্যান্স" },
+  repUnknown:         { ar: "غير معروف",           en: "Unknown",              ur: "نامعلوم",                hi: "अज्ञात",                bn: "অজানা" },
+  repUnassigned:      { ar: "غير معين",            en: "Unassigned",           ur: "غیر تفویض",             hi: "असाइन नहीं",            bn: "অনির্ধারিত" },
+  repTotalDiscounts:  { ar: "إجمالي الخصومات",     en: "Total Discounts",      ur: "کل چھوٹ",               hi: "कुल छूट",               bn: "মোট ছাড়" },
+
+  // ── Customers – extra keys ────────────────────────────────
+  custAll:            { ar: "الكل",               en: "All",                  ur: "سب",                     hi: "सभी",                  bn: "সব" },
+  custTotalCustomers: { ar: "إجمالي العملاء",     en: "Total Customers",      ur: "کل گاہک",                hi: "कुल ग्राहक",            bn: "মোট গ্রাহক" },
+  custVIPCount:       { ar: "عملاء VIP",          en: "VIP Customers",        ur: "VIP گاہک",               hi: "VIP ग्राहक",            bn: "VIP গ্রাহক" },
+  custRevenue:        { ar: "إجمالي الإيرادات",   en: "Total Revenue",        ur: "کل آمدنی",               hi: "कुल राजस्व",            bn: "মোট আয়" },
+  custDelivered:      { ar: "مسلَّم",             en: "Delivered",            ur: "تحویل شدہ",              hi: "वितरित",                bn: "ডেলিভারড" },
+  custFrom:           { ar: "من",                 en: "of",                   ur: "میں سے",                 hi: "में से",                bn: "এর মধ্যে" },
+  custOrderSingular:  { ar: "طلب",                en: "order",                ur: "آرڈر",                   hi: "ऑर्डर",                 bn: "অর্ডার" },
 } as const;
 
 export type TranslationKey = keyof typeof translations;

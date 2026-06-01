@@ -25,6 +25,7 @@ import { PLATFORM_OWNER } from "@/constants/platform";
 import { useCompany } from "@/context/CompanyContext";
 import { useEmployee } from "@/context/EmployeeContext";
 import { useLang } from "@/context/LanguageContext";
+import type { TranslationKey } from "@/constants/translations";
 
 const ROLE_COLORS: Record<string, string> = {
   cashier: Colors.gold,
@@ -283,7 +284,7 @@ function DesktopSidebar({ activePath, navigate, isRTL }: { activePath: string; n
           {showDepts && DEPT_TABS.map(tab => (
             <SideNavItem
               key={tab.name}
-              label={t(tab.labelKey)} icon={tab.icon}
+              label={t(tab.labelKey as TranslationKey)} icon={tab.icon}
               active={activePath.includes(tab.name)} accent={tab.accent}
               onPress={() => navigate(tab.name)} indent
             />
@@ -300,7 +301,7 @@ function DesktopSidebar({ activePath, navigate, isRTL }: { activePath: string; n
           {showMore && MORE_TABS.map(tab => (
             <SideNavItem
               key={tab.name}
-              label={tab.labelKey.startsWith("tab") ? t(tab.labelKey) : tab.labelKey}
+              label={tab.labelKey.startsWith("tab") ? t(tab.labelKey as TranslationKey) : tab.labelKey}
               icon={tab.icon} active={activePath.includes(tab.name)} accent={tab.accent}
               onPress={() => navigate(tab.name)} indent
             />
@@ -351,7 +352,7 @@ function PopupSheet({ visible, onClose, tabs, onSelect, activePath }: {
 }) {
   const { t } = useLang();
   const insets = useSafeAreaInsets();
-  const labelFor = (key: string) => key.startsWith("tab") ? t(key) : key;
+  const labelFor = (key: string) => key.startsWith("tab") ? t(key as TranslationKey) : key;
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.sheetBackdrop} onPress={onClose} />
@@ -454,11 +455,11 @@ const SCREEN_META: Record<string, { titleKey: string; accent: string }> = {
   admin:            { titleKey: "titleAdmin",      accent: Colors.primaryLight },
 };
 
-function useScreenMeta(pathname: string, t: (k: string) => string) {
+function useScreenMeta(pathname: string, t: (k: TranslationKey) => string) {
   const key = Object.keys(SCREEN_META).find((k) => pathname.includes(k)) ?? "cashier";
   const meta = SCREEN_META[key];
   const rawKey = meta.titleKey;
-  const title = rawKey.startsWith("title") || rawKey.startsWith("tab") ? t(rawKey) : rawKey;
+  const title = rawKey.startsWith("title") || rawKey.startsWith("tab") ? t(rawKey as TranslationKey) : rawKey;
   return { title, accent: meta.accent };
 }
 

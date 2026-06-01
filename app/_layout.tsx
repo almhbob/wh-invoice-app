@@ -25,6 +25,7 @@ import { ProductsProvider } from "@/context/ProductsContext";
 import { TraysProvider } from "@/context/TraysInventoryContext";
 import { PriceChangeProvider } from "@/context/PriceChangeContext";
 import { FeaturesProvider } from "@/context/FeaturesContext";
+import { ShiftProvider } from "@/context/ShiftContext";
 import { ensureTemporaryFirebaseSession } from "@/lib/authIdentity";
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
@@ -83,11 +84,13 @@ export default function RootLayout() {
                       <TraysProvider>
                         <PriceChangeProvider>
                           <FeaturesProvider>
+                            <ShiftProvider>
                             <GestureHandlerRootView style={{ flex: 1 }}>
                               <KeyboardProvider>
                                 <RootLayoutNav />
                               </KeyboardProvider>
                             </GestureHandlerRootView>
+                            </ShiftProvider>
                           </FeaturesProvider>
                         </PriceChangeProvider>
                       </TraysProvider>

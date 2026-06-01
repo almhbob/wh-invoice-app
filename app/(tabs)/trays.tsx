@@ -1,4 +1,6 @@
 import { Feather } from "@expo/vector-icons";
+import * as Haptics from "expo-haptics";
+import * as Linking from "expo-linking";
 import React, { useMemo, useState } from "react";
 import {
   FlatList,
@@ -10,15 +12,23 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Colors } from "@/constants/colors";
+import { useEmployee } from "@/context/EmployeeContext";
 import { useLang } from "@/context/LanguageContext";
 import { useOrders } from "@/context/OrdersContext";
 import { fmtCurrency, fmtDate } from "@/utils/dateUtils";
 
+function openWhatsApp(phone: string, message?: string) {
+  const raw = phone.replace(/\D/g, "");
+  const intl = raw.startsWith("0") ? "966" + raw.slice(1) : raw;
+  const text = message ? `?text=${encodeURIComponent(message)}` : "";
+  Linking.openURL(`https://wa.me/${intl}${text}`).catch(() => {});
+}
+
 export default function TraysScreen() {
   const { t, lang } = useLang();
-  const { orders } = useOrders();
+  const { orders, markTrayReturned } = useOrders();
+  const { currentEmployee } = useEmployee();
   const insets = useSafeAreaInsets();
-  const [returnedIds, setReturnedIds] = useState<Set<string>>(new Set());
   const [tab, setTab] = useState<"pending" | "returned">("pending");
 
   const trayOrders = useMemo(
@@ -26,19 +36,20 @@ export default function TraysScreen() {
     [orders]
   );
 
-  const pending = trayOrders.filter((o) => !returnedIds.has(o.id));
-  const returned = trayOrders.filter((o) => returnedIds.has(o.id));
+  const pending = trayOrders.filter((o) => !o.trayReturned);
+  const returned = trayOrders.filter((o) => o.trayReturned);
   const totalInsurance = trayOrders.reduce((s, o) => s + (o.insuranceAmount ?? 0), 0);
   const pendingInsurance = pending.reduce((s, o) => s + (o.insuranceAmount ?? 0), 0);
 
   const displayed = tab === "pending" ? pending : returned;
 
-  const toggleReturn = (id: string) => {
-    setReturnedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
+  const handleMarkReturned = (id: string) => {
+    markTrayReturned(
+      id,
+      currentEmployee
+        ? { name: currentEmployee.name, employeeId: currentEmployee.employeeId }
+        : undefined
+    );
   };
 
   const TABS = [
@@ -98,7 +109,7 @@ export default function TraysScreen() {
           </View>
         }
         renderItem={({ item: order }) => {
-          const isReturned = returnedIds.has(order.id);
+          const isReturned = !!order.trayReturned;
           return (
             <View style={[styles.card, { borderLeftColor: isReturned ? "#16a34a" : Colors.gold }]}>
               <View style={styles.cardHeader}>
@@ -115,8 +126,24 @@ export default function TraysScreen() {
               <View style={styles.customerRow}>
                 <Feather name="user" size={13} color={Colors.primary} />
                 <Text style={styles.customerName}>{order.customerName}</Text>
-                <Feather name="phone" size={12} color={Colors.textMuted} />
                 <Text style={styles.customerPhone}>{order.customerPhone}</Text>
+                <TouchableOpacity
+                  style={[styles.quickBtn, { backgroundColor: "#16a34a18" }]}
+                  onPress={() => { Haptics.selectionAsync(); Linking.openURL(`tel:${order.customerPhone.replace(/\D/g, "")}`); }}
+                >
+                  <Feather name="phone" size={13} color="#16a34a" />
+                </TouchableOpacity>
+                {!isReturned && (
+                  <TouchableOpacity
+                    style={[styles.quickBtn, { backgroundColor: "#25D36618" }]}
+                    onPress={() => {
+                      Haptics.selectionAsync();
+                      openWhatsApp(order.customerPhone, `أهلاً ${order.customerName}، نذكّركم بإعادة الصينية الخاصة بطلب #${order.orderNumber}. شكراً لكم 🙏`);
+                    }}
+                  >
+                    <Feather name="message-circle" size={13} color="#25D366" />
+                  </TouchableOpacity>
+                )}
               </View>
 
               {order.insurancePaymentMethod && (
@@ -127,7 +154,7 @@ export default function TraysScreen() {
 
               <TouchableOpacity
                 style={[styles.returnBtn, isReturned && styles.returnBtnDone]}
-                onPress={() => toggleReturn(order.id)}
+                onPress={() => !isReturned && handleMarkReturned(order.id)}
                 activeOpacity={0.8}
               >
                 <Feather name={isReturned ? "check-circle" : "rotate-ccw"} size={14} color={isReturned ? "#16a34a" : Colors.primary} />
@@ -179,7 +206,11 @@ const styles = StyleSheet.create({
   amountText: { fontSize: 13, fontWeight: "700", color: Colors.gold },
   customerRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 6 },
   customerName: { flex: 1, fontSize: 14, fontWeight: "700", color: Colors.text },
-  customerPhone: { fontSize: 13, color: Colors.textMuted },
+  customerPhone: { fontSize: 12, color: Colors.textMuted },
+  quickBtn: {
+    width: 32, height: 32, borderRadius: 10,
+    alignItems: "center", justifyContent: "center",
+  },
   payMethod: { fontSize: 11, color: Colors.textSecondary, marginBottom: 10 },
   returnBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,

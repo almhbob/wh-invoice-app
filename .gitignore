@@ -37,3 +37,8 @@ Thumbs.db
 *.mobileprovision
 *.orig.*
 web-build/
+
+# One-time scripts
+seed-*.mjs
+seed-*.js
+.claude/

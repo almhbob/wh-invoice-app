@@ -11,9 +11,15 @@ interface StatsBarProps {
 
 export function StatsBar({ orders }: StatsBarProps) {
   const { t } = useLang();
-  const pending = orders.filter((o) => o.status === "pending").length;
-  const inProgress = orders.filter((o) => o.status === "in_progress").length;
-  const done = orders.filter((o) => o.status === "done").length;
+  function overallStatus(o: Order) {
+    const statuses = Object.values(o.departmentStatuses);
+    if (statuses.every((s) => s === "done")) return "done";
+    if (statuses.some((s) => s === "in_progress" || s === "done")) return "in_progress";
+    return "pending";
+  }
+  const pending = orders.filter((o) => overallStatus(o) === "pending").length;
+  const inProgress = orders.filter((o) => overallStatus(o) === "in_progress").length;
+  const done = orders.filter((o) => overallStatus(o) === "done").length;
 
   return (
     <View style={styles.container}>
