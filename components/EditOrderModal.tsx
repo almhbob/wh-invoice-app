@@ -15,6 +15,7 @@ import {
   View,
 } from "react-native";
 
+import { DeliveryDatePicker, DeliveryTimePicker } from "@/components/DeliveryDateTimePicker";
 import { Colors } from "@/constants/colors";
 import {
   Order,
@@ -91,7 +92,8 @@ export default function EditOrderModal({
   // ---- local state ----------------------------------------------------------
   const [items, setItems] = useState<EditableItem[]>([]);
   const [notes, setNotes] = useState("");
-  const [deliveryTime, setDeliveryTime] = useState("");
+  const [deliveryDate, setDeliveryDate] = useState("");
+  const [deliveryTimeSlot, setDeliveryTimeSlot] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const [amountPaidStr, setAmountPaidStr] = useState("");
 
@@ -100,7 +102,10 @@ export default function EditOrderModal({
     if (!order) return;
     setItems(order.items.map(orderItemToEditable));
     setNotes(order.notes ?? "");
-    setDeliveryTime(order.deliveryTime ?? "");
+    // Split "YYYY-MM-DD HH:MM" into date and time parts
+    const parts = (order.deliveryTime ?? "").split(" ");
+    setDeliveryDate(parts[0] ?? "");
+    setDeliveryTimeSlot(parts[1] ?? "");
     setPaymentMethod(order.paymentMethod ?? "cash");
     setAmountPaidStr(
       order.amountPaid !== undefined ? String(order.amountPaid) : ""
@@ -145,7 +150,7 @@ export default function EditOrderModal({
     const patch: Partial<Order> = {
       items: cleanedItems,
       notes: notes.trim() || undefined,
-      deliveryTime: deliveryTime.trim() || undefined,
+      deliveryTime: [deliveryDate.trim(), deliveryTimeSlot.trim()].filter(Boolean).join(" ") || undefined,
       paymentMethod,
       amountPaid:
         amountPaidStr.trim() !== "" ? parseFloat(amountPaidStr) : undefined,
@@ -269,16 +274,29 @@ export default function EditOrderModal({
 
             {/* ---- Section: Delivery Time --------------------------------- */}
             <SectionCard title="موعد التسليم">
-              <TextInput
-                style={styles.textInput}
-                value={deliveryTime}
-                onChangeText={setDeliveryTime}
-                placeholder="مثال: الثلاثاء بعد الظهر"
-                placeholderTextColor={Colors.textMuted}
-                textAlign="right"
-                returnKeyType="done"
-                onFocus={() => Haptics.selectionAsync()}
+              <DeliveryDatePicker
+                value={deliveryDate}
+                onChange={(iso) => setDeliveryDate(iso)}
+                accentColor={Colors.primary}
               />
+              {deliveryDate ? (
+                <View style={{ marginTop: 8 }}>
+                  <DeliveryTimePicker
+                    value={deliveryTimeSlot}
+                    onChange={setDeliveryTimeSlot}
+                    accentColor={Colors.primary}
+                  />
+                </View>
+              ) : null}
+              {(deliveryDate || deliveryTimeSlot) && (
+                <TouchableOpacity
+                  onPress={() => { setDeliveryDate(""); setDeliveryTimeSlot(""); }}
+                  style={styles.clearDTBtn}
+                >
+                  <Feather name="x-circle" size={13} color={Colors.textMuted} />
+                  <Text style={styles.clearDTText}>مسح الموعد</Text>
+                </TouchableOpacity>
+              )}
             </SectionCard>
 
             {/* ---- Section: Payment Method -------------------------------- */}
@@ -668,4 +686,11 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 0.4,
   },
+  clearDTBtn: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    marginTop: 8, alignSelf: "flex-end",
+    paddingHorizontal: 10, paddingVertical: 5,
+    borderRadius: 8, backgroundColor: Colors.background,
+  },
+  clearDTText: { fontSize: 12, color: Colors.textMuted, fontWeight: "600" },
 });
