@@ -272,6 +272,41 @@ export function DeptOrderCard({ order, department, onStatusChange }: DeptOrderCa
           </TouchableOpacity>
         )}
 
+        {/* Cross-dept readiness (shown for packaging only) */}
+        {department === "packaging" && (() => {
+          const prodDepts: Department[] = ["halwa", "mawali", "chocolate", "cake"];
+          const relevantDepts = prodDepts.filter((d) =>
+            order.items.some((i) => i.department === d)
+          );
+          if (relevantDepts.length === 0) return null;
+          const allReady = relevantDepts.every(
+            (d) => order.departmentStatuses[d] === "done"
+          );
+          return (
+            <View style={[styles.readinessRow, allReady && styles.readinessRowReady]}>
+              {relevantDepts.map((d) => {
+                const st = order.departmentStatuses[d] ?? "pending";
+                const isDone = st === "done";
+                return (
+                  <View key={d} style={styles.readinessItem}>
+                    <View style={[styles.readinessDot, { backgroundColor: isDone ? "#16a34a" : DEPT_COLORS[d] }]}>
+                      {isDone && <Feather name="check" size={8} color="#fff" />}
+                    </View>
+                    <Text style={[styles.readinessLabel, isDone && { color: "#16a34a" }]}>
+                      {deptLabel[d]}
+                    </Text>
+                  </View>
+                );
+              })}
+              {allReady && (
+                <View style={styles.allReadyBadge}>
+                  <Text style={styles.allReadyText}>✓ جاهز للتغليف</Text>
+                </View>
+              )}
+            </View>
+          );
+        })()}
+
         {/* Main action */}
         {meta.next ? (
           <TouchableOpacity
@@ -402,4 +437,23 @@ const styles = StyleSheet.create({
     gap: 8, borderRadius: 12, paddingVertical: 10,
   },
   doneText: { fontSize: 13, fontWeight: "700" },
+
+  // Cross-dept readiness row (packaging only)
+  readinessRow: {
+    flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 8,
+    padding: 10, borderRadius: 10, backgroundColor: Colors.border + "40",
+  },
+  readinessRowReady: { backgroundColor: "#16a34a15" },
+  readinessItem: { flexDirection: "row", alignItems: "center", gap: 4 },
+  readinessDot: {
+    width: 16, height: 16, borderRadius: 8,
+    alignItems: "center", justifyContent: "center",
+  },
+  readinessLabel: { fontSize: 11, fontWeight: "600", color: Colors.textSecondary },
+  allReadyBadge: {
+    marginLeft: "auto" as any,
+    paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10,
+    backgroundColor: "#16a34a",
+  },
+  allReadyText: { fontSize: 11, fontWeight: "800", color: "#fff" },
 });
