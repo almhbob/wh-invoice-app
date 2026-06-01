@@ -26,6 +26,7 @@ import { ProductGalleryModal } from "@/components/ProductGalleryModal";
 import { useCompany } from "@/context/CompanyContext";
 import { useEmployee } from "@/context/EmployeeContext";
 import { useLang } from "@/context/LanguageContext";
+import { useProducts } from "@/context/ProductsContext";
 import {
   Department,
   Discount,
@@ -95,6 +96,7 @@ export default function CashierScreen() {
   ], [t]);
   const { company } = useCompany();
   const isLaviviane = company.id === LAVIVIANE_COMPANY_ID;
+  const { products } = useProducts();
 
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -120,6 +122,7 @@ export default function CashierScreen() {
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [receiptQr, setReceiptQr] = useState<string>("");
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+  const [autoItemId, setAutoItemId] = useState<string | null>(null);
 
   // Daily closing modal
   const [showClosing, setShowClosing] = useState(false);
@@ -132,6 +135,19 @@ export default function CashierScreen() {
     return orders.filter((o) => o.createdAt?.slice(0, 10) === today);
   }, [orders]);
   const todayTotal = todayOrders.reduce((s, o) => s + (o.totalAmount ?? 0), 0);
+
+  // Product autocomplete suggestions for item name input
+  const autoSuggestions = useMemo(() => {
+    if (!autoItemId) return [];
+    const item = items.find((i) => i.id === autoItemId);
+    if (!item || !item.name.trim()) return [];
+    const q = item.name.trim().toLowerCase();
+    return products
+      .filter((p) => p.isAvailable && (
+        p.name.toLowerCase().includes(q) || (p.nameEn ?? "").toLowerCase().includes(q)
+      ))
+      .slice(0, 6);
+  }, [autoItemId, items, products]);
 
   // Customer auto-fill: find a previous order matching the entered phone
   const suggestedCustomer = useMemo(() => {
@@ -1007,14 +1023,38 @@ export default function CashierScreen() {
               )}
               {/* ── Main row ── */}
               <View style={styles.itemRow}>
-                <TextInput
-                  style={[styles.input, styles.itemName]}
-                  value={item.name}
-                  onChangeText={(v) => updateItem(item.id, "name", v)}
-                  placeholder={`صنف ${idx + 1}`}
-                  placeholderTextColor={Colors.textMuted}
-                  textAlign="right"
-                />
+                <View style={styles.itemNameWrap}>
+                  <TextInput
+                    style={[styles.input, styles.itemName]}
+                    value={item.name}
+                    onChangeText={(v) => { updateItem(item.id, "name", v); setAutoItemId(item.id); }}
+                    onFocus={() => setAutoItemId(item.id)}
+                    onBlur={() => setTimeout(() => setAutoItemId(null), 200)}
+                    placeholder={`صنف ${idx + 1}`}
+                    placeholderTextColor={Colors.textMuted}
+                    textAlign="right"
+                  />
+                  {autoItemId === item.id && autoSuggestions.length > 0 && (
+                    <View style={styles.autoList}>
+                      {autoSuggestions.map((p) => (
+                        <TouchableOpacity
+                          key={p.id}
+                          style={styles.autoItem}
+                          onPress={() => {
+                            updateItem(item.id, "name", p.name);
+                            updateItem(item.id, "price", p.price);
+                            updateItem(item.id, "department", p.department as any);
+                            setAutoItemId(null);
+                          }}
+                          activeOpacity={0.75}
+                        >
+                          <Text style={styles.autoItemName} numberOfLines={1}>{p.name}</Text>
+                          <Text style={styles.autoItemPrice}>{p.price} ر.س</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+                </View>
                 <TextInput
                   style={[styles.input, styles.priceInput]}
                   value={item.price !== undefined ? String(item.price) : ""}
@@ -2003,7 +2043,23 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surfaceSecondary,
   },
   itemNoteToggleText: { fontSize: 11, color: Colors.textMuted, fontWeight: "600" },
+  itemNameWrap: { flex: 1, position: "relative", zIndex: 10 },
   itemName: { flex: 1, paddingVertical: 10 },
+  autoList: {
+    position: "absolute", top: "100%", left: 0, right: 0,
+    backgroundColor: Colors.surface, borderRadius: 10,
+    borderWidth: 1, borderColor: Colors.border,
+    shadowColor: "#000", shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12, shadowRadius: 8, elevation: 8,
+    zIndex: 100, overflow: "hidden",
+  },
+  autoItem: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingHorizontal: 12, paddingVertical: 9,
+    borderBottomWidth: 1, borderBottomColor: Colors.border + "60",
+  },
+  autoItemName: { flex: 1, fontSize: 13, color: Colors.text, fontWeight: "600", textAlign: "right" },
+  autoItemPrice: { fontSize: 12, color: Colors.gold, fontWeight: "700", marginLeft: 8 },
   qtyBox: {
     flexDirection: "row", alignItems: "center", width: 80,
     borderWidth: 1, borderColor: Colors.border, borderRadius: 10,

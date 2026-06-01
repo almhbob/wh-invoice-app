@@ -13,13 +13,16 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { writeBatch, doc } from "firebase/firestore";
 
 import { Image } from "expo-image";
 
 import { Colors } from "@/constants/colors";
 import { canDo, ROLE_CAN_ACCESS_ADMIN } from "@/constants/rbac";
+import { buildLavivianeProducts, LAVIVIANE_COMPANY_ID } from "@/constants/lavivianeProducts";
 import { DevSettingsModal } from "@/components/DevSettingsModal";
 import { ProductManagerModal } from "@/components/ProductManagerModal";
+import { useCompany } from "@/context/CompanyContext";
 import { useLang } from "@/context/LanguageContext";
 import {
   Employee,
@@ -32,6 +35,7 @@ import { Offer, useOffers } from "@/context/OffersContext";
 import { Product, useProducts } from "@/context/ProductsContext";
 import { usePriceChange } from "@/context/PriceChangeContext";
 import { useFeatures, AppFeatures } from "@/context/FeaturesContext";
+import { db } from "@/lib/firebase";
 
 // ─── helpers ───────────────────────────────────────────────────────────────
 function todayStr() {
@@ -488,10 +492,50 @@ function RecentActivitySection({ orders }: { orders: Order[] }) {
 // ─── Products Section ─────────────────────────────────────────────────────
 function ProductsSection() {
   const { products, deleteProduct, updateProduct } = useProducts();
+  const { companyId } = useCompany();
   const [modalVisible, setModalVisible] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
   const [filterDept, setFilterDept] = useState<"all" | "halwa" | "mawali" | "chocolate" | "cake">("all");
   const [search, setSearch] = useState("");
+  const [isSeedLoading, setIsSeedLoading] = useState(false);
+
+  const handleSeedCatalog = async () => {
+    if (products.length > 0) {
+      Alert.alert(
+        "زرع الكتالوج",
+        `يوجد ${products.length} منتج. هل تريد إعادة زرع الكتالوج الكامل (103 منتج)؟`,
+        [
+          { text: "إلغاء", style: "cancel" },
+          { text: "زرع", style: "destructive", onPress: doSeed },
+        ]
+      );
+    } else {
+      doSeed();
+    }
+  };
+
+  const doSeed = async () => {
+    setIsSeedLoading(true);
+    try {
+      const catalog = buildLavivianeProducts();
+      const BATCH_SIZE = 400;
+      for (let i = 0; i < catalog.length; i += BATCH_SIZE) {
+        const batch = writeBatch(db);
+        catalog.slice(i, i + BATCH_SIZE).forEach((p) => {
+          const ref = doc(db, "companies", companyId, "products", p.id);
+          const { id, ...data } = p;
+          batch.set(ref, data);
+        });
+        await batch.commit();
+      }
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert("تم الزرع", `تم إضافة ${catalog.length} منتج إلى Firestore بنجاح`);
+    } catch (e) {
+      Alert.alert("خطأ", "فشل زرع الكتالوج، تحقق من الاتصال");
+    } finally {
+      setIsSeedLoading(false);
+    }
+  };
 
   const filtered = products.filter((p) => {
     if (filterDept !== "all" && p.department !== filterDept) return false;
@@ -532,10 +576,23 @@ function ProductsSection() {
       {/* Header */}
       <View style={styles.prodHeader}>
         <SectionHeader title="إدارة المنتجات" icon="shopping-bag" />
-        <TouchableOpacity style={styles.addProdBtn} onPress={openAdd} activeOpacity={0.85}>
-          <Feather name="plus" size={15} color="#fff" />
-          <Text style={styles.addProdBtnText}>إضافة منتج</Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          {companyId === LAVIVIANE_COMPANY_ID && (
+            <TouchableOpacity
+              style={[styles.seedBtn, isSeedLoading && { opacity: 0.6 }]}
+              onPress={handleSeedCatalog}
+              activeOpacity={0.85}
+              disabled={isSeedLoading}
+            >
+              <Feather name="database" size={13} color={Colors.primary} />
+              <Text style={styles.seedBtnText}>{isSeedLoading ? "جارٍ الزرع…" : "زرع الكتالوج"}</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity style={styles.addProdBtn} onPress={openAdd} activeOpacity={0.85}>
+            <Feather name="plus" size={15} color="#fff" />
+            <Text style={styles.addProdBtnText}>إضافة منتج</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Stats row */}
@@ -1514,6 +1571,11 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.gold, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12,
   },
   addProdBtnText: { color: "#fff", fontSize: 13, fontWeight: "700" },
+  seedBtn: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    borderWidth: 1.5, borderColor: Colors.primary, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 12,
+  },
+  seedBtnText: { color: Colors.primary, fontSize: 12, fontWeight: "700" },
   prodStats: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
   prodStatPill: {
     flexDirection: "row", alignItems: "center", gap: 5,
