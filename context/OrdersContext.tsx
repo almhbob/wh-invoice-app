@@ -146,6 +146,7 @@ interface OrdersContextType {
   markTrayReturned: (orderId: string, employee?: { name: string; employeeId: string }) => Promise<void>;
   updateDeliveryStatus: (orderId: string, status: "pending" | "delivered") => Promise<void>;
   assignDeliveryDriver: (orderId: string, driver: { name: string; employeeId: string }) => Promise<void>;
+  updateOrder: (id: string, patch: Partial<Omit<Order, "id" | "companyId" | "orderNumber" | "createdAt">>) => Promise<void>;
   getOrdersForDepartment: (department: Department) => Order[];
   isLoading: boolean;
 }
@@ -493,6 +494,30 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
     [companyId, orderDoc]
   );
 
+  const updateOrder = useCallback(
+    async (
+      id: string,
+      patch: Partial<Omit<Order, "id" | "companyId" | "orderNumber" | "createdAt">>
+    ) => {
+      const now = new Date().toISOString();
+      const fullPatch = { ...patch, updatedAt: now };
+      setAllOrders((prev) =>
+        prev.map((o) => (o.id !== id ? o : { ...o, ...fullPatch }))
+      );
+      readLocalOrders(companyId).then((saved) =>
+        writeLocalOrders(
+          companyId,
+          saved.map((o) => (o.id !== id ? o : { ...o, ...fullPatch }))
+        )
+      );
+      if (id.startsWith("local-")) return;
+      updateDoc(orderDoc(id), removeUndefined({ ...fullPatch, companyId })).catch(
+        (err) => console.warn("Firestore updateOrder failed:", err?.code)
+      );
+    },
+    [companyId, orderDoc]
+  );
+
   const getOrdersForDepartment = useCallback(
     (department: Department) => {
       return orders
@@ -520,6 +545,7 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
         markTrayReturned,
         updateDeliveryStatus,
         assignDeliveryDriver,
+        updateOrder,
         getOrdersForDepartment,
         isLoading,
       }}

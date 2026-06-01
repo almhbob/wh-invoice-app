@@ -11,7 +11,9 @@ import {
 } from "react-native";
 
 import { EmptyState } from "@/components/EmptyState";
+import EditOrderModal from "@/components/EditOrderModal";
 import { Colors } from "@/constants/colors";
+import { canDo, ROLE_CAN_DELETE_ORDERS, ROLE_CAN_EDIT_ORDERS } from "@/constants/rbac";
 import { useLang } from "@/context/LanguageContext";
 import { useEmployee } from "@/context/EmployeeContext";
 import { Department, Order, OrderStatus, PAYMENT_LABELS, useOrders } from "@/context/OrdersContext";
@@ -34,7 +36,7 @@ const DEPT_FILTERS: { value: Department | "all"; label: string }[] = [
   { value: "packaging", label: "تغليف" },
 ];
 
-function ArchiveCard({ order, canDelete, onDelete }: { order: Order; canDelete?: boolean; onDelete?: (o: Order) => void }) {
+function ArchiveCard({ order, canDelete, canEdit, onDelete, onEdit }: { order: Order; canDelete?: boolean; canEdit?: boolean; onDelete?: (o: Order) => void; onEdit?: (o: Order) => void }) {
   const { lang } = useLang();
   const depts = [...new Set(order.items.map((i) => i.department))] as Department[];
 
@@ -56,6 +58,15 @@ function ArchiveCard({ order, canDelete, onDelete }: { order: Order; canDelete?:
               ) : null
             )}
           </View>
+          {canEdit && onEdit && (
+            <TouchableOpacity
+              onPress={() => onEdit(order)}
+              style={[styles.deleteBtn, { backgroundColor: Colors.primary + "12" }]}
+              activeOpacity={0.7}
+            >
+              <Feather name="edit-2" size={14} color={Colors.primary} />
+            </TouchableOpacity>
+          )}
           {canDelete && onDelete && (
             <TouchableOpacity
               onPress={() => onDelete(order)}
@@ -236,13 +247,15 @@ function DeletedCard({ order, onRestore }: { order: Order; onRestore: (id: strin
 }
 
 export default function ArchiveScreen() {
-  const { orders, deletedOrders, deleteOrder, restoreOrder } = useOrders();
+  const { orders, deletedOrders, deleteOrder, restoreOrder, updateOrder } = useOrders();
   const { currentEmployee } = useEmployee();
-  const isAdmin = currentEmployee?.role === "admin";
+  const isAdmin = canDo(currentEmployee?.role, ROLE_CAN_DELETE_ORDERS);
+  const canEdit = canDo(currentEmployee?.role, ROLE_CAN_EDIT_ORDERS);
   const [activeTab, setActiveTab] = useState<"archive" | "trash">("archive");
   const [search, setSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState<Department | "all">("all");
   const [dateFilter, setDateFilter] = useState("");
+  const [editingOrder, setEditingOrder] = useState<Order | null>(null);
 
   const filtered = useMemo(() => {
     return orders
@@ -380,6 +393,13 @@ export default function ArchiveScreen() {
             <Text style={styles.countText}>{filtered.length} فاتورة</Text>
           </View>
 
+          <EditOrderModal
+            order={editingOrder}
+            visible={editingOrder !== null}
+            onClose={() => setEditingOrder(null)}
+            onSave={(id: string, patch: Parameters<typeof updateOrder>[1]) => { updateOrder(id, patch); setEditingOrder(null); }}
+          />
+
           <FlatList
             data={filtered}
             keyExtractor={(item) => item.id}
@@ -388,7 +408,9 @@ export default function ArchiveScreen() {
               <ArchiveCard
                 order={item}
                 canDelete={isAdmin}
+                canEdit={canEdit}
                 onDelete={handleDelete}
+                onEdit={setEditingOrder}
               />
             )}
             ListEmptyComponent={

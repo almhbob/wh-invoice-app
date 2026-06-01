@@ -48,6 +48,14 @@ function parseDeliveryDT(dt?: string): Date | null {
   return null;
 }
 
+// An order is "ready for delivery" when all item departments are "done"
+function isReadyForDelivery(order: Order): boolean {
+  if (isDelivered(order)) return false;
+  const depts = [...new Set(order.items.map((i) => i.department))];
+  if (depts.length === 0) return false;
+  return depts.every((d) => order.departmentStatuses[d] === "done");
+}
+
 type Urgency = "overdue" | "urgent" | "soon" | "ok" | "none";
 
 function getUrgency(order: Order): Urgency {
@@ -266,7 +274,8 @@ function DeliveryCard({
   const delivered = isDelivered(order);
   const urgency = getUrgency(order);
   const urgencyColor = URGENCY_COLOR[urgency];
-  const accentColor = delivered ? "#16a34a" : urgency !== "none" ? urgencyColor : Colors.gold;
+  const ready = isReadyForDelivery(order);
+  const accentColor = delivered ? "#16a34a" : ready ? "#7c3aed" : urgency !== "none" ? urgencyColor : Colors.gold;
   const hasDriver = !!(order.deliveryDriver?.employeeId);
 
   return (
@@ -276,7 +285,12 @@ function DeliveryCard({
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
             <Text style={styles.orderNum}>#{order.orderNumber}</Text>
-            {!delivered && urgency !== "none" && (
+            {ready && (
+              <View style={[styles.urgencyBadge, { backgroundColor: "#7c3aed20" }]}>
+                <Text style={[styles.urgencyText, { color: "#7c3aed" }]}>✓ جاهز</Text>
+              </View>
+            )}
+            {!delivered && !ready && urgency !== "none" && (
               <View style={[styles.urgencyBadge, { backgroundColor: urgencyColor + "20" }]}>
                 <Text style={[styles.urgencyText, { color: urgencyColor }]}>
                   {URGENCY_LABEL[urgency]}

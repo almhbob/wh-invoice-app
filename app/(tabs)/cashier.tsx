@@ -41,6 +41,8 @@ import {
 } from "@/context/OrdersContext";
 import { Offer, normalizePhone, useOffers } from "@/context/OffersContext";
 import { DeliveryDatePicker, DeliveryTimePicker } from "@/components/DeliveryDateTimePicker";
+import { DailyClosingModal } from "@/components/DailyClosingModal";
+import { canDo, ROLE_CAN_CLOSE_SHIFT } from "@/constants/rbac";
 import QRCode from "qrcode";
 
 
@@ -78,7 +80,7 @@ const PAYMENT_OPTIONS: { value: PaymentMethod; icon: string }[] = [
 
 export default function CashierScreen() {
   const insets = useSafeAreaInsets();
-  const { addOrder } = useOrders();
+  const { addOrder, orders } = useOrders();
   const { currentEmployee, setCurrentEmployee } = useEmployee();
   const { getOfferByPhone, incrementUsage } = useOffers();
   const { t } = useLang();
@@ -115,6 +117,17 @@ export default function CashierScreen() {
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [receiptQr, setReceiptQr] = useState<string>("");
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+
+  // Daily closing modal
+  const [showClosing, setShowClosing] = useState(false);
+  const canCloseShift = canDo(currentEmployee?.role, ROLE_CAN_CLOSE_SHIFT);
+
+  // Today's summary (for cashier strip)
+  const todayOrders = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    return orders.filter((o) => o.createdAt?.slice(0, 10) === today);
+  }, [orders]);
+  const todayTotal = todayOrders.reduce((s, o) => s + (o.totalAmount ?? 0), 0);
 
   // Discount
   const [discountEnabled, setDiscountEnabled] = useState(false);
@@ -624,6 +637,13 @@ export default function CashierScreen() {
 
   return (
     <>
+    {/* Daily closing modal */}
+    <DailyClosingModal
+      visible={showClosing}
+      onClose={() => setShowClosing(false)}
+      orders={orders}
+    />
+
     <KeyboardAvoidingView
       style={{ flex: 1 }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -637,6 +657,31 @@ export default function CashierScreen() {
       ]}
       keyboardShouldPersistTaps="handled"
     >
+      {/* Today's summary strip + close shift */}
+      <View style={styles.todayStrip}>
+        <View style={styles.todayStripLeft}>
+          <Text style={styles.todayStripCount}>{todayOrders.length}</Text>
+          <Text style={styles.todayStripLabel}>طلب اليوم</Text>
+        </View>
+        <View style={styles.todayStripDivider} />
+        <View style={styles.todayStripLeft}>
+          <Text style={[styles.todayStripCount, { color: Colors.success }]}>
+            {todayTotal.toLocaleString("ar-SA", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+          </Text>
+          <Text style={styles.todayStripLabel}>ر.س اليوم</Text>
+        </View>
+        {canCloseShift && (
+          <TouchableOpacity
+            style={styles.closeShiftBtn}
+            onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setShowClosing(true); }}
+            activeOpacity={0.85}
+          >
+            <Feather name="moon" size={14} color="#fff" />
+            <Text style={styles.closeShiftBtnText}>{t("shiftClose")}</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
       {/* بيانات العميل */}
       <View style={styles.card}>
         <Text style={styles.cardTitle}>{t("customerData")}</Text>
@@ -1846,6 +1891,23 @@ const styles = StyleSheet.create({
     shadowColor: Colors.shadow, shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.06, shadowRadius: 6, elevation: 2,
   },
+  // Today summary strip
+  todayStrip: {
+    flexDirection: "row", alignItems: "center",
+    backgroundColor: Colors.primary, borderRadius: 14,
+    marginHorizontal: 16, marginBottom: 4, marginTop: 8,
+    paddingHorizontal: 16, paddingVertical: 10, gap: 12,
+  },
+  todayStripLeft: { alignItems: "center", gap: 1 },
+  todayStripCount: { fontSize: 18, fontWeight: "900", color: "#fff" },
+  todayStripLabel: { fontSize: 10, color: "rgba(255,255,255,0.65)" },
+  todayStripDivider: { width: 1, height: 30, backgroundColor: "rgba(255,255,255,0.2)" },
+  closeShiftBtn: {
+    marginLeft: "auto" as any, flexDirection: "row", alignItems: "center", gap: 6,
+    backgroundColor: Colors.gold, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8,
+  },
+  closeShiftBtnText: { fontSize: 12, fontWeight: "800", color: "#fff" },
+
   cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   cardTitle: { fontSize: 15, fontWeight: "700", color: Colors.primary },
   label: { fontSize: 12, color: Colors.textSecondary, marginBottom: -4 },

@@ -483,6 +483,31 @@ const translations = {
   accountSection:     { ar: "الحساب",                       en: "Account",                     ur: "حساب",                hi: "खाता",               bn: "হিসাব" },
   printInvoice:       { ar: "عرض وطباعة الفاتورة",         en: "Print Invoice",               ur: "انوائس پرنٹ کریں",    hi: "चालान प्रिंट करें",  bn: "ইনভয়েস প্রিন্ট করুন" },
   shareLabel:         { ar: "مشاركة",                       en: "Share",                       ur: "شیئر",                hi: "साझा करें",          bn: "শেয়ার" },
+
+  // ── Daily Shift Closing ───────────────────────────────────
+  shiftClose:         { ar: "إغلاق اليومية",     en: "Close Shift",       ur: "شفٹ بند کریں",      hi: "शिफ्ट बंद करें",     bn: "শিফট বন্ধ করুন" },
+  shiftReport:        { ar: "تقرير Z",            en: "Z-Report",          ur: "زیڈ رپورٹ",         hi: "Z-रिपोर्ट",          bn: "Z-রিপোর্ট" },
+  shiftShareReport:   { ar: "مشاركة التقرير",     en: "Share Report",      ur: "رپورٹ شیئر کریں",   hi: "रिपोर्ट साझा करें",  bn: "রিপোর্ট শেয়ার করুন" },
+  shiftClosedBy:      { ar: "أُغلق بواسطة",       en: "Closed By",         ur: "بند کیا گیا",        hi: "बंद किया",           bn: "বন্ধ করেছেন" },
+  shiftPeriod:        { ar: "فترة الوردية",       en: "Shift Period",      ur: "شفٹ کا دورانیہ",    hi: "शिफ्ट अवधि",         bn: "শিফটের মেয়াদ" },
+  shiftCash:          { ar: "نقداً",              en: "Cash",              ur: "نقد",                hi: "नकद",                bn: "নগদ" },
+  shiftCard:          { ar: "شبكة",               en: "Card",              ur: "کارڈ",               hi: "कार्ड",              bn: "কার্ড" },
+  shiftTransfer:      { ar: "تحويل",              en: "Transfer",          ur: "ٹرانسفر",            hi: "ट्रांसफर",           bn: "ট্রান্সফার" },
+  shiftNotes:         { ar: "ملاحظات الإغلاق",    en: "Closing Notes",     ur: "اختتامی نوٹس",       hi: "समापन नोट्स",        bn: "সমাপনী নোট" },
+  shiftTodaySummary:  { ar: "ملخص اليوم",         en: "Today's Summary",   ur: "آج کا خلاصہ",        hi: "आज का सारांश",       bn: "আজকের সারসংক্ষেপ" },
+  shiftOrdersToday:   { ar: "طلبات اليوم",        en: "Today's Orders",    ur: "آج کے آرڈر",         hi: "आज के ऑर्डर",        bn: "আজকের অর্ডার" },
+  shiftLastClosed:    { ar: "آخر إغلاق",          en: "Last Closed",       ur: "آخری اختتام",        hi: "अंतिम बंद",          bn: "শেষ বন্ধ" },
+
+  // ── Edit Order ────────────────────────────────────────────
+  editOrder:          { ar: "تعديل الفاتورة",     en: "Edit Order",        ur: "آرڈر ترمیم کریں",   hi: "ऑर्डर संपादित करें", bn: "অর্ডার সম্পাদনা" },
+  editSave:           { ar: "حفظ التعديلات",      en: "Save Changes",      ur: "تبدیلیاں محفوظ کریں", hi: "बदलाव सहेजें",      bn: "পরিবর্তন সংরক্ষণ" },
+  editItems:          { ar: "الأصناف",            en: "Items",             ur: "اشیاء",              hi: "वस्तुएं",            bn: "আইটেম" },
+  editAddItem:        { ar: "إضافة صنف",          en: "Add Item",          ur: "آئٹم شامل کریں",    hi: "आइटम जोड़ें",        bn: "আইটেম যোগ করুন" },
+  editAccessDenied:   { ar: "غير مصرح",           en: "Access Denied",     ur: "اجازت نہیں",         hi: "अनुमति नहीं",        bn: "অনুমতি নেই" },
+  editAccessMsg:      { ar: "هذه الصفحة للمدراء فقط", en: "Admins only",   ur: "صرف منتظمین کے لیے", hi: "केवल व्यवस्थापक",   bn: "শুধুমাত্র অ্যাডমিন" },
+
+  // ── Ready for delivery ────────────────────────────────────
+  readyForDelivery:   { ar: "جاهز للتوصيل",      en: "Ready to Ship",     ur: "ترسیل کے لیے تیار", hi: "डिलीवरी के लिए तैयार", bn: "ডেলিভারির জন্য প্রস্তুত" },
 } as const;
 
 export type TranslationKey = keyof typeof translations;

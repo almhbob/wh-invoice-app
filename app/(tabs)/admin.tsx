@@ -17,6 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 
 import { Colors } from "@/constants/colors";
+import { canDo, ROLE_CAN_ACCESS_ADMIN } from "@/constants/rbac";
 import { DevSettingsModal } from "@/components/DevSettingsModal";
 import { ProductManagerModal } from "@/components/ProductManagerModal";
 import { useLang } from "@/context/LanguageContext";
@@ -1207,8 +1208,29 @@ export default function AdminScreen() {
   const [showDev, setShowDev] = useState(false);
   const { pendingCount: priceReqCount } = usePriceChange();
 
-  const isAdmin =
-    currentEmployee?.role === "admin" || currentEmployee?.role === "cashier";
+  const isAdmin = canDo(currentEmployee?.role, ROLE_CAN_ACCESS_ADMIN);
+
+  // RBAC guard — show locked screen for non-admins
+  if (!currentEmployee || !isAdmin) {
+    return (
+      <View style={[styles.container, { alignItems: "center", justifyContent: "center", gap: 16 }]}>
+        <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: Colors.accent + "18", alignItems: "center", justifyContent: "center" }}>
+          <Feather name="lock" size={32} color={Colors.accent} />
+        </View>
+        <Text style={{ fontSize: 18, fontWeight: "800", color: Colors.text }}>
+          {t("editAccessDenied")}
+        </Text>
+        <Text style={{ fontSize: 14, color: Colors.textSecondary, textAlign: "center", paddingHorizontal: 32 }}>
+          {t("editAccessMsg")}
+        </Text>
+        <Text style={{ fontSize: 12, color: Colors.textMuted }}>
+          {currentEmployee
+            ? `${currentEmployee.name} · ${currentEmployee.role}`
+            : "غير مسجّل"}
+        </Text>
+      </View>
+    );
+  }
 
   const TABS = [
     { key: "overview",      label: t("adminTabOverview"),  icon: "grid" },
