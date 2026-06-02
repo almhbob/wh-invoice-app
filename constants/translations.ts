@@ -70,6 +70,13 @@ const translations = {
   search:           { ar: "بحث...",           en: "Search...",        ur: "تلاش...",            hi: "खोजें...",          bn: "খুঁজুন..." },
   noResults:        { ar: "لا توجد نتائج",    en: "No results",       ur: "کوئی نتیجہ نہیں",   hi: "कोई परिणाम नहीं",  bn: "কোনো ফলাফল নেই" },
 
+  // ── Alert titles ──────────────────────────────────────────────
+  errTitle:         { ar: "خطأ",                 en: "Error",            ur: "غلطی",             hi: "त्रुटि",          bn: "ত্রুটি" },
+  successTitle:     { ar: "تم",                   en: "Done",             ur: "مکمل",             hi: "हो गया",          bn: "সম্পন্ন" },
+  requiredTitle:    { ar: "مطلوب",              en: "Required",         ur: "ضروری",            hi: "आवश्यक",       bn: "প্রয়োজনীয়" },
+  permissionTitle:  { ar: "صلاحية مطلوبة",   en: "Permission Needed", ur: "اجازت درکار", hi: "अनुमति आवश्यक", bn: "অনুমতি প্রয়োজন" },
+  warningTitle:     { ar: "تنبيه",               en: "Warning",          ur: "انتباہ",           hi: "चेतावनी",       bn: "সতর্কতা" },
+
   // ── Cashier form ───────────────────────────────────────────────
   customerName:     { ar: "اسم العميل",       en: "Customer Name",    ur: "گاہک کا نام",        hi: "ग्राहक का नाम",    bn: "গ্রাহকের নাম" },
   customerPhone:    { ar: "رقم الهاتف",       en: "Phone Number",     ur: "فون نمبر",           hi: "फोन नंबर",         bn: "ফোন নম্বর" },

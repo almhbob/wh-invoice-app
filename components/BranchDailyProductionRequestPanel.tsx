@@ -6,6 +6,7 @@ import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View 
 import { Colors } from "@/constants/colors";
 import { useCompany } from "@/context/CompanyContext";
 import { useEmployee } from "@/context/EmployeeContext";
+import { useLang } from "@/context/LanguageContext";
 import { Product, useProducts } from "@/context/ProductsContext";
 
 type BranchRequestStatus = "new" | "sent" | "preparing" | "completed";
@@ -60,6 +61,7 @@ function normalizeQty(value: string) {
 }
 
 export function BranchDailyProductionRequestPanel() {
+  const { t } = useLang();
   const { companyId, company } = useCompany();
   const { currentEmployee } = useEmployee();
   const { products, isLoading } = useProducts();
@@ -126,11 +128,11 @@ export function BranchDailyProductionRequestPanel() {
 
   const submitRequest = async () => {
     if (!branchName.trim()) {
-      Alert.alert("مطلوب", "أدخل اسم الفرع أو الجهة الطالبة.");
+      Alert.alert(t("requiredTitle"), "أدخل اسم الفرع أو الجهة الطالبة.");
       return;
     }
     if (!requestItems.length) {
-      Alert.alert("لا توجد كميات", "أدخل كمية لمنتج واحد على الأقل قبل إرسال الطلبية.");
+      Alert.alert(t("warningTitle"), "أدخل كمية لمنتج واحد على الأقل قبل إرسال الطلبية.");
       return;
     }
 
@@ -148,7 +150,7 @@ export function BranchDailyProductionRequestPanel() {
 
     await persistRequests([request, ...savedRequests].slice(0, 60));
     clearDraft();
-    Alert.alert("تم إرسال الطلبية", "تم حفظ طلبية الفرع اليومية وتجهيزها للمصنع.");
+    Alert.alert(t("successTitle"), "تم حفظ طلبية الفرع اليومية وتجهيزها للمصنع.");
   };
 
   const updateStatus = async (id: string, status: BranchRequestStatus) => {

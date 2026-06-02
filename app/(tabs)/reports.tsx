@@ -934,7 +934,7 @@ export default function ReportsScreen() {
       const { uri } = await Print.printToFileAsync({ html, base64: false });
       await Sharing.shareAsync(uri, { mimeType: "application/pdf", dialogTitle: `تقرير ${label}` });
     } catch {
-      Alert.alert("خطأ", "تعذّر إنشاء PDF");
+      Alert.alert(t("errTitle"), "تعذّر إنشاء PDF");
     }
   }
 

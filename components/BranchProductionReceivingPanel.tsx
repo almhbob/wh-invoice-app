@@ -5,6 +5,7 @@ import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View 
 import { Colors } from "@/constants/colors";
 import { useCompany } from "@/context/CompanyContext";
 import { useEmployee } from "@/context/EmployeeContext";
+import { useLang } from "@/context/LanguageContext";
 import { BranchOpsBaseRecord, loadLocalBranchOps, saveLocalBranchOps } from "@/lib/branchOpsStore";
 
 const REQUESTS_PREFIX = "@fawtara_branch_daily_requests_v1";
@@ -72,6 +73,7 @@ function buildSummary(matched: string, shortage: string) {
 }
 
 export function BranchProductionReceivingPanel() {
+  const { t } = useLang();
   const { companyId } = useCompany();
   const { currentEmployee } = useEmployee();
   const [requests, setRequests] = useState<BranchProductionRequest[]>([]);
@@ -105,7 +107,7 @@ export function BranchProductionReceivingPanel() {
 
   const saveReceipt = async (mode: "received" | "partial_received") => {
     if (!selected) {
-      Alert.alert("لا توجد طلبية", "لا توجد طلبية محفوظة لتسجيل الاستلام.");
+      Alert.alert(t("warningTitle"), "لا توجد طلبية محفوظة لتسجيل الاستلام.");
       return;
     }
 
@@ -127,7 +129,7 @@ export function BranchProductionReceivingPanel() {
     setRequests(next);
     setMatchedNote("");
     setShortageNote("");
-    Alert.alert("تم تسجيل الاستلام", mode === "received" ? "تم تسجيل أن الطلبية وصلت مطابقة." : "تم تسجيل الاستلام مع توضيح النواقص.");
+    Alert.alert(t("successTitle"), mode === "received" ? "تم تسجيل أن الطلبية وصلت مطابقة." : "تم تسجيل الاستلام مع توضيح النواقص.");
   };
 
   return (

@@ -647,18 +647,18 @@ export default function CashierScreen() {
       setExpandedItems(new Set());
       setReceiptOrder(created);
     } catch {
-      Alert.alert("خطأ", t("errSend"));
+      Alert.alert(t("errTitle"), t("errSend"));
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleSubmit = () => {
-    if (!customerName.trim()) { Alert.alert("خطأ", t("errName")); return; }
-    if (!customerPhone.trim()) { Alert.alert("خطأ", t("errPhone")); return; }
-    if (orderType === "delivery" && !deliveryAddress.trim()) { Alert.alert("خطأ", t("errDelivAddress")); return; }
+    if (!customerName.trim()) { Alert.alert(t("errTitle"), t("errName")); return; }
+    if (!customerPhone.trim()) { Alert.alert(t("errTitle"), t("errPhone")); return; }
+    if (orderType === "delivery" && !deliveryAddress.trim()) { Alert.alert(t("errTitle"), t("errDelivAddress")); return; }
     const filteredItems = items.filter((i) => i.name.trim() && i.quantity > 0);
-    if (filteredItems.length === 0) { Alert.alert("خطأ", t("errItems")); return; }
+    if (filteredItems.length === 0) { Alert.alert(t("errTitle"), t("errItems")); return; }
     if (!currentEmployee) {
       Alert.alert("تسجيل الدخول مطلوب", "يجب تسجيل الدخول أولاً — اضغط على زر تغيير في الأعلى.", [{ text: "حسناً" }]);
       return;

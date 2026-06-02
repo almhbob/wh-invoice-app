@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Colors } from "@/constants/colors";
 import { canBranchSupervisorAssignRole } from "@/constants/branchSupervisorPermissions";
+import { useLang } from "@/context/LanguageContext";
 import {
   Employee,
   EmployeeRole,
@@ -59,6 +60,7 @@ interface Props {
 }
 
 export function EmployeeSelectorModal({ visible, onClose }: Props) {
+  const { t } = useLang();
   const insets = useSafeAreaInsets();
   const { employees, currentEmployee, setCurrentEmployee, addEmployee, removeEmployee } =
     useEmployee();
@@ -94,17 +96,17 @@ export function EmployeeSelectorModal({ visible, onClose }: Props) {
   };
 
   const handleAddEmployee = async () => {
-    if (!newName.trim()) { Alert.alert("خطأ", "أدخل اسم الموظف"); return; }
-    if (!newEmpId.trim()) { Alert.alert("خطأ", "أدخل الرقم الوظيفي"); return; }
+    if (!newName.trim()) { Alert.alert(t("errTitle"), "أدخل اسم الموظف"); return; }
+    if (!newEmpId.trim()) { Alert.alert(t("errTitle"), "أدخل الرقم الوظيفي"); return; }
     const normalizedEmpId = newEmpId.trim().toUpperCase();
     const normalizedUsername = (newUsername.trim() || normalizedEmpId).toLowerCase();
     const exists = employees.find((e) => {
       const empUsername = String(e.username || e.employeeId).toLowerCase();
       return e.employeeId.toLowerCase() === normalizedEmpId.toLowerCase() || empUsername === normalizedUsername;
     });
-    if (exists) { Alert.alert("خطأ", "الرقم الوظيفي أو اليوزر مستخدم مسبقاً"); return; }
+    if (exists) { Alert.alert(t("errTitle"), "الرقم الوظيفي أو اليوزر مستخدم مسبقاً"); return; }
     if (!addRoles.includes(newRole)) {
-      Alert.alert("صلاحية غير مسموحة", "الدور المحدد غير مسموح لهذا المستخدم.");
+      Alert.alert(t("permissionTitle"), "الدور المحدد غير مسموح لهذا المستخدم.");
       return;
     }
     setSaving(true);
@@ -120,11 +122,11 @@ export function EmployeeSelectorModal({ visible, onClose }: Props) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setNewName(""); setNewEmpId(""); setNewUsername(""); setNewPin("1234"); setNewRole("cashier");
       setTab("select");
-      Alert.alert("تم", "تمت إضافة الموظف مع يوزر ورمز دخول.");
+      Alert.alert(t("successTitle"), "تمت إضافة الموظف مع يوزر ورمز دخول.");
     } catch (error) {
       console.error("Add employee failed", error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert("تعذر إضافة الموظف", employeeCredentialErrorMessage(error));
+      Alert.alert(t("errTitle"), employeeCredentialErrorMessage(error));
     } finally {
       setSaving(false);
     }
@@ -141,7 +143,7 @@ export function EmployeeSelectorModal({ visible, onClose }: Props) {
           style: "destructive",
           onPress: async () => {
             try { await removeEmployee(emp.id); }
-            catch (error) { Alert.alert("تعذر الحذف", employeeCredentialErrorMessage(error)); }
+            catch (error) { Alert.alert(t("errTitle"), employeeCredentialErrorMessage(error)); }
           },
         },
       ]

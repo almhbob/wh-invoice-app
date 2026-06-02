@@ -19,6 +19,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Colors } from "@/constants/colors";
+import { useLang } from "@/context/LanguageContext";
 
 // ─── Types ────────────────────────────────────────────────────────────────
 export type LinkCategory =
@@ -208,6 +209,7 @@ function LinkForm({
   onSave: (data: Omit<SubLink, "id" | "createdAt">) => void;
   onCancel: () => void;
 }) {
+  const { t } = useLang();
   const [title, setTitle] = useState(link?.title ?? "");
   const [url, setUrl] = useState(link?.url ?? "");
   const [description, setDescription] = useState(link?.description ?? "");
@@ -215,9 +217,9 @@ function LinkForm({
   const [isPrimary, setIsPrimary] = useState(link?.isPrimary ?? false);
 
   const save = () => {
-    if (!title.trim()) { Alert.alert("خطأ", "أدخل عنوان الرابط"); return; }
+    if (!title.trim()) { Alert.alert(t("errTitle"), "أدخل عنوان الرابط"); return; }
     if (!url.trim() || !url.startsWith("http")) {
-      Alert.alert("خطأ", "أدخل رابطاً صحيحاً يبدأ بـ http");
+      Alert.alert(t("errTitle"), "أدخل رابطاً صحيحاً يبدأ بـ http");
       return;
     }
     onSave({ title: title.trim(), url: url.trim(), description: description.trim() || undefined, category, isPrimary });
@@ -305,6 +307,7 @@ function LinkForm({
 
 // ─── Dev Settings Panel ───────────────────────────────────────────────────
 function DevPanel({ onClose }: { onClose: () => void }) {
+  const { t } = useLang();
   const insets = useSafeAreaInsets();
   const [links, setLinks] = useState<SubLink[]>([]);
   const [showForm, setShowForm] = useState(false);
@@ -367,23 +370,23 @@ function DevPanel({ onClose }: { onClose: () => void }) {
     try {
       const supported = await Linking.canOpenURL(url);
       if (supported) await Linking.openURL(url);
-      else Alert.alert("خطأ", "لا يمكن فتح هذا الرابط");
+      else Alert.alert(t("errTitle"), "لا يمكن فتح هذا الرابط");
     } catch {
-      Alert.alert("خطأ", "فشل في فتح الرابط");
+      Alert.alert(t("errTitle"), "فشل في فتح الرابط");
     }
   };
 
   const changePin = async () => {
     if (newPin.length !== 4 || !/^\d{4}$/.test(newPin)) {
-      Alert.alert("خطأ", "الرمز يجب أن يكون 4 أرقام"); return;
+      Alert.alert(t("errTitle"), "الرمز يجب أن يكون 4 أرقام"); return;
     }
     if (newPin !== confirmPin) {
-      Alert.alert("خطأ", "الرمزان غير متطابقان"); return;
+      Alert.alert(t("errTitle"), "الرمزان غير متطابقان"); return;
     }
     await AsyncStorage.setItem(PIN_KEY, newPin);
     setShowChangePIN(false); setNewPin(""); setConfirmPin("");
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    Alert.alert("✓", "تم تغيير رمز الوصول بنجاح");
+    Alert.alert(t("successTitle"), "تم تغيير رمز الوصول بنجاح");
   };
 
   // Group by category

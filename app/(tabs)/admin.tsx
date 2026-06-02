@@ -106,6 +106,7 @@ function SectionHeader({ title, icon }: { title: string; icon: any }) {
 
 // ─── Employee Management ──────────────────────────────────────────────────
 function EmployeesSection() {
+  const { t } = useLang();
   const { employees, addEmployee, removeEmployee } = useEmployee();
   const [showAdd, setShowAdd] = useState(false);
   const [name, setName] = useState("");
@@ -114,10 +115,10 @@ function EmployeesSection() {
   const [saving, setSaving] = useState(false);
 
   const handleAdd = async () => {
-    if (!name.trim()) { Alert.alert("خطأ", "أدخل اسم الموظف"); return; }
-    if (!empId.trim()) { Alert.alert("خطأ", "أدخل الرقم الوظيفي"); return; }
+    if (!name.trim()) { Alert.alert(t("errTitle"), "أدخل اسم الموظف"); return; }
+    if (!empId.trim()) { Alert.alert(t("errTitle"), "أدخل الرقم الوظيفي"); return; }
     const dup = employees.find((e) => e.employeeId.toLowerCase() === empId.trim().toLowerCase());
-    if (dup) { Alert.alert("خطأ", "هذا الرقم الوظيفي مستخدم مسبقاً"); return; }
+    if (dup) { Alert.alert(t("errTitle"), "هذا الرقم الوظيفي مستخدم مسبقاً"); return; }
     setSaving(true);
     try {
       await addEmployee({ name: name.trim(), employeeId: empId.trim().toUpperCase(), role });
@@ -491,6 +492,7 @@ function RecentActivitySection({ orders }: { orders: Order[] }) {
 
 // ─── Products Section ─────────────────────────────────────────────────────
 function ProductsSection() {
+  const { t } = useLang();
   const { products, deleteProduct, updateProduct } = useProducts();
   const { companyId } = useCompany();
   const [modalVisible, setModalVisible] = useState(false);
@@ -529,9 +531,9 @@ function ProductsSection() {
         await batch.commit();
       }
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert("تم الزرع", `تم إضافة ${catalog.length} منتج إلى Firestore بنجاح`);
+      Alert.alert(t("successTitle"), `تم إضافة ${catalog.length} منتج إلى Firestore بنجاح`);
     } catch (e) {
-      Alert.alert("خطأ", "فشل زرع الكتالوج، تحقق من الاتصال");
+      Alert.alert(t("errTitle"), "فشل زرع الكتالوج، تحقق من الاتصال");
     } finally {
       setIsSeedLoading(false);
     }
@@ -746,6 +748,7 @@ function ProductsSection() {
 
 // ─── Offers Section ───────────────────────────────────────────────────────
 function OffersSection() {
+  const { t } = useLang();
   const { offers, addOffer, updateOffer, deleteOffer } = useOffers();
   const [modalVisible, setModalVisible] = useState(false);
   const [editing, setEditing] = useState<Offer | null>(null);
@@ -785,10 +788,10 @@ function OffersSection() {
   };
 
   const handleSave = async () => {
-    if (!phone.trim()) { Alert.alert("خطأ", "رقم الهاتف مطلوب"); return; }
+    if (!phone.trim()) { Alert.alert(t("requiredTitle"), "رقم الهاتف مطلوب"); return; }
     const val = parseFloat(discountValue);
-    if (!val || val <= 0) { Alert.alert("خطأ", "قيمة الخصم يجب أن تكون أكبر من صفر"); return; }
-    if (discountType === "percentage" && val > 100) { Alert.alert("خطأ", "نسبة الخصم لا تتجاوز 100%"); return; }
+    if (!val || val <= 0) { Alert.alert(t("errTitle"), "قيمة الخصم يجب أن تكون أكبر من صفر"); return; }
+    if (discountType === "percentage" && val > 100) { Alert.alert(t("errTitle"), "نسبة الخصم لا تتجاوز 100%"); return; }
 
     const data = {
       phoneNumber: phone.trim(),
@@ -811,7 +814,7 @@ function OffersSection() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setModalVisible(false);
     } catch {
-      Alert.alert("خطأ", "فشل الحفظ، حاول مرة أخرى");
+      Alert.alert(t("errTitle"), "فشل الحفظ، حاول مرة أخرى");
     }
   };
 
