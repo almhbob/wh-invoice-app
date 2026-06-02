@@ -257,7 +257,7 @@ export default function CashierScreen() {
 
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") { Alert.alert(t("permRequired"), "يحتاج التطبيق للوصول إلى الصور"); return; }
+    if (status !== "granted") { Alert.alert(t("permRequired"), t("permPhotosMsg")); return; }
     const res = await ImagePicker.launchImageLibraryAsync({ allowsEditing: true, quality: 0.8 });
     if (!res.canceled) setImageUri(res.assets[0].uri);
   };
@@ -265,7 +265,7 @@ export default function CashierScreen() {
   const addReferenceImage = async () => {
     if (referenceImages.length >= 3) return;
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") { Alert.alert(t("permRequired"), "يحتاج التطبيق للوصول إلى الصور"); return; }
+    if (status !== "granted") { Alert.alert(t("permRequired"), t("permPhotosMsg")); return; }
     const res = await ImagePicker.launchImageLibraryAsync({ allowsEditing: false, quality: 0.75 });
     if (!res.canceled) setReferenceImages((prev) => [...prev, res.assets[0].uri].slice(0, 3));
   };
@@ -276,7 +276,7 @@ export default function CashierScreen() {
 
   const takePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== "granted") { Alert.alert(t("permRequired"), "يحتاج التطبيق للوصول إلى الكاميرا"); return; }
+    if (status !== "granted") { Alert.alert(t("permRequired"), t("permCameraMsg")); return; }
     const res = await ImagePicker.launchCameraAsync({ allowsEditing: true, quality: 0.8 });
     if (!res.canceled) setImageUri(res.assets[0].uri);
   };
@@ -286,7 +286,7 @@ export default function CashierScreen() {
     Alert.alert(t("addPhotoLabel"), t("chooseSource"), [
       { text: t("camera"), onPress: takePhoto },
       { text: t("photoGallery"), onPress: pickImage },
-      { text: "إلغاء", style: "cancel" },
+      { text: t("cancel"), style: "cancel" },
     ]);
   };
 

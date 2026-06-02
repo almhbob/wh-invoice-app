@@ -115,8 +115,8 @@ function EmployeesSection() {
   const [saving, setSaving] = useState(false);
 
   const handleAdd = async () => {
-    if (!name.trim()) { Alert.alert(t("errTitle"), "أدخل اسم الموظف"); return; }
-    if (!empId.trim()) { Alert.alert(t("errTitle"), "أدخل الرقم الوظيفي"); return; }
+    if (!name.trim()) { Alert.alert(t("errTitle"), t("empNameRequired")); return; }
+    if (!empId.trim()) { Alert.alert(t("errTitle"), t("empIdRequired")); return; }
     const dup = employees.find((e) => e.employeeId.toLowerCase() === empId.trim().toLowerCase());
     if (dup) { Alert.alert(t("errTitle"), "هذا الرقم الوظيفي مستخدم مسبقاً"); return; }
     setSaving(true);
@@ -141,7 +141,7 @@ function EmployeesSection() {
 
   return (
     <View style={styles.section}>
-      <SectionHeader title="إدارة الموظفين" icon="users" />
+      <SectionHeader title={t("adminEmpSection")} icon="users" />
 
       {/* Counts row */}
       <View style={styles.empCountRow}>
@@ -157,7 +157,7 @@ function EmployeesSection() {
       {employees.length === 0 ? (
         <View style={styles.emptyBox}>
           <Feather name="users" size={32} color={Colors.textMuted} />
-          <Text style={styles.emptyText}>لا يوجد موظفون — أضف الآن</Text>
+          <Text style={styles.emptyText}>{t("adminNoEmpMsg")}</Text>
         </View>
       ) : (
         ALL_ROLES.map((r) => {
@@ -191,14 +191,14 @@ function EmployeesSection() {
       {/* Add form */}
       {showAdd ? (
         <View style={styles.addForm}>
-          <Text style={styles.formLabel}>اسم الموظف *</Text>
+          <Text style={styles.formLabel}>{t("adminEmpNameLabel")} *</Text>
           <TextInput style={styles.formInput} value={name} onChangeText={setName}
-            placeholder="الاسم الكامل" placeholderTextColor={Colors.textMuted} textAlign="right" />
-          <Text style={styles.formLabel}>الرقم الوظيفي *</Text>
+            placeholder={t("adminEmpNamePh")} placeholderTextColor={Colors.textMuted} textAlign="right" />
+          <Text style={styles.formLabel}>{t("adminEmpIdLabel")} *</Text>
           <TextInput style={styles.formInput} value={empId} onChangeText={setEmpId}
-            placeholder="مثال: EMP001" placeholderTextColor={Colors.textMuted}
+            placeholder={t("adminEmpIdPh")} placeholderTextColor={Colors.textMuted}
             textAlign="right" autoCapitalize="characters" />
-          <Text style={styles.formLabel}>الدور الوظيفي</Text>
+          <Text style={styles.formLabel}>{t("adminEmpRoleLabel")}</Text>
           <View style={styles.roleRow}>
             {ALL_ROLES.map((r) => (
               <TouchableOpacity key={r}
@@ -210,18 +210,18 @@ function EmployeesSection() {
           </View>
           <View style={styles.formBtns}>
             <TouchableOpacity style={styles.cancelBtn} onPress={() => { setShowAdd(false); setName(""); setEmpId(""); setRole("cashier"); }}>
-              <Text style={styles.cancelBtnText}>إلغاء</Text>
+              <Text style={styles.cancelBtnText}>{t("cancel")}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.saveBtn, saving && { opacity: 0.6 }]} onPress={handleAdd} disabled={saving}>
               <Feather name="user-plus" size={15} color="#fff" />
-              <Text style={styles.saveBtnText}>{saving ? "..." : "حفظ"}</Text>
+              <Text style={styles.saveBtnText}>{saving ? "..." : t("save")}</Text>
             </TouchableOpacity>
           </View>
         </View>
       ) : (
         <TouchableOpacity style={styles.addBtn} onPress={() => { Haptics.selectionAsync(); setShowAdd(true); }}>
           <Feather name="plus" size={16} color={Colors.primary} />
-          <Text style={styles.addBtnText}>إضافة موظف جديد</Text>
+          <Text style={styles.addBtnText}>{t("adminAddEmpBtn")}</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -230,6 +230,7 @@ function EmployeesSection() {
 
 // ─── Financial Summary ────────────────────────────────────────────────────
 function FinancialSection({ orders }: { orders: Order[] }) {
+  const { t } = useLang();
   const today = todayStr();
   const todayOrders = orders.filter((o) => o.createdAt.startsWith(today));
 
@@ -261,20 +262,20 @@ function FinancialSection({ orders }: { orders: Order[] }) {
 
   return (
     <View style={styles.section}>
-      <SectionHeader title="الملخص المالي" icon="dollar-sign" />
+      <SectionHeader title={t("financialSummary")} icon="dollar-sign" />
       <View style={styles.statsGrid}>
-        <StatCard icon="trending-up" label="إجمالي الإيرادات" value={fmtCurrency(totalRevenue)} color={Colors.gold}
-          sub={`${ordersWithTotal.length} فاتورة مسعَّرة`} />
-        <StatCard icon="sun" label="إيرادات اليوم" value={fmtCurrency(todayRevenue)} color={Colors.success} />
-        <StatCard icon="bar-chart-2" label="متوسط الفاتورة" value={fmtCurrency(avgOrder)} color={Colors.info} />
-        <StatCard icon="shield" label="إجمالي التأمينات" value={fmtCurrency(totalInsurance)} color={Colors.primaryLight} />
+        <StatCard icon="trending-up" label={t("repTotalRevenue")} value={fmtCurrency(totalRevenue)} color={Colors.gold}
+          sub={`${ordersWithTotal.length} ${t("adminPricedInv")}`} />
+        <StatCard icon="sun" label={t("repTodayRevenue")} value={fmtCurrency(todayRevenue)} color={Colors.success} />
+        <StatCard icon="bar-chart-2" label={t("repAvgOrder")} value={fmtCurrency(avgOrder)} color={Colors.info} />
+        <StatCard icon="shield" label={t("totalInsurance")} value={fmtCurrency(totalInsurance)} color={Colors.primaryLight} />
         {ordersWithDiscount.length > 0 && (
           <StatCard
             icon="tag"
-            label="إجمالي الخصومات"
+            label={t("adminTotalDiscounts")}
             value={fmtCurrency(totalDiscountAmount)}
             color={Colors.warning}
-            sub={`${ordersWithDiscount.length} فاتورة بخصم`}
+            sub={`${ordersWithDiscount.length} ${t("adminDiscountedInv")}`}
           />
         )}
       </View>
@@ -282,7 +283,7 @@ function FinancialSection({ orders }: { orders: Order[] }) {
       {/* Payment method breakdown */}
       {(pmCounts.cash + pmCounts.card + pmCounts.transfer) > 0 && (
         <View style={styles.pmCard}>
-          <Text style={styles.pmTitle}>طرق الدفع</Text>
+          <Text style={styles.pmTitle}>{t("repByPayment")}</Text>
           <View style={styles.pmRow}>
             {(["cash", "card", "transfer"] as PaymentMethod[]).map((pm) => (
               pmCounts[pm] > 0 ? (
@@ -378,7 +379,7 @@ function CashierPerformanceSection({ orders }: { orders: Order[] }) {
       const key = o.cashierEmployee?.employeeId ?? "__unknown__";
       if (!map[key]) {
         map[key] = {
-          name: o.cashierEmployee?.name ?? "غير محدد",
+          name: o.cashierEmployee?.name ?? t("unspecified"),
           empId: o.cashierEmployee?.employeeId ?? "-",
           count: 0,
           revenue: 0,
@@ -409,18 +410,18 @@ function CashierPerformanceSection({ orders }: { orders: Order[] }) {
           <View style={styles.perfStats}>
             <View style={styles.perfStat}>
               <Text style={styles.perfStatNum}>{emp.count}</Text>
-              <Text style={styles.perfStatLabel}>فاتورة</Text>
+              <Text style={styles.perfStatLabel}>{t("invoiceCount")}</Text>
             </View>
             {emp.revenue > 0 && (
               <View style={[styles.perfStat, { backgroundColor: Colors.success + "15" }]}>
                 <Text style={[styles.perfStatNum, { color: Colors.success }]}>{fmtCurrency(emp.revenue)}</Text>
-                <Text style={[styles.perfStatLabel, { color: Colors.success }]}>إيرادات</Text>
+                <Text style={[styles.perfStatLabel, { color: Colors.success }]}>{t("repTabRevenue")}</Text>
               </View>
             )}
             {emp.insurance > 0 && (
               <View style={[styles.perfStat, { backgroundColor: Colors.gold + "18" }]}>
                 <Text style={[styles.perfStatNum, { color: Colors.gold }]}>{fmtCurrency(emp.insurance)}</Text>
-                <Text style={[styles.perfStatLabel, { color: Colors.gold }]}>تأمين</Text>
+                <Text style={[styles.perfStatLabel, { color: Colors.gold }]}>{t("insurance_short")}</Text>
               </View>
             )}
           </View>
@@ -432,14 +433,15 @@ function CashierPerformanceSection({ orders }: { orders: Order[] }) {
 
 // ─── Recent Activity ──────────────────────────────────────────────────────
 function RecentActivitySection({ orders }: { orders: Order[] }) {
+  const { t } = useLang();
   const recent = orders.slice(0, 8);
   if (recent.length === 0) return null;
 
   const statusConf = {
-    pending: { label: "انتظار", color: Colors.statusPending },
-    in_progress: { label: "تحضير", color: Colors.statusInProgress },
-    done: { label: "تم", color: Colors.statusDone },
-    cancelled: { label: "ملغي", color: Colors.statusCancelled },
+    pending:     { label: t("waiting"),         color: Colors.statusPending },
+    in_progress: { label: t("preparing"),       color: Colors.statusInProgress },
+    done:        { label: t("statusDone"),       color: Colors.statusDone },
+    cancelled:   { label: t("statusCancelled"), color: Colors.statusCancelled },
   };
 
   function overallStatus(order: Order) {
@@ -451,7 +453,7 @@ function RecentActivitySection({ orders }: { orders: Order[] }) {
 
   return (
     <View style={styles.section}>
-      <SectionHeader title="آخر الفواتير" icon="list" />
+      <SectionHeader title={t("recentInvoices")} icon="list" />
       {recent.map((o) => {
         const os = overallStatus(o);
         const conf = statusConf[os];
@@ -465,10 +467,10 @@ function RecentActivitySection({ orders }: { orders: Order[] }) {
               <Text style={styles.actName} numberOfLines={1}>{o.customerName}</Text>
               <View style={styles.actDepts}>
                 {depts.includes("halwa") && (
-                  <Text style={[styles.actDeptTag, { backgroundColor: Colors.halwa + "20", color: Colors.halwa }]}>حلا</Text>
+                  <Text style={[styles.actDeptTag, { backgroundColor: Colors.halwa + "20", color: Colors.halwa }]}>{t("deptHalwaShort")}</Text>
                 )}
                 {depts.includes("mawali") && (
-                  <Text style={[styles.actDeptTag, { backgroundColor: Colors.mawali + "20", color: Colors.mawali }]}>موالح</Text>
+                  <Text style={[styles.actDeptTag, { backgroundColor: Colors.mawali + "20", color: Colors.mawali }]}>{t("deptMawaliShort")}</Text>
                 )}
               </View>
             </View>
@@ -481,7 +483,7 @@ function RecentActivitySection({ orders }: { orders: Order[] }) {
                 <Text style={styles.actInsurance}>{fmtCurrency(o.totalAmount)}</Text>
               ) : o.insuranceAmount ? (
                 <Text style={[styles.actInsurance, { color: Colors.primaryLight }]}>
-                  تأمين {fmtCurrency(o.insuranceAmount)}
+                  {t("insurance_short")} {fmtCurrency(o.insuranceAmount)}
                 </Text>
               ) : null}
             </View>
@@ -509,8 +511,8 @@ function ProductsSection() {
         "زرع الكتالوج",
         `يوجد ${products.length} منتج. هل تريد إعادة زرع الكتالوج الكامل (103 منتج)؟`,
         [
-          { text: "إلغاء", style: "cancel" },
-          { text: "زرع", style: "destructive", onPress: doSeed },
+          { text: t("cancel"), style: "cancel" },
+          { text: t("adminSeedBtn"), style: "destructive", onPress: doSeed },
         ]
       );
     } else {
@@ -558,11 +560,11 @@ function ProductsSection() {
 
   const handleDelete = (prod: Product) => {
     Alert.alert(
-      "حذف المنتج",
-      `هل تريد حذف "${prod.name}"؟`,
+      t("deleteProduct"),
+      `${t("deleteEmpConfirm")} "${prod.name}"؟`,
       [
-        { text: "إلغاء", style: "cancel" },
-        { text: "حذف", style: "destructive", onPress: () => deleteProduct(prod.id) },
+        { text: t("cancel"), style: "cancel" },
+        { text: t("deleteProduct"), style: "destructive", onPress: () => deleteProduct(prod.id) },
       ]
     );
   };
@@ -579,7 +581,7 @@ function ProductsSection() {
     <View style={styles.section}>
       {/* Header */}
       <View style={styles.prodHeader}>
-        <SectionHeader title="إدارة المنتجات" icon="shopping-bag" />
+        <SectionHeader title={t("adminProductsMgmt")} icon="shopping-bag" />
         <View style={{ flexDirection: "row", gap: 8 }}>
           {companyId === LAVIVIANE_COMPANY_ID && (
             <TouchableOpacity
@@ -589,12 +591,12 @@ function ProductsSection() {
               disabled={isSeedLoading}
             >
               <Feather name="database" size={13} color={Colors.primary} />
-              <Text style={styles.seedBtnText}>{isSeedLoading ? "جارٍ الزرع…" : "زرع الكتالوج"}</Text>
+              <Text style={styles.seedBtnText}>{isSeedLoading ? t("adminSeedLoading") : t("adminSeedBtn")}</Text>
             </TouchableOpacity>
           )}
           <TouchableOpacity style={styles.addProdBtn} onPress={openAdd} activeOpacity={0.85}>
             <Feather name="plus" size={15} color="#fff" />
-            <Text style={styles.addProdBtnText}>إضافة منتج</Text>
+            <Text style={styles.addProdBtnText}>{t("adminAddProduct")}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -603,28 +605,28 @@ function ProductsSection() {
       <View style={styles.prodStats}>
         <View style={[styles.prodStatPill, { backgroundColor: Colors.primary + "12" }]}>
           <Text style={[styles.prodStatNum, { color: Colors.primary }]}>{products.length}</Text>
-          <Text style={[styles.prodStatLabel, { color: Colors.primary }]}>الكل</Text>
+          <Text style={[styles.prodStatLabel, { color: Colors.primary }]}>{t("archiveAll")}</Text>
         </View>
         <View style={[styles.prodStatPill, { backgroundColor: Colors.halwa + "12" }]}>
           <Text style={[styles.prodStatNum, { color: Colors.halwa }]}>{halwaCount}</Text>
-          <Text style={[styles.prodStatLabel, { color: Colors.halwa }]}>حلا</Text>
+          <Text style={[styles.prodStatLabel, { color: Colors.halwa }]}>{t("deptHalwaShort")}</Text>
         </View>
         <View style={[styles.prodStatPill, { backgroundColor: Colors.mawali + "12" }]}>
           <Text style={[styles.prodStatNum, { color: Colors.mawali }]}>{mawaliCount}</Text>
-          <Text style={[styles.prodStatLabel, { color: Colors.mawali }]}>موالح</Text>
+          <Text style={[styles.prodStatLabel, { color: Colors.mawali }]}>{t("deptMawaliShort")}</Text>
         </View>
         <View style={[styles.prodStatPill, { backgroundColor: Colors.chocolate + "12" }]}>
           <Text style={[styles.prodStatNum, { color: Colors.chocolate }]}>{chocolateCount}</Text>
-          <Text style={[styles.prodStatLabel, { color: Colors.chocolate }]}>شوكلت</Text>
+          <Text style={[styles.prodStatLabel, { color: Colors.chocolate }]}>{t("deptChocolateShort")}</Text>
         </View>
         <View style={[styles.prodStatPill, { backgroundColor: Colors.cake + "12" }]}>
           <Text style={[styles.prodStatNum, { color: Colors.cake }]}>{cakeCount}</Text>
-          <Text style={[styles.prodStatLabel, { color: Colors.cake }]}>كيك</Text>
+          <Text style={[styles.prodStatLabel, { color: Colors.cake }]}>{t("deptCakeShort")}</Text>
         </View>
         {unavailableCount > 0 && (
           <View style={[styles.prodStatPill, { backgroundColor: Colors.accent + "12" }]}>
             <Text style={[styles.prodStatNum, { color: Colors.accent }]}>{unavailableCount}</Text>
-            <Text style={[styles.prodStatLabel, { color: Colors.accent }]}>غير متوفر</Text>
+            <Text style={[styles.prodStatLabel, { color: Colors.accent }]}>{t("adminProdUnavailable")}</Text>
           </View>
         )}
       </View>
@@ -636,7 +638,7 @@ function ProductsSection() {
           style={styles.prodSearchInput}
           value={search}
           onChangeText={setSearch}
-          placeholder="بحث عن منتج..."
+          placeholder={t("adminProdSearch")}
           placeholderTextColor={Colors.textMuted}
           textAlign="right"
         />
@@ -651,7 +653,7 @@ function ProductsSection() {
       <View style={styles.prodFilterRow}>
         {(["all", "halwa", "mawali", "chocolate", "cake"] as const).map((f) => {
           const labels: Record<string, string> = {
-            all: "الكل", halwa: "حلا", mawali: "موالح", chocolate: "شوكلت", cake: "كيك",
+            all: t("archiveAll"), halwa: t("deptHalwaShort"), mawali: t("deptMawaliShort"), chocolate: t("deptChocolateShort"), cake: t("deptCakeShort"),
           };
           const colors: Record<string, string> = {
             all: Colors.primary, halwa: Colors.halwa, mawali: Colors.mawali,
@@ -674,7 +676,7 @@ function ProductsSection() {
       {filtered.length === 0 ? (
         <View style={styles.emptyBox}>
           <Feather name="shopping-bag" size={32} color={Colors.textMuted} />
-          <Text style={styles.emptyText}>{search ? "لا توجد نتائج" : "لا يوجد منتجات — أضف الآن"}</Text>
+          <Text style={styles.emptyText}>{search ? t("adminNoResults") : t("adminNoProdMsg")}</Text>
         </View>
       ) : (
         filtered.map((prod) => {
@@ -682,7 +684,7 @@ function ProductsSection() {
             halwa: Colors.halwa, mawali: Colors.mawali, chocolate: Colors.chocolate, cake: Colors.cake,
           };
           const deptLabelMap: Record<string, string> = {
-            halwa: "حلا", mawali: "موالح", chocolate: "شوكلت", cake: "كيك",
+            halwa: t("deptHalwaShort"), mawali: t("deptMawaliShort"), chocolate: t("deptChocolateShort"), cake: t("deptCakeShort"),
           };
           const deptIconMap: Record<string, string> = {
             halwa: "coffee", mawali: "package", chocolate: "gift", cake: "layers",
@@ -822,11 +824,11 @@ function OffersSection() {
 
   const handleDelete = (offer: Offer) => {
     Alert.alert(
-      "حذف العرض",
-      `هل تريد حذف عرض الزبون ${offer.phoneNumber}؟`,
+      t("deleteOffer"),
+      `${t("deleteEmpConfirm")} ${offer.phoneNumber}؟`,
       [
-        { text: "إلغاء", style: "cancel" },
-        { text: "حذف", style: "destructive", onPress: () => deleteOffer(offer.id) },
+        { text: t("cancel"), style: "cancel" },
+        { text: t("deleteOffer"), style: "destructive", onPress: () => deleteOffer(offer.id) },
       ]
     );
   };
@@ -841,36 +843,36 @@ function OffersSection() {
 
   return (
     <View style={styles.section}>
-      <SectionHeader title="عروض الزبائن" icon="tag" />
+      <SectionHeader title={t("adminOffersTitle")} icon="tag" />
 
       {/* Stats bar */}
       <View style={styles.offerStats}>
         <View style={styles.offerStatBox}>
           <Text style={styles.offerStatNum}>{offers.length}</Text>
-          <Text style={styles.offerStatLabel}>إجمالي</Text>
+          <Text style={styles.offerStatLabel}>{t("total")}</Text>
         </View>
         <View style={[styles.offerStatBox, { borderColor: Colors.success + "40" }]}>
           <Text style={[styles.offerStatNum, { color: Colors.success }]}>{activeCount}</Text>
-          <Text style={styles.offerStatLabel}>نشطة</Text>
+          <Text style={styles.offerStatLabel}>{t("adminOfferActive")}</Text>
         </View>
         <View style={[styles.offerStatBox, { borderColor: Colors.gold + "40" }]}>
           <Text style={[styles.offerStatNum, { color: Colors.gold }]}>{totalUsage}</Text>
-          <Text style={styles.offerStatLabel}>مرة استُخدم</Text>
+          <Text style={styles.offerStatLabel}>{t("adminOfferUsed")}</Text>
         </View>
       </View>
 
       {/* Add button */}
       <TouchableOpacity style={styles.addOfferBtn} onPress={openAdd} activeOpacity={0.85}>
         <Feather name="plus" size={16} color="#fff" />
-        <Text style={styles.addOfferBtnText}>إضافة عرض جديد</Text>
+        <Text style={styles.addOfferBtnText}>{t("adminAddOffer")}</Text>
       </TouchableOpacity>
 
       {/* List */}
       {offers.length === 0 ? (
         <View style={styles.offerEmpty}>
           <Feather name="tag" size={36} color={Colors.textMuted} />
-          <Text style={styles.offerEmptyText}>لا توجد عروض بعد</Text>
-          <Text style={styles.offerEmptyHint}>أضف عروضاً مخصصة لزبائنك بحسب رقم الهاتف</Text>
+          <Text style={styles.offerEmptyText}>{t("adminNoOffersYet")}</Text>
+          <Text style={styles.offerEmptyHint}>{t("adminOfferHint")}</Text>
         </View>
       ) : (
         offers.map((offer) => (
@@ -896,7 +898,7 @@ function OffersSection() {
                   onPress={() => toggleActive(offer)}
                 >
                   <Text style={[styles.offerStatusText, offer.active && styles.offerStatusTextActive]}>
-                    {offer.active ? "نشط" : "موقوف"}
+                    {offer.active ? t("offerStatusActive") : t("offerStatusPaused")}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => openEdit(offer)} hitSlop={8}>
@@ -953,7 +955,7 @@ function OffersSection() {
             <View style={styles.offerModalHandle} />
             <View style={styles.offerModalHeader}>
               <Text style={styles.offerModalTitle}>
-                {editing ? "تعديل العرض" : "إضافة عرض جديد"}
+                {editing ? t("adminEditOffer") : t("adminAddOffer")}
               </Text>
               <TouchableOpacity onPress={() => setModalVisible(false)} hitSlop={8}>
                 <Feather name="x" size={20} color={Colors.textMuted} />
@@ -1102,11 +1104,11 @@ function OffersSection() {
             {/* Actions */}
             <View style={styles.offerModalActions}>
               <TouchableOpacity style={styles.offerModalCancelBtn} onPress={() => setModalVisible(false)}>
-                <Text style={styles.offerModalCancelText}>إلغاء</Text>
+                <Text style={styles.offerModalCancelText}>{t("cancel")}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.offerModalSaveBtn} onPress={handleSave} activeOpacity={0.85}>
                 <Feather name="check" size={16} color="#fff" />
-                <Text style={styles.offerModalSaveText}>{editing ? "حفظ التعديلات" : "إضافة العرض"}</Text>
+                <Text style={styles.offerModalSaveText}>{editing ? t("adminSaveEdits") : t("adminAddOfferSave")}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1118,17 +1120,18 @@ function OffersSection() {
 
 // ─── Price Requests Section ────────────────────────────────────────────────
 function PriceRequestsSection() {
+  const { t } = useLang();
   const { requests, approveRequest, rejectRequest } = usePriceChange();
   const pending = requests.filter((r) => r.status === "pending");
 
   return (
     <View style={styles.section}>
-      <SectionHeader title="طلبات تعديل الأسعار" icon="tag" />
+      <SectionHeader title={t("adminPriceReqTitle")} icon="tag" />
 
       {pending.length === 0 ? (
         <View style={styles.emptyBox}>
           <Feather name="check-circle" size={32} color={Colors.textMuted} />
-          <Text style={styles.emptyText}>لا توجد طلبات معلقة</Text>
+          <Text style={styles.emptyText}>{t("adminNoPendingReqs")}</Text>
         </View>
       ) : (
         pending.map((req) => (
@@ -1136,12 +1139,12 @@ function PriceRequestsSection() {
             <View style={styles.priceReqHeader}>
               <Text style={styles.priceReqProduct}>{req.productName}</Text>
               <View style={styles.priceReqBadge}>
-                <Text style={styles.priceReqBadgeText}>معلق</Text>
+                <Text style={styles.priceReqBadgeText}>{t("adminPendingBadge")}</Text>
               </View>
             </View>
 
             <View style={styles.priceReqRow}>
-              <Text style={styles.priceReqLabel}>السعر الحالي:</Text>
+              <Text style={styles.priceReqLabel}>{t("adminCurrentPrice")}</Text>
               <Text style={styles.priceReqCurrent}>{fmtCurrency(req.currentPrice)}</Text>
               <Feather name="arrow-left" size={12} color={Colors.textMuted} />
               <Text style={styles.priceReqNew}>{fmtCurrency(req.newPrice)}</Text>
@@ -1152,7 +1155,7 @@ function PriceRequestsSection() {
             ) : null}
 
             <Text style={styles.priceReqBy}>
-              بواسطة: {req.requestedBy.name} • {new Date(req.createdAt).toLocaleDateString("ar-SA")}
+              {t("adminRequestBy")} {req.requestedBy.name} • {new Date(req.createdAt).toLocaleDateString("ar-SA")}
             </Text>
 
             <View style={styles.priceReqActions}>
@@ -1162,7 +1165,7 @@ function PriceRequestsSection() {
                 activeOpacity={0.8}
               >
                 <Feather name="check" size={14} color="#fff" />
-                <Text style={styles.priceReqBtnText}>موافقة</Text>
+                <Text style={styles.priceReqBtnText}>{t("adminApprove")}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.priceReqBtn, { backgroundColor: Colors.statusCancelled }]}
@@ -1170,7 +1173,7 @@ function PriceRequestsSection() {
                 activeOpacity={0.8}
               >
                 <Feather name="x" size={14} color="#fff" />
-                <Text style={styles.priceReqBtnText}>رفض</Text>
+                <Text style={styles.priceReqBtnText}>{t("adminReject")}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1180,7 +1183,7 @@ function PriceRequestsSection() {
       {/* Recent resolved */}
       {requests.filter((r) => r.status !== "pending").length > 0 && (
         <>
-          <Text style={styles.resolvedTitle}>المنجزة مؤخراً</Text>
+          <Text style={styles.resolvedTitle}>{t("adminResolvedRecent")}</Text>
           {requests
             .filter((r) => r.status !== "pending")
             .slice(0, 5)
@@ -1195,12 +1198,12 @@ function PriceRequestsSection() {
                     <Text style={[styles.priceReqBadgeText, {
                       color: req.status === "approved" ? "#16a34a" : Colors.statusCancelled,
                     }]}>
-                      {req.status === "approved" ? "تمت الموافقة" : "مرفوض"}
+                      {req.status === "approved" ? t("adminApprovedStatus") : t("adminRejectedStatus")}
                     </Text>
                   </View>
                 </View>
                 <View style={styles.priceReqRow}>
-                  <Text style={styles.priceReqLabel}>التعديل:</Text>
+                  <Text style={styles.priceReqLabel}>{t("adminCurrentPrice")}</Text>
                   <Text style={styles.priceReqCurrent}>{fmtCurrency(req.currentPrice)}</Text>
                   <Feather name="arrow-left" size={12} color={Colors.textMuted} />
                   <Text style={styles.priceReqNew}>{fmtCurrency(req.newPrice)}</Text>

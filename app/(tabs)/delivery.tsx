@@ -78,13 +78,7 @@ const URGENCY_COLOR: Record<Urgency, string> = {
   none: Colors.textMuted,
 };
 
-const URGENCY_LABEL: Record<Urgency, string> = {
-  overdue: "متأخر",
-  urgent: "عاجل",
-  soon: "قريباً",
-  ok: "",
-  none: "",
-};
+// URGENCY_LABEL moved inside DeliveryCard to use translations
 
 const URGENCY_RANK: Record<Urgency, number> = {
   overdue: 0, urgent: 1, soon: 2, ok: 3, none: 4,
@@ -303,6 +297,13 @@ function DeliveryCard({
   onOpenDriverModal: (order: Order) => void;
 }) {
   const { t } = useLang();
+  const urgencyLabels: Record<Urgency, string> = {
+    overdue: t("delOverdue"),
+    urgent: t("delUrgent"),
+    soon: t("delSoon"),
+    ok: "",
+    none: "",
+  };
   const delivered = isDelivered(order);
   const urgency = getUrgency(order);
   const urgencyColor = URGENCY_COLOR[urgency];
@@ -319,13 +320,13 @@ function DeliveryCard({
             <Text style={styles.orderNum}>#{order.orderNumber}</Text>
             {ready && (
               <View style={[styles.urgencyBadge, { backgroundColor: "#7c3aed20" }]}>
-                <Text style={[styles.urgencyText, { color: "#7c3aed" }]}>✓ جاهز</Text>
+                <Text style={[styles.urgencyText, { color: "#7c3aed" }]}>{t("delOrderReady")}</Text>
               </View>
             )}
             {!delivered && !ready && urgency !== "none" && (
               <View style={[styles.urgencyBadge, { backgroundColor: urgencyColor + "20" }]}>
                 <Text style={[styles.urgencyText, { color: urgencyColor }]}>
-                  {URGENCY_LABEL[urgency]}
+                  {urgencyLabels[urgency]}
                 </Text>
               </View>
             )}
@@ -461,7 +462,7 @@ function DeliveryCard({
           activeOpacity={0.8}
         >
           <Feather name="message-circle" size={15} color="#fff" />
-          <Text style={styles.waReadyBtnText}>WhatsApp — طلبك جاهز</Text>
+          <Text style={styles.waReadyBtnText}>{t("delWaReadyBtn")}</Text>
         </TouchableOpacity>
       )}
 
