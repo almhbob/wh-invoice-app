@@ -63,7 +63,7 @@ const KNOWN_TRIAL_COMPANIES: Record<string, CompanyTenant> = {
 
 const COMPANY_STORAGE_KEY = "@fawtara_current_tenant_v1";
 const LEGACY_COMPANY_STORAGE_KEY = "@wh_current_company_v1";
-const INVALID_TENANT_IDS = new Set(["default-company"]);
+const INVALID_TENANT_IDS = new Set(["default-company", "select-company"]);
 const CompanyContext = createContext<CompanyContextType | undefined>(undefined);
 
 function companyFromId(companyId: string): CompanyTenant {

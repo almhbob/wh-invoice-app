@@ -5,9 +5,9 @@ export const PLATFORM_OWNER = {
 };
 
 export const DEFAULT_TENANT = {
-  id: "select-company",
-  name: "اختر الشركة",
-  slug: "select-company",
+  id: "laviviane-trial",
+  name: "Laviviane Maison de Patisserie",
+  slug: "laviviane",
 };
 
 export const TENANT_ROLES = {
