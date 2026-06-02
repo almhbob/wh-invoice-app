@@ -354,10 +354,10 @@ function DevPanel({ onClose }: { onClose: () => void }) {
   };
 
   const handleDelete = (link: SubLink) => {
-    Alert.alert("حذف الرابط", `هل تريد حذف "${link.title}"؟`, [
-      { text: "إلغاء", style: "cancel" },
+    Alert.alert(t("deleteLink"), `${t("deleteEmpConfirm")} "${link.title}"؟`, [
+      { text: t("cancel"), style: "cancel" },
       {
-        text: "حذف", style: "destructive",
+        text: t("delete"), style: "destructive",
         onPress: async () => {
           await saveLinks(links.filter((l) => l.id !== link.id));
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);

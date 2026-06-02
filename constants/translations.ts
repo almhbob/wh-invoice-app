@@ -174,10 +174,18 @@ const translations = {
                       ur: "آپ کی تلاش سے کوئی فاتورہ نہیں ملا",
                       hi: "आपकी खोज से कोई इनवॉइस नहीं मिला",
                       bn: "আপনার খোঁজের সাথে কোনো ইনভয়েস মেলে না" },
+  archiveDeletedLabel: { ar: "محذوف",                    en: "Deleted",           ur: "حذف شدہ",          hi: "هटाया गया",       bn: "মুছে ফেলা" },
+  archiveDeletedAt:    { ar: "حُذف:",                    en: "Deleted:",          ur: "حذف ہوا:",         hi: "हटाया:",          bn: "মুছেছে:" },
+  archiveRestoreInv:   { ar: "استرجاع الفاتورة",        en: "Restore Invoice",   ur: "فاتورہ بحال کریں", hi: "चालान वापस लाएं", bn: "ইনভয়েস ফেরান" },
+  archiveEnteredBy:    { ar: "أدخله:",                   en: "Entered by:",       ur: "درج کیا:",         hi: "दर्ज किया:",      bn: "প্রবেশ করেছে:" },
+  archiveReceivedBy:   { ar: "استلم",                    en: "Received",          ur: "موصول",            hi: "प्राप्त",          bn: "গ্রহণ" },
+  noTrashOrders:       { ar: "سلة المحذوفات فارغة",     en: "Trash is Empty",    ur: "ردی خالی ہے",      hi: "ट्रैश खाली है",   bn: "ট্র্যাশ খালি" },
+  noTrashOrdersSub:    { ar: "لا توجد فواتير محذوفة حالياً", en: "No deleted invoices", ur: "ابھی کوئی حذف شدہ فاتورہ نہیں", hi: "अभी कोई हटाया गया चालान नहीं", bn: "এখন কোনো মুছে ফেলা ইনভয়েস নেই" },
   deptHalwaLabel:   { ar: "قسم الحلويات",       en: "Sweets Dept.",    ur: "حلوائی قسم",        hi: "मिठाई विभाग",        bn: "মিষ্টি বিভাগ" },
   deptMawaliLabel:  { ar: "قسم الموالح",         en: "Savory Dept.",    ur: "نمکین قسم",         hi: "नमकीन विभाग",       bn: "বেকারি বিভাগ" },
   deptChocolateLabel:{ ar: "قسم شوكولاتة",        en: "Chocolate Dept.",  ur: "چاکلیٹ",           hi: "चॉकलेट विभाग",     bn: "চকলেট বিভাগ" },
   deptCakeLabel:    { ar: "قسم الكيك",            en: "Cake Dept.",        ur: "کیک",              hi: "केक विभाग",        bn: "কেক বিভাগ" },
+  deptPackagingLabel:{ ar: "قسم التغليف",   en: "Packaging Dept.",  ur: "پیکنگ قسم",        hi: "पैकेजिंग विभाग",  bn: "প্যাকেজিং বিভাগ" },
 
   // ── Dept screen banners (used by halwa/mawali/chocolate/cake/packaging screens) ──
 
@@ -308,6 +316,13 @@ const translations = {
   delSelectDriver:  { ar: "اختر السائق",        en: "Select Driver",    ur: "ڈرائیور منتخب کریں", hi: "चालक चुनें",        bn: "চালক নির্বাচন করুন" },
   delSortTime:      { ar: "ترتيب حسب الوقت",   en: "Sort by Time",     ur: "وقت کے مطابق ترتیب", hi: "समय के अनुसार",      bn: "সময় অনুযায়ী" },
   delSortDate:      { ar: "ترتيب حسب التاريخ", en: "Sort by Date",     ur: "تاریخ کے مطابق ترتیب", hi: "तारीख के अनुसार",   bn: "তারিখ অনুযায়ী" },
+
+  cashierTodayCount:   { ar: "طلب اليوم",              en: "Today's Orders",    ur: "آج کے آرڈرز",     hi: "आज के ऑर्डर",    bn: "আজকের অর্ডার" },
+  cashierTodaySAR:     { ar: "ر.س اليوم",              en: "Today's Revenue",   ur: "آج کی آمدنی",     hi: "आज का राजस्व",   bn: "আজকের আয়" },
+  cashierAddManual:    { ar: "إضافة صنف يدوياً",       en: "Add Item Manually", ur: "دستی آئٹم",       hi: "मैन्युअल आइटम",  bn: "ম্যানুয়াল আইটেম" },
+  cashierLoginMsg:     { ar: "يجب تسجيل الدخول أولاً — اضغط على زر تغيير في الأعلى.", en: "You must log in first — tap Change at the top.", ur: "پہلے لاگ ان کریں۔", hi: "पहले लॉग इन करें।", bn: "প্রথমে লগইন করুন।" },
+  delMapBtn:           { ar: "خريطة",                  en: "Map",               ur: "نقشہ",            hi: "मानचित्र",        bn: "মানচিত্র" },
+  deleteLink:          { ar: "حذف الرابط",             en: "Delete Link",       ur: "لنک حذف کریں",    hi: "लिंक हटाएं",     bn: "লিঙ্ক মুছুন" },
 
   // ── Trays ─────────────────────────────────────────────────────
   traysTitle:       { ar: "صواني التأمين",     en: "Insurance Trays",  ur: "ضمانتی ٹرے",         hi: "बीमा ट्रे",        bn: "জামানত ট্রে" },

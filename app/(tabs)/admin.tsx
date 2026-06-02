@@ -128,9 +128,9 @@ function EmployeesSection() {
   };
 
   const handleRemove = (emp: Employee) => {
-    Alert.alert("حذف الموظف", `هل تريد حذف "${emp.name}"؟`, [
-      { text: "إلغاء", style: "cancel" },
-      { text: "حذف", style: "destructive", onPress: () => removeEmployee(emp.id) },
+    Alert.alert(t("deleteEmployee"), `${t("deleteEmpConfirm")} "${emp.name}"؟`, [
+      { text: t("cancel"), style: "cancel" },
+      { text: t("delete"), style: "destructive", onPress: () => removeEmployee(emp.id) },
     ]);
   };
 
@@ -301,6 +301,7 @@ function FinancialSection({ orders }: { orders: Order[] }) {
 
 // ─── Operations Overview ──────────────────────────────────────────────────
 function OperationsSection({ orders }: { orders: Order[] }) {
+  const { t } = useLang();
   const today = todayStr();
   const todayOrders = orders.filter((o) => o.createdAt.startsWith(today));
 
@@ -325,41 +326,41 @@ function OperationsSection({ orders }: { orders: Order[] }) {
 
   return (
     <View style={styles.section}>
-      <SectionHeader title="مراقبة سير العمل" icon="activity" />
+      <SectionHeader title={t("workMonitor")} icon="activity" />
 
       <View style={styles.statsGrid}>
-        <StatCard icon="file-text" label="إجمالي الطلبات" value={totalAll} color={Colors.primary} />
-        <StatCard icon="calendar" label="طلبات اليوم" value={totalToday} color={Colors.info} />
-        <StatCard icon="check-circle" label="مكتملة بالكامل" value={doneAll} color={Colors.success} />
-        <StatCard icon="clock" label="قيد التنفيذ" value={totalAll - doneAll} color={Colors.warning} />
+        <StatCard icon="file-text" label={t("totalOrders")} value={totalAll} color={Colors.primary} />
+        <StatCard icon="calendar" label={t("todayOrders")} value={totalToday} color={Colors.info} />
+        <StatCard icon="check-circle" label={t("allDone")} value={doneAll} color={Colors.success} />
+        <StatCard icon="clock" label={t("inProgress")} value={totalAll - doneAll} color={Colors.warning} />
       </View>
 
       {/* Dept breakdown */}
       {[
-        { dept: "halwa" as Department, label: "قسم الحلا", stats: halwa, color: Colors.halwa },
-        { dept: "mawali" as Department, label: "قسم الموالح", stats: mawali, color: Colors.mawali },
+        { dept: "halwa" as Department, label: t("deptHalwaLabel"), stats: halwa, color: Colors.halwa },
+        { dept: "mawali" as Department, label: t("deptMawaliLabel"), stats: mawali, color: Colors.mawali },
       ].map(({ label, stats, color }) => (
         <View key={label} style={[styles.deptCard, { borderLeftColor: color }]}>
           <Text style={[styles.deptCardTitle, { color }]}>{label}</Text>
           <View style={styles.deptCardStats}>
             <View style={styles.deptStat}>
               <Text style={styles.deptStatNum}>{stats.total}</Text>
-              <Text style={styles.deptStatLabel}>إجمالي</Text>
+              <Text style={styles.deptStatLabel}>{t("total")}</Text>
             </View>
             <View style={styles.deptStatDivider} />
             <View style={styles.deptStat}>
               <Text style={[styles.deptStatNum, { color: Colors.statusPending }]}>{stats.pending}</Text>
-              <Text style={styles.deptStatLabel}>انتظار</Text>
+              <Text style={styles.deptStatLabel}>{t("waiting")}</Text>
             </View>
             <View style={styles.deptStatDivider} />
             <View style={styles.deptStat}>
               <Text style={[styles.deptStatNum, { color: Colors.statusInProgress }]}>{stats.inProg}</Text>
-              <Text style={styles.deptStatLabel}>تحضير</Text>
+              <Text style={styles.deptStatLabel}>{t("preparing")}</Text>
             </View>
             <View style={styles.deptStatDivider} />
             <View style={styles.deptStat}>
               <Text style={[styles.deptStatNum, { color: Colors.statusDone }]}>{stats.done}</Text>
-              <Text style={styles.deptStatLabel}>تم</Text>
+              <Text style={styles.deptStatLabel}>{t("statusDone")}</Text>
             </View>
           </View>
         </View>
@@ -370,6 +371,7 @@ function OperationsSection({ orders }: { orders: Order[] }) {
 
 // ─── Cashier Performance ──────────────────────────────────────────────────
 function CashierPerformanceSection({ orders }: { orders: Order[] }) {
+  const { t } = useLang();
   const byEmp = useMemo(() => {
     const map: Record<string, { name: string; empId: string; count: number; revenue: number; insurance: number }> = {};
     orders.forEach((o) => {
@@ -394,7 +396,7 @@ function CashierPerformanceSection({ orders }: { orders: Order[] }) {
 
   return (
     <View style={styles.section}>
-      <SectionHeader title="أداء الكاشيرية" icon="bar-chart-2" />
+      <SectionHeader title={t("cashierPerf")} icon="bar-chart-2" />
       {byEmp.map((emp, idx) => (
         <View key={idx} style={styles.perfRow}>
           <View style={styles.perfRank}>

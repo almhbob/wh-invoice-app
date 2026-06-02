@@ -382,7 +382,7 @@ function DeliveryCard({
           </Text>
           <View style={styles.mapBtn}>
             <Feather name="navigation" size={12} color="#fff" />
-            <Text style={styles.mapBtnText}>خريطة</Text>
+            <Text style={styles.mapBtnText}>{t("delMapBtn")}</Text>
           </View>
         </TouchableOpacity>
       ) : null}

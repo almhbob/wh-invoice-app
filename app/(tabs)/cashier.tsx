@@ -660,7 +660,7 @@ export default function CashierScreen() {
     const filteredItems = items.filter((i) => i.name.trim() && i.quantity > 0);
     if (filteredItems.length === 0) { Alert.alert(t("errTitle"), t("errItems")); return; }
     if (!currentEmployee) {
-      Alert.alert("تسجيل الدخول مطلوب", "يجب تسجيل الدخول أولاً — اضغط على زر تغيير في الأعلى.", [{ text: "حسناً" }]);
+      Alert.alert(t("loginRequired"), t("cashierLoginMsg"), [{ text: t("ok") }]);
       return;
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -705,14 +705,14 @@ export default function CashierScreen() {
       <View style={styles.todayStrip}>
         <View style={styles.todayStripLeft}>
           <Text style={styles.todayStripCount}>{todayOrders.length}</Text>
-          <Text style={styles.todayStripLabel}>طلب اليوم</Text>
+          <Text style={styles.todayStripLabel}>{t("cashierTodayCount")}</Text>
         </View>
         <View style={styles.todayStripDivider} />
         <View style={styles.todayStripLeft}>
           <Text style={[styles.todayStripCount, { color: Colors.success }]}>
             {todayTotal.toLocaleString("ar-SA", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
           </Text>
-          <Text style={styles.todayStripLabel}>ر.س اليوم</Text>
+          <Text style={styles.todayStripLabel}>{t("cashierTodaySAR")}</Text>
         </View>
         {lastClosed && (
           <>

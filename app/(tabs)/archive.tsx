@@ -22,26 +22,18 @@ import { Department, Order, OrderStatus, PAYMENT_LABELS, useOrders } from "@/con
 import { fmtDate } from "@/utils/dateUtils";
 import { setPendingClone } from "@/stores/cloneOrder";
 
-const DEPT_META: Record<string, { label: string; shortLabel: string; color: string }> = {
-  halwa:     { label: "قسم الحلا",      shortLabel: "حلا",      color: Colors.halwa },
-  mawali:    { label: "قسم الموالح",    shortLabel: "موالح",    color: Colors.mawali },
-  chocolate: { label: "قسم الشوكولاتة", shortLabel: "شوكولاتة", color: Colors.chocolate },
-  cake:      { label: "قسم الكيك",      shortLabel: "كيك",      color: Colors.cake },
-  packaging: { label: "قسم التغليف",    shortLabel: "تغليف",    color: Colors.packaging },
-};
-
-const DEPT_FILTERS: { value: Department | "all"; label: string }[] = [
-  { value: "all",       label: "الكل" },
-  { value: "halwa",     label: "حلا" },
-  { value: "mawali",    label: "موالح" },
-  { value: "chocolate", label: "شوكولاتة" },
-  { value: "cake",      label: "كيك" },
-  { value: "packaging", label: "تغليف" },
-];
+// DEPT_META and DEPT_FILTERS are built inside components using t() for i18n
 
 function ArchiveCard({ order, canDelete, canEdit, onDelete, onEdit, onRepeat }: { order: Order; canDelete?: boolean; canEdit?: boolean; onDelete?: (o: Order) => void; onEdit?: (o: Order) => void; onRepeat?: (o: Order) => void }) {
   const { t, lang } = useLang();
   const depts = [...new Set(order.items.map((i) => i.department))] as Department[];
+  const DEPT_META: Record<string, { label: string; shortLabel: string; color: string }> = {
+    halwa:     { label: t("deptHalwaLabel"),      shortLabel: t("deptHalwaShort"),     color: Colors.halwa },
+    mawali:    { label: t("deptMawaliLabel"),     shortLabel: t("deptMawaliShort"),    color: Colors.mawali },
+    chocolate: { label: t("deptChocolateLabel"),  shortLabel: t("deptChocolateShort"), color: Colors.chocolate },
+    cake:      { label: t("deptCakeLabel"),       shortLabel: t("deptCakeShort"),      color: Colors.cake },
+    packaging: { label: t("deptPackagingLabel"),  shortLabel: t("deptPackagingShort"), color: Colors.packaging },
+  };
 
   return (
     <View style={styles.archiveCard}>
@@ -116,7 +108,7 @@ function ArchiveCard({ order, canDelete, canEdit, onDelete, onEdit, onRepeat }: 
         {order.cashierEmployee && (
           <View style={styles.trailRow}>
             <Feather name="edit-3" size={11} color={Colors.gold} />
-            <Text style={styles.trailLabel}>أدخله:</Text>
+            <Text style={styles.trailLabel}>{t("archiveEnteredBy")}</Text>
             <Text style={styles.trailName}>{order.cashierEmployee.name}</Text>
             <Text style={styles.trailId}>#{order.cashierEmployee.employeeId}</Text>
           </View>
@@ -127,7 +119,7 @@ function ArchiveCard({ order, canDelete, canEdit, onDelete, onEdit, onRepeat }: 
           return (
             <View key={key} style={styles.trailRow}>
               <Feather name="check-square" size={11} color={meta.color} />
-              <Text style={[styles.trailLabel, { color: meta.color }]}>استلم {meta.shortLabel}:</Text>
+              <Text style={[styles.trailLabel, { color: meta.color }]}>{t("archiveReceivedBy")} {meta.shortLabel}:</Text>
               <Text style={[styles.trailName, { color: meta.color }]}>{receiver.name}</Text>
               <Text style={styles.trailId}>#{receiver.employeeId}</Text>
             </View>
@@ -200,11 +192,12 @@ function ArchiveCard({ order, canDelete, canEdit, onDelete, onEdit, onRepeat }: 
 }
 
 function StatusRow({ status }: { status?: OrderStatus }) {
+  const { t } = useLang();
   const conf: Record<OrderStatus, { label: string; color: string }> = {
-    pending: { label: "انتظار", color: Colors.statusPending },
-    in_progress: { label: "جاري التحضير", color: Colors.statusInProgress },
-    done: { label: "تم التسليم", color: Colors.statusDone },
-    cancelled: { label: "ملغي", color: Colors.statusCancelled },
+    pending:     { label: t("waiting"),         color: Colors.statusPending },
+    in_progress: { label: t("preparing"),       color: Colors.statusInProgress },
+    done:        { label: t("statusDone"),       color: Colors.statusDone },
+    cancelled:   { label: t("statusCancelled"), color: Colors.statusCancelled },
   };
   if (!status) return null;
   const c = conf[status];
@@ -217,7 +210,7 @@ function StatusRow({ status }: { status?: OrderStatus }) {
 }
 
 function DeletedCard({ order, onRestore }: { order: Order; onRestore: (id: string) => void }) {
-  const { lang } = useLang();
+  const { t, lang } = useLang();
   return (
     <View style={[styles.archiveCard, { borderLeftWidth: 3, borderLeftColor: Colors.accent }]}>
       <View style={styles.archiveHeader}>
@@ -226,7 +219,7 @@ function DeletedCard({ order, onRestore }: { order: Order; onRestore: (id: strin
           <Text style={styles.archiveDate}>{fmtDate(order.createdAt, lang)}</Text>
         </View>
         <View style={[styles.deptTag, { backgroundColor: Colors.accent + "18", borderRadius: 8 }]}>
-          <Text style={[styles.deptTagText, { color: Colors.accent }]}>محذوف</Text>
+          <Text style={[styles.deptTagText, { color: Colors.accent }]}>{t("archiveDeletedLabel")}</Text>
         </View>
       </View>
       <View style={styles.customerBlock}>
@@ -242,7 +235,7 @@ function DeletedCard({ order, onRestore }: { order: Order; onRestore: (id: strin
       {order.deletedAt && (
         <View style={styles.trailRow}>
           <Feather name="trash-2" size={11} color={Colors.accent} />
-          <Text style={styles.trailLabel}>حُذف:</Text>
+          <Text style={styles.trailLabel}>{t("archiveDeletedAt")}</Text>
           <Text style={[styles.trailName, { color: Colors.accent }]}>{fmtDate(order.deletedAt, lang)}</Text>
           {order.deletedBy && (
             <Text style={styles.trailId}>· {order.deletedBy.name}</Text>
@@ -255,13 +248,22 @@ function DeletedCard({ order, onRestore }: { order: Order; onRestore: (id: strin
         activeOpacity={0.8}
       >
         <Feather name="rotate-ccw" size={14} color="#fff" />
-        <Text style={styles.restoreBtnText}>استرجاع الفاتورة</Text>
+        <Text style={styles.restoreBtnText}>{t("archiveRestoreInv")}</Text>
       </TouchableOpacity>
     </View>
   );
 }
 
 export default function ArchiveScreen() {
+  const { t } = useLang();
+  const DEPT_FILTERS: { value: Department | "all"; label: string }[] = [
+    { value: "all",       label: t("archiveAll") },
+    { value: "halwa",     label: t("deptHalwaShort") },
+    { value: "mawali",    label: t("deptMawaliShort") },
+    { value: "chocolate", label: t("deptChocolateShort") },
+    { value: "cake",      label: t("deptCakeShort") },
+    { value: "packaging", label: t("deptPackagingShort") },
+  ];
   const { orders, deletedOrders, deleteOrder, restoreOrder, updateOrder } = useOrders();
   const { currentEmployee } = useEmployee();
   const isAdmin = canDo(currentEmployee?.role, ROLE_CAN_DELETE_ORDERS);
@@ -350,8 +352,8 @@ export default function ArchiveScreen() {
           contentContainerStyle={[styles.list, deletedOrders.length === 0 && { flex: 1 }]}
           renderItem={({ item }) => <DeletedCard order={item} onRestore={restoreOrder} />}
           ListEmptyComponent={
-            <EmptyState icon="trash-2" title="سلة المحذوفات فارغة"
-              subtitle="لا توجد فواتير محذوفة حالياً" />
+            <EmptyState icon="trash-2" title={t("noTrashOrders")}
+              subtitle={t("noTrashOrdersSub")} />
           }
           showsVerticalScrollIndicator={false}
         />
@@ -364,7 +366,7 @@ export default function ArchiveScreen() {
               style={styles.searchInput}
               value={search}
               onChangeText={setSearch}
-              placeholder="بحث بالرقم أو الاسم أو الهاتف أو الصنف..."
+              placeholder={t("archiveSearch")}
               placeholderTextColor={Colors.textMuted}
               textAlign="right"
             />
@@ -396,7 +398,7 @@ export default function ArchiveScreen() {
                 style={styles.searchInput}
                 value={dateFilter}
                 onChangeText={setDateFilter}
-                placeholder="تصفية بالتاريخ (مثال: 2025-01-15)"
+                placeholder={t("filterByDate")}
                 placeholderTextColor={Colors.textMuted}
                 textAlign="right"
               />
@@ -410,7 +412,7 @@ export default function ArchiveScreen() {
 
           <View style={styles.countRow}>
             <Feather name="file-text" size={13} color={Colors.textMuted} />
-            <Text style={styles.countText}>{filtered.length} فاتورة</Text>
+            <Text style={styles.countText}>{filtered.length} {t("invoiceCount")}</Text>
           </View>
 
           <EditOrderModal
@@ -435,8 +437,8 @@ export default function ArchiveScreen() {
               />
             )}
             ListEmptyComponent={
-              <EmptyState icon="archive" title="لا توجد فواتير"
-                subtitle="لم يتم العثور على فواتير تطابق البحث" />
+              <EmptyState icon="archive" title={t("noInvoices")}
+                subtitle={t("noInvoicesSub")} />
             }
             showsVerticalScrollIndicator={false}
           />
