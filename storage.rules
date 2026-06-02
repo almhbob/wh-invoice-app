@@ -31,9 +31,9 @@ service firebase.storage {
       allow write: if signedIn() && isSafeFile();
     }
 
-    // Product images — any signed-in user (incl. anonymous) can read/write
+    // Product images — auth-required read/write (anonymous session covers app users)
     match /product-images/{companyId}/{fileName} {
-      allow read: if true;
+      allow read: if signedIn();
       allow write: if signedIn() && isSafeFile();
     }
 

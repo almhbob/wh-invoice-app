@@ -49,9 +49,11 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const isRTL = isRTLForLang(lang);
 
   useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY).then((stored) => {
-      if (stored && LANGS.includes(stored as Lang)) setLang(stored as Lang);
-    });
+    AsyncStorage.getItem(STORAGE_KEY)
+      .then((stored) => {
+        if (stored && LANGS.includes(stored as Lang)) setLang(stored as Lang);
+      })
+      .catch(() => undefined);
   }, []);
 
   useEffect(() => {

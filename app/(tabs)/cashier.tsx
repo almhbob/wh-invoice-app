@@ -369,7 +369,11 @@ export default function CashierScreen() {
   };
 
   const shareViaWhatsApp = (order: Order) => {
-    const text = buildReceiptText(order);
+    const MAX_WA_LENGTH = 3800;
+    let text = buildReceiptText(order);
+    if (text.length > MAX_WA_LENGTH) {
+      text = text.slice(0, MAX_WA_LENGTH - 3) + "...";
+    }
     const rawPhone = order.customerPhone.replace(/\D/g, "");
     const intlPhone = rawPhone.startsWith("0") ? "966" + rawPhone.slice(1) : rawPhone;
     const url = `whatsapp://send?phone=${intlPhone}&text=${encodeURIComponent(text)}`;
@@ -659,6 +663,9 @@ export default function CashierScreen() {
     if (orderType === "delivery" && !deliveryAddress.trim()) { Alert.alert(t("errTitle"), t("errDelivAddress")); return; }
     const filteredItems = items.filter((i) => i.name.trim() && i.quantity > 0);
     if (filteredItems.length === 0) { Alert.alert(t("errTitle"), t("errItems")); return; }
+    if (discountEnabled && discountVal < 0) { Alert.alert(t("errTitle"), t("errDiscountNeg")); return; }
+    if (discountEnabled && discountType === "percentage" && discountVal > 100) { Alert.alert(t("errTitle"), t("errDiscountMax")); return; }
+    if (insuranceVal < 0) { Alert.alert(t("errTitle"), t("errInsuranceNeg")); return; }
     if (!currentEmployee) {
       Alert.alert(t("loginRequired"), t("cashierLoginMsg"), [{ text: t("ok") }]);
       return;
