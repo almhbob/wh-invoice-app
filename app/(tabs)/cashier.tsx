@@ -42,6 +42,7 @@ import {
 import { Offer, normalizePhone, useOffers } from "@/context/OffersContext";
 import { DeliveryDatePicker, DeliveryTimePicker } from "@/components/DeliveryDateTimePicker";
 import { DailyClosingModal } from "@/components/DailyClosingModal";
+import { ChocolateCardSection, ChocolateCardValue, buildChocoItems, chocoCardTotal } from "@/components/ChocolateCardSection";
 import { canDo, ROLE_CAN_CLOSE_SHIFT } from "@/constants/rbac";
 import { useShift } from "@/context/ShiftContext";
 import QRCode from "qrcode";
@@ -118,6 +119,9 @@ export default function CashierScreen() {
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [receiptQr, setReceiptQr] = useState<string>("");
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+
+  // Chocolate card add-on
+  const [chocoCard, setChocoCard] = useState<ChocolateCardValue | null>(null);
 
   // Daily closing modal
   const [showClosing, setShowClosing] = useState(false);
@@ -284,11 +288,13 @@ export default function CashierScreen() {
     setDiscountEnabled(false); setDiscountType("percentage");
     setDiscountValue(""); setDiscountReason("");
     setDetectedOffer(null); setAppliedOfferId(null);
+    setChocoCard(null);
   };
 
   // ── Totals ──────────────────────────────────────────────────────────────
   const validItems = items.filter((i) => i.name.trim() && i.quantity > 0);
-  const subtotal = validItems.reduce((s, i) => s + (i.price || 0) * i.quantity, 0);
+  const chocoPrice = chocoCardTotal(chocoCard);
+  const subtotal = validItems.reduce((s, i) => s + (i.price || 0) * i.quantity, 0) + chocoPrice;
   const insuranceVal = parseFloat(insuranceAmount) || 0;
   const discountVal = parseFloat(discountValue) || 0;
   const discountAmount = discountEnabled && discountVal > 0
@@ -586,7 +592,10 @@ export default function CashierScreen() {
   };
 
   const doSubmit = async () => {
-    const filteredItems = items.filter((i) => i.name.trim() && i.quantity > 0);
+    const filteredItems = [
+      ...items.filter((i) => i.name.trim() && i.quantity > 0),
+      ...buildChocoItems(chocoCard),
+    ];
     const insurance = insuranceAmount.trim() ? parseFloat(insuranceAmount) : undefined;
     const total = grandTotal > 0 ? grandTotal : undefined;
     const discountData: Discount | undefined =
@@ -642,7 +651,7 @@ export default function CashierScreen() {
     if (!customerName.trim()) { Alert.alert("خطأ", t("errName")); return; }
     if (!customerPhone.trim()) { Alert.alert("خطأ", t("errPhone")); return; }
     const filteredItems = items.filter((i) => i.name.trim() && i.quantity > 0);
-    if (filteredItems.length === 0) { Alert.alert("خطأ", t("errItems")); return; }
+    if (filteredItems.length === 0 && !chocoCard) { Alert.alert("خطأ", t("errItems")); return; }
     if (!currentEmployee) {
       Alert.alert("تسجيل الدخول مطلوب", "يجب تسجيل الدخول أولاً — اضغط على زر تغيير في الأعلى.", [{ text: "حسناً" }]);
       return;
@@ -1219,6 +1228,11 @@ export default function CashierScreen() {
           </View>
         </View>
       )}
+
+      {/* كرت أو لوح شوكلاتة */}
+      <View style={styles.card}>
+        <ChocolateCardSection value={chocoCard} onChange={setChocoCard} />
+      </View>
 
       {/* ملاحظات */}
       <View style={styles.card}>

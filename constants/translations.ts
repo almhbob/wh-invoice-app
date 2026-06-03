@@ -673,6 +673,19 @@ const translations = {
   shopItemsCount:     { ar: "منتجات",                  en: "items",                ur: "آئٹمز",              hi: "आइटम",             bn: "আইটেম" },
   shopSummary:        { ar: "ملخص الطلب",              en: "Order Summary",        ur: "آرڈر خلاصہ",         hi: "ऑर्डर सारांश",      bn: "অর্ডার সারসংক্ষেপ" },
   shopConfirmMsg:     { ar: "سيتواصل معك فريقنا لتأكيد الطلب.", en: "Our team will contact you to confirm.", ur: "ہماری ٹیم آپ سے رابطہ کرے گی۔", hi: "हमारी टीम आपसे संपर्क करेगी।", bn: "আমাদের টিম আপনার সাথে যোগাযোগ করবে।" },
+
+  // ── Chocolate Card Add-on ─────────────────────────────────────
+  chocoCardTitle:      { ar: "إضافة كرت أو لوح شوكلاتة",    en: "Add Card or Chocolate",        ur: "کارڈ یا چاکلیٹ شامل کریں",  hi: "कार्ड या चॉकलेट जोड़ें",  bn: "কার্ড বা চকলেট যোগ করুন" },
+  chocoCardHint:       { ar: "اختياري — يُضاف للطلب بسعر محدد", en: "Optional — added to order at set price", ur: "اختیاری — طے شدہ قیمت پر", hi: "वैकल्पिक — ऑर्डर में जोड़ा जाएगा", bn: "ঐচ্ছিক — অর্ডারে যোগ হবে" },
+  chocoCardTypeCard:   { ar: "كرت هدية",                     en: "Gift Card",                    ur: "گفٹ کارڈ",                  hi: "गिफ्ट कार्ड",             bn: "গিফট কার্ড" },
+  chocoCardTypeChoco:  { ar: "لوح شوكلاتة",                  en: "Chocolate Bar",                ur: "چاکلیٹ بار",                hi: "चॉकलेट बार",              bn: "চকলেট বার" },
+  chocoCardLarge:      { ar: "كبير — 15 ر.س",               en: "Large — 15 SAR",               ur: "بڑا — 15 ریال",             hi: "बड़ा — 15 SAR",            bn: "বড় — 15 SAR" },
+  chocoCardSmall:      { ar: "صغير — 5 ر.س",                en: "Small — 5 SAR",                ur: "چھوٹا — 5 ریال",            hi: "छोटा — 5 SAR",            bn: "ছোট — 5 SAR" },
+  chocoCardSmallMax:   { ar: "بحد أقصى 4 قطع",              en: "Max 4 pieces",                 ur: "زیادہ سے زیادہ 4 ٹکڑے",    hi: "अधिकतम 4 टुकड़े",         bn: "সর্বোচ্চ 4 টুকরো" },
+  chocoCardMessage:    { ar: "الرسالة المطلوب كتابتها",      en: "Message to write",             ur: "لکھنے کا پیغام",            hi: "लिखने का संदेश",           bn: "লেখার বার্তা" },
+  chocoCardMsgHint:    { ar: "اكتب الرسالة المطلوب كتابتها على الكرت أو الشوكلاتة...", en: "Write the message for the card or chocolate...", ur: "کارڈ یا چاکلیٹ پر لکھنے والا پیغام...", hi: "कार्ड या चॉकलेट के लिए संदेश...", bn: "কার্ড বা চকলেটের জন্য বার্তা..." },
+  chocoCardFree:       { ar: "مجاناً",                       en: "Free",                         ur: "مفت",                       hi: "मुफ़्त",                   bn: "বিনামূল্যে" },
+  chocoCardPcs:        { ar: "قطعة",                         en: "pcs",                          ur: "پیس",                       hi: "पीस",                      bn: "পিস" },
 } as const;
 
 export type TranslationKey = keyof typeof translations;
