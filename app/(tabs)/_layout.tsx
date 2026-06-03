@@ -228,6 +228,7 @@ function DesktopSidebar({ activePath, navigate, isRTL }: { activePath: string; n
   const [showDepts, setShowDepts] = useState(() => DEPT_TABS.some(d => activePath.includes(d.name)));
   const [showMore, setShowMore]   = useState(() => MORE_TABS.some(m => activePath.includes(m.name)));
 
+  const isHome    = activePath.includes("home") || activePath === "/" || activePath === "/(tabs)";
   const isCashier = activePath.includes("cashier");
   const isArchive = activePath.includes("archive");
   const isReports = activePath.includes("reports");
@@ -274,6 +275,7 @@ function DesktopSidebar({ activePath, navigate, isRTL }: { activePath: string; n
 
         {/* Navigation */}
         <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8 }}>
+          <SideNavItem label="الرئيسية" icon="home" active={isHome} accent={Colors.primary} onPress={() => navigate("home")} />
           <SideNavItem label={t("tabCashier")} icon="file-text" active={isCashier} accent={Colors.gold} onPress={() => navigate("cashier")} />
 
           <SideNavItem
@@ -388,6 +390,7 @@ function CustomTabBar() {
   const [showDepts, setShowDepts] = useState(false);
   const [showMore, setShowMore] = useState(false);
   const navigate = (name: string) => { setShowDepts(false); setShowMore(false); router.navigate(`/(tabs)/${name}` as any); };
+  const isHome = pathname.includes("home") || pathname === "/(tabs)" || pathname === "/";
   const isCashier = pathname.includes("cashier");
   const isArchive = pathname.includes("archive");
   const isReports = pathname.includes("reports");
@@ -407,6 +410,7 @@ function CustomTabBar() {
       <View style={[styles.bar, isWeb ? styles.webBar : styles.nativeBar, { height: tabH + pb, paddingBottom: pb, borderTopColor: border }]}>
         {isIOS && <BlurView intensity={90} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />}
         {!isIOS && <View style={[StyleSheet.absoluteFill, { backgroundColor: bg }]} />}
+        <BarItem label="الرئيسية" icon="home" sf="house" active={isHome} accent={Colors.primary} onPress={() => navigate("home")} />
         <BarItem label={t("tabCashier")} icon="file-text" sf="doc.text" active={isCashier} accent={Colors.gold} onPress={() => navigate("cashier")} />
         <BarItem label={t("tabDepts")} icon="grid" sf="square.grid.2x2" active={isDept} accent={activeDeptAccent} badge={showDepts ? "▲" : "▼"} onPress={() => setShowDepts((v) => !v)} />
         <BarItem label={t("tabArchive")} icon="archive" sf="archivebox" active={isArchive} accent={Colors.primaryLight} onPress={() => navigate("archive")} />
@@ -437,6 +441,7 @@ function BarItem({ label, icon, sf, active, accent, badge, onPress }: {
 // ── Root layout ────────────────────────────────────────────────────────────────
 
 const SCREEN_META: Record<string, { titleKey: string; accent: string }> = {
+  home:             { titleKey: "الرئيسية",        accent: Colors.primary },
   cashier:          { titleKey: "titleCashier",   accent: Colors.gold },
   halwa:            { titleKey: "titleHalwa",      accent: Colors.halwa },
   mawali:           { titleKey: "titleMawali",     accent: Colors.mawali },
@@ -456,7 +461,7 @@ const SCREEN_META: Record<string, { titleKey: string; accent: string }> = {
 };
 
 function useScreenMeta(pathname: string, t: (k: TranslationKey) => string) {
-  const key = Object.keys(SCREEN_META).find((k) => pathname.includes(k)) ?? "cashier";
+  const key = Object.keys(SCREEN_META).find((k) => pathname.includes(k)) ?? "home";
   const meta = SCREEN_META[key];
   const rawKey = meta.titleKey;
   const title = rawKey.startsWith("title") || rawKey.startsWith("tab") ? t(rawKey as TranslationKey) : rawKey;
@@ -476,6 +481,7 @@ export default function TabLayout() {
 
   const screens = (
     <>
+      <Tabs.Screen name="home"             options={{ title: "الرئيسية",          headerShown: false }} />
       <Tabs.Screen name="cashier"          options={{ title: t("titleCashier"),   headerShown: false }} />
       <Tabs.Screen name="halwa"            options={{ title: t("titleHalwa"),     headerShown: false }} />
       <Tabs.Screen name="mawali"           options={{ title: t("titleMawali"),    headerShown: false }} />
