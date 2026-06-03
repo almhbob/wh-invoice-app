@@ -2,6 +2,19 @@ import * as Haptics from "expo-haptics";
 import { useEffect, useRef } from "react";
 import { Platform, Vibration } from "react-native";
 
+function showBrowserNotification(count: number) {
+  if (Platform.OS !== "web" || typeof Notification === "undefined") return;
+  if (Notification.permission !== "granted") return;
+  try {
+    new Notification("طلب جديد! 🔔", {
+      body: `${count} طلب${count > 1 ? " جديدة" : " جديد"} بانتظار المعالجة`,
+      icon: "/laviviane-logo.png",
+      tag: "new-order",
+      renotify: true,
+    } as NotificationOptions);
+  } catch (_) {}
+}
+
 function playWebBeep() {
   if (Platform.OS !== "web" || typeof window === "undefined") return;
   try {
@@ -34,6 +47,13 @@ export function useNewOrderAlert(
   const prevRef = useRef(pendingCount);
   const mountedRef = useRef(false);
 
+  // Request browser notification permission once on mount (web only)
+  useEffect(() => {
+    if (Platform.OS === "web" && typeof Notification !== "undefined") {
+      Notification.requestPermission();
+    }
+  }, []);
+
   useEffect(() => {
     // Skip the very first render — we don't want to alert on initial load
     if (!mountedRef.current) {
@@ -46,6 +66,7 @@ export function useNewOrderAlert(
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       if (Platform.OS !== "web") Vibration.vibrate([0, 120, 80, 120]);
       playWebBeep();
+      showBrowserNotification(pendingCount - prevRef.current);
       onNew?.();
     }
 

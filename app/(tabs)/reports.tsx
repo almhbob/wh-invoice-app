@@ -16,11 +16,12 @@ import { Colors } from "@/constants/colors";
 import { useLang } from "@/context/LanguageContext";
 import { useOrders } from "@/context/OrdersContext";
 import { fmtCurrency } from "@/utils/dateUtils";
+import { ShiftCloseModal } from "@/components/ShiftCloseModal";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type Filter = "today" | "week" | "month" | "all";
-type Tab = "revenue" | "products" | "cashier" | "delivery";
+type Tab = "revenue" | "products" | "cashier" | "delivery" | "export";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -227,6 +228,208 @@ function DriverRow({
     </View>
   );
 }
+
+// ─── CSV helpers ─────────────────────────────────────────────────────────────
+
+function escapeCsv(val: string | number | undefined | null): string {
+  return `"${String(val ?? "").replace(/"/g, '""')}"`;
+}
+
+function buildOrdersCsv(orders: ReturnType<typeof useOrders>["orders"]): string {
+  const PAYMENT_AR: Record<string, string> = { cash: "نقداً", card: "بطاقة", transfer: "تحويل" };
+  const header = [
+    "رقم الطلب", "العميل", "الهاتف", "تاريخ الإنشاء", "موعد التسليم",
+    "نوع الطلب", "المجموع (ر.س)", "طريقة الدفع", "الخصم", "حالة التوصيل", "السائق", "الكاشير",
+  ].map(escapeCsv).join(",");
+  const rows = orders.map((o) =>
+    [
+      o.orderNumber,
+      o.customerName,
+      o.customerPhone,
+      o.createdAt,
+      o.deliveryTime ?? "",
+      o.orderType === "delivery" ? "توصيل" : "استلام",
+      o.totalAmount?.toFixed(2) ?? "0",
+      PAYMENT_AR[o.paymentMethod ?? "cash"] ?? o.paymentMethod ?? "",
+      o.discount ? (o.discount.type === "percentage" ? `${o.discount.value}%` : `${o.discount.value} ر.س`) : "",
+      o.deliveryStatus === "delivered" ? "تم التسليم" : (o.orderType === "delivery" ? "قيد التوصيل" : ""),
+      o.deliveryDriver?.name ?? "",
+      o.cashierEmployee?.name ?? "",
+    ].map(escapeCsv).join(",")
+  );
+  return "﻿" + [header, ...rows].join("\n");
+}
+
+function buildProductsCsv(orders: ReturnType<typeof useOrders>["orders"]): string {
+  const map: Record<string, { qty: number; revenue: number; dept: string }> = {};
+  orders.forEach((o) =>
+    o.items.forEach((item) => {
+      if (!map[item.name]) map[item.name] = { qty: 0, revenue: 0, dept: item.department };
+      map[item.name].qty += item.quantity;
+      map[item.name].revenue += (item.price ?? 0) * item.quantity;
+    })
+  );
+  const DEPT_AR: Record<string, string> = {
+    halwa: "حلا زفة", mawali: "معجنات", chocolate: "شوكولاتة", cake: "كيك", packaging: "تغليف",
+  };
+  const header = ["المنتج", "القسم", "الكمية الإجمالية", "الإيراد (ر.س)"].map(escapeCsv).join(",");
+  const rows = Object.entries(map)
+    .sort((a, b) => b[1].revenue - a[1].revenue)
+    .map(([name, d]) =>
+      [name, DEPT_AR[d.dept] ?? d.dept, d.qty, d.revenue.toFixed(2)].map(escapeCsv).join(",")
+    );
+  return "﻿" + [header, ...rows].join("\n");
+}
+
+function downloadCsv(csv: string, filename: string) {
+  if (Platform.OS === "web" && typeof document !== "undefined") {
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  } else {
+    Share.share({ message: csv, title: filename }).catch(() => {});
+  }
+}
+
+// ─── Tab: Export ──────────────────────────────────────────────────────────────
+
+function ExportTab({ filtered, filterLbl }: { filtered: ReturnType<typeof useOrders>["orders"]; filterLbl: string }) {
+  const [exporting, setExporting] = React.useState<string | null>(null);
+
+  async function handleExport(type: "orders" | "products") {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setExporting(type);
+    try {
+      const date = new Date().toISOString().slice(0, 10);
+      if (type === "orders") {
+        const csv = buildOrdersCsv(filtered);
+        downloadCsv(csv, `الطلبات-${filterLbl}-${date}.csv`);
+      } else {
+        const csv = buildProductsCsv(filtered);
+        downloadCsv(csv, `المنتجات-${filterLbl}-${date}.csv`);
+      }
+    } finally {
+      setTimeout(() => setExporting(null), 1500);
+    }
+  }
+
+  const productCount = new Set(filtered.flatMap((o) => o.items.map((i) => i.name))).size;
+  const totalRevenue = filtered.reduce((s, o) => s + (o.totalAmount ?? 0), 0);
+
+  return (
+    <View style={{ gap: 0 }}>
+      {/* Summary */}
+      <View style={styles.card}>
+        <SectionHeader title="ملخص البيانات القابلة للتصدير" />
+        <View style={exportStyles.summaryRow}>
+          <View style={exportStyles.summaryItem}>
+            <Feather name="file-text" size={22} color={Colors.primary} />
+            <Text style={exportStyles.summaryNum}>{filtered.length}</Text>
+            <Text style={exportStyles.summaryLabel}>طلب</Text>
+          </View>
+          <View style={exportStyles.summaryDivider} />
+          <View style={exportStyles.summaryItem}>
+            <Feather name="package" size={22} color={Colors.gold} />
+            <Text style={exportStyles.summaryNum}>{productCount}</Text>
+            <Text style={exportStyles.summaryLabel}>منتج مختلف</Text>
+          </View>
+          <View style={exportStyles.summaryDivider} />
+          <View style={exportStyles.summaryItem}>
+            <Feather name="dollar-sign" size={22} color={Colors.success} />
+            <Text style={exportStyles.summaryNum}>{fmtCurrency(totalRevenue)}</Text>
+            <Text style={exportStyles.summaryLabel}>إجمالي الإيراد</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Export buttons */}
+      <View style={styles.card}>
+        <SectionHeader title="تصدير البيانات" />
+        <Text style={exportStyles.hint}>
+          {Platform.OS === "web"
+            ? "سيتم تحميل ملف CSV مباشرة إلى جهازك."
+            : "سيتم مشاركة ملف CSV عبر التطبيقات المتاحة."}
+        </Text>
+
+        <TouchableOpacity
+          style={[exportStyles.exportBtn, exporting === "orders" && exportStyles.exportBtnBusy]}
+          onPress={() => handleExport("orders")}
+          disabled={exporting !== null || filtered.length === 0}
+          activeOpacity={0.8}
+        >
+          <Feather name={exporting === "orders" ? "loader" : "download"} size={18} color="#fff" />
+          <View style={{ flex: 1 }}>
+            <Text style={exportStyles.exportBtnTitle}>
+              {exporting === "orders" ? "جاري التصدير..." : "تصدير قائمة الطلبات"}
+            </Text>
+            <Text style={exportStyles.exportBtnSub}>{filtered.length} طلب · CSV</Text>
+          </View>
+          <View style={exportStyles.csvTag}><Text style={exportStyles.csvTagText}>CSV</Text></View>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[exportStyles.exportBtn, exportStyles.exportBtnGold, exporting === "products" && exportStyles.exportBtnBusy]}
+          onPress={() => handleExport("products")}
+          disabled={exporting !== null || filtered.length === 0}
+          activeOpacity={0.8}
+        >
+          <Feather name={exporting === "products" ? "loader" : "download"} size={18} color="#fff" />
+          <View style={{ flex: 1 }}>
+            <Text style={exportStyles.exportBtnTitle}>
+              {exporting === "products" ? "جاري التصدير..." : "تصدير ملخص المنتجات"}
+            </Text>
+            <Text style={exportStyles.exportBtnSub}>{productCount} منتج · CSV</Text>
+          </View>
+          <View style={exportStyles.csvTag}><Text style={exportStyles.csvTagText}>CSV</Text></View>
+        </TouchableOpacity>
+
+        {filtered.length === 0 && (
+          <Text style={[exportStyles.hint, { color: Colors.accent, marginTop: 8 }]}>
+            لا توجد بيانات في الفترة المحددة
+          </Text>
+        )}
+      </View>
+
+      {/* Format note */}
+      <View style={[styles.card, { flexDirection: "row", alignItems: "flex-start", gap: 10 }]}>
+        <Feather name="info" size={15} color={Colors.info} style={{ marginTop: 1 }} />
+        <Text style={[exportStyles.hint, { flex: 1, marginTop: 0 }]}>
+          الملفات بصيغة CSV مدعومة في Excel، Google Sheets، وجميع برامج الجداول. تأكد من فتح الملف بترميز UTF-8 لعرض العربية صحيحاً.
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+const exportStyles = StyleSheet.create({
+  summaryRow: {
+    flexDirection: "row", alignItems: "center",
+    paddingVertical: 8,
+  },
+  summaryItem: { flex: 1, alignItems: "center", gap: 5 },
+  summaryDivider: { width: 1, height: 50, backgroundColor: Colors.border },
+  summaryNum: { fontSize: 15, fontWeight: "900", color: Colors.text },
+  summaryLabel: { fontSize: 11, color: Colors.textMuted },
+  hint: { fontSize: 12, color: Colors.textSecondary, lineHeight: 18, marginBottom: 12 },
+  exportBtn: {
+    flexDirection: "row", alignItems: "center", gap: 12,
+    backgroundColor: Colors.primary, borderRadius: 14,
+    padding: 14, marginBottom: 10,
+  },
+  exportBtnGold: { backgroundColor: Colors.gold },
+  exportBtnBusy: { opacity: 0.6 },
+  exportBtnTitle: { fontSize: 14, fontWeight: "800", color: "#fff" },
+  exportBtnSub: { fontSize: 11, color: "rgba(255,255,255,0.75)", marginTop: 2 },
+  csvTag: {
+    backgroundColor: "rgba(255,255,255,0.2)", borderRadius: 6,
+    paddingHorizontal: 7, paddingVertical: 3,
+  },
+  csvTagText: { fontSize: 10, fontWeight: "900", color: "#fff" },
+});
 
 // ─── Tab: Revenue ─────────────────────────────────────────────────────────────
 
@@ -750,12 +953,14 @@ export default function ReportsScreen() {
 
   const [filter, setFilter] = useState<Filter>("month");
   const [activeTab, setActiveTab] = useState<Tab>("revenue");
+  const [showShiftClose, setShowShiftClose] = useState(false);
 
   const TAB_ITEMS: { key: Tab; label: string; icon: string }[] = [
     { key: "revenue",  label: t("repTabRevenue"),  icon: "trending-up" },
     { key: "products", label: t("repTabProducts"), icon: "package" },
     { key: "cashier",  label: t("repTabCashier"),  icon: "user-check" },
     { key: "delivery", label: t("repTabDelivery"), icon: "truck" },
+    { key: "export",   label: "تصدير",             icon: "download" },
   ];
 
   const filtered = useMemo(
@@ -837,6 +1042,14 @@ export default function ReportsScreen() {
       <View style={styles.headerRow}>
         <Text style={styles.screenTitle}>{t("titleReports")}</Text>
         <View style={{ flexDirection: "row", gap: 8 }}>
+          <TouchableOpacity
+            style={[styles.shareBtn, { backgroundColor: "#16a34a12", borderColor: "#16a34a30" }]}
+            onPress={() => { Haptics.selectionAsync(); setShowShiftClose(true); }}
+            activeOpacity={0.75}
+          >
+            <Feather name="lock" size={14} color="#16a34a" />
+            <Text style={{ fontSize: 11, fontWeight: "700", color: "#16a34a" }}>إغلاق الوردية</Text>
+          </TouchableOpacity>
           <TouchableOpacity
             style={[styles.shareBtn, { backgroundColor: Colors.primary + "12" }]}
             onPress={handleDailyReport}
@@ -938,7 +1151,12 @@ export default function ReportsScreen() {
         {filtered.length > 0 && activeTab === "delivery" && (
           <DeliveryTab filtered={filtered} />
         )}
+        {activeTab === "export" && (
+          <ExportTab filtered={filtered} filterLbl={filterLabel(filter)} />
+        )}
       </ScrollView>
+
+      <ShiftCloseModal visible={showShiftClose} onClose={() => setShowShiftClose(false)} />
     </View>
   );
 }
