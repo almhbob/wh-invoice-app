@@ -3,45 +3,20 @@ import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
-const rawFirebaseConfig = {
-  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
+// Firebase client-side config — these values are intentionally public.
+// Security is enforced via Firestore/Storage rules, not by hiding these keys.
+// Env vars override if present (local dev / CI), otherwise production values are used.
+const firebaseConfig = {
+  apiKey:            process.env.EXPO_PUBLIC_FIREBASE_API_KEY            ?? "AIzaSyB76Y-DdPYNjejZeZiuDZcojH_jvOzIlNI",
+  authDomain:        process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN        ?? "wh-cake-chocolate.firebaseapp.com",
+  projectId:         process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID         ?? "wh-cake-chocolate",
+  storageBucket:     process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET     ?? "wh-cake-chocolate.firebasestorage.app",
+  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ?? "1003148247429",
+  appId:             process.env.EXPO_PUBLIC_FIREBASE_APP_ID             ?? "1:1003148247429:web:4b29fa44119668e2e3c4ec",
 };
 
-export const firebaseConfigDiagnostics = {
-  hasApiKey: Boolean(rawFirebaseConfig.apiKey),
-  hasAuthDomain: Boolean(rawFirebaseConfig.authDomain),
-  hasProjectId: Boolean(rawFirebaseConfig.projectId),
-  hasStorageBucket: Boolean(rawFirebaseConfig.storageBucket),
-  hasMessagingSenderId: Boolean(rawFirebaseConfig.messagingSenderId),
-  hasAppId: Boolean(rawFirebaseConfig.appId),
-  missingKeys: Object.entries(rawFirebaseConfig)
-    .filter(([, value]) => !value)
-    .map(([key]) => key),
-};
-
-export const isFirebaseConfigured = firebaseConfigDiagnostics.missingKeys.length === 0;
-
-const fallbackProjectId = "fawtara-bootstrap-demo";
-
-const firebaseConfig = isFirebaseConfigured
-  ? rawFirebaseConfig
-  : {
-      apiKey: rawFirebaseConfig.apiKey || "bootstrap-demo-key",
-      authDomain: rawFirebaseConfig.authDomain || `${fallbackProjectId}.firebaseapp.com`,
-      projectId: rawFirebaseConfig.projectId || fallbackProjectId,
-      storageBucket: rawFirebaseConfig.storageBucket || `${fallbackProjectId}.appspot.com`,
-      messagingSenderId: rawFirebaseConfig.messagingSenderId || "000000000000",
-      appId: rawFirebaseConfig.appId || "1:000000000000:web:bootstrapdemo",
-    };
-
-if (!isFirebaseConfigured) {
-  console.warn("Firebase config is incomplete. Running in bootstrap mode.", firebaseConfigDiagnostics.missingKeys);
-}
+export const isFirebaseConfigured = true;
+export const firebaseConfigDiagnostics = { missingKeys: [] as string[] };
 
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 export const auth = getAuth(app);
