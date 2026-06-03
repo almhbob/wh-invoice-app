@@ -625,6 +625,8 @@ const translations = {
   custFavDept:        { ar: "القسم المفضل",       en: "Favorite Dept",        ur: "پسندیدہ قسم",            hi: "पसंदीदा विभाग",         bn: "পছন্দের বিভাগ" },
   custCall:           { ar: "اتصال",              en: "Call",                 ur: "کال کریں",               hi: "कॉल करें",              bn: "কল করুন" },
   custWhatsappBtn:    { ar: "واتساب",             en: "WhatsApp",             ur: "واٹس ایپ",               hi: "व्हाट्सएप",             bn: "হোয়াটসঅ্যাপ" },
+  custExportPDF:      { ar: "تصدير PDF",          en: "Export PDF",           ur: "PDF برآمد کریں",         hi: "PDF निर्यात करें",      bn: "PDF রপ্তানি" },
+  custExportCSV:      { ar: "تصدير Excel",        en: "Export Excel",         ur: "Excel برآمد کریں",       hi: "Excel निर्यात करें",    bn: "Excel রপ্তানি" },
 
   delAssignDriverHint:{ ar: "اضغط لإسناد سائق",  en: "Tap to assign driver", ur: "ڈرائیور تفویض کریں",    hi: "चालक नियुक्त करने के लिए टैप करें", bn: "চালক নিযুক্ত করতে ট্যাপ করুন" },
   delDriverLabel:     { ar: "السائق:",            en: "Driver:",              ur: "ڈرائیور:",               hi: "चालक:",                 bn: "চালক:" },
