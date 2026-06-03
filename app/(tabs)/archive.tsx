@@ -535,65 +535,80 @@ export default function ArchiveScreen() {
 
   const handleDelete = (order: Order) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    Alert.alert(
-      `حذف الفاتورة #${order.orderNumber}`,
-      `هل تريد حذف فاتورة "${order.customerName}"؟ يمكن استرجاعها لاحقاً من سلة المحذوفات.`,
-      [
-        { text: "إلغاء", style: "cancel" },
-        {
-          text: "حذف",
-          style: "destructive",
-          onPress: () => {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-            deleteOrder(
-              order.id,
-              currentEmployee
-                ? { name: currentEmployee.name, employeeId: currentEmployee.employeeId }
-                : undefined
-            );
-          },
-        },
-      ]
-    );
+    const doDelete = () => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      deleteOrder(
+        order.id,
+        currentEmployee
+          ? { name: currentEmployee.name, employeeId: currentEmployee.employeeId }
+          : undefined
+      );
+    };
+    if (Platform.OS === "web") {
+      if (window.confirm(`حذف الفاتورة #${order.orderNumber}\n\nهل تريد حذف فاتورة "${order.customerName}"؟`)) {
+        doDelete();
+      }
+    } else {
+      Alert.alert(
+        `حذف الفاتورة #${order.orderNumber}`,
+        `هل تريد حذف فاتورة "${order.customerName}"؟ يمكن استرجاعها لاحقاً من سلة المحذوفات.`,
+        [
+          { text: "إلغاء", style: "cancel" },
+          { text: "حذف", style: "destructive", onPress: doDelete },
+        ]
+      );
+    }
   };
 
   const handlePurgeAll = () => {
     const totalCount = orders.length + deletedOrders.length;
-    Alert.alert(
-      "⚠️ حذف جميع الطلبات نهائياً",
-      `سيتم حذف ${totalCount} فاتورة بشكل دائم لا يمكن التراجع عنه. هل أنت متأكد تماماً؟`,
-      [
-        { text: "إلغاء", style: "cancel" },
-        {
-          text: "نعم، احذف الكل",
-          style: "destructive",
-          onPress: () => {
-            Alert.alert(
-              "تأكيد نهائي",
-              "هذا الإجراء لا يمكن التراجع عنه. سيتم حذف جميع الفواتير من قاعدة البيانات نهائياً.",
-              [
-                { text: "إلغاء", style: "cancel" },
-                {
-                  text: "حذف نهائي",
-                  style: "destructive",
-                  onPress: async () => {
-                    setIsPurging(true);
-                    try {
-                      await purgeAllOrders();
-                      Alert.alert("تم", "تم حذف جميع الطلبات والفواتير بنجاح.");
-                    } catch {
-                      Alert.alert("خطأ", "حدث خطأ أثناء الحذف. حاول مرة أخرى.");
-                    } finally {
-                      setIsPurging(false);
-                    }
-                  },
-                },
-              ]
-            );
+    const doPurge = async () => {
+      setIsPurging(true);
+      try {
+        await purgeAllOrders();
+        if (Platform.OS === "web") {
+          window.alert("تم حذف جميع الطلبات والفواتير بنجاح.");
+        } else {
+          Alert.alert("تم", "تم حذف جميع الطلبات والفواتير بنجاح.");
+        }
+      } catch {
+        if (Platform.OS === "web") {
+          window.alert("حدث خطأ أثناء الحذف. حاول مرة أخرى.");
+        } else {
+          Alert.alert("خطأ", "حدث خطأ أثناء الحذف. حاول مرة أخرى.");
+        }
+      } finally {
+        setIsPurging(false);
+      }
+    };
+    if (Platform.OS === "web") {
+      if (window.confirm(`⚠️ حذف ${totalCount} فاتورة نهائياً؟\n\nهذا الإجراء لا يمكن التراجع عنه.`)) {
+        if (window.confirm("تأكيد نهائي: سيتم حذف جميع الفواتير من قاعدة البيانات بشكل دائم. متأكد؟")) {
+          doPurge();
+        }
+      }
+    } else {
+      Alert.alert(
+        "⚠️ حذف جميع الطلبات نهائياً",
+        `سيتم حذف ${totalCount} فاتورة بشكل دائم لا يمكن التراجع عنه. هل أنت متأكد تماماً؟`,
+        [
+          { text: "إلغاء", style: "cancel" },
+          {
+            text: "نعم، احذف الكل",
+            style: "destructive",
+            onPress: () =>
+              Alert.alert(
+                "تأكيد نهائي",
+                "هذا الإجراء لا يمكن التراجع عنه. سيتم حذف جميع الفواتير من قاعدة البيانات نهائياً.",
+                [
+                  { text: "إلغاء", style: "cancel" },
+                  { text: "حذف نهائي", style: "destructive", onPress: doPurge },
+                ]
+              ),
           },
-        },
-      ]
-    );
+        ]
+      );
+    }
   };
 
   const totalCount = orders.length + deletedOrders.length;
