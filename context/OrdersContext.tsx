@@ -2,12 +2,15 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   addDoc,
   collection,
+  deleteDoc,
   doc,
+  getDocs,
   onSnapshot,
   orderBy,
   query,
   runTransaction,
   updateDoc,
+  writeBatch,
 } from "firebase/firestore";
 import React, {
   createContext,
@@ -149,6 +152,7 @@ interface OrdersContextType {
   updateOrder: (id: string, patch: Partial<Omit<Order, "id" | "companyId" | "orderNumber" | "createdAt">>) => Promise<void>;
   getOrdersForDepartment: (department: Department) => Order[];
   refreshOrders: () => void;
+  purgeAllOrders: () => Promise<void>;
   isLoading: boolean;
 }
 
@@ -538,6 +542,28 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
     [orders]
   );
 
+  const purgeAllOrders = useCallback(async () => {
+    // Permanently delete every order document from Firestore, then clear local state
+    try {
+      const snap = await getDocs(query(ordersCollection()));
+      const BATCH_SIZE = 500;
+      const docs = snap.docs;
+      for (let i = 0; i < docs.length; i += BATCH_SIZE) {
+        const batch = writeBatch(db);
+        docs.slice(i, i + BATCH_SIZE).forEach((d) => batch.delete(d.ref));
+        await batch.commit();
+      }
+    } catch (err) {
+      console.warn("Firestore purge failed:", err);
+    }
+    // Reset counter
+    try {
+      await deleteDoc(doc(db, "companies", companyId, "counters", "orders"));
+    } catch (_) {}
+    setAllOrders([]);
+    await writeLocalOrders(companyId, []);
+  }, [companyId, ordersCollection]);
+
   return (
     <OrdersContext.Provider
       value={{
@@ -554,6 +580,7 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
         updateOrder,
         getOrdersForDepartment,
         refreshOrders,
+        purgeAllOrders,
         isLoading,
       }}
     >
