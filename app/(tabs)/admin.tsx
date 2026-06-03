@@ -1,7 +1,10 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import * as FileSystem from "expo-file-system/legacy";
+import * as Sharing from "expo-sharing";
 import React, { useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Modal,
   Platform,
@@ -1151,6 +1154,100 @@ function PriceRequestsSection() {
   );
 }
 
+// ─── Backup Section ────────────────────────────────────────────────────────
+function BackupSection() {
+  const { orders } = useOrders();
+  const { t } = useLang();
+  const [exporting, setExporting] = useState(false);
+
+  async function handleExport() {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setExporting(true);
+    try {
+      const customers: Record<string, { name: string; phone: string; orders: number; total: number }> = {};
+      orders.forEach((o) => {
+        const key = o.customerPhone;
+        if (!customers[key]) customers[key] = { name: o.customerName, phone: o.customerPhone, orders: 0, total: 0 };
+        customers[key].orders += 1;
+        customers[key].total += o.totalAmount ?? 0;
+      });
+      const payload = {
+        exportedAt: new Date().toISOString(),
+        orderCount: orders.length,
+        customerCount: Object.keys(customers).length,
+        orders: orders.map((o) => ({
+          orderNumber: o.orderNumber,
+          createdAt: o.createdAt,
+          customerName: o.customerName,
+          customerPhone: o.customerPhone,
+          orderType: o.orderType,
+          paymentMethod: o.paymentMethod,
+          totalAmount: o.totalAmount,
+          deliveryStatus: o.deliveryStatus,
+          items: o.items.map((i) => ({ name: i.name, quantity: i.quantity, price: i.price, department: i.department })),
+        })),
+        customers: Object.values(customers),
+      };
+      const json = JSON.stringify(payload, null, 2);
+      const filename = `laviviane-backup-${new Date().toISOString().slice(0, 10)}.json`;
+
+      if (Platform.OS === "web") {
+        const blob = new Blob([json], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+      } else {
+        const path = (FileSystem.documentDirectory ?? "") + filename;
+        await FileSystem.writeAsStringAsync(path, json);
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(path, { mimeType: "application/json" });
+        } else {
+          Alert.alert(t("backupData"), path);
+        }
+      }
+    } catch (e) {
+      Alert.alert("خطأ", String(e));
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  return (
+    <View style={styles.section}>
+      <SectionHeader title={t("backupData")} icon="database" />
+      <Text style={styles.featuresDesc}>{t("backupExportDesc")}</Text>
+      <View style={styles.backupRow}>
+        <View style={styles.backupStat}>
+          <Text style={styles.backupStatNum}>{orders.length}</Text>
+          <Text style={styles.backupStatLabel}>{t("invoiceCount")}</Text>
+        </View>
+        <View style={styles.backupStat}>
+          <Text style={styles.backupStatNum}>
+            {new Set(orders.map((o) => o.customerPhone)).size}
+          </Text>
+          <Text style={styles.backupStatLabel}>{t("custTotalCustomers")}</Text>
+        </View>
+      </View>
+      <TouchableOpacity
+        style={[styles.backupBtn, exporting && { opacity: 0.6 }]}
+        onPress={handleExport}
+        disabled={exporting}
+        activeOpacity={0.85}
+      >
+        {exporting ? (
+          <ActivityIndicator size="small" color="#fff" />
+        ) : (
+          <Feather name="download" size={16} color="#fff" />
+        )}
+        <Text style={styles.backupBtnText}>{t("backupExportOrders")}</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 // ─── Features Section ──────────────────────────────────────────────────────
 const FEATURE_ITEMS: { key: keyof AppFeatures; label: string; icon: string; color: string }[] = [
   { key: "halwaEnabled",     label: "حلا زفة و ضيافة",  icon: "coffee",       color: Colors.halwa },
@@ -1204,7 +1301,7 @@ export default function AdminScreen() {
   const { orders } = useOrders();
   const { currentEmployee } = useEmployee();
   const { t } = useLang();
-  const [activeTab, setActiveTab] = useState<"overview" | "employees" | "products" | "offers" | "priceRequests" | "features">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "employees" | "products" | "offers" | "priceRequests" | "features" | "backup">("overview");
   const [showDev, setShowDev] = useState(false);
   const { pendingCount: priceReqCount } = usePriceChange();
 
@@ -1239,6 +1336,7 @@ export default function AdminScreen() {
     { key: "offers",        label: t("adminTabOffers"),    icon: "tag" },
     { key: "priceRequests", label: `${t("adminTabPrices")}${priceReqCount > 0 ? ` (${priceReqCount})` : ""}`, icon: "dollar-sign" },
     { key: "features",      label: t("adminTabFeatures"),  icon: "sliders" },
+    { key: "backup",        label: t("backupData"),        icon: "database" },
   ] as const;
 
   return (
@@ -1305,6 +1403,8 @@ export default function AdminScreen() {
           <PriceRequestsSection />
         ) : activeTab === "features" ? (
           <FeaturesSection />
+        ) : activeTab === "backup" ? (
+          <BackupSection />
         ) : (
           <EmployeesSection />
         )}
@@ -1731,6 +1831,22 @@ const styles = StyleSheet.create({
   },
   priceReqBtnText: { fontSize: 13, fontWeight: "700", color: "#fff" },
   resolvedTitle: { fontSize: 13, fontWeight: "700", color: Colors.textSecondary, marginTop: 16, marginBottom: 8 },
+
+  // ─── Backup ───────────────────────────────────────────────────────────────
+  backupRow: { flexDirection: "row", gap: 12, marginBottom: 12 },
+  backupStat: {
+    flex: 1, alignItems: "center", backgroundColor: Colors.surfaceSecondary,
+    borderRadius: 12, paddingVertical: 14, borderWidth: 1, borderColor: Colors.borderLight,
+  },
+  backupStatNum: { fontSize: 24, fontWeight: "900", color: Colors.primary },
+  backupStatLabel: { fontSize: 11, color: Colors.textMuted, marginTop: 2 },
+  backupBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
+    backgroundColor: Colors.primary, borderRadius: 12, paddingVertical: 14,
+    shadowColor: Colors.primary, shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3, shadowRadius: 6, elevation: 4,
+  },
+  backupBtnText: { fontSize: 15, fontWeight: "700", color: "#fff" },
 
   // ─── Features ─────────────────────────────────────────────────────────────
   featuresDesc: { fontSize: 13, color: Colors.textSecondary, marginBottom: 14 },

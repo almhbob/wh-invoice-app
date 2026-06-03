@@ -2,6 +2,7 @@ import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import React, { useMemo, useState } from "react";
 import {
+  Platform,
   ScrollView,
   Share,
   StyleSheet,
@@ -779,67 +780,55 @@ export default function ReportsScreen() {
     setActiveTab(key);
   }
 
-  async function handleShare() {
-    Haptics.selectionAsync();
-
-    // Build share text
-    const totalRevenue = filtered.reduce((s, o) => s + (o.totalAmount ?? 0), 0);
-    const orderCount   = filtered.length;
-
+  function buildReportText(reportOrders: typeof orders, label: string) {
+    const totalRevenue = reportOrders.reduce((s, o) => s + (o.totalAmount ?? 0), 0);
+    const orderCount   = reportOrders.length;
     const byPayment: Record<string, number> = { cash: 0, card: 0, transfer: 0 };
-    filtered.forEach((o) => {
+    reportOrders.forEach((o) => {
       const pm = o.paymentMethod ?? "cash";
       byPayment[pm] = (byPayment[pm] ?? 0) + (o.totalAmount ?? 0);
     });
-
-    const deliveryCount = filtered.filter((o) => o.orderType === "delivery").length;
-    const pickupCount   = filtered.filter((o) => o.orderType !== "delivery").length;
-
-    // Top product by qty
+    const deliveryCount = reportOrders.filter((o) => o.orderType === "delivery").length;
+    const pickupCount   = reportOrders.filter((o) => o.orderType !== "delivery").length;
     const qtyMap: Record<string, number> = {};
-    filtered.forEach((o) =>
-      o.items.forEach((item) => {
-        qtyMap[item.name] = (qtyMap[item.name] ?? 0) + item.quantity;
-      })
-    );
-    const topProductEntries = Object.entries(qtyMap).sort((a, b) => b[1] - a[1]);
-    const topProduct = topProductEntries[0];
-
-    // Top cashier by order count
+    reportOrders.forEach((o) => o.items.forEach((item) => {
+      qtyMap[item.name] = (qtyMap[item.name] ?? 0) + item.quantity;
+    }));
+    const topProduct = Object.entries(qtyMap).sort((a, b) => b[1] - a[1])[0];
     const cashierMap: Record<string, number> = {};
-    filtered.forEach((o) => {
+    reportOrders.forEach((o) => {
       const name = o.cashierEmployee?.name ?? "غير معروف";
       cashierMap[name] = (cashierMap[name] ?? 0) + 1;
     });
-    const topCashierEntries = Object.entries(cashierMap).sort((a, b) => b[1] - a[1]);
-    const topCashier = topCashierEntries[0];
-
+    const topCashier = Object.entries(cashierMap).sort((a, b) => b[1] - a[1])[0];
     const dateStr = new Date().toLocaleDateString("ar-SA");
-    const label   = filterLabel(filter);
-
-    const text = [
+    return [
       `📊 تقرير — ${label} ${dateStr}`,
       "══════════════════════════════",
       `📦 الطلبات: ${orderCount}`,
       `💰 الإيرادات: ${fmtCurrency(totalRevenue)}`,
       `   نقد: ${fmtCurrency(byPayment.cash)} | شبكة: ${fmtCurrency(byPayment.card)} | تحويل: ${fmtCurrency(byPayment.transfer)}`,
       `🚗 توصيل: ${deliveryCount} | 🛍 استلام: ${pickupCount}`,
-      topProduct
-        ? `🏆 أعلى منتج: ${topProduct[0]} (${topProduct[1]} وحدة)`
-        : null,
-      topCashier
-        ? `👤 أعلى كاشير: ${topCashier[0]} (${topCashier[1]} طلب)`
-        : null,
+      topProduct ? `🏆 أعلى منتج: ${topProduct[0]} (${topProduct[1]} وحدة)` : null,
+      topCashier ? `👤 أعلى كاشير: ${topCashier[0]} (${topCashier[1]} طلب)` : null,
       "══════════════════════════════",
-    ]
-      .filter(Boolean)
-      .join("\n");
+    ].filter(Boolean).join("\n");
+  }
 
-    try {
-      await Share.share({ message: text });
-    } catch (_) {
-      // user cancelled or permission denied
+  async function handleDailyReport() {
+    Haptics.selectionAsync();
+    const todayOrders = orders.filter((o) => isInFilter(o.createdAt, "today"));
+    const text = buildReportText(todayOrders, t("dailyReportBtn"));
+    if (Platform.OS === "web" && typeof navigator !== "undefined" && navigator.clipboard) {
+      try { await navigator.clipboard.writeText(text); } catch (_) {}
     }
+    try { await Share.share({ message: text }); } catch (_) {}
+  }
+
+  async function handleShare() {
+    Haptics.selectionAsync();
+    const text = buildReportText(filtered, filterLabel(filter));
+    try { await Share.share({ message: text }); } catch (_) {}
   }
 
   return (
@@ -847,13 +836,23 @@ export default function ReportsScreen() {
       {/* Header row */}
       <View style={styles.headerRow}>
         <Text style={styles.screenTitle}>{t("titleReports")}</Text>
-        <TouchableOpacity
-          style={styles.shareBtn}
-          onPress={handleShare}
-          activeOpacity={0.75}
-        >
-          <Feather name="share-2" size={18} color={Colors.primary} />
-        </TouchableOpacity>
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          <TouchableOpacity
+            style={[styles.shareBtn, { backgroundColor: Colors.primary + "12" }]}
+            onPress={handleDailyReport}
+            activeOpacity={0.75}
+          >
+            <Feather name="calendar" size={16} color={Colors.primary} />
+            <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.primary }}>{t("dailyReportBtn")}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.shareBtn}
+            onPress={handleShare}
+            activeOpacity={0.75}
+          >
+            <Feather name="share-2" size={18} color={Colors.primary} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Time filter pills */}
@@ -967,7 +966,6 @@ const styles = StyleSheet.create({
     color: Colors.text,
   },
   shareBtn: {
-    width: 38,
     height: 38,
     borderRadius: 10,
     backgroundColor: Colors.surface,
@@ -975,6 +973,9 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     alignItems: "center",
     justifyContent: "center",
+    flexDirection: "row",
+    gap: 5,
+    paddingHorizontal: 10,
   },
 
   // Filter pills

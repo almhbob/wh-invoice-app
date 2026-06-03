@@ -124,12 +124,29 @@ export default function CashierScreen() {
   const canCloseShift = canDo(currentEmployee?.role, ROLE_CAN_CLOSE_SHIFT);
   const { lastClosed } = useShift();
 
+  // Invoice search
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
   // Today's summary (for cashier strip)
   const todayOrders = useMemo(() => {
     const today = new Date().toISOString().slice(0, 10);
     return orders.filter((o) => o.createdAt?.slice(0, 10) === today);
   }, [orders]);
   const todayTotal = todayOrders.reduce((s, o) => s + (o.totalAmount ?? 0), 0);
+
+  const searchResults = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (q.length < 2) return [];
+    return [...orders]
+      .sort((a, b) => (b.orderNumber ?? 0) - (a.orderNumber ?? 0))
+      .filter((o) =>
+        o.customerName.toLowerCase().includes(q) ||
+        o.customerPhone.includes(q) ||
+        (o.orderNumber?.toString() ?? "").includes(q)
+      )
+      .slice(0, 30);
+  }, [orders, searchQuery]);
 
   // Customer auto-fill: find a previous order matching the entered phone
   const suggestedCustomer = useMemo(() => {
@@ -693,6 +710,13 @@ export default function CashierScreen() {
             </View>
           </>
         )}
+        <TouchableOpacity
+          style={styles.searchStripBtn}
+          onPress={() => { Haptics.selectionAsync(); setSearchQuery(""); setShowSearch(true); }}
+          activeOpacity={0.85}
+        >
+          <Feather name="search" size={15} color="#fff" />
+        </TouchableOpacity>
         {canCloseShift && (
           <TouchableOpacity
             style={styles.closeShiftBtn}
@@ -1437,6 +1461,61 @@ export default function CashierScreen() {
     </ScrollView>
     </KeyboardAvoidingView>
 
+    {/* ─── Invoice Search Modal ─────────────────────────────────── */}
+    {showSearch && (
+      <Modal visible transparent animationType="slide" onRequestClose={() => setShowSearch(false)}>
+        <View style={styles.searchOverlay}>
+          <View style={styles.searchSheet}>
+            <View style={styles.searchHandle} />
+            <View style={styles.searchHeader}>
+              <TouchableOpacity style={styles.searchCloseBtn} onPress={() => setShowSearch(false)}>
+                <Feather name="x" size={20} color={Colors.primary} />
+              </TouchableOpacity>
+              <Text style={styles.searchTitle}>{t("searchInvoices")}</Text>
+              <View style={{ width: 36 }} />
+            </View>
+            <View style={styles.searchInputRow}>
+              <Feather name="search" size={16} color={Colors.textMuted} />
+              <TextInput
+                style={styles.searchInput}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder={t("searchPlaceholder")}
+                placeholderTextColor={Colors.textMuted}
+                autoFocus
+                textAlign="right"
+                clearButtonMode="while-editing"
+              />
+            </View>
+            <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 40 }}>
+              {searchQuery.trim().length >= 2 && searchResults.length === 0 && (
+                <Text style={styles.searchEmpty}>{t("searchNoResults")}</Text>
+              )}
+              {searchResults.map((order) => (
+                <TouchableOpacity
+                  key={order.id}
+                  style={styles.searchResultRow}
+                  onPress={() => { setShowSearch(false); setReceiptOrder(order); }}
+                  activeOpacity={0.7}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.searchResultName}>{order.customerName}</Text>
+                    <Text style={styles.searchResultSub}>{order.customerPhone} · {order.receivedAt?.slice(0, 16)}</Text>
+                  </View>
+                  <View style={{ alignItems: "flex-end", gap: 2 }}>
+                    <Text style={styles.searchResultNum}>#{order.orderNumber}</Text>
+                    {order.totalAmount ? (
+                      <Text style={styles.searchResultTotal}>{order.totalAmount.toFixed(2)} ر.س</Text>
+                    ) : null}
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+    )}
+
     {/* ─── Preview Modal ──────────────────────────────────────────── */}
     {showPreview && (
       <Modal visible transparent animationType="slide" onRequestClose={() => setShowPreview(false)}>
@@ -1954,11 +2033,50 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   autoFillText: { flex: 1, fontSize: 13, color: Colors.primary },
+  searchStripBtn: {
+    marginLeft: "auto" as any, width: 34, height: 34, borderRadius: 17,
+    backgroundColor: "rgba(255,255,255,0.18)", alignItems: "center", justifyContent: "center",
+  },
   closeShiftBtn: {
-    marginLeft: "auto" as any, flexDirection: "row", alignItems: "center", gap: 6,
+    flexDirection: "row", alignItems: "center", gap: 6,
     backgroundColor: Colors.gold, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8,
   },
   closeShiftBtnText: { fontSize: 12, fontWeight: "800", color: "#fff" },
+
+  // invoice search modal
+  searchOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.55)", justifyContent: "flex-end" },
+  searchSheet: {
+    backgroundColor: Colors.background, borderTopLeftRadius: 28, borderTopRightRadius: 28,
+    maxHeight: "85%", overflow: "hidden",
+  },
+  searchHandle: {
+    width: 40, height: 4, borderRadius: 2, backgroundColor: Colors.border,
+    alignSelf: "center", marginTop: 10, marginBottom: 4,
+  },
+  searchHeader: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingHorizontal: 16, paddingVertical: 12,
+    borderBottomWidth: 1, borderBottomColor: Colors.border,
+  },
+  searchCloseBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.primary + "12", alignItems: "center", justifyContent: "center" },
+  searchTitle: { fontSize: 17, fontWeight: "800", color: Colors.primary },
+  searchInputRow: {
+    flexDirection: "row", alignItems: "center", gap: 10,
+    marginHorizontal: 16, marginVertical: 12,
+    backgroundColor: Colors.surfaceSecondary, borderRadius: 12,
+    borderWidth: 1, borderColor: Colors.border, paddingHorizontal: 12,
+  },
+  searchInput: { flex: 1, fontSize: 15, color: Colors.text, paddingVertical: 11 },
+  searchEmpty: { textAlign: "center", color: Colors.textMuted, fontSize: 14, marginTop: 32 },
+  searchResultRow: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingHorizontal: 16, paddingVertical: 14,
+    borderBottomWidth: 1, borderBottomColor: Colors.borderLight,
+  },
+  searchResultName: { fontSize: 15, fontWeight: "700", color: Colors.text },
+  searchResultSub: { fontSize: 12, color: Colors.textMuted, marginTop: 2 },
+  searchResultNum: { fontSize: 13, fontWeight: "700", color: Colors.primary },
+  searchResultTotal: { fontSize: 12, color: Colors.success, fontWeight: "600" },
 
   cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   cardTitle: { fontSize: 15, fontWeight: "700", color: Colors.primary },

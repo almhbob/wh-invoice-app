@@ -540,6 +540,19 @@ const translations = {
   custDelivered:      { ar: "مسلَّم",             en: "Delivered",            ur: "تحویل شدہ",              hi: "वितरित",                bn: "ডেলিভারড" },
   custFrom:           { ar: "من",                 en: "of",                   ur: "میں سے",                 hi: "में से",                bn: "এর মধ্যে" },
   custOrderSingular:  { ar: "طلب",                en: "order",                ur: "آرڈر",                   hi: "ऑर्डर",                 bn: "অর্ডার" },
+
+  // ── Invoice Search (cashier) ─────────────────────────────────
+  searchInvoices:     { ar: "بحث في الفواتير",  en: "Search Invoices",   ur: "انوائس تلاش",  hi: "इन्वॉयस खोजें",  bn: "ইনভয়েস অনুসন্ধান" },
+  searchPlaceholder:  { ar: "الاسم، الهاتف، رقم الطلب", en: "Name, phone, order #", ur: "نام، فون، آرڈر #", hi: "नाम, फ़ोन, ऑर्डर #", bn: "নাম, ফোন, অর্ডার #" },
+  searchNoResults:    { ar: "لا توجد فواتير مطابقة", en: "No matching invoices", ur: "کوئی مطابق انوائس نہیں", hi: "कोई मिलता इन्वॉयस नहीं", bn: "কোনো মিলদার ইনভয়েস নেই" },
+
+  // ── Daily Report ──────────────────────────────────────────────
+  dailyReportBtn:     { ar: "تقرير اليوم",    en: "Today's Report",    ur: "آج کی رپورٹ",  hi: "आज की रिपोर्ट", bn: "আজকের রিপোর্ট" },
+
+  // ── Data Backup (admin) ───────────────────────────────────────
+  backupData:         { ar: "نسخ احتياطي",    en: "Backup Data",       ur: "ڈیٹا بیکاپ",    hi: "डेटा बैकअप",    bn: "ডেটা ব্যাকআপ" },
+  backupExportOrders: { ar: "تصدير الطلبات JSON", en: "Export Orders JSON", ur: "آرڈرز JSON برآمد",  hi: "ऑर्डर JSON एक्सपोर्ट", bn: "অর্ডার JSON এক্সপোর্ট" },
+  backupExportDesc:   { ar: "تصدير جميع بيانات الطلبات والعملاء", en: "Export all orders & customers data", ur: "تمام آرڈرز اور گاہکوں کا ڈیٹا برآمد کریں", hi: "सभी ऑर्डर और ग्राहक डेटा एक्सपोर्ट करें", bn: "সব অর্ডার ও গ্রাহক ডেটা এক্সপোর্ট" },
 } as const;
 
 export type TranslationKey = keyof typeof translations;
