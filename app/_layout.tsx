@@ -25,6 +25,7 @@ import { ProductsProvider } from "@/context/ProductsContext";
 import { TraysProvider } from "@/context/TraysInventoryContext";
 import { PriceChangeProvider } from "@/context/PriceChangeContext";
 import { FeaturesProvider } from "@/context/FeaturesContext";
+import { PrinterProvider } from "@/context/PrinterContext";
 import { ShiftProvider } from "@/context/ShiftContext";
 import { ensureTemporaryFirebaseSession } from "@/lib/authIdentity";
 
@@ -84,6 +85,7 @@ export default function RootLayout() {
                       <TraysProvider>
                         <PriceChangeProvider>
                           <FeaturesProvider>
+                            <PrinterProvider>
                             <ShiftProvider>
                             <GestureHandlerRootView style={{ flex: 1 }}>
                               <KeyboardProvider>
@@ -91,6 +93,7 @@ export default function RootLayout() {
                               </KeyboardProvider>
                             </GestureHandlerRootView>
                             </ShiftProvider>
+                            </PrinterProvider>
                           </FeaturesProvider>
                         </PriceChangeProvider>
                       </TraysProvider>

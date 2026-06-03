@@ -22,6 +22,7 @@ import { Image } from "expo-image";
 import { Colors } from "@/constants/colors";
 import { canDo, ROLE_CAN_ACCESS_ADMIN } from "@/constants/rbac";
 import { DevSettingsModal } from "@/components/DevSettingsModal";
+import { PrinterSettingsModal } from "@/components/PrinterSettingsModal";
 import { ProductManagerModal } from "@/components/ProductManagerModal";
 import { useLang } from "@/context/LanguageContext";
 import {
@@ -1295,13 +1296,32 @@ function FeaturesSection() {
   );
 }
 
+// ─── Printer Section ───────────────────────────────────────────────────────
+function PrinterSection() {
+  const [showModal, setShowModal] = useState(false);
+  return (
+    <View style={styles.section}>
+      <SectionHeader title="إعدادات الطابعة" icon="printer" />
+      <PrinterSettingsModal visible={showModal} onClose={() => setShowModal(false)} />
+      <Text style={styles.featuresDesc}>ربط وضبط الطابعة الحرارية أو أي طابعة متصلة</Text>
+      <TouchableOpacity
+        style={[styles.backupBtn, { backgroundColor: "#374151" }]}
+        onPress={() => setShowModal(true)}
+      >
+        <Feather name="printer" size={18} color="#fff" />
+        <Text style={styles.backupBtnText}>فتح إعدادات الطابعة</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 // ─── Main Screen ──────────────────────────────────────────────────────────
 export default function AdminScreen() {
   const insets = useSafeAreaInsets();
   const { orders } = useOrders();
   const { currentEmployee } = useEmployee();
   const { t } = useLang();
-  const [activeTab, setActiveTab] = useState<"overview" | "employees" | "products" | "offers" | "priceRequests" | "features" | "backup">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "employees" | "products" | "offers" | "priceRequests" | "features" | "backup" | "printer">("overview");
   const [showDev, setShowDev] = useState(false);
   const { pendingCount: priceReqCount } = usePriceChange();
 
@@ -1337,6 +1357,7 @@ export default function AdminScreen() {
     { key: "priceRequests", label: `${t("adminTabPrices")}${priceReqCount > 0 ? ` (${priceReqCount})` : ""}`, icon: "dollar-sign" },
     { key: "features",      label: t("adminTabFeatures"),  icon: "sliders" },
     { key: "backup",        label: t("backupData"),        icon: "database" },
+    { key: "printer",       label: t("adminTabPrinter"),   icon: "printer" },
   ] as const;
 
   return (
@@ -1405,6 +1426,8 @@ export default function AdminScreen() {
           <FeaturesSection />
         ) : activeTab === "backup" ? (
           <BackupSection />
+        ) : activeTab === "printer" ? (
+          <PrinterSection />
         ) : (
           <EmployeesSection />
         )}

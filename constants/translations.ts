@@ -246,6 +246,7 @@ const translations = {
   adminTabOffers:    { ar: "العروض",           en: "Offers",           ur: "پیشکشیں",            hi: "ऑफ़र",             bn: "অফার" },
   adminTabPrices:    { ar: "الأسعار",          en: "Prices",           ur: "قیمتیں",             hi: "कीमतें",           bn: "মূল্য" },
   adminTabFeatures:  { ar: "الأقسام",          en: "Sections",         ur: "حصے",                hi: "विभाग",            bn: "বিভাগ" },
+  adminTabPrinter:   { ar: "الطابعة",          en: "Printer",          ur: "پرنٹر",               hi: "प्रिंटर",           bn: "প্রিন্টার" },
   deleteEmployee:   { ar: "حذف الموظف",       en: "Delete Employee",  ur: "ملازم حذف کریں",    hi: "कर्मचारी हटाएं",   bn: "কর্মচারী মুছুন" },
   deleteEmpConfirm: { ar: "هل تريد حذف",      en: "Are you sure you want to delete", ur: "کیا آپ حذف کرنا چاہتے ہیں", hi: "क्या आप हटाना चاहते हैं", bn: "আপনি কি মুছতে চান" },
   deleteProduct:    { ar: "حذف المنتج",       en: "Delete Product",   ur: "مصنوع حذف کریں",    hi: "उत्पाद हटाएं",      bn: "পণ্য মুছুন" },
