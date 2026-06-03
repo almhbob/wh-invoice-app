@@ -15,13 +15,14 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors } from "@/constants/colors";
 import { useLang } from "@/context/LanguageContext";
 import { useOrders } from "@/context/OrdersContext";
-import { fmtCurrency } from "@/utils/dateUtils";
+import { useShift, type ClosedShift } from "@/context/ShiftContext";
+import { fmtCurrency, fmtDate, fmtDateTime } from "@/utils/dateUtils";
 import { ShiftCloseModal } from "@/components/ShiftCloseModal";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type Filter = "today" | "week" | "month" | "all";
-type Tab = "revenue" | "products" | "cashier" | "delivery" | "export";
+type Tab = "revenue" | "products" | "cashier" | "delivery" | "export" | "shifts";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -944,6 +945,194 @@ function DeliveryTab({
   );
 }
 
+// ─── Tab: Shifts ──────────────────────────────────────────────────────────────
+
+const SHIFT_CASH_COLOR    = "#16a34a";
+const SHIFT_CARD_COLOR    = "#2563eb";
+const SHIFT_TRANSFER_COLOR = "#7c3aed";
+const SHIFT_DELIVERY_COLOR = "#ea580c";
+const SHIFT_PICKUP_COLOR   = "#0d9488";
+
+function PaymentPill({ label, value, color }: { label: string; value: number; color: string }) {
+  if (value <= 0) return null;
+  return (
+    <View style={[shiftStyles.pill, { backgroundColor: color + "1a", borderColor: color + "50" }]}>
+      <View style={[shiftStyles.pillDot, { backgroundColor: color }]} />
+      <Text style={[shiftStyles.pillLabel, { color }]}>{label}</Text>
+      <Text style={[shiftStyles.pillValue, { color }]}>{fmtCurrency(value)}</Text>
+    </View>
+  );
+}
+
+function ShiftCard({ shift }: { shift: ClosedShift }) {
+  const { t } = useLang();
+  const { lang } = useLang();
+  const s = shift.summary;
+
+  async function handleShare() {
+    Haptics.selectionAsync();
+    const periodStart = fmtDateTime(shift.periodStart, lang);
+    const closedAt    = fmtDateTime(shift.closedAt, lang);
+    const lines = [
+      `📊 ${t("shiftReport")}`,
+      "══════════════════════════════",
+      `🗓 ${t("shiftPeriod")}: ${periodStart} ← ${closedAt}`,
+      `👤 ${t("shiftClosedBy")}: ${shift.closedBy.name} (#${shift.closedBy.employeeId})`,
+      ``,
+      `💰 ${t("repTotalRevenue")}: ${fmtCurrency(s.totalAmount)}`,
+      `📦 ${t("repTotalOrdersNum")}: ${s.orderCount}`,
+      ``,
+      `💵 ${t("shiftCash")}: ${fmtCurrency(s.cashAmount)}`,
+      `💳 ${t("shiftCard")}: ${fmtCurrency(s.cardAmount)}`,
+      `🔄 ${t("shiftTransfer")}: ${fmtCurrency(s.transferAmount)}`,
+      ``,
+      `🚗 ${t("delivery")}: ${s.deliveryCount} | 🛍 ${t("pickup")}: ${s.pickupCount}`,
+      s.insuranceTotal > 0 ? `🛡 تأمين: ${fmtCurrency(s.insuranceTotal)}` : null,
+      s.discountTotal  > 0 ? `🏷 خصومات: ${fmtCurrency(s.discountTotal)}` : null,
+      shift.notes       ? `📝 ${t("shiftNotes")}: ${shift.notes}` : null,
+      "══════════════════════════════",
+    ].filter(Boolean).join("\n");
+    try { await Share.share({ message: lines }); } catch (_) {}
+  }
+
+  return (
+    <View style={shiftStyles.card}>
+      {/* Left accent bar */}
+      <View style={shiftStyles.cardAccent} />
+
+      <View style={shiftStyles.cardBody}>
+        {/* Date range row */}
+        <View style={shiftStyles.dateRow}>
+          <Feather name="clock" size={13} color={Colors.textMuted} />
+          <Text style={shiftStyles.dateText}>
+            {fmtDate(shift.periodStart, lang)} → {fmtDate(shift.closedAt, lang)}
+          </Text>
+          <TouchableOpacity
+            style={shiftStyles.shareBtn}
+            onPress={handleShare}
+            activeOpacity={0.75}
+          >
+            <Feather name="share-2" size={13} color={Colors.primary} />
+            <Text style={shiftStyles.shareBtnText}>{t("shiftShareReport")}</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Closed by */}
+        <View style={shiftStyles.closedByRow}>
+          <Feather name="user" size={12} color={Colors.textSecondary} />
+          <Text style={shiftStyles.closedByText}>
+            {t("shiftClosedBy")}: <Text style={shiftStyles.closedByName}>{shift.closedBy.name}</Text>
+            {" "}
+            <Text style={shiftStyles.closedById}>#{shift.closedBy.employeeId}</Text>
+          </Text>
+        </View>
+
+        {/* Revenue total — gold & large */}
+        <Text style={shiftStyles.revenueAmount}>{fmtCurrency(s.totalAmount)}</Text>
+        <Text style={shiftStyles.revenueLabel}>{t("repTotalRevenue")}</Text>
+
+        {/* Orders count badge */}
+        <View style={shiftStyles.ordersRow}>
+          <View style={shiftStyles.ordersBadge}>
+            <Feather name="shopping-bag" size={12} color={Colors.primary} />
+            <Text style={shiftStyles.ordersBadgeText}>{s.orderCount} {t("custOrderSingular")}</Text>
+          </View>
+
+          {/* Delivery vs Pickup */}
+          {(s.deliveryCount > 0 || s.pickupCount > 0) && (
+            <>
+              <View style={[shiftStyles.ordersBadge, { backgroundColor: SHIFT_DELIVERY_COLOR + "15", borderColor: SHIFT_DELIVERY_COLOR + "40" }]}>
+                <Feather name="truck" size={12} color={SHIFT_DELIVERY_COLOR} />
+                <Text style={[shiftStyles.ordersBadgeText, { color: SHIFT_DELIVERY_COLOR }]}>{s.deliveryCount}</Text>
+              </View>
+              <View style={[shiftStyles.ordersBadge, { backgroundColor: SHIFT_PICKUP_COLOR + "15", borderColor: SHIFT_PICKUP_COLOR + "40" }]}>
+                <Feather name="shopping-bag" size={12} color={SHIFT_PICKUP_COLOR} />
+                <Text style={[shiftStyles.ordersBadgeText, { color: SHIFT_PICKUP_COLOR }]}>{s.pickupCount}</Text>
+              </View>
+            </>
+          )}
+        </View>
+
+        {/* Payment breakdown pills */}
+        <View style={shiftStyles.pillRow}>
+          <PaymentPill label={t("shiftCash")}     value={s.cashAmount}     color={SHIFT_CASH_COLOR} />
+          <PaymentPill label={t("shiftCard")}     value={s.cardAmount}     color={SHIFT_CARD_COLOR} />
+          <PaymentPill label={t("shiftTransfer")} value={s.transferAmount} color={SHIFT_TRANSFER_COLOR} />
+        </View>
+
+        {/* Insurance & discount (conditional) */}
+        {(s.insuranceTotal > 0 || s.discountTotal > 0) && (
+          <View style={shiftStyles.extraRow}>
+            {s.insuranceTotal > 0 && (
+              <View style={shiftStyles.extraItem}>
+                <Feather name="shield" size={12} color={Colors.info} />
+                <Text style={[shiftStyles.extraLabel, { color: Colors.info }]}>تأمين</Text>
+                <Text style={[shiftStyles.extraValue, { color: Colors.info }]}>{fmtCurrency(s.insuranceTotal)}</Text>
+              </View>
+            )}
+            {s.discountTotal > 0 && (
+              <View style={shiftStyles.extraItem}>
+                <Feather name="tag" size={12} color={Colors.accent} />
+                <Text style={[shiftStyles.extraLabel, { color: Colors.accent }]}>خصومات</Text>
+                <Text style={[shiftStyles.extraValue, { color: Colors.accent }]}>{fmtCurrency(s.discountTotal)}</Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Notes (conditional) */}
+        {shift.notes ? (
+          <View style={shiftStyles.notesBox}>
+            <Feather name="file-text" size={12} color={Colors.textMuted} />
+            <Text style={shiftStyles.notesText} numberOfLines={3}>{shift.notes}</Text>
+          </View>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
+function ShiftsTab() {
+  const { closedShifts, isLoading } = useShift();
+
+  if (isLoading) {
+    return (
+      <View style={shiftStyles.emptyState}>
+        <Feather name="clock" size={40} color={Colors.textMuted} />
+        <Text style={shiftStyles.emptyText}>جاري التحميل...</Text>
+      </View>
+    );
+  }
+
+  if (closedShifts.length === 0) {
+    return (
+      <View style={shiftStyles.emptyState}>
+        <View style={shiftStyles.emptyIconWrap}>
+          <Feather name="clock" size={36} color={Colors.textMuted} />
+        </View>
+        <Text style={shiftStyles.emptyTitle}>لا توجد ورديات مغلقة بعد</Text>
+        <Text style={shiftStyles.emptyHint}>
+          استخدم زر "إغلاق الوردية" لتسجيل نهاية كل وردية
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={shiftStyles.listContainer}>
+      <View style={shiftStyles.listHeader}>
+        <Feather name="clock" size={14} color={Colors.textSecondary} />
+        <Text style={shiftStyles.listHeaderText}>
+          {closedShifts.length} وردية مغلقة
+        </Text>
+      </View>
+      {closedShifts.map((shift) => (
+        <ShiftCard key={shift.id} shift={shift} />
+      ))}
+    </View>
+  );
+}
+
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function ReportsScreen() {
@@ -961,6 +1150,7 @@ export default function ReportsScreen() {
     { key: "cashier",  label: t("repTabCashier"),  icon: "user-check" },
     { key: "delivery", label: t("repTabDelivery"), icon: "truck" },
     { key: "export",   label: "تصدير",             icon: "download" },
+    { key: "shifts",   label: "ورديات",            icon: "clock" },
   ];
 
   const filtered = useMemo(
@@ -1132,7 +1322,7 @@ export default function ReportsScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        {filtered.length === 0 && (
+        {filtered.length === 0 && activeTab !== "shifts" && (
           <View style={styles.emptyState}>
             <Feather name="bar-chart-2" size={48} color={Colors.textMuted} />
             <Text style={styles.emptyStateText}>{t("repNoData")}</Text>
@@ -1153,6 +1343,9 @@ export default function ReportsScreen() {
         )}
         {activeTab === "export" && (
           <ExportTab filtered={filtered} filterLbl={filterLabel(filter)} />
+        )}
+        {activeTab === "shifts" && (
+          <ShiftsTab />
         )}
       </ScrollView>
 
@@ -1600,5 +1793,233 @@ const styles = StyleSheet.create({
   emptyStateText: {
     fontSize: 15,
     color: Colors.textMuted,
+  },
+});
+
+// ─── Shift Tab Styles ─────────────────────────────────────────────────────────
+
+const shiftStyles = StyleSheet.create({
+  listContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    gap: 12,
+  },
+  listHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingBottom: 4,
+  },
+  listHeaderText: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    fontWeight: "600",
+  },
+
+  // Shift card
+  card: {
+    backgroundColor: Colors.surface,
+    borderRadius: 14,
+    flexDirection: "row",
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOpacity: 0.07,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
+    marginBottom: 4,
+  },
+  cardAccent: {
+    width: 4,
+    backgroundColor: Colors.primary,
+  },
+  cardBody: {
+    flex: 1,
+    padding: 14,
+    gap: 8,
+  },
+
+  // Date row
+  dateRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  dateText: {
+    flex: 1,
+    fontSize: 12,
+    color: Colors.textSecondary,
+    fontWeight: "600",
+  },
+
+  // Share button
+  shareBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: Colors.primary + "12",
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  shareBtnText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: Colors.primary,
+  },
+
+  // Closed by
+  closedByRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  closedByText: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+  },
+  closedByName: {
+    fontWeight: "700",
+    color: Colors.text,
+  },
+  closedById: {
+    color: Colors.textMuted,
+    fontSize: 11,
+  },
+
+  // Revenue
+  revenueAmount: {
+    fontSize: 28,
+    fontWeight: "900",
+    color: Colors.gold,
+    letterSpacing: -0.5,
+  },
+  revenueLabel: {
+    fontSize: 11,
+    color: Colors.textMuted,
+    marginTop: -4,
+  },
+
+  // Orders row
+  ordersRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    flexWrap: "wrap",
+  },
+  ordersBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: Colors.primary + "12",
+    borderWidth: 1,
+    borderColor: Colors.primary + "30",
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  ordersBadgeText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: Colors.primary,
+  },
+
+  // Payment pills
+  pillRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+  },
+  pill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+  },
+  pillDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+  },
+  pillLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  pillValue: {
+    fontSize: 11,
+    fontWeight: "800",
+  },
+
+  // Extra (insurance / discounts)
+  extraRow: {
+    flexDirection: "row",
+    gap: 10,
+    flexWrap: "wrap",
+  },
+  extraItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  extraLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+  },
+  extraValue: {
+    fontSize: 11,
+    fontWeight: "800",
+  },
+
+  // Notes
+  notesBox: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 6,
+    backgroundColor: Colors.surfaceSecondary,
+    borderRadius: 8,
+    padding: 8,
+  },
+  notesText: {
+    flex: 1,
+    fontSize: 12,
+    color: Colors.textSecondary,
+    lineHeight: 17,
+  },
+
+  // Empty state
+  emptyState: {
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 48,
+    gap: 12,
+  },
+  emptyIconWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: Colors.surfaceSecondary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: Colors.textSecondary,
+    textAlign: "center",
+  },
+  emptyHint: {
+    fontSize: 13,
+    color: Colors.textMuted,
+    textAlign: "center",
+    lineHeight: 19,
+    maxWidth: 260,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: Colors.textMuted,
+    textAlign: "center",
   },
 });

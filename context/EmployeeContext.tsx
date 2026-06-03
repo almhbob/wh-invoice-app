@@ -10,6 +10,7 @@ import {
   orderBy,
   query,
   setDoc,
+  updateDoc,
 } from "firebase/firestore";
 import React, {
   createContext,
@@ -68,6 +69,7 @@ interface EmployeeContextType {
   setCurrentEmployee: (emp: Employee | null) => void;
   addEmployee: (data: Omit<Employee, "id" | "createdAt" | "companyId">) => Promise<Employee>;
   removeEmployee: (id: string) => Promise<void>;
+  updateEmployee: (id: string, changes: Partial<Pick<Employee, "name" | "role" | "status" | "pinCode">>) => Promise<void>;
   checkAndLogin: (emp: Employee, forceKick?: boolean) => Promise<"ok" | "conflict">;
   isLoading: boolean;
 }
@@ -353,8 +355,41 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
     [currentEmployee, employeeDoc, employees, setCurrentEmployee]
   );
 
+  const updateEmployee = useCallback(
+    async (id: string, changes: Partial<Pick<Employee, "name" | "role" | "status" | "pinCode">>) => {
+      // Update local state immediately
+      setEmployees((current) =>
+        current.map((e) => (e.id === id ? { ...e, ...changes } : e))
+      );
+
+      // Persist to AsyncStorage — update stored session if it's the current employee
+      try {
+        const raw = await AsyncStorage.getItem(sessionEmployeeKey);
+        if (raw) {
+          const parsed = JSON.parse(raw) as Employee;
+          if (parsed.id === id) {
+            const updated = { ...parsed, ...changes };
+            await AsyncStorage.setItem(sessionEmployeeKey, JSON.stringify(updated));
+          }
+        }
+      } catch {}
+
+      // Update Firestore (non-blocking; skip for local-fallback employees)
+      const target = employees.find((e) => e.id === id);
+      if (!target?.isLocalFallback) {
+        updateDoc(employeeDoc(id), changes as Record<string, unknown>).catch(() => {});
+      }
+
+      // If the updated employee is the current employee and status becomes "suspended", log them out
+      if (currentEmployee?.id === id && changes.status === "suspended") {
+        setCurrentEmployee(null);
+      }
+    },
+    [currentEmployee, employeeDoc, employees, sessionEmployeeKey, setCurrentEmployee]
+  );
+
   return (
-    <EmployeeContext.Provider value={{ employees, currentEmployee, setCurrentEmployee, addEmployee, removeEmployee, checkAndLogin, isLoading }}>
+    <EmployeeContext.Provider value={{ employees, currentEmployee, setCurrentEmployee, addEmployee, removeEmployee, updateEmployee, checkAndLogin, isLoading }}>
       {children}
     </EmployeeContext.Provider>
   );

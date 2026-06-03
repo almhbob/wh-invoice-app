@@ -194,6 +194,7 @@ const MORE_TABS: TabDef[] = [
   { name: "delivery",         labelKey: "tabDelivery",        titleKey: "titleDelivery",        icon: "truck",        sf: "shippingbox.and.arrow.backward",   accent: "#0d9488" },
   { name: "trays",            labelKey: "tabTrays",           titleKey: "titleTrays",           icon: "layers",       sf: "tray.2",                           accent: Colors.gold },
   { name: "admin",            labelKey: "tabAdmin",           titleKey: "titleAdmin",           icon: "settings",     sf: "gearshape",                        accent: Colors.primaryLight },
+  { name: "settings",         labelKey: "الإعدادات",          titleKey: "الإعدادات",            icon: "sliders",      sf: "gearshape.2",                      accent: Colors.primary },
 ];
 
 // ── Desktop sidebar ────────────────────────────────────────────────────────────
@@ -308,6 +309,12 @@ function DesktopSidebar({ activePath, navigate, isRTL }: { activePath: string; n
               onPress={() => navigate(tab.name)} indent
             />
           ))}
+
+          <SideNavItem
+            label="الإعدادات" icon="settings"
+            active={activePath.includes("settings")} accent={Colors.primary}
+            onPress={() => navigate("settings")}
+          />
         </ScrollView>
 
         <View style={ds.divider} />
@@ -458,6 +465,7 @@ const SCREEN_META: Record<string, { titleKey: string; accent: string }> = {
   delivery:         { titleKey: "titleDelivery",   accent: "#0d9488" },
   trays:            { titleKey: "titleTrays",      accent: Colors.gold },
   admin:            { titleKey: "titleAdmin",      accent: Colors.primaryLight },
+  settings:         { titleKey: "الإعدادات",       accent: Colors.primary },
 };
 
 function useScreenMeta(pathname: string, t: (k: TranslationKey) => string) {
@@ -498,6 +506,7 @@ export default function TabLayout() {
       <Tabs.Screen name="delivery"         options={{ title: t("titleDelivery"),  headerShown: false }} />
       <Tabs.Screen name="trays"            options={{ title: t("titleTrays"),     headerShown: false }} />
       <Tabs.Screen name="admin"            options={{ title: t("titleAdmin"),     headerShown: false }} />
+      <Tabs.Screen name="settings"         options={{ title: "الإعدادات",         headerShown: false }} />
       <Tabs.Screen name="index"            options={{ href: null }} />
     </>
   );

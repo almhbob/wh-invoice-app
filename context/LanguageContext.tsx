@@ -22,6 +22,7 @@ const LANG_LABELS: Record<Lang, string> = {
 interface LanguageContextType {
   lang: Lang;
   toggleLang: () => void;
+  setLang: (lang: Lang) => void;
   t: (key: TranslationKey) => string;
   rl: (role: string) => string;
   isRTL: boolean;
@@ -45,13 +46,13 @@ function applyWebDirection(lang: Lang, isRTL: boolean) {
 }
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [lang, setLang] = useState<Lang>("ar");
+  const [lang, setLangState] = useState<Lang>("ar");
   const isRTL = isRTLForLang(lang);
 
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY)
       .then((stored) => {
-        if (stored && LANGS.includes(stored as Lang)) setLang(stored as Lang);
+        if (stored && LANGS.includes(stored as Lang)) setLangState(stored as Lang);
       })
       .catch(() => undefined);
   }, []);
@@ -63,7 +64,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   }, [lang, isRTL]);
 
   const toggleLang = useCallback(() => {
-    setLang((prev) => {
+    setLangState((prev) => {
       const idx = LANGS.indexOf(prev);
       const next = LANGS[(idx + 1) % LANGS.length];
       AsyncStorage.setItem(STORAGE_KEY, next).catch(() => undefined);
@@ -71,11 +72,17 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  const setLang = useCallback((next: Lang) => {
+    if (!LANGS.includes(next)) return;
+    setLangState(next);
+    AsyncStorage.setItem(STORAGE_KEY, next).catch(() => undefined);
+  }, []);
+
   const t = useCallback((key: TranslationKey) => translate(key, lang), [lang]);
   const rl = useCallback((role: string) => roleLabel(role, lang), [lang]);
 
   return (
-    <LanguageContext.Provider value={{ lang, toggleLang, t, rl, isRTL, langLabel: LANG_LABELS[lang] }}>
+    <LanguageContext.Provider value={{ lang, toggleLang, setLang, t, rl, isRTL, langLabel: LANG_LABELS[lang] }}>
       {children}
     </LanguageContext.Provider>
   );

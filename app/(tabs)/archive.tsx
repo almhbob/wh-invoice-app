@@ -89,6 +89,11 @@ function buildInvoiceHtml(order: Order, brandName = "فاتورة", brandSub = "
   const cashierHtml = order.cashierEmployee
     ? `${order.cashierEmployee.name} #${order.cashierEmployee.employeeId}` : "—";
 
+  const notesHtml = order.notes
+    ? `<div style="background:#f0f7ff;border-right:3px solid #2980b9;padding:6px 10px;margin:4px 0;font-size:10px;border-radius:3px">
+        <span style="color:#1a5276;font-weight:700">ملاحظات: </span><span>${order.notes}</span>
+      </div>` : "";
+
   const logoBlock = brandSub
     ? `<div style="font-size:17px;font-weight:900;margin-bottom:2px">${brandName}</div>
        <div style="font-size:8px;letter-spacing:2px;color:#555">${brandSub}</div>`
@@ -133,6 +138,7 @@ function buildInvoiceHtml(order: Order, brandName = "فاتورة", brandSub = "
   ${deliveryHtml}
   ${addressHtml}
   <div class="total-line"><span style="color:#555">منشئ الطلب</span><span>${cashierHtml}</span></div>
+  ${notesHtml}
   <hr class="divider-solid">
   <table>
     <thead>
@@ -366,6 +372,14 @@ function ArchiveCard({
           <Text style={styles.customerPhone}>{order.customerPhone}</Text>
         </View>
       </View>
+
+      {/* Notes */}
+      {!!order.notes && (
+        <View style={styles.notesBox}>
+          <Feather name="file-text" size={12} color={Colors.info} />
+          <Text style={styles.notesText}>{order.notes}</Text>
+        </View>
+      )}
 
       {/* Items grouped by dept */}
       {Object.entries(DEPT_META).map(([key, meta]) => {
@@ -844,6 +858,13 @@ const styles = StyleSheet.create({
   trailLabel: { fontSize: 11, color: Colors.textSecondary },
   trailName: { fontSize: 12, fontWeight: "700", color: Colors.primary },
   trailId: { fontSize: 11, color: Colors.textMuted },
+  notesBox: {
+    flexDirection: "row", alignItems: "flex-start", gap: 8,
+    backgroundColor: Colors.info + "10", borderRadius: 10,
+    paddingHorizontal: 12, paddingVertical: 8,
+    borderWidth: 1, borderColor: Colors.info + "25",
+  },
+  notesText: { flex: 1, fontSize: 13, color: Colors.info, lineHeight: 20 },
   archiveFooter: {
     flexDirection: "row", flexWrap: "wrap", gap: 14, paddingTop: 4,
     borderTopWidth: 1, borderTopColor: Colors.borderLight,
