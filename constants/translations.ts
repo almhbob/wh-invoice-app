@@ -553,6 +553,29 @@ const translations = {
   backupData:         { ar: "نسخ احتياطي",    en: "Backup Data",       ur: "ڈیٹا بیکاپ",    hi: "डेटा बैकअप",    bn: "ডেটা ব্যাকআপ" },
   backupExportOrders: { ar: "تصدير الطلبات JSON", en: "Export Orders JSON", ur: "آرڈرز JSON برآمد",  hi: "ऑर्डर JSON एक्सपोर्ट", bn: "অর্ডার JSON এক্সপোর্ট" },
   backupExportDesc:   { ar: "تصدير جميع بيانات الطلبات والعملاء", en: "Export all orders & customers data", ur: "تمام آرڈرز اور گاہکوں کا ڈیٹا برآمد کریں", hi: "सभी ऑर्डर और ग्राहक डेटा एक्सपोर्ट करें", bn: "সব অর্ডার ও গ্রাহক ডেটা এক্সপোর্ট" },
+
+  // ── Online Shop / Cart ────────────────────────────────────────
+  shopTitle:          { ar: "متجر لافيفيان",           en: "Laviviane Shop",       ur: "لافیویان شاپ",      hi: "लाविवियाने शॉप",  bn: "লাভিভিয়ান শপ" },
+  shopCartBtn:        { ar: "السلة",                  en: "Cart",                 ur: "کارٹ",               hi: "कार्ट",            bn: "কার্ট" },
+  shopCartEmpty:      { ar: "السلة فارغة",             en: "Cart is empty",        ur: "کارٹ خالی ہے",       hi: "कार्ट खाली है",    bn: "কার্ট খালি" },
+  shopAddToCart:      { ar: "أضف للسلة",              en: "Add to Cart",          ur: "کارٹ میں شامل کریں", hi: "कार्ट में जोड़ें",  bn: "কার্টে যোগ করুন" },
+  shopCheckout:       { ar: "إتمام الطلب",             en: "Checkout",             ur: "چیک آؤٹ",            hi: "चेकआउट",           bn: "চেকআউট" },
+  shopBackToCart:     { ar: "العودة للسلة",            en: "Back to Cart",         ur: "کارٹ پر واپس",       hi: "कार्ट पर वापस",    bn: "কার্টে ফিরুন" },
+  shopPickup:         { ar: "استلام من المحل",         en: "In-store Pickup",      ur: "دکان سے اٹھاؤ",      hi: "स्टोर पिकअप",      bn: "স্টোর পিকআপ" },
+  shopDelivery:       { ar: "توصيل للمنزل",            en: "Home Delivery",        ur: "گھر ڈیلیوری",        hi: "होम डिलीवरी",      bn: "হোম ডেলিভারি" },
+  shopDeliveryAddr:   { ar: "عنوان التوصيل",           en: "Delivery Address",     ur: "ڈیلیوری پتہ",        hi: "डिलीवरी पता",      bn: "ডেলিভারি ঠিকানা" },
+  shopNotes:          { ar: "ملاحظات الطلب",           en: "Order Notes",          ur: "آرڈر نوٹس",          hi: "ऑर्डर नोट्स",      bn: "অর্ডার নোট" },
+  shopPlaceOrder:     { ar: "تأكيد الطلب",             en: "Place Order",          ur: "آرڈر دیں",           hi: "ऑर्डर दें",        bn: "অর্ডার দিন" },
+  shopOrderSuccess:   { ar: "تم استلام طلبك!",         en: "Order Received!",      ur: "آرڈر موصول ہوا!",    hi: "ऑर्डर मिला!",      bn: "অর্ডার পাওয়া গেছে!" },
+  shopOrderNum:       { ar: "رقم طلبك",                en: "Your Order #",         ur: "آپ کا آرڈر #",       hi: "आपका ऑर्डर #",     bn: "আপনার অর্ডার #" },
+  shopNewOrder:       { ar: "طلب جديد",                en: "New Order",            ur: "نیا آرڈر",           hi: "नया ऑर्डर",        bn: "নতুন অর্ডার" },
+  shopPayLater:       { ar: "الدفع عند الاستلام",       en: "Pay on Pickup",        ur: "وصولی پر ادائیگی",   hi: "पिकअप पर भुगतान",   bn: "পিকআপে পেমেন্ট" },
+  shopAllCats:        { ar: "الكل",                    en: "All",                  ur: "سب",                 hi: "सभी",              bn: "সব" },
+  shopNoProducts:     { ar: "لا توجد منتجات",          en: "No products available", ur: "کوئی مصنوعات نہیں",  hi: "कोई उत्पाद नहीं",   bn: "কোনো পণ্য নেই" },
+  shopDeliveryTime:   { ar: "وقت التسليم المطلوب",     en: "Requested Delivery Time", ur: "مطلوبہ ترسیل کا وقت", hi: "डिलीवरी का समय",  bn: "ডেলিভারির সময়" },
+  shopItemsCount:     { ar: "منتجات",                  en: "items",                ur: "آئٹمز",              hi: "आइटम",             bn: "আইটেম" },
+  shopSummary:        { ar: "ملخص الطلب",              en: "Order Summary",        ur: "آرڈر خلاصہ",         hi: "ऑर्डर सारांश",      bn: "অর্ডার সারসংক্ষেপ" },
+  shopConfirmMsg:     { ar: "سيتواصل معك فريقنا لتأكيد الطلب.", en: "Our team will contact you to confirm.", ur: "ہماری ٹیم آپ سے رابطہ کرے گی۔", hi: "हमारी टीम आपसे संपर्क करेगी।", bn: "আমাদের টিম আপনার সাথে যোগাযোগ করবে।" },
 } as const;
 
 export type TranslationKey = keyof typeof translations;
