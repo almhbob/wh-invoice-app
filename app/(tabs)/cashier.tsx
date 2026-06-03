@@ -26,7 +26,6 @@ import { ProductGalleryModal } from "@/components/ProductGalleryModal";
 import { useCompany } from "@/context/CompanyContext";
 import { useEmployee } from "@/context/EmployeeContext";
 import { useLang } from "@/context/LanguageContext";
-import { useProducts } from "@/context/ProductsContext";
 import {
   Department,
   Discount,
@@ -41,11 +40,10 @@ import {
   useOrders,
 } from "@/context/OrdersContext";
 import { Offer, normalizePhone, useOffers } from "@/context/OffersContext";
-import { DeliveryDateTimePicker } from "@/components/DeliveryDateTimePicker";
+import { DeliveryDatePicker, DeliveryTimePicker } from "@/components/DeliveryDateTimePicker";
 import { DailyClosingModal } from "@/components/DailyClosingModal";
 import { canDo, ROLE_CAN_CLOSE_SHIFT } from "@/constants/rbac";
 import { useShift } from "@/context/ShiftContext";
-import { consumePendingClone } from "@/stores/cloneOrder";
 import QRCode from "qrcode";
 
 
@@ -96,7 +94,6 @@ export default function CashierScreen() {
   ], [t]);
   const { company } = useCompany();
   const isLaviviane = company.id === LAVIVIANE_COMPANY_ID;
-  const { products } = useProducts();
 
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -106,7 +103,6 @@ export default function CashierScreen() {
   const [receivedAt, setReceivedAt] = useState("");
   const [deliveryDate, setDeliveryDate] = useState("");
   const [deliveryTime, setDeliveryTime] = useState("");
-  const [dateTimePickerOpen, setDateTimePickerOpen] = useState(false);
   const [insuranceAmount, setInsuranceAmount] = useState("");
   const [insurancePaymentMethod, setInsurancePaymentMethod] = useState<"cash" | "card">("cash");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
@@ -122,12 +118,15 @@ export default function CashierScreen() {
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [receiptQr, setReceiptQr] = useState<string>("");
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
-  const [autoItemId, setAutoItemId] = useState<string | null>(null);
 
   // Daily closing modal
   const [showClosing, setShowClosing] = useState(false);
   const canCloseShift = canDo(currentEmployee?.role, ROLE_CAN_CLOSE_SHIFT);
   const { lastClosed } = useShift();
+
+  // Invoice search
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Today's summary (for cashier strip)
   const todayOrders = useMemo(() => {
@@ -136,18 +135,18 @@ export default function CashierScreen() {
   }, [orders]);
   const todayTotal = todayOrders.reduce((s, o) => s + (o.totalAmount ?? 0), 0);
 
-  // Product autocomplete suggestions for item name input
-  const autoSuggestions = useMemo(() => {
-    if (!autoItemId) return [];
-    const item = items.find((i) => i.id === autoItemId);
-    if (!item || !item.name.trim()) return [];
-    const q = item.name.trim().toLowerCase();
-    return products
-      .filter((p) => p.isAvailable && (
-        p.name.toLowerCase().includes(q) || (p.nameEn ?? "").toLowerCase().includes(q)
-      ))
-      .slice(0, 6);
-  }, [autoItemId, items, products]);
+  const searchResults = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (q.length < 2) return [];
+    return [...orders]
+      .sort((a, b) => (b.orderNumber ?? 0) - (a.orderNumber ?? 0))
+      .filter((o) =>
+        o.customerName.toLowerCase().includes(q) ||
+        o.customerPhone.includes(q) ||
+        (o.orderNumber?.toString() ?? "").includes(q)
+      )
+      .slice(0, 30);
+  }, [orders, searchQuery]);
 
   // Customer auto-fill: find a previous order matching the entered phone
   const suggestedCustomer = useMemo(() => {
@@ -170,20 +169,6 @@ export default function CashierScreen() {
 
   useEffect(() => {
     setReceivedAt(formatNow());
-    const clone = consumePendingClone();
-    if (clone) {
-      setCustomerName(clone.customerName ?? "");
-      setCustomerPhone(clone.customerPhone ?? "");
-      if (clone.customerPhone2) setCustomerPhone2(clone.customerPhone2);
-      if (clone.deliveryAddress) setDeliveryAddress(clone.deliveryAddress);
-      setOrderType(clone.orderType ?? "pickup");
-      setItems(clone.items.map((i) => ({
-        ...i,
-        id: Date.now().toString() + Math.random().toString(36).slice(2),
-      })));
-      if (clone.notes) setNotes(clone.notes);
-      if (clone.paymentMethod) setPaymentMethod(clone.paymentMethod);
-    }
   }, []);
 
   // Auto-detect offer when phone changes
@@ -257,7 +242,7 @@ export default function CashierScreen() {
 
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") { Alert.alert(t("permRequired"), t("permPhotosMsg")); return; }
+    if (status !== "granted") { Alert.alert(t("permRequired"), "يحتاج التطبيق للوصول إلى الصور"); return; }
     const res = await ImagePicker.launchImageLibraryAsync({ allowsEditing: true, quality: 0.8 });
     if (!res.canceled) setImageUri(res.assets[0].uri);
   };
@@ -265,7 +250,7 @@ export default function CashierScreen() {
   const addReferenceImage = async () => {
     if (referenceImages.length >= 3) return;
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") { Alert.alert(t("permRequired"), t("permPhotosMsg")); return; }
+    if (status !== "granted") { Alert.alert(t("permRequired"), "يحتاج التطبيق للوصول إلى الصور"); return; }
     const res = await ImagePicker.launchImageLibraryAsync({ allowsEditing: false, quality: 0.75 });
     if (!res.canceled) setReferenceImages((prev) => [...prev, res.assets[0].uri].slice(0, 3));
   };
@@ -276,7 +261,7 @@ export default function CashierScreen() {
 
   const takePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== "granted") { Alert.alert(t("permRequired"), t("permCameraMsg")); return; }
+    if (status !== "granted") { Alert.alert(t("permRequired"), "يحتاج التطبيق للوصول إلى الكاميرا"); return; }
     const res = await ImagePicker.launchCameraAsync({ allowsEditing: true, quality: 0.8 });
     if (!res.canceled) setImageUri(res.assets[0].uri);
   };
@@ -286,7 +271,7 @@ export default function CashierScreen() {
     Alert.alert(t("addPhotoLabel"), t("chooseSource"), [
       { text: t("camera"), onPress: takePhoto },
       { text: t("photoGallery"), onPress: pickImage },
-      { text: t("cancel"), style: "cancel" },
+      { text: "إلغاء", style: "cancel" },
     ]);
   };
 
@@ -369,11 +354,7 @@ export default function CashierScreen() {
   };
 
   const shareViaWhatsApp = (order: Order) => {
-    const MAX_WA_LENGTH = 3800;
-    let text = buildReceiptText(order);
-    if (text.length > MAX_WA_LENGTH) {
-      text = text.slice(0, MAX_WA_LENGTH - 3) + "...";
-    }
+    const text = buildReceiptText(order);
     const rawPhone = order.customerPhone.replace(/\D/g, "");
     const intlPhone = rawPhone.startsWith("0") ? "966" + rawPhone.slice(1) : rawPhone;
     const url = `whatsapp://send?phone=${intlPhone}&text=${encodeURIComponent(text)}`;
@@ -651,23 +632,19 @@ export default function CashierScreen() {
       setExpandedItems(new Set());
       setReceiptOrder(created);
     } catch {
-      Alert.alert(t("errTitle"), t("errSend"));
+      Alert.alert("خطأ", t("errSend"));
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleSubmit = () => {
-    if (!customerName.trim()) { Alert.alert(t("errTitle"), t("errName")); return; }
-    if (!customerPhone.trim()) { Alert.alert(t("errTitle"), t("errPhone")); return; }
-    if (orderType === "delivery" && !deliveryAddress.trim()) { Alert.alert(t("errTitle"), t("errDelivAddress")); return; }
+    if (!customerName.trim()) { Alert.alert("خطأ", t("errName")); return; }
+    if (!customerPhone.trim()) { Alert.alert("خطأ", t("errPhone")); return; }
     const filteredItems = items.filter((i) => i.name.trim() && i.quantity > 0);
-    if (filteredItems.length === 0) { Alert.alert(t("errTitle"), t("errItems")); return; }
-    if (discountEnabled && discountVal < 0) { Alert.alert(t("errTitle"), t("errDiscountNeg")); return; }
-    if (discountEnabled && discountType === "percentage" && discountVal > 100) { Alert.alert(t("errTitle"), t("errDiscountMax")); return; }
-    if (insuranceVal < 0) { Alert.alert(t("errTitle"), t("errInsuranceNeg")); return; }
+    if (filteredItems.length === 0) { Alert.alert("خطأ", t("errItems")); return; }
     if (!currentEmployee) {
-      Alert.alert(t("loginRequired"), t("cashierLoginMsg"), [{ text: t("ok") }]);
+      Alert.alert("تسجيل الدخول مطلوب", "يجب تسجيل الدخول أولاً — اضغط على زر تغيير في الأعلى.", [{ text: "حسناً" }]);
       return;
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -712,14 +689,14 @@ export default function CashierScreen() {
       <View style={styles.todayStrip}>
         <View style={styles.todayStripLeft}>
           <Text style={styles.todayStripCount}>{todayOrders.length}</Text>
-          <Text style={styles.todayStripLabel}>{t("cashierTodayCount")}</Text>
+          <Text style={styles.todayStripLabel}>طلب اليوم</Text>
         </View>
         <View style={styles.todayStripDivider} />
         <View style={styles.todayStripLeft}>
           <Text style={[styles.todayStripCount, { color: Colors.success }]}>
             {todayTotal.toLocaleString("ar-SA", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
           </Text>
-          <Text style={styles.todayStripLabel}>{t("cashierTodaySAR")}</Text>
+          <Text style={styles.todayStripLabel}>ر.س اليوم</Text>
         </View>
         {lastClosed && (
           <>
@@ -733,6 +710,13 @@ export default function CashierScreen() {
             </View>
           </>
         )}
+        <TouchableOpacity
+          style={styles.searchStripBtn}
+          onPress={() => { Haptics.selectionAsync(); setSearchQuery(""); setShowSearch(true); }}
+          activeOpacity={0.85}
+        >
+          <Feather name="search" size={15} color="#fff" />
+        </TouchableOpacity>
         {canCloseShift && (
           <TouchableOpacity
             style={styles.closeShiftBtn}
@@ -902,18 +886,39 @@ export default function CashierScreen() {
           </View>
         </View>
 
-        {/* Delivery date + time — compact modal picker */}
+        {/* Delivery date */}
         <Text style={styles.label}>{t("delivDateLabel")}</Text>
-        <DeliveryDateTimePicker
-          dateValue={deliveryDate}
-          timeValue={deliveryTime}
-          onDateChange={setDeliveryDate}
-          onTimeChange={setDeliveryTime}
+        <DeliveryDatePicker
+          value={deliveryDate}
+          onChange={(iso, label) => setDeliveryDate(iso)}
           accentColor={Colors.primary}
-          open={dateTimePickerOpen}
-          onOpen={() => setDateTimePickerOpen(true)}
-          onClose={() => setDateTimePickerOpen(false)}
         />
+        {deliveryDate ? (
+          <View style={styles.selectedValueRow}>
+            <Feather name="calendar" size={13} color={Colors.primary} />
+            <Text style={styles.selectedValueText}>{deliveryDate}</Text>
+            <TouchableOpacity onPress={() => setDeliveryDate("")}>
+              <Feather name="x" size={14} color={Colors.textMuted} />
+            </TouchableOpacity>
+          </View>
+        ) : null}
+
+        {/* Delivery time */}
+        <Text style={[styles.label, { marginTop: 12 }]}>{t("delivTimeLabel")}</Text>
+        <DeliveryTimePicker
+          value={deliveryTime}
+          onChange={setDeliveryTime}
+          accentColor={Colors.primary}
+        />
+        {deliveryTime ? (
+          <View style={styles.selectedValueRow}>
+            <Feather name="clock" size={13} color={Colors.primary} />
+            <Text style={styles.selectedValueText}>{deliveryTime}</Text>
+            <TouchableOpacity onPress={() => setDeliveryTime("")}>
+              <Feather name="x" size={14} color={Colors.textMuted} />
+            </TouchableOpacity>
+          </View>
+        ) : null}
 
         {/* Insurance */}
         <Text style={styles.label}>{t("trayInsAmount")}</Text>
@@ -1030,38 +1035,14 @@ export default function CashierScreen() {
               )}
               {/* ── Main row ── */}
               <View style={styles.itemRow}>
-                <View style={styles.itemNameWrap}>
-                  <TextInput
-                    style={[styles.input, styles.itemName]}
-                    value={item.name}
-                    onChangeText={(v) => { updateItem(item.id, "name", v); setAutoItemId(item.id); }}
-                    onFocus={() => setAutoItemId(item.id)}
-                    onBlur={() => setTimeout(() => setAutoItemId(null), 200)}
-                    placeholder={`صنف ${idx + 1}`}
-                    placeholderTextColor={Colors.textMuted}
-                    textAlign="right"
-                  />
-                  {autoItemId === item.id && autoSuggestions.length > 0 && (
-                    <View style={styles.autoList}>
-                      {autoSuggestions.map((p) => (
-                        <TouchableOpacity
-                          key={p.id}
-                          style={styles.autoItem}
-                          onPress={() => {
-                            updateItem(item.id, "name", p.name);
-                            updateItem(item.id, "price", p.price);
-                            updateItem(item.id, "department", p.department as any);
-                            setAutoItemId(null);
-                          }}
-                          activeOpacity={0.75}
-                        >
-                          <Text style={styles.autoItemName} numberOfLines={1}>{p.name}</Text>
-                          <Text style={styles.autoItemPrice}>{p.price} ر.س</Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  )}
-                </View>
+                <TextInput
+                  style={[styles.input, styles.itemName]}
+                  value={item.name}
+                  onChangeText={(v) => updateItem(item.id, "name", v)}
+                  placeholder={`صنف ${idx + 1}`}
+                  placeholderTextColor={Colors.textMuted}
+                  textAlign="right"
+                />
                 <TextInput
                   style={[styles.input, styles.priceInput]}
                   value={item.price !== undefined ? String(item.price) : ""}
@@ -1479,6 +1460,61 @@ export default function CashierScreen() {
       </TouchableOpacity>
     </ScrollView>
     </KeyboardAvoidingView>
+
+    {/* ─── Invoice Search Modal ─────────────────────────────────── */}
+    {showSearch && (
+      <Modal visible transparent animationType="slide" onRequestClose={() => setShowSearch(false)}>
+        <View style={styles.searchOverlay}>
+          <View style={styles.searchSheet}>
+            <View style={styles.searchHandle} />
+            <View style={styles.searchHeader}>
+              <TouchableOpacity style={styles.searchCloseBtn} onPress={() => setShowSearch(false)}>
+                <Feather name="x" size={20} color={Colors.primary} />
+              </TouchableOpacity>
+              <Text style={styles.searchTitle}>{t("searchInvoices")}</Text>
+              <View style={{ width: 36 }} />
+            </View>
+            <View style={styles.searchInputRow}>
+              <Feather name="search" size={16} color={Colors.textMuted} />
+              <TextInput
+                style={styles.searchInput}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder={t("searchPlaceholder")}
+                placeholderTextColor={Colors.textMuted}
+                autoFocus
+                textAlign="right"
+                clearButtonMode="while-editing"
+              />
+            </View>
+            <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 40 }}>
+              {searchQuery.trim().length >= 2 && searchResults.length === 0 && (
+                <Text style={styles.searchEmpty}>{t("searchNoResults")}</Text>
+              )}
+              {searchResults.map((order) => (
+                <TouchableOpacity
+                  key={order.id}
+                  style={styles.searchResultRow}
+                  onPress={() => { setShowSearch(false); setReceiptOrder(order); }}
+                  activeOpacity={0.7}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.searchResultName}>{order.customerName}</Text>
+                    <Text style={styles.searchResultSub}>{order.customerPhone} · {order.receivedAt?.slice(0, 16)}</Text>
+                  </View>
+                  <View style={{ alignItems: "flex-end", gap: 2 }}>
+                    <Text style={styles.searchResultNum}>#{order.orderNumber}</Text>
+                    {order.totalAmount ? (
+                      <Text style={styles.searchResultTotal}>{order.totalAmount.toFixed(2)} ر.س</Text>
+                    ) : null}
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+    )}
 
     {/* ─── Preview Modal ──────────────────────────────────────────── */}
     {showPreview && (
@@ -1997,11 +2033,50 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   autoFillText: { flex: 1, fontSize: 13, color: Colors.primary },
+  searchStripBtn: {
+    marginLeft: "auto" as any, width: 34, height: 34, borderRadius: 17,
+    backgroundColor: "rgba(255,255,255,0.18)", alignItems: "center", justifyContent: "center",
+  },
   closeShiftBtn: {
-    marginLeft: "auto" as any, flexDirection: "row", alignItems: "center", gap: 6,
+    flexDirection: "row", alignItems: "center", gap: 6,
     backgroundColor: Colors.gold, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8,
   },
   closeShiftBtnText: { fontSize: 12, fontWeight: "800", color: "#fff" },
+
+  // invoice search modal
+  searchOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.55)", justifyContent: "flex-end" },
+  searchSheet: {
+    backgroundColor: Colors.background, borderTopLeftRadius: 28, borderTopRightRadius: 28,
+    maxHeight: "85%", overflow: "hidden",
+  },
+  searchHandle: {
+    width: 40, height: 4, borderRadius: 2, backgroundColor: Colors.border,
+    alignSelf: "center", marginTop: 10, marginBottom: 4,
+  },
+  searchHeader: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingHorizontal: 16, paddingVertical: 12,
+    borderBottomWidth: 1, borderBottomColor: Colors.border,
+  },
+  searchCloseBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.primary + "12", alignItems: "center", justifyContent: "center" },
+  searchTitle: { fontSize: 17, fontWeight: "800", color: Colors.primary },
+  searchInputRow: {
+    flexDirection: "row", alignItems: "center", gap: 10,
+    marginHorizontal: 16, marginVertical: 12,
+    backgroundColor: Colors.surfaceSecondary, borderRadius: 12,
+    borderWidth: 1, borderColor: Colors.border, paddingHorizontal: 12,
+  },
+  searchInput: { flex: 1, fontSize: 15, color: Colors.text, paddingVertical: 11 },
+  searchEmpty: { textAlign: "center", color: Colors.textMuted, fontSize: 14, marginTop: 32 },
+  searchResultRow: {
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingHorizontal: 16, paddingVertical: 14,
+    borderBottomWidth: 1, borderBottomColor: Colors.borderLight,
+  },
+  searchResultName: { fontSize: 15, fontWeight: "700", color: Colors.text },
+  searchResultSub: { fontSize: 12, color: Colors.textMuted, marginTop: 2 },
+  searchResultNum: { fontSize: 13, fontWeight: "700", color: Colors.primary },
+  searchResultTotal: { fontSize: 12, color: Colors.success, fontWeight: "600" },
 
   cardHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   cardTitle: { fontSize: 15, fontWeight: "700", color: Colors.primary },
@@ -2050,23 +2125,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surfaceSecondary,
   },
   itemNoteToggleText: { fontSize: 11, color: Colors.textMuted, fontWeight: "600" },
-  itemNameWrap: { flex: 1, position: "relative", zIndex: 10 },
   itemName: { flex: 1, paddingVertical: 10 },
-  autoList: {
-    position: "absolute", top: "100%", left: 0, right: 0,
-    backgroundColor: Colors.surface, borderRadius: 10,
-    borderWidth: 1, borderColor: Colors.border,
-    shadowColor: "#000", shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12, shadowRadius: 8, elevation: 8,
-    zIndex: 100, overflow: "hidden",
-  },
-  autoItem: {
-    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
-    paddingHorizontal: 12, paddingVertical: 9,
-    borderBottomWidth: 1, borderBottomColor: Colors.border + "60",
-  },
-  autoItemName: { flex: 1, fontSize: 13, color: Colors.text, fontWeight: "600", textAlign: "right" },
-  autoItemPrice: { fontSize: 12, color: Colors.gold, fontWeight: "700", marginLeft: 8 },
   qtyBox: {
     flexDirection: "row", alignItems: "center", width: 80,
     borderWidth: 1, borderColor: Colors.border, borderRadius: 10,

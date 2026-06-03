@@ -1,6 +1,4 @@
 import { Feather } from "@expo/vector-icons";
-import * as Haptics from "expo-haptics";
-import { router } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
   Alert,
@@ -20,20 +18,27 @@ import { useLang } from "@/context/LanguageContext";
 import { useEmployee } from "@/context/EmployeeContext";
 import { Department, Order, OrderStatus, PAYMENT_LABELS, useOrders } from "@/context/OrdersContext";
 import { fmtDate } from "@/utils/dateUtils";
-import { setPendingClone } from "@/stores/cloneOrder";
 
-// DEPT_META and DEPT_FILTERS are built inside components using t() for i18n
+const DEPT_META: Record<string, { label: string; shortLabel: string; color: string }> = {
+  halwa:     { label: "قسم الحلا",      shortLabel: "حلا",      color: Colors.halwa },
+  mawali:    { label: "قسم الموالح",    shortLabel: "موالح",    color: Colors.mawali },
+  chocolate: { label: "قسم الشوكولاتة", shortLabel: "شوكولاتة", color: Colors.chocolate },
+  cake:      { label: "قسم الكيك",      shortLabel: "كيك",      color: Colors.cake },
+  packaging: { label: "قسم التغليف",    shortLabel: "تغليف",    color: Colors.packaging },
+};
 
-function ArchiveCard({ order, canDelete, canEdit, onDelete, onEdit, onRepeat }: { order: Order; canDelete?: boolean; canEdit?: boolean; onDelete?: (o: Order) => void; onEdit?: (o: Order) => void; onRepeat?: (o: Order) => void }) {
-  const { t, lang } = useLang();
+const DEPT_FILTERS: { value: Department | "all"; label: string }[] = [
+  { value: "all",       label: "الكل" },
+  { value: "halwa",     label: "حلا" },
+  { value: "mawali",    label: "موالح" },
+  { value: "chocolate", label: "شوكولاتة" },
+  { value: "cake",      label: "كيك" },
+  { value: "packaging", label: "تغليف" },
+];
+
+function ArchiveCard({ order, canDelete, canEdit, onDelete, onEdit }: { order: Order; canDelete?: boolean; canEdit?: boolean; onDelete?: (o: Order) => void; onEdit?: (o: Order) => void }) {
+  const { lang } = useLang();
   const depts = [...new Set(order.items.map((i) => i.department))] as Department[];
-  const DEPT_META: Record<string, { label: string; shortLabel: string; color: string }> = {
-    halwa:     { label: t("deptHalwaLabel"),      shortLabel: t("deptHalwaShort"),     color: Colors.halwa },
-    mawali:    { label: t("deptMawaliLabel"),     shortLabel: t("deptMawaliShort"),    color: Colors.mawali },
-    chocolate: { label: t("deptChocolateLabel"),  shortLabel: t("deptChocolateShort"), color: Colors.chocolate },
-    cake:      { label: t("deptCakeLabel"),       shortLabel: t("deptCakeShort"),      color: Colors.cake },
-    packaging: { label: t("deptPackagingLabel"),  shortLabel: t("deptPackagingShort"), color: Colors.packaging },
-  };
 
   return (
     <View style={styles.archiveCard}>
@@ -108,7 +113,7 @@ function ArchiveCard({ order, canDelete, canEdit, onDelete, onEdit, onRepeat }: 
         {order.cashierEmployee && (
           <View style={styles.trailRow}>
             <Feather name="edit-3" size={11} color={Colors.gold} />
-            <Text style={styles.trailLabel}>{t("archiveEnteredBy")}</Text>
+            <Text style={styles.trailLabel}>أدخله:</Text>
             <Text style={styles.trailName}>{order.cashierEmployee.name}</Text>
             <Text style={styles.trailId}>#{order.cashierEmployee.employeeId}</Text>
           </View>
@@ -119,7 +124,7 @@ function ArchiveCard({ order, canDelete, canEdit, onDelete, onEdit, onRepeat }: 
           return (
             <View key={key} style={styles.trailRow}>
               <Feather name="check-square" size={11} color={meta.color} />
-              <Text style={[styles.trailLabel, { color: meta.color }]}>{t("archiveReceivedBy")} {meta.shortLabel}:</Text>
+              <Text style={[styles.trailLabel, { color: meta.color }]}>استلم {meta.shortLabel}:</Text>
               <Text style={[styles.trailName, { color: meta.color }]}>{receiver.name}</Text>
               <Text style={styles.trailId}>#{receiver.employeeId}</Text>
             </View>
@@ -175,29 +180,16 @@ function ArchiveCard({ order, canDelete, canEdit, onDelete, onEdit, onRepeat }: 
           </View>
         )}
       </View>
-
-      {/* Repeat order button */}
-      {onRepeat && (
-        <TouchableOpacity
-          style={styles.repeatBtn}
-          onPress={() => { Haptics.selectionAsync(); onRepeat(order); }}
-          activeOpacity={0.8}
-        >
-          <Feather name="copy" size={13} color={Colors.primary} />
-          <Text style={styles.repeatBtnText}>{t("archiveRepeat")}</Text>
-        </TouchableOpacity>
-      )}
     </View>
   );
 }
 
 function StatusRow({ status }: { status?: OrderStatus }) {
-  const { t } = useLang();
   const conf: Record<OrderStatus, { label: string; color: string }> = {
-    pending:     { label: t("waiting"),         color: Colors.statusPending },
-    in_progress: { label: t("preparing"),       color: Colors.statusInProgress },
-    done:        { label: t("statusDone"),       color: Colors.statusDone },
-    cancelled:   { label: t("statusCancelled"), color: Colors.statusCancelled },
+    pending: { label: "انتظار", color: Colors.statusPending },
+    in_progress: { label: "جاري التحضير", color: Colors.statusInProgress },
+    done: { label: "تم التسليم", color: Colors.statusDone },
+    cancelled: { label: "ملغي", color: Colors.statusCancelled },
   };
   if (!status) return null;
   const c = conf[status];
@@ -210,7 +202,7 @@ function StatusRow({ status }: { status?: OrderStatus }) {
 }
 
 function DeletedCard({ order, onRestore }: { order: Order; onRestore: (id: string) => void }) {
-  const { t, lang } = useLang();
+  const { lang } = useLang();
   return (
     <View style={[styles.archiveCard, { borderLeftWidth: 3, borderLeftColor: Colors.accent }]}>
       <View style={styles.archiveHeader}>
@@ -219,7 +211,7 @@ function DeletedCard({ order, onRestore }: { order: Order; onRestore: (id: strin
           <Text style={styles.archiveDate}>{fmtDate(order.createdAt, lang)}</Text>
         </View>
         <View style={[styles.deptTag, { backgroundColor: Colors.accent + "18", borderRadius: 8 }]}>
-          <Text style={[styles.deptTagText, { color: Colors.accent }]}>{t("archiveDeletedLabel")}</Text>
+          <Text style={[styles.deptTagText, { color: Colors.accent }]}>محذوف</Text>
         </View>
       </View>
       <View style={styles.customerBlock}>
@@ -235,7 +227,7 @@ function DeletedCard({ order, onRestore }: { order: Order; onRestore: (id: strin
       {order.deletedAt && (
         <View style={styles.trailRow}>
           <Feather name="trash-2" size={11} color={Colors.accent} />
-          <Text style={styles.trailLabel}>{t("archiveDeletedAt")}</Text>
+          <Text style={styles.trailLabel}>حُذف:</Text>
           <Text style={[styles.trailName, { color: Colors.accent }]}>{fmtDate(order.deletedAt, lang)}</Text>
           {order.deletedBy && (
             <Text style={styles.trailId}>· {order.deletedBy.name}</Text>
@@ -248,22 +240,13 @@ function DeletedCard({ order, onRestore }: { order: Order; onRestore: (id: strin
         activeOpacity={0.8}
       >
         <Feather name="rotate-ccw" size={14} color="#fff" />
-        <Text style={styles.restoreBtnText}>{t("archiveRestoreInv")}</Text>
+        <Text style={styles.restoreBtnText}>استرجاع الفاتورة</Text>
       </TouchableOpacity>
     </View>
   );
 }
 
 export default function ArchiveScreen() {
-  const { t } = useLang();
-  const DEPT_FILTERS: { value: Department | "all"; label: string }[] = [
-    { value: "all",       label: t("archiveAll") },
-    { value: "halwa",     label: t("deptHalwaShort") },
-    { value: "mawali",    label: t("deptMawaliShort") },
-    { value: "chocolate", label: t("deptChocolateShort") },
-    { value: "cake",      label: t("deptCakeShort") },
-    { value: "packaging", label: t("deptPackagingShort") },
-  ];
   const { orders, deletedOrders, deleteOrder, restoreOrder, updateOrder } = useOrders();
   const { currentEmployee } = useEmployee();
   const isAdmin = canDo(currentEmployee?.role, ROLE_CAN_DELETE_ORDERS);
@@ -313,11 +296,6 @@ export default function ArchiveScreen() {
     );
   };
 
-  const handleRepeat = (order: Order) => {
-    setPendingClone(order);
-    router.navigate("/(tabs)/cashier" as any);
-  };
-
   return (
     <View style={styles.container}>
       {/* Tab bar */}
@@ -352,8 +330,8 @@ export default function ArchiveScreen() {
           contentContainerStyle={[styles.list, deletedOrders.length === 0 && { flex: 1 }]}
           renderItem={({ item }) => <DeletedCard order={item} onRestore={restoreOrder} />}
           ListEmptyComponent={
-            <EmptyState icon="trash-2" title={t("noTrashOrders")}
-              subtitle={t("noTrashOrdersSub")} />
+            <EmptyState icon="trash-2" title="سلة المحذوفات فارغة"
+              subtitle="لا توجد فواتير محذوفة حالياً" />
           }
           showsVerticalScrollIndicator={false}
         />
@@ -366,7 +344,7 @@ export default function ArchiveScreen() {
               style={styles.searchInput}
               value={search}
               onChangeText={setSearch}
-              placeholder={t("archiveSearch")}
+              placeholder="بحث بالرقم أو الاسم أو الهاتف أو الصنف..."
               placeholderTextColor={Colors.textMuted}
               textAlign="right"
             />
@@ -398,7 +376,7 @@ export default function ArchiveScreen() {
                 style={styles.searchInput}
                 value={dateFilter}
                 onChangeText={setDateFilter}
-                placeholder={t("filterByDate")}
+                placeholder="تصفية بالتاريخ (مثال: 2025-01-15)"
                 placeholderTextColor={Colors.textMuted}
                 textAlign="right"
               />
@@ -412,7 +390,7 @@ export default function ArchiveScreen() {
 
           <View style={styles.countRow}>
             <Feather name="file-text" size={13} color={Colors.textMuted} />
-            <Text style={styles.countText}>{filtered.length} {t("invoiceCount")}</Text>
+            <Text style={styles.countText}>{filtered.length} فاتورة</Text>
           </View>
 
           <EditOrderModal
@@ -433,12 +411,11 @@ export default function ArchiveScreen() {
                 canEdit={canEdit}
                 onDelete={handleDelete}
                 onEdit={setEditingOrder}
-                onRepeat={handleRepeat}
               />
             )}
             ListEmptyComponent={
-              <EmptyState icon="archive" title={t("noInvoices")}
-                subtitle={t("noInvoicesSub")} />
+              <EmptyState icon="archive" title="لا توجد فواتير"
+                subtitle="لم يتم العثور على فواتير تطابق البحث" />
             }
             showsVerticalScrollIndicator={false}
           />
@@ -475,12 +452,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary, borderRadius: 10, paddingVertical: 10, marginTop: 4,
   },
   restoreBtnText: { color: "#fff", fontSize: 13, fontWeight: "700" },
-  repeatBtn: {
-    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
-    paddingVertical: 8, borderRadius: 10, borderWidth: 1.5,
-    borderColor: Colors.primary + "50", backgroundColor: Colors.primary + "08",
-  },
-  repeatBtnText: { fontSize: 13, fontWeight: "700", color: Colors.primary },
   searchRow: {
     flexDirection: "row", alignItems: "center", gap: 10,
     marginHorizontal: 16, marginTop: 12,

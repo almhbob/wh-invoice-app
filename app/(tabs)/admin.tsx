@@ -1,7 +1,10 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import * as FileSystem from "expo-file-system/legacy";
+import * as Sharing from "expo-sharing";
 import React, { useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Modal,
   Platform,
@@ -13,16 +16,13 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { writeBatch, doc } from "firebase/firestore";
 
 import { Image } from "expo-image";
 
 import { Colors } from "@/constants/colors";
 import { canDo, ROLE_CAN_ACCESS_ADMIN } from "@/constants/rbac";
-import { buildLavivianeProducts, LAVIVIANE_COMPANY_ID } from "@/constants/lavivianeProducts";
 import { DevSettingsModal } from "@/components/DevSettingsModal";
 import { ProductManagerModal } from "@/components/ProductManagerModal";
-import { useCompany } from "@/context/CompanyContext";
 import { useLang } from "@/context/LanguageContext";
 import {
   Employee,
@@ -35,7 +35,6 @@ import { Offer, useOffers } from "@/context/OffersContext";
 import { Product, useProducts } from "@/context/ProductsContext";
 import { usePriceChange } from "@/context/PriceChangeContext";
 import { useFeatures, AppFeatures } from "@/context/FeaturesContext";
-import { db } from "@/lib/firebase";
 
 // ─── helpers ───────────────────────────────────────────────────────────────
 function todayStr() {
@@ -106,7 +105,6 @@ function SectionHeader({ title, icon }: { title: string; icon: any }) {
 
 // ─── Employee Management ──────────────────────────────────────────────────
 function EmployeesSection() {
-  const { t } = useLang();
   const { employees, addEmployee, removeEmployee } = useEmployee();
   const [showAdd, setShowAdd] = useState(false);
   const [name, setName] = useState("");
@@ -115,10 +113,10 @@ function EmployeesSection() {
   const [saving, setSaving] = useState(false);
 
   const handleAdd = async () => {
-    if (!name.trim()) { Alert.alert(t("errTitle"), t("empNameRequired")); return; }
-    if (!empId.trim()) { Alert.alert(t("errTitle"), t("empIdRequired")); return; }
+    if (!name.trim()) { Alert.alert("خطأ", "أدخل اسم الموظف"); return; }
+    if (!empId.trim()) { Alert.alert("خطأ", "أدخل الرقم الوظيفي"); return; }
     const dup = employees.find((e) => e.employeeId.toLowerCase() === empId.trim().toLowerCase());
-    if (dup) { Alert.alert(t("errTitle"), "هذا الرقم الوظيفي مستخدم مسبقاً"); return; }
+    if (dup) { Alert.alert("خطأ", "هذا الرقم الوظيفي مستخدم مسبقاً"); return; }
     setSaving(true);
     try {
       await addEmployee({ name: name.trim(), employeeId: empId.trim().toUpperCase(), role });
@@ -128,9 +126,9 @@ function EmployeesSection() {
   };
 
   const handleRemove = (emp: Employee) => {
-    Alert.alert(t("deleteEmployee"), `${t("deleteEmpConfirm")} "${emp.name}"؟`, [
-      { text: t("cancel"), style: "cancel" },
-      { text: t("delete"), style: "destructive", onPress: () => removeEmployee(emp.id) },
+    Alert.alert("حذف الموظف", `هل تريد حذف "${emp.name}"؟`, [
+      { text: "إلغاء", style: "cancel" },
+      { text: "حذف", style: "destructive", onPress: () => removeEmployee(emp.id) },
     ]);
   };
 
@@ -141,7 +139,7 @@ function EmployeesSection() {
 
   return (
     <View style={styles.section}>
-      <SectionHeader title={t("adminEmpSection")} icon="users" />
+      <SectionHeader title="إدارة الموظفين" icon="users" />
 
       {/* Counts row */}
       <View style={styles.empCountRow}>
@@ -157,7 +155,7 @@ function EmployeesSection() {
       {employees.length === 0 ? (
         <View style={styles.emptyBox}>
           <Feather name="users" size={32} color={Colors.textMuted} />
-          <Text style={styles.emptyText}>{t("adminNoEmpMsg")}</Text>
+          <Text style={styles.emptyText}>لا يوجد موظفون — أضف الآن</Text>
         </View>
       ) : (
         ALL_ROLES.map((r) => {
@@ -191,14 +189,14 @@ function EmployeesSection() {
       {/* Add form */}
       {showAdd ? (
         <View style={styles.addForm}>
-          <Text style={styles.formLabel}>{t("adminEmpNameLabel")} *</Text>
+          <Text style={styles.formLabel}>اسم الموظف *</Text>
           <TextInput style={styles.formInput} value={name} onChangeText={setName}
-            placeholder={t("adminEmpNamePh")} placeholderTextColor={Colors.textMuted} textAlign="right" />
-          <Text style={styles.formLabel}>{t("adminEmpIdLabel")} *</Text>
+            placeholder="الاسم الكامل" placeholderTextColor={Colors.textMuted} textAlign="right" />
+          <Text style={styles.formLabel}>الرقم الوظيفي *</Text>
           <TextInput style={styles.formInput} value={empId} onChangeText={setEmpId}
-            placeholder={t("adminEmpIdPh")} placeholderTextColor={Colors.textMuted}
+            placeholder="مثال: EMP001" placeholderTextColor={Colors.textMuted}
             textAlign="right" autoCapitalize="characters" />
-          <Text style={styles.formLabel}>{t("adminEmpRoleLabel")}</Text>
+          <Text style={styles.formLabel}>الدور الوظيفي</Text>
           <View style={styles.roleRow}>
             {ALL_ROLES.map((r) => (
               <TouchableOpacity key={r}
@@ -210,18 +208,18 @@ function EmployeesSection() {
           </View>
           <View style={styles.formBtns}>
             <TouchableOpacity style={styles.cancelBtn} onPress={() => { setShowAdd(false); setName(""); setEmpId(""); setRole("cashier"); }}>
-              <Text style={styles.cancelBtnText}>{t("cancel")}</Text>
+              <Text style={styles.cancelBtnText}>إلغاء</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.saveBtn, saving && { opacity: 0.6 }]} onPress={handleAdd} disabled={saving}>
               <Feather name="user-plus" size={15} color="#fff" />
-              <Text style={styles.saveBtnText}>{saving ? "..." : t("save")}</Text>
+              <Text style={styles.saveBtnText}>{saving ? "..." : "حفظ"}</Text>
             </TouchableOpacity>
           </View>
         </View>
       ) : (
         <TouchableOpacity style={styles.addBtn} onPress={() => { Haptics.selectionAsync(); setShowAdd(true); }}>
           <Feather name="plus" size={16} color={Colors.primary} />
-          <Text style={styles.addBtnText}>{t("adminAddEmpBtn")}</Text>
+          <Text style={styles.addBtnText}>إضافة موظف جديد</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -230,7 +228,6 @@ function EmployeesSection() {
 
 // ─── Financial Summary ────────────────────────────────────────────────────
 function FinancialSection({ orders }: { orders: Order[] }) {
-  const { t } = useLang();
   const today = todayStr();
   const todayOrders = orders.filter((o) => o.createdAt.startsWith(today));
 
@@ -262,20 +259,20 @@ function FinancialSection({ orders }: { orders: Order[] }) {
 
   return (
     <View style={styles.section}>
-      <SectionHeader title={t("financialSummary")} icon="dollar-sign" />
+      <SectionHeader title="الملخص المالي" icon="dollar-sign" />
       <View style={styles.statsGrid}>
-        <StatCard icon="trending-up" label={t("repTotalRevenue")} value={fmtCurrency(totalRevenue)} color={Colors.gold}
-          sub={`${ordersWithTotal.length} ${t("adminPricedInv")}`} />
-        <StatCard icon="sun" label={t("repTodayRevenue")} value={fmtCurrency(todayRevenue)} color={Colors.success} />
-        <StatCard icon="bar-chart-2" label={t("repAvgOrder")} value={fmtCurrency(avgOrder)} color={Colors.info} />
-        <StatCard icon="shield" label={t("totalInsurance")} value={fmtCurrency(totalInsurance)} color={Colors.primaryLight} />
+        <StatCard icon="trending-up" label="إجمالي الإيرادات" value={fmtCurrency(totalRevenue)} color={Colors.gold}
+          sub={`${ordersWithTotal.length} فاتورة مسعَّرة`} />
+        <StatCard icon="sun" label="إيرادات اليوم" value={fmtCurrency(todayRevenue)} color={Colors.success} />
+        <StatCard icon="bar-chart-2" label="متوسط الفاتورة" value={fmtCurrency(avgOrder)} color={Colors.info} />
+        <StatCard icon="shield" label="إجمالي التأمينات" value={fmtCurrency(totalInsurance)} color={Colors.primaryLight} />
         {ordersWithDiscount.length > 0 && (
           <StatCard
             icon="tag"
-            label={t("adminTotalDiscounts")}
+            label="إجمالي الخصومات"
             value={fmtCurrency(totalDiscountAmount)}
             color={Colors.warning}
-            sub={`${ordersWithDiscount.length} ${t("adminDiscountedInv")}`}
+            sub={`${ordersWithDiscount.length} فاتورة بخصم`}
           />
         )}
       </View>
@@ -283,7 +280,7 @@ function FinancialSection({ orders }: { orders: Order[] }) {
       {/* Payment method breakdown */}
       {(pmCounts.cash + pmCounts.card + pmCounts.transfer) > 0 && (
         <View style={styles.pmCard}>
-          <Text style={styles.pmTitle}>{t("repByPayment")}</Text>
+          <Text style={styles.pmTitle}>طرق الدفع</Text>
           <View style={styles.pmRow}>
             {(["cash", "card", "transfer"] as PaymentMethod[]).map((pm) => (
               pmCounts[pm] > 0 ? (
@@ -302,7 +299,6 @@ function FinancialSection({ orders }: { orders: Order[] }) {
 
 // ─── Operations Overview ──────────────────────────────────────────────────
 function OperationsSection({ orders }: { orders: Order[] }) {
-  const { t } = useLang();
   const today = todayStr();
   const todayOrders = orders.filter((o) => o.createdAt.startsWith(today));
 
@@ -327,41 +323,41 @@ function OperationsSection({ orders }: { orders: Order[] }) {
 
   return (
     <View style={styles.section}>
-      <SectionHeader title={t("workMonitor")} icon="activity" />
+      <SectionHeader title="مراقبة سير العمل" icon="activity" />
 
       <View style={styles.statsGrid}>
-        <StatCard icon="file-text" label={t("totalOrders")} value={totalAll} color={Colors.primary} />
-        <StatCard icon="calendar" label={t("todayOrders")} value={totalToday} color={Colors.info} />
-        <StatCard icon="check-circle" label={t("allDone")} value={doneAll} color={Colors.success} />
-        <StatCard icon="clock" label={t("inProgress")} value={totalAll - doneAll} color={Colors.warning} />
+        <StatCard icon="file-text" label="إجمالي الطلبات" value={totalAll} color={Colors.primary} />
+        <StatCard icon="calendar" label="طلبات اليوم" value={totalToday} color={Colors.info} />
+        <StatCard icon="check-circle" label="مكتملة بالكامل" value={doneAll} color={Colors.success} />
+        <StatCard icon="clock" label="قيد التنفيذ" value={totalAll - doneAll} color={Colors.warning} />
       </View>
 
       {/* Dept breakdown */}
       {[
-        { dept: "halwa" as Department, label: t("deptHalwaLabel"), stats: halwa, color: Colors.halwa },
-        { dept: "mawali" as Department, label: t("deptMawaliLabel"), stats: mawali, color: Colors.mawali },
+        { dept: "halwa" as Department, label: "قسم الحلا", stats: halwa, color: Colors.halwa },
+        { dept: "mawali" as Department, label: "قسم الموالح", stats: mawali, color: Colors.mawali },
       ].map(({ label, stats, color }) => (
         <View key={label} style={[styles.deptCard, { borderLeftColor: color }]}>
           <Text style={[styles.deptCardTitle, { color }]}>{label}</Text>
           <View style={styles.deptCardStats}>
             <View style={styles.deptStat}>
               <Text style={styles.deptStatNum}>{stats.total}</Text>
-              <Text style={styles.deptStatLabel}>{t("total")}</Text>
+              <Text style={styles.deptStatLabel}>إجمالي</Text>
             </View>
             <View style={styles.deptStatDivider} />
             <View style={styles.deptStat}>
               <Text style={[styles.deptStatNum, { color: Colors.statusPending }]}>{stats.pending}</Text>
-              <Text style={styles.deptStatLabel}>{t("waiting")}</Text>
+              <Text style={styles.deptStatLabel}>انتظار</Text>
             </View>
             <View style={styles.deptStatDivider} />
             <View style={styles.deptStat}>
               <Text style={[styles.deptStatNum, { color: Colors.statusInProgress }]}>{stats.inProg}</Text>
-              <Text style={styles.deptStatLabel}>{t("preparing")}</Text>
+              <Text style={styles.deptStatLabel}>تحضير</Text>
             </View>
             <View style={styles.deptStatDivider} />
             <View style={styles.deptStat}>
               <Text style={[styles.deptStatNum, { color: Colors.statusDone }]}>{stats.done}</Text>
-              <Text style={styles.deptStatLabel}>{t("statusDone")}</Text>
+              <Text style={styles.deptStatLabel}>تم</Text>
             </View>
           </View>
         </View>
@@ -372,14 +368,13 @@ function OperationsSection({ orders }: { orders: Order[] }) {
 
 // ─── Cashier Performance ──────────────────────────────────────────────────
 function CashierPerformanceSection({ orders }: { orders: Order[] }) {
-  const { t } = useLang();
   const byEmp = useMemo(() => {
     const map: Record<string, { name: string; empId: string; count: number; revenue: number; insurance: number }> = {};
     orders.forEach((o) => {
       const key = o.cashierEmployee?.employeeId ?? "__unknown__";
       if (!map[key]) {
         map[key] = {
-          name: o.cashierEmployee?.name ?? t("unspecified"),
+          name: o.cashierEmployee?.name ?? "غير محدد",
           empId: o.cashierEmployee?.employeeId ?? "-",
           count: 0,
           revenue: 0,
@@ -397,7 +392,7 @@ function CashierPerformanceSection({ orders }: { orders: Order[] }) {
 
   return (
     <View style={styles.section}>
-      <SectionHeader title={t("cashierPerf")} icon="bar-chart-2" />
+      <SectionHeader title="أداء الكاشيرية" icon="bar-chart-2" />
       {byEmp.map((emp, idx) => (
         <View key={idx} style={styles.perfRow}>
           <View style={styles.perfRank}>
@@ -410,18 +405,18 @@ function CashierPerformanceSection({ orders }: { orders: Order[] }) {
           <View style={styles.perfStats}>
             <View style={styles.perfStat}>
               <Text style={styles.perfStatNum}>{emp.count}</Text>
-              <Text style={styles.perfStatLabel}>{t("invoiceCount")}</Text>
+              <Text style={styles.perfStatLabel}>فاتورة</Text>
             </View>
             {emp.revenue > 0 && (
               <View style={[styles.perfStat, { backgroundColor: Colors.success + "15" }]}>
                 <Text style={[styles.perfStatNum, { color: Colors.success }]}>{fmtCurrency(emp.revenue)}</Text>
-                <Text style={[styles.perfStatLabel, { color: Colors.success }]}>{t("repTabRevenue")}</Text>
+                <Text style={[styles.perfStatLabel, { color: Colors.success }]}>إيرادات</Text>
               </View>
             )}
             {emp.insurance > 0 && (
               <View style={[styles.perfStat, { backgroundColor: Colors.gold + "18" }]}>
                 <Text style={[styles.perfStatNum, { color: Colors.gold }]}>{fmtCurrency(emp.insurance)}</Text>
-                <Text style={[styles.perfStatLabel, { color: Colors.gold }]}>{t("insurance_short")}</Text>
+                <Text style={[styles.perfStatLabel, { color: Colors.gold }]}>تأمين</Text>
               </View>
             )}
           </View>
@@ -433,15 +428,14 @@ function CashierPerformanceSection({ orders }: { orders: Order[] }) {
 
 // ─── Recent Activity ──────────────────────────────────────────────────────
 function RecentActivitySection({ orders }: { orders: Order[] }) {
-  const { t } = useLang();
   const recent = orders.slice(0, 8);
   if (recent.length === 0) return null;
 
   const statusConf = {
-    pending:     { label: t("waiting"),         color: Colors.statusPending },
-    in_progress: { label: t("preparing"),       color: Colors.statusInProgress },
-    done:        { label: t("statusDone"),       color: Colors.statusDone },
-    cancelled:   { label: t("statusCancelled"), color: Colors.statusCancelled },
+    pending: { label: "انتظار", color: Colors.statusPending },
+    in_progress: { label: "تحضير", color: Colors.statusInProgress },
+    done: { label: "تم", color: Colors.statusDone },
+    cancelled: { label: "ملغي", color: Colors.statusCancelled },
   };
 
   function overallStatus(order: Order) {
@@ -453,7 +447,7 @@ function RecentActivitySection({ orders }: { orders: Order[] }) {
 
   return (
     <View style={styles.section}>
-      <SectionHeader title={t("recentInvoices")} icon="list" />
+      <SectionHeader title="آخر الفواتير" icon="list" />
       {recent.map((o) => {
         const os = overallStatus(o);
         const conf = statusConf[os];
@@ -467,10 +461,10 @@ function RecentActivitySection({ orders }: { orders: Order[] }) {
               <Text style={styles.actName} numberOfLines={1}>{o.customerName}</Text>
               <View style={styles.actDepts}>
                 {depts.includes("halwa") && (
-                  <Text style={[styles.actDeptTag, { backgroundColor: Colors.halwa + "20", color: Colors.halwa }]}>{t("deptHalwaShort")}</Text>
+                  <Text style={[styles.actDeptTag, { backgroundColor: Colors.halwa + "20", color: Colors.halwa }]}>حلا</Text>
                 )}
                 {depts.includes("mawali") && (
-                  <Text style={[styles.actDeptTag, { backgroundColor: Colors.mawali + "20", color: Colors.mawali }]}>{t("deptMawaliShort")}</Text>
+                  <Text style={[styles.actDeptTag, { backgroundColor: Colors.mawali + "20", color: Colors.mawali }]}>موالح</Text>
                 )}
               </View>
             </View>
@@ -483,7 +477,7 @@ function RecentActivitySection({ orders }: { orders: Order[] }) {
                 <Text style={styles.actInsurance}>{fmtCurrency(o.totalAmount)}</Text>
               ) : o.insuranceAmount ? (
                 <Text style={[styles.actInsurance, { color: Colors.primaryLight }]}>
-                  {t("insurance_short")} {fmtCurrency(o.insuranceAmount)}
+                  تأمين {fmtCurrency(o.insuranceAmount)}
                 </Text>
               ) : null}
             </View>
@@ -496,52 +490,11 @@ function RecentActivitySection({ orders }: { orders: Order[] }) {
 
 // ─── Products Section ─────────────────────────────────────────────────────
 function ProductsSection() {
-  const { t } = useLang();
   const { products, deleteProduct, updateProduct } = useProducts();
-  const { companyId } = useCompany();
   const [modalVisible, setModalVisible] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
   const [filterDept, setFilterDept] = useState<"all" | "halwa" | "mawali" | "chocolate" | "cake">("all");
   const [search, setSearch] = useState("");
-  const [isSeedLoading, setIsSeedLoading] = useState(false);
-
-  const handleSeedCatalog = async () => {
-    if (products.length > 0) {
-      Alert.alert(
-        "زرع الكتالوج",
-        `يوجد ${products.length} منتج. هل تريد إعادة زرع الكتالوج الكامل (103 منتج)؟`,
-        [
-          { text: t("cancel"), style: "cancel" },
-          { text: t("adminSeedBtn"), style: "destructive", onPress: doSeed },
-        ]
-      );
-    } else {
-      doSeed();
-    }
-  };
-
-  const doSeed = async () => {
-    setIsSeedLoading(true);
-    try {
-      const catalog = buildLavivianeProducts();
-      const BATCH_SIZE = 400;
-      for (let i = 0; i < catalog.length; i += BATCH_SIZE) {
-        const batch = writeBatch(db);
-        catalog.slice(i, i + BATCH_SIZE).forEach((p) => {
-          const ref = doc(db, "companies", companyId, "products", p.id);
-          const { id, ...data } = p;
-          batch.set(ref, data);
-        });
-        await batch.commit();
-      }
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert(t("successTitle"), `تم إضافة ${catalog.length} منتج إلى Firestore بنجاح`);
-    } catch (e) {
-      Alert.alert(t("errTitle"), "فشل زرع الكتالوج، تحقق من الاتصال");
-    } finally {
-      setIsSeedLoading(false);
-    }
-  };
 
   const filtered = products.filter((p) => {
     if (filterDept !== "all" && p.department !== filterDept) return false;
@@ -560,11 +513,11 @@ function ProductsSection() {
 
   const handleDelete = (prod: Product) => {
     Alert.alert(
-      t("deleteProduct"),
-      `${t("deleteEmpConfirm")} "${prod.name}"؟`,
+      "حذف المنتج",
+      `هل تريد حذف "${prod.name}"؟`,
       [
-        { text: t("cancel"), style: "cancel" },
-        { text: t("deleteProduct"), style: "destructive", onPress: () => deleteProduct(prod.id) },
+        { text: "إلغاء", style: "cancel" },
+        { text: "حذف", style: "destructive", onPress: () => deleteProduct(prod.id) },
       ]
     );
   };
@@ -581,52 +534,39 @@ function ProductsSection() {
     <View style={styles.section}>
       {/* Header */}
       <View style={styles.prodHeader}>
-        <SectionHeader title={t("adminProductsMgmt")} icon="shopping-bag" />
-        <View style={{ flexDirection: "row", gap: 8 }}>
-          {companyId === LAVIVIANE_COMPANY_ID && (
-            <TouchableOpacity
-              style={[styles.seedBtn, isSeedLoading && { opacity: 0.6 }]}
-              onPress={handleSeedCatalog}
-              activeOpacity={0.85}
-              disabled={isSeedLoading}
-            >
-              <Feather name="database" size={13} color={Colors.primary} />
-              <Text style={styles.seedBtnText}>{isSeedLoading ? t("adminSeedLoading") : t("adminSeedBtn")}</Text>
-            </TouchableOpacity>
-          )}
-          <TouchableOpacity style={styles.addProdBtn} onPress={openAdd} activeOpacity={0.85}>
-            <Feather name="plus" size={15} color="#fff" />
-            <Text style={styles.addProdBtnText}>{t("adminAddProduct")}</Text>
-          </TouchableOpacity>
-        </View>
+        <SectionHeader title="إدارة المنتجات" icon="shopping-bag" />
+        <TouchableOpacity style={styles.addProdBtn} onPress={openAdd} activeOpacity={0.85}>
+          <Feather name="plus" size={15} color="#fff" />
+          <Text style={styles.addProdBtnText}>إضافة منتج</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Stats row */}
       <View style={styles.prodStats}>
         <View style={[styles.prodStatPill, { backgroundColor: Colors.primary + "12" }]}>
           <Text style={[styles.prodStatNum, { color: Colors.primary }]}>{products.length}</Text>
-          <Text style={[styles.prodStatLabel, { color: Colors.primary }]}>{t("archiveAll")}</Text>
+          <Text style={[styles.prodStatLabel, { color: Colors.primary }]}>الكل</Text>
         </View>
         <View style={[styles.prodStatPill, { backgroundColor: Colors.halwa + "12" }]}>
           <Text style={[styles.prodStatNum, { color: Colors.halwa }]}>{halwaCount}</Text>
-          <Text style={[styles.prodStatLabel, { color: Colors.halwa }]}>{t("deptHalwaShort")}</Text>
+          <Text style={[styles.prodStatLabel, { color: Colors.halwa }]}>حلا</Text>
         </View>
         <View style={[styles.prodStatPill, { backgroundColor: Colors.mawali + "12" }]}>
           <Text style={[styles.prodStatNum, { color: Colors.mawali }]}>{mawaliCount}</Text>
-          <Text style={[styles.prodStatLabel, { color: Colors.mawali }]}>{t("deptMawaliShort")}</Text>
+          <Text style={[styles.prodStatLabel, { color: Colors.mawali }]}>موالح</Text>
         </View>
         <View style={[styles.prodStatPill, { backgroundColor: Colors.chocolate + "12" }]}>
           <Text style={[styles.prodStatNum, { color: Colors.chocolate }]}>{chocolateCount}</Text>
-          <Text style={[styles.prodStatLabel, { color: Colors.chocolate }]}>{t("deptChocolateShort")}</Text>
+          <Text style={[styles.prodStatLabel, { color: Colors.chocolate }]}>شوكلت</Text>
         </View>
         <View style={[styles.prodStatPill, { backgroundColor: Colors.cake + "12" }]}>
           <Text style={[styles.prodStatNum, { color: Colors.cake }]}>{cakeCount}</Text>
-          <Text style={[styles.prodStatLabel, { color: Colors.cake }]}>{t("deptCakeShort")}</Text>
+          <Text style={[styles.prodStatLabel, { color: Colors.cake }]}>كيك</Text>
         </View>
         {unavailableCount > 0 && (
           <View style={[styles.prodStatPill, { backgroundColor: Colors.accent + "12" }]}>
             <Text style={[styles.prodStatNum, { color: Colors.accent }]}>{unavailableCount}</Text>
-            <Text style={[styles.prodStatLabel, { color: Colors.accent }]}>{t("adminProdUnavailable")}</Text>
+            <Text style={[styles.prodStatLabel, { color: Colors.accent }]}>غير متوفر</Text>
           </View>
         )}
       </View>
@@ -638,7 +578,7 @@ function ProductsSection() {
           style={styles.prodSearchInput}
           value={search}
           onChangeText={setSearch}
-          placeholder={t("adminProdSearch")}
+          placeholder="بحث عن منتج..."
           placeholderTextColor={Colors.textMuted}
           textAlign="right"
         />
@@ -653,7 +593,7 @@ function ProductsSection() {
       <View style={styles.prodFilterRow}>
         {(["all", "halwa", "mawali", "chocolate", "cake"] as const).map((f) => {
           const labels: Record<string, string> = {
-            all: t("archiveAll"), halwa: t("deptHalwaShort"), mawali: t("deptMawaliShort"), chocolate: t("deptChocolateShort"), cake: t("deptCakeShort"),
+            all: "الكل", halwa: "حلا", mawali: "موالح", chocolate: "شوكلت", cake: "كيك",
           };
           const colors: Record<string, string> = {
             all: Colors.primary, halwa: Colors.halwa, mawali: Colors.mawali,
@@ -676,7 +616,7 @@ function ProductsSection() {
       {filtered.length === 0 ? (
         <View style={styles.emptyBox}>
           <Feather name="shopping-bag" size={32} color={Colors.textMuted} />
-          <Text style={styles.emptyText}>{search ? t("adminNoResults") : t("adminNoProdMsg")}</Text>
+          <Text style={styles.emptyText}>{search ? "لا توجد نتائج" : "لا يوجد منتجات — أضف الآن"}</Text>
         </View>
       ) : (
         filtered.map((prod) => {
@@ -684,7 +624,7 @@ function ProductsSection() {
             halwa: Colors.halwa, mawali: Colors.mawali, chocolate: Colors.chocolate, cake: Colors.cake,
           };
           const deptLabelMap: Record<string, string> = {
-            halwa: t("deptHalwaShort"), mawali: t("deptMawaliShort"), chocolate: t("deptChocolateShort"), cake: t("deptCakeShort"),
+            halwa: "حلا", mawali: "موالح", chocolate: "شوكلت", cake: "كيك",
           };
           const deptIconMap: Record<string, string> = {
             halwa: "coffee", mawali: "package", chocolate: "gift", cake: "layers",
@@ -752,7 +692,6 @@ function ProductsSection() {
 
 // ─── Offers Section ───────────────────────────────────────────────────────
 function OffersSection() {
-  const { t } = useLang();
   const { offers, addOffer, updateOffer, deleteOffer } = useOffers();
   const [modalVisible, setModalVisible] = useState(false);
   const [editing, setEditing] = useState<Offer | null>(null);
@@ -792,10 +731,10 @@ function OffersSection() {
   };
 
   const handleSave = async () => {
-    if (!phone.trim()) { Alert.alert(t("requiredTitle"), "رقم الهاتف مطلوب"); return; }
+    if (!phone.trim()) { Alert.alert("خطأ", "رقم الهاتف مطلوب"); return; }
     const val = parseFloat(discountValue);
-    if (!val || val <= 0) { Alert.alert(t("errTitle"), "قيمة الخصم يجب أن تكون أكبر من صفر"); return; }
-    if (discountType === "percentage" && val > 100) { Alert.alert(t("errTitle"), "نسبة الخصم لا تتجاوز 100%"); return; }
+    if (!val || val <= 0) { Alert.alert("خطأ", "قيمة الخصم يجب أن تكون أكبر من صفر"); return; }
+    if (discountType === "percentage" && val > 100) { Alert.alert("خطأ", "نسبة الخصم لا تتجاوز 100%"); return; }
 
     const data = {
       phoneNumber: phone.trim(),
@@ -818,17 +757,17 @@ function OffersSection() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setModalVisible(false);
     } catch {
-      Alert.alert(t("errTitle"), "فشل الحفظ، حاول مرة أخرى");
+      Alert.alert("خطأ", "فشل الحفظ، حاول مرة أخرى");
     }
   };
 
   const handleDelete = (offer: Offer) => {
     Alert.alert(
-      t("deleteOffer"),
-      `${t("deleteEmpConfirm")} ${offer.phoneNumber}؟`,
+      "حذف العرض",
+      `هل تريد حذف عرض الزبون ${offer.phoneNumber}؟`,
       [
-        { text: t("cancel"), style: "cancel" },
-        { text: t("deleteOffer"), style: "destructive", onPress: () => deleteOffer(offer.id) },
+        { text: "إلغاء", style: "cancel" },
+        { text: "حذف", style: "destructive", onPress: () => deleteOffer(offer.id) },
       ]
     );
   };
@@ -843,36 +782,36 @@ function OffersSection() {
 
   return (
     <View style={styles.section}>
-      <SectionHeader title={t("adminOffersTitle")} icon="tag" />
+      <SectionHeader title="عروض الزبائن" icon="tag" />
 
       {/* Stats bar */}
       <View style={styles.offerStats}>
         <View style={styles.offerStatBox}>
           <Text style={styles.offerStatNum}>{offers.length}</Text>
-          <Text style={styles.offerStatLabel}>{t("total")}</Text>
+          <Text style={styles.offerStatLabel}>إجمالي</Text>
         </View>
         <View style={[styles.offerStatBox, { borderColor: Colors.success + "40" }]}>
           <Text style={[styles.offerStatNum, { color: Colors.success }]}>{activeCount}</Text>
-          <Text style={styles.offerStatLabel}>{t("adminOfferActive")}</Text>
+          <Text style={styles.offerStatLabel}>نشطة</Text>
         </View>
         <View style={[styles.offerStatBox, { borderColor: Colors.gold + "40" }]}>
           <Text style={[styles.offerStatNum, { color: Colors.gold }]}>{totalUsage}</Text>
-          <Text style={styles.offerStatLabel}>{t("adminOfferUsed")}</Text>
+          <Text style={styles.offerStatLabel}>مرة استُخدم</Text>
         </View>
       </View>
 
       {/* Add button */}
       <TouchableOpacity style={styles.addOfferBtn} onPress={openAdd} activeOpacity={0.85}>
         <Feather name="plus" size={16} color="#fff" />
-        <Text style={styles.addOfferBtnText}>{t("adminAddOffer")}</Text>
+        <Text style={styles.addOfferBtnText}>إضافة عرض جديد</Text>
       </TouchableOpacity>
 
       {/* List */}
       {offers.length === 0 ? (
         <View style={styles.offerEmpty}>
           <Feather name="tag" size={36} color={Colors.textMuted} />
-          <Text style={styles.offerEmptyText}>{t("adminNoOffersYet")}</Text>
-          <Text style={styles.offerEmptyHint}>{t("adminOfferHint")}</Text>
+          <Text style={styles.offerEmptyText}>لا توجد عروض بعد</Text>
+          <Text style={styles.offerEmptyHint}>أضف عروضاً مخصصة لزبائنك بحسب رقم الهاتف</Text>
         </View>
       ) : (
         offers.map((offer) => (
@@ -898,7 +837,7 @@ function OffersSection() {
                   onPress={() => toggleActive(offer)}
                 >
                   <Text style={[styles.offerStatusText, offer.active && styles.offerStatusTextActive]}>
-                    {offer.active ? t("offerStatusActive") : t("offerStatusPaused")}
+                    {offer.active ? "نشط" : "موقوف"}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => openEdit(offer)} hitSlop={8}>
@@ -955,7 +894,7 @@ function OffersSection() {
             <View style={styles.offerModalHandle} />
             <View style={styles.offerModalHeader}>
               <Text style={styles.offerModalTitle}>
-                {editing ? t("adminEditOffer") : t("adminAddOffer")}
+                {editing ? "تعديل العرض" : "إضافة عرض جديد"}
               </Text>
               <TouchableOpacity onPress={() => setModalVisible(false)} hitSlop={8}>
                 <Feather name="x" size={20} color={Colors.textMuted} />
@@ -1104,11 +1043,11 @@ function OffersSection() {
             {/* Actions */}
             <View style={styles.offerModalActions}>
               <TouchableOpacity style={styles.offerModalCancelBtn} onPress={() => setModalVisible(false)}>
-                <Text style={styles.offerModalCancelText}>{t("cancel")}</Text>
+                <Text style={styles.offerModalCancelText}>إلغاء</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.offerModalSaveBtn} onPress={handleSave} activeOpacity={0.85}>
                 <Feather name="check" size={16} color="#fff" />
-                <Text style={styles.offerModalSaveText}>{editing ? t("adminSaveEdits") : t("adminAddOfferSave")}</Text>
+                <Text style={styles.offerModalSaveText}>{editing ? "حفظ التعديلات" : "إضافة العرض"}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1120,18 +1059,17 @@ function OffersSection() {
 
 // ─── Price Requests Section ────────────────────────────────────────────────
 function PriceRequestsSection() {
-  const { t } = useLang();
   const { requests, approveRequest, rejectRequest } = usePriceChange();
   const pending = requests.filter((r) => r.status === "pending");
 
   return (
     <View style={styles.section}>
-      <SectionHeader title={t("adminPriceReqTitle")} icon="tag" />
+      <SectionHeader title="طلبات تعديل الأسعار" icon="tag" />
 
       {pending.length === 0 ? (
         <View style={styles.emptyBox}>
           <Feather name="check-circle" size={32} color={Colors.textMuted} />
-          <Text style={styles.emptyText}>{t("adminNoPendingReqs")}</Text>
+          <Text style={styles.emptyText}>لا توجد طلبات معلقة</Text>
         </View>
       ) : (
         pending.map((req) => (
@@ -1139,12 +1077,12 @@ function PriceRequestsSection() {
             <View style={styles.priceReqHeader}>
               <Text style={styles.priceReqProduct}>{req.productName}</Text>
               <View style={styles.priceReqBadge}>
-                <Text style={styles.priceReqBadgeText}>{t("adminPendingBadge")}</Text>
+                <Text style={styles.priceReqBadgeText}>معلق</Text>
               </View>
             </View>
 
             <View style={styles.priceReqRow}>
-              <Text style={styles.priceReqLabel}>{t("adminCurrentPrice")}</Text>
+              <Text style={styles.priceReqLabel}>السعر الحالي:</Text>
               <Text style={styles.priceReqCurrent}>{fmtCurrency(req.currentPrice)}</Text>
               <Feather name="arrow-left" size={12} color={Colors.textMuted} />
               <Text style={styles.priceReqNew}>{fmtCurrency(req.newPrice)}</Text>
@@ -1155,7 +1093,7 @@ function PriceRequestsSection() {
             ) : null}
 
             <Text style={styles.priceReqBy}>
-              {t("adminRequestBy")} {req.requestedBy.name} • {new Date(req.createdAt).toLocaleDateString("ar-SA")}
+              بواسطة: {req.requestedBy.name} • {new Date(req.createdAt).toLocaleDateString("ar-SA")}
             </Text>
 
             <View style={styles.priceReqActions}>
@@ -1165,7 +1103,7 @@ function PriceRequestsSection() {
                 activeOpacity={0.8}
               >
                 <Feather name="check" size={14} color="#fff" />
-                <Text style={styles.priceReqBtnText}>{t("adminApprove")}</Text>
+                <Text style={styles.priceReqBtnText}>موافقة</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.priceReqBtn, { backgroundColor: Colors.statusCancelled }]}
@@ -1173,7 +1111,7 @@ function PriceRequestsSection() {
                 activeOpacity={0.8}
               >
                 <Feather name="x" size={14} color="#fff" />
-                <Text style={styles.priceReqBtnText}>{t("adminReject")}</Text>
+                <Text style={styles.priceReqBtnText}>رفض</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -1183,7 +1121,7 @@ function PriceRequestsSection() {
       {/* Recent resolved */}
       {requests.filter((r) => r.status !== "pending").length > 0 && (
         <>
-          <Text style={styles.resolvedTitle}>{t("adminResolvedRecent")}</Text>
+          <Text style={styles.resolvedTitle}>المنجزة مؤخراً</Text>
           {requests
             .filter((r) => r.status !== "pending")
             .slice(0, 5)
@@ -1198,12 +1136,12 @@ function PriceRequestsSection() {
                     <Text style={[styles.priceReqBadgeText, {
                       color: req.status === "approved" ? "#16a34a" : Colors.statusCancelled,
                     }]}>
-                      {req.status === "approved" ? t("adminApprovedStatus") : t("adminRejectedStatus")}
+                      {req.status === "approved" ? "تمت الموافقة" : "مرفوض"}
                     </Text>
                   </View>
                 </View>
                 <View style={styles.priceReqRow}>
-                  <Text style={styles.priceReqLabel}>{t("adminCurrentPrice")}</Text>
+                  <Text style={styles.priceReqLabel}>التعديل:</Text>
                   <Text style={styles.priceReqCurrent}>{fmtCurrency(req.currentPrice)}</Text>
                   <Feather name="arrow-left" size={12} color={Colors.textMuted} />
                   <Text style={styles.priceReqNew}>{fmtCurrency(req.newPrice)}</Text>
@@ -1212,6 +1150,100 @@ function PriceRequestsSection() {
             ))}
         </>
       )}
+    </View>
+  );
+}
+
+// ─── Backup Section ────────────────────────────────────────────────────────
+function BackupSection() {
+  const { orders } = useOrders();
+  const { t } = useLang();
+  const [exporting, setExporting] = useState(false);
+
+  async function handleExport() {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setExporting(true);
+    try {
+      const customers: Record<string, { name: string; phone: string; orders: number; total: number }> = {};
+      orders.forEach((o) => {
+        const key = o.customerPhone;
+        if (!customers[key]) customers[key] = { name: o.customerName, phone: o.customerPhone, orders: 0, total: 0 };
+        customers[key].orders += 1;
+        customers[key].total += o.totalAmount ?? 0;
+      });
+      const payload = {
+        exportedAt: new Date().toISOString(),
+        orderCount: orders.length,
+        customerCount: Object.keys(customers).length,
+        orders: orders.map((o) => ({
+          orderNumber: o.orderNumber,
+          createdAt: o.createdAt,
+          customerName: o.customerName,
+          customerPhone: o.customerPhone,
+          orderType: o.orderType,
+          paymentMethod: o.paymentMethod,
+          totalAmount: o.totalAmount,
+          deliveryStatus: o.deliveryStatus,
+          items: o.items.map((i) => ({ name: i.name, quantity: i.quantity, price: i.price, department: i.department })),
+        })),
+        customers: Object.values(customers),
+      };
+      const json = JSON.stringify(payload, null, 2);
+      const filename = `laviviane-backup-${new Date().toISOString().slice(0, 10)}.json`;
+
+      if (Platform.OS === "web") {
+        const blob = new Blob([json], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+      } else {
+        const path = (FileSystem.documentDirectory ?? "") + filename;
+        await FileSystem.writeAsStringAsync(path, json);
+        if (await Sharing.isAvailableAsync()) {
+          await Sharing.shareAsync(path, { mimeType: "application/json" });
+        } else {
+          Alert.alert(t("backupData"), path);
+        }
+      }
+    } catch (e) {
+      Alert.alert("خطأ", String(e));
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  return (
+    <View style={styles.section}>
+      <SectionHeader title={t("backupData")} icon="database" />
+      <Text style={styles.featuresDesc}>{t("backupExportDesc")}</Text>
+      <View style={styles.backupRow}>
+        <View style={styles.backupStat}>
+          <Text style={styles.backupStatNum}>{orders.length}</Text>
+          <Text style={styles.backupStatLabel}>{t("invoiceCount")}</Text>
+        </View>
+        <View style={styles.backupStat}>
+          <Text style={styles.backupStatNum}>
+            {new Set(orders.map((o) => o.customerPhone)).size}
+          </Text>
+          <Text style={styles.backupStatLabel}>{t("custTotalCustomers")}</Text>
+        </View>
+      </View>
+      <TouchableOpacity
+        style={[styles.backupBtn, exporting && { opacity: 0.6 }]}
+        onPress={handleExport}
+        disabled={exporting}
+        activeOpacity={0.85}
+      >
+        {exporting ? (
+          <ActivityIndicator size="small" color="#fff" />
+        ) : (
+          <Feather name="download" size={16} color="#fff" />
+        )}
+        <Text style={styles.backupBtnText}>{t("backupExportOrders")}</Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -1269,7 +1301,7 @@ export default function AdminScreen() {
   const { orders } = useOrders();
   const { currentEmployee } = useEmployee();
   const { t } = useLang();
-  const [activeTab, setActiveTab] = useState<"overview" | "employees" | "products" | "offers" | "priceRequests" | "features">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "employees" | "products" | "offers" | "priceRequests" | "features" | "backup">("overview");
   const [showDev, setShowDev] = useState(false);
   const { pendingCount: priceReqCount } = usePriceChange();
 
@@ -1304,6 +1336,7 @@ export default function AdminScreen() {
     { key: "offers",        label: t("adminTabOffers"),    icon: "tag" },
     { key: "priceRequests", label: `${t("adminTabPrices")}${priceReqCount > 0 ? ` (${priceReqCount})` : ""}`, icon: "dollar-sign" },
     { key: "features",      label: t("adminTabFeatures"),  icon: "sliders" },
+    { key: "backup",        label: t("backupData"),        icon: "database" },
   ] as const;
 
   return (
@@ -1370,6 +1403,8 @@ export default function AdminScreen() {
           <PriceRequestsSection />
         ) : activeTab === "features" ? (
           <FeaturesSection />
+        ) : activeTab === "backup" ? (
+          <BackupSection />
         ) : (
           <EmployeesSection />
         )}
@@ -1579,11 +1614,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.gold, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 12,
   },
   addProdBtnText: { color: "#fff", fontSize: 13, fontWeight: "700" },
-  seedBtn: {
-    flexDirection: "row", alignItems: "center", gap: 6,
-    borderWidth: 1.5, borderColor: Colors.primary, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 12,
-  },
-  seedBtnText: { color: Colors.primary, fontSize: 12, fontWeight: "700" },
   prodStats: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
   prodStatPill: {
     flexDirection: "row", alignItems: "center", gap: 5,
@@ -1801,6 +1831,22 @@ const styles = StyleSheet.create({
   },
   priceReqBtnText: { fontSize: 13, fontWeight: "700", color: "#fff" },
   resolvedTitle: { fontSize: 13, fontWeight: "700", color: Colors.textSecondary, marginTop: 16, marginBottom: 8 },
+
+  // ─── Backup ───────────────────────────────────────────────────────────────
+  backupRow: { flexDirection: "row", gap: 12, marginBottom: 12 },
+  backupStat: {
+    flex: 1, alignItems: "center", backgroundColor: Colors.surfaceSecondary,
+    borderRadius: 12, paddingVertical: 14, borderWidth: 1, borderColor: Colors.borderLight,
+  },
+  backupStatNum: { fontSize: 24, fontWeight: "900", color: Colors.primary },
+  backupStatLabel: { fontSize: 11, color: Colors.textMuted, marginTop: 2 },
+  backupBtn: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
+    backgroundColor: Colors.primary, borderRadius: 12, paddingVertical: 14,
+    shadowColor: Colors.primary, shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3, shadowRadius: 6, elevation: 4,
+  },
+  backupBtnText: { fontSize: 15, fontWeight: "700", color: "#fff" },
 
   // ─── Features ─────────────────────────────────────────────────────────────
   featuresDesc: { fontSize: 13, color: Colors.textSecondary, marginBottom: 14 },

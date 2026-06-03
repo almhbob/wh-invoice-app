@@ -1,15 +1,10 @@
 import { Feather } from "@expo/vector-icons";
-import * as FileSystem from "expo-file-system/legacy";
 import * as Haptics from "expo-haptics";
 import * as Linking from "expo-linking";
-import * as Print from "expo-print";
-import * as Sharing from "expo-sharing";
 import React, { useMemo, useState } from "react";
 import {
-  ActivityIndicator,
   FlatList,
   Modal,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -181,14 +176,14 @@ function CustomerHistoryModal({
             <Text style={[styles.modalStatValue, { color: Colors.gold }]}>
               {fmtCurrency(customer.totalSpent)}
             </Text>
-            <Text style={styles.modalStatLabel}>{t("custTotalSpent")}</Text>
+            <Text style={styles.modalStatLabel}>إجمالي الإنفاق</Text>
           </View>
           <View style={styles.modalStatDivider} />
           <View style={styles.modalStatItem}>
             <Text style={[styles.modalStatValue, { color: Colors.success }]}>
               {totalItems}
             </Text>
-            <Text style={styles.modalStatLabel}>{t("custTotalItems")}</Text>
+            <Text style={styles.modalStatLabel}>إجمالي القطع</Text>
           </View>
         </View>
 
@@ -196,7 +191,7 @@ function CustomerHistoryModal({
         <View style={styles.favDeptRow}>
           <Feather name="star" size={13} color={Colors.gold} />
           <Text style={styles.favDeptText}>
-            {t("custFavDept")}:{" "}
+            القسم المفضل:{" "}
             <Text style={{ fontWeight: "700", color: Colors.text }}>
               {favDept}
             </Text>
@@ -214,7 +209,7 @@ function CustomerHistoryModal({
             activeOpacity={0.8}
           >
             <Feather name="phone" size={16} color="#fff" />
-            <Text style={styles.contactBtnText}>{t("custCall")}</Text>
+            <Text style={styles.contactBtnText}>اتصال</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -226,7 +221,7 @@ function CustomerHistoryModal({
             activeOpacity={0.8}
           >
             <Feather name="message-circle" size={16} color="#fff" />
-            <Text style={styles.contactBtnText}>{t("custWhatsappBtn")}</Text>
+            <Text style={styles.contactBtnText}>واتساب</Text>
           </TouchableOpacity>
         </View>
 
@@ -284,7 +279,6 @@ export default function CustomersScreen() {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Customer | null>(null);
   const [tab, setTab] = useState<TabKey>("all");
-  const [isExporting, setIsExporting] = useState<"pdf" | "csv" | null>(null);
 
   // Build customer map from orders
   const customers = useMemo<Customer[]>(() => {
@@ -338,150 +332,6 @@ export default function CustomersScreen() {
     }
     return list;
   }, [customers, search, tab]);
-
-  // ── Export helpers ───────────────────────────────────────────────────────
-  const buildExportRows = () =>
-    filtered.map((c) => ({
-      name: c.name,
-      phone: c.phone,
-      orders: c.orders.length,
-      totalSpent: c.totalSpent,
-      lastOrder: fmtDate(c.lastOrderAt, lang),
-      vip: isVIP(c) ? "⭐ VIP" : "",
-      favDept: getFavoriteDepartment(c.orders),
-      totalItems: getTotalItems(c.orders),
-    }));
-
-  const handleExportPDF = async () => {
-    setIsExporting("pdf");
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    try {
-      const rows = buildExportRows();
-      const now = new Date().toLocaleDateString("ar-SA");
-      const tableRows = rows
-        .map(
-          (r, i) => `
-          <tr style="background:${i % 2 === 0 ? "#fff" : "#f9f9f9"}">
-            <td>${i + 1}</td>
-            <td style="font-weight:700">${r.name}</td>
-            <td dir="ltr">${r.phone}</td>
-            <td>${r.orders}</td>
-            <td style="color:#16a34a;font-weight:700">${r.totalSpent.toFixed(2)} ر.س</td>
-            <td>${r.vip}</td>
-            <td>${r.favDept}</td>
-            <td>${r.totalItems}</td>
-            <td style="font-size:11px;color:#666">${r.lastOrder}</td>
-          </tr>`
-        )
-        .join("");
-
-      const html = `<!DOCTYPE html><html dir="rtl" lang="ar">
-      <head><meta charset="UTF-8"/>
-      <style>
-        * { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; margin:0; padding:0; box-sizing:border-box; }
-        body { padding: 24px; color: #1a1a1a; font-size: 13px; }
-        .header { text-align: center; margin-bottom: 20px; }
-        .header h1 { font-size: 22px; color: #7c3aed; margin-bottom: 4px; }
-        .header p { color: #666; font-size: 12px; }
-        .stats { display: flex; gap: 12px; margin-bottom: 20px; justify-content: center; }
-        .stat { background: #f3f0ff; border-radius: 8px; padding: 10px 20px; text-align: center; }
-        .stat-num { font-size: 20px; font-weight: 900; color: #7c3aed; }
-        .stat-label { font-size: 11px; color: #666; }
-        table { width: 100%; border-collapse: collapse; }
-        th { background: #7c3aed; color: #fff; padding: 8px 6px; font-size: 11px; text-align: center; }
-        td { padding: 7px 6px; border-bottom: 1px solid #eee; text-align: center; font-size: 12px; }
-        .footer { margin-top: 16px; text-align: center; color: #999; font-size: 11px; }
-        @media print { body { padding: 12px; } }
-      </style></head>
-      <body>
-        <div class="header">
-          <h1>🌹 Laviviane — قائمة العملاء</h1>
-          <p>تاريخ التصدير: ${now} · إجمالي العملاء: ${rows.length}</p>
-        </div>
-        <div class="stats">
-          <div class="stat"><div class="stat-num">${rows.length}</div><div class="stat-label">إجمالي العملاء</div></div>
-          <div class="stat"><div class="stat-num">${rows.filter((r) => r.vip).length}</div><div class="stat-label">⭐ VIP</div></div>
-          <div class="stat"><div class="stat-num">${rows.reduce((s, r) => s + r.orders, 0)}</div><div class="stat-label">إجمالي الطلبات</div></div>
-          <div class="stat"><div class="stat-num" style="color:#16a34a">${rows.reduce((s, r) => s + r.totalSpent, 0).toFixed(0)} ر.س</div><div class="stat-label">إجمالي الإيرادات</div></div>
-        </div>
-        <table>
-          <thead><tr>
-            <th>#</th><th>الاسم</th><th>الهاتف</th><th>الطلبات</th>
-            <th>الإجمالي</th><th>VIP</th><th>القسم المفضل</th><th>الأصناف</th><th>آخر طلب</th>
-          </tr></thead>
-          <tbody>${tableRows}</tbody>
-        </table>
-        <div class="footer">Laviviane Maison de Pâtisserie · ${now}</div>
-      </body></html>`;
-
-      if (Platform.OS === "web") {
-        const win = (globalThis as any).window?.open("", "_blank");
-        if (win) {
-          win.document.write(html);
-          win.document.close();
-          setTimeout(() => win.print(), 400);
-        }
-      } else {
-        const { uri } = await Print.printToFileAsync({ html, base64: false });
-        await Sharing.shareAsync(uri, {
-          mimeType: "application/pdf",
-          dialogTitle: t("custExportPDF"),
-        });
-      }
-    } finally {
-      setIsExporting(null);
-    }
-  };
-
-  const handleExportCSV = async () => {
-    setIsExporting("csv");
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    try {
-      const rows = buildExportRows();
-      const headers = ["الاسم", "الهاتف", "عدد الطلبات", "الإجمالي (ر.س)", "VIP", "القسم المفضل", "إجمالي الأصناف", "آخر طلب"];
-      const csvLines = [
-        headers.join(","),
-        ...rows.map((r) =>
-          [
-            `"${r.name}"`,
-            `"${r.phone}"`,
-            r.orders,
-            r.totalSpent.toFixed(2),
-            r.vip ? "VIP" : "",
-            `"${r.favDept}"`,
-            r.totalItems,
-            `"${r.lastOrder}"`,
-          ].join(",")
-        ),
-      ];
-      // UTF-8 BOM so Arabic renders correctly in Excel
-      const csv = "﻿" + csvLines.join("\n");
-      const fileName = `laviviane-customers-${new Date().toISOString().slice(0, 10)}.csv`;
-
-      if (Platform.OS === "web") {
-        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-        const url = URL.createObjectURL(blob);
-        const a = (globalThis as any).document?.createElement("a");
-        if (a) {
-          a.href = url;
-          a.download = fileName;
-          a.click();
-          URL.revokeObjectURL(url);
-        }
-      } else {
-        const fileUri = (FileSystem.documentDirectory ?? "") + fileName;
-        await FileSystem.writeAsStringAsync(fileUri, csv, {
-          encoding: FileSystem.EncodingType.UTF8,
-        });
-        await Sharing.shareAsync(fileUri, {
-          mimeType: "text/csv",
-          dialogTitle: t("custExportCSV"),
-        });
-      }
-    } finally {
-      setIsExporting(null);
-    }
-  };
 
   const tabs: { key: TabKey; label: string }[] = [
     { key: "all", label: t("custAll") },
@@ -552,48 +402,6 @@ export default function CustomersScreen() {
           </TouchableOpacity>
         ))}
       </View>
-
-      {/* ── Export Bar ── */}
-      {filtered.length > 0 && (
-        <View style={styles.exportBar}>
-          <Text style={styles.exportCount}>
-            {filtered.length} {t("custTotalCustomers").replace("إجمالي ", "")}
-          </Text>
-          <View style={styles.exportBtns}>
-            <TouchableOpacity
-              style={[styles.exportBtn, isExporting === "pdf" && styles.exportBtnDisabled]}
-              onPress={handleExportPDF}
-              disabled={isExporting !== null}
-              activeOpacity={0.8}
-            >
-              {isExporting === "pdf" ? (
-                <ActivityIndicator size="small" color={Colors.accent} />
-              ) : (
-                <Feather name="file-text" size={14} color={Colors.accent} />
-              )}
-              <Text style={[styles.exportBtnText, { color: Colors.accent }]}>
-                {t("custExportPDF")}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.exportBtn, styles.exportBtnExcel, isExporting === "csv" && styles.exportBtnDisabled]}
-              onPress={handleExportCSV}
-              disabled={isExporting !== null}
-              activeOpacity={0.8}
-            >
-              {isExporting === "csv" ? (
-                <ActivityIndicator size="small" color={Colors.success} />
-              ) : (
-                <Feather name="download" size={14} color={Colors.success} />
-              )}
-              <Text style={[styles.exportBtnText, { color: Colors.success }]}>
-                {t("custExportCSV")}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
 
       {/* ── Customer List ── */}
       <FlatList
@@ -841,44 +649,6 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
   },
   tabBtnTextActive: { color: "#fff" },
-
-  // Export bar
-  exportBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingBottom: 8,
-  },
-  exportCount: {
-    fontSize: 12,
-    color: Colors.textMuted,
-    fontWeight: "600",
-  },
-  exportBtns: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  exportBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    backgroundColor: Colors.accent + "12",
-    borderWidth: 1,
-    borderColor: Colors.accent + "30",
-  },
-  exportBtnExcel: {
-    backgroundColor: Colors.success + "12",
-    borderColor: Colors.success + "30",
-  },
-  exportBtnDisabled: { opacity: 0.5 },
-  exportBtnText: {
-    fontSize: 12,
-    fontWeight: "700",
-  },
 
   // Customer card
   customerCard: {

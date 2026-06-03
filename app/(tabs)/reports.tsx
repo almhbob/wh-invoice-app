@@ -1,16 +1,12 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
-import * as Print from "expo-print";
-import * as Sharing from "expo-sharing";
 import React, { useMemo, useState } from "react";
 import {
-  Alert,
   Platform,
   ScrollView,
   Share,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -23,7 +19,7 @@ import { fmtCurrency } from "@/utils/dateUtils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type Filter = "today" | "week" | "month" | "all" | "custom";
+type Filter = "today" | "week" | "month" | "all";
 type Tab = "revenue" | "products" | "cashier" | "delivery";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -754,8 +750,6 @@ export default function ReportsScreen() {
 
   const [filter, setFilter] = useState<Filter>("month");
   const [activeTab, setActiveTab] = useState<Tab>("revenue");
-  const [customFrom, setCustomFrom] = useState("");
-  const [customTo, setCustomTo] = useState("");
 
   const TAB_ITEMS: { key: Tab; label: string; icon: string }[] = [
     { key: "revenue",  label: t("repTabRevenue"),  icon: "trending-up" },
@@ -764,24 +758,16 @@ export default function ReportsScreen() {
     { key: "delivery", label: t("repTabDelivery"), icon: "truck" },
   ];
 
-  const filtered = useMemo(() => {
-    if (filter === "custom") {
-      return orders.filter((o) => {
-        const d = o.createdAt.slice(0, 10);
-        if (customFrom && d < customFrom) return false;
-        if (customTo && d > customTo) return false;
-        return true;
-      });
-    }
-    return orders.filter((o) => isInFilter(o.createdAt, filter));
-  }, [orders, filter, customFrom, customTo]);
+  const filtered = useMemo(
+    () => orders.filter((o) => isInFilter(o.createdAt, filter)),
+    [orders, filter]
+  );
 
   const FILTERS: { key: Filter; label: string }[] = [
-    { key: "today",  label: t("repFilterToday") },
-    { key: "week",   label: t("repFilterWeek") },
-    { key: "month",  label: t("repFilterMonth") },
-    { key: "all",    label: t("repFilterAll") },
-    { key: "custom", label: t("repFilterCustom") },
+    { key: "today", label: t("repFilterToday") },
+    { key: "week",  label: t("repFilterWeek") },
+    { key: "month", label: t("repFilterMonth") },
+    { key: "all",   label: t("repFilterAll") },
   ];
 
   function handleFilterChange(key: Filter) {
@@ -794,148 +780,55 @@ export default function ReportsScreen() {
     setActiveTab(key);
   }
 
-  async function handleShare() {
-    Haptics.selectionAsync();
-
-    // Build share text
-    const totalRevenue = filtered.reduce((s, o) => s + (o.totalAmount ?? 0), 0);
-    const orderCount   = filtered.length;
-
+  function buildReportText(reportOrders: typeof orders, label: string) {
+    const totalRevenue = reportOrders.reduce((s, o) => s + (o.totalAmount ?? 0), 0);
+    const orderCount   = reportOrders.length;
     const byPayment: Record<string, number> = { cash: 0, card: 0, transfer: 0 };
-    filtered.forEach((o) => {
+    reportOrders.forEach((o) => {
       const pm = o.paymentMethod ?? "cash";
       byPayment[pm] = (byPayment[pm] ?? 0) + (o.totalAmount ?? 0);
     });
-
-    const deliveryCount = filtered.filter((o) => o.orderType === "delivery").length;
-    const pickupCount   = filtered.filter((o) => o.orderType !== "delivery").length;
-
-    // Top product by qty
+    const deliveryCount = reportOrders.filter((o) => o.orderType === "delivery").length;
+    const pickupCount   = reportOrders.filter((o) => o.orderType !== "delivery").length;
     const qtyMap: Record<string, number> = {};
-    filtered.forEach((o) =>
-      o.items.forEach((item) => {
-        qtyMap[item.name] = (qtyMap[item.name] ?? 0) + item.quantity;
-      })
-    );
-    const topProductEntries = Object.entries(qtyMap).sort((a, b) => b[1] - a[1]);
-    const topProduct = topProductEntries[0];
-
-    // Top cashier by order count
+    reportOrders.forEach((o) => o.items.forEach((item) => {
+      qtyMap[item.name] = (qtyMap[item.name] ?? 0) + item.quantity;
+    }));
+    const topProduct = Object.entries(qtyMap).sort((a, b) => b[1] - a[1])[0];
     const cashierMap: Record<string, number> = {};
-    filtered.forEach((o) => {
+    reportOrders.forEach((o) => {
       const name = o.cashierEmployee?.name ?? "غير معروف";
       cashierMap[name] = (cashierMap[name] ?? 0) + 1;
     });
-    const topCashierEntries = Object.entries(cashierMap).sort((a, b) => b[1] - a[1]);
-    const topCashier = topCashierEntries[0];
-
+    const topCashier = Object.entries(cashierMap).sort((a, b) => b[1] - a[1])[0];
     const dateStr = new Date().toLocaleDateString("ar-SA");
-    const label   = filterLabel(filter);
-
-    const text = [
+    return [
       `📊 تقرير — ${label} ${dateStr}`,
       "══════════════════════════════",
       `📦 الطلبات: ${orderCount}`,
       `💰 الإيرادات: ${fmtCurrency(totalRevenue)}`,
       `   نقد: ${fmtCurrency(byPayment.cash)} | شبكة: ${fmtCurrency(byPayment.card)} | تحويل: ${fmtCurrency(byPayment.transfer)}`,
       `🚗 توصيل: ${deliveryCount} | 🛍 استلام: ${pickupCount}`,
-      topProduct
-        ? `🏆 أعلى منتج: ${topProduct[0]} (${topProduct[1]} وحدة)`
-        : null,
-      topCashier
-        ? `👤 أعلى كاشير: ${topCashier[0]} (${topCashier[1]} طلب)`
-        : null,
+      topProduct ? `🏆 أعلى منتج: ${topProduct[0]} (${topProduct[1]} وحدة)` : null,
+      topCashier ? `👤 أعلى كاشير: ${topCashier[0]} (${topCashier[1]} طلب)` : null,
       "══════════════════════════════",
-    ]
-      .filter(Boolean)
-      .join("\n");
-
-    try {
-      await Share.share({ message: text });
-    } catch (_) {
-      // user cancelled or permission denied
-    }
+    ].filter(Boolean).join("\n");
   }
 
-  async function handlePrintPDF() {
+  async function handleDailyReport() {
     Haptics.selectionAsync();
-    const totalRevenue = filtered.reduce((s, o) => s + (o.totalAmount ?? 0), 0);
-    const orderCount = filtered.length;
-    const byPayment: Record<string, number> = { cash: 0, card: 0, transfer: 0 };
-    filtered.forEach((o) => { byPayment[o.paymentMethod ?? "cash"] = (byPayment[o.paymentMethod ?? "cash"] ?? 0) + (o.totalAmount ?? 0); });
-    const qtyMap: Record<string, number> = {};
-    filtered.forEach((o) => o.items.forEach((item) => { qtyMap[item.name] = (qtyMap[item.name] ?? 0) + item.quantity; }));
-    const topProducts = Object.entries(qtyMap).sort((a, b) => b[1] - a[1]).slice(0, 15);
-    const cashierMap: Record<string, number> = {};
-    filtered.forEach((o) => { const n = o.cashierEmployee?.name ?? "غير معروف"; cashierMap[n] = (cashierMap[n] ?? 0) + 1; });
-    const topCashiers = Object.entries(cashierMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
-    const deliveryCount = filtered.filter((o) => o.orderType === "delivery").length;
-    const label = filterLabel(filter);
-    const dateStr = new Date().toLocaleDateString("ar-SA");
-    const avg = orderCount > 0 ? fmtCurrency(totalRevenue / orderCount) : "—";
-
-    const html = `<!DOCTYPE html>
-<html dir="rtl" lang="ar">
-<head><meta charset="utf-8"><title>تقرير ${label}</title>
-<style>
-  *{margin:0;padding:0;box-sizing:border-box}
-  body{font-family:Tahoma,Arial,sans-serif;direction:rtl;padding:32px;color:#1a1a2e;background:#fff;font-size:13px}
-  h1{font-size:22px;color:#b8860b;text-align:center;margin-bottom:4px;letter-spacing:1px}
-  .brand{text-align:center;color:#888;font-size:12px;margin-bottom:6px}
-  .period{text-align:center;font-size:13px;font-weight:700;color:#1a1a2e;margin-bottom:24px}
-  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:28px}
-  .card{background:#fdf8f0;border-radius:10px;padding:14px 16px;border-right:4px solid #b8860b}
-  .card-val{font-size:20px;font-weight:900;color:#1a1a2e}
-  .card-lbl{font-size:11px;color:#999;margin-top:3px}
-  h2{font-size:14px;color:#b8860b;margin:24px 0 10px;padding-bottom:5px;border-bottom:2px solid #b8860b33}
-  table{width:100%;border-collapse:collapse;font-size:12px}
-  th{background:#b8860b;color:#fff;padding:9px 12px;text-align:right;font-weight:700}
-  td{padding:8px 12px;border-bottom:1px solid #eee}
-  tr:nth-child(even) td{background:#fafafa}
-  .pay-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee}
-  .pay-lbl{color:#555}
-  .pay-val{font-weight:700;color:#1a1a2e}
-  .footer{margin-top:32px;text-align:center;font-size:10px;color:#bbb}
-  @media print{body{padding:16px}}
-</style></head>
-<body>
-  <h1>Laviviane — Maison de Pâtisserie</h1>
-  <p class="brand">تقرير مبيعات</p>
-  <p class="period">${label} · ${dateStr}</p>
-  <div class="cards">
-    <div class="card"><div class="card-val">${fmtCurrency(totalRevenue)}</div><div class="card-lbl">إجمالي الإيرادات</div></div>
-    <div class="card"><div class="card-val">${orderCount}</div><div class="card-lbl">عدد الطلبات</div></div>
-    <div class="card"><div class="card-val">${avg}</div><div class="card-lbl">متوسط الطلب</div></div>
-  </div>
-  <h2>طريقة الدفع</h2>
-  <div class="pay-row"><span class="pay-lbl">نقد</span><span class="pay-val">${fmtCurrency(byPayment.cash ?? 0)}</span></div>
-  <div class="pay-row"><span class="pay-lbl">شبكة (بطاقة)</span><span class="pay-val">${fmtCurrency(byPayment.card ?? 0)}</span></div>
-  <div class="pay-row"><span class="pay-lbl">تحويل بنكي</span><span class="pay-val">${fmtCurrency(byPayment.transfer ?? 0)}</span></div>
-  <div class="pay-row"><span class="pay-lbl">توصيل / استلام</span><span class="pay-val">${deliveryCount} توصيل · ${orderCount - deliveryCount} استلام</span></div>
-  ${topProducts.length > 0 ? `
-  <h2>أعلى المنتجات مبيعاً</h2>
-  <table><tr><th>#</th><th>المنتج</th><th>الكمية</th></tr>
-  ${topProducts.map(([n, q], i) => `<tr><td>${i + 1}</td><td>${n}</td><td>${q} وحدة</td></tr>`).join("")}
-  </table>` : ""}
-  ${topCashiers.length > 0 ? `
-  <h2>أداء الكاشيرين</h2>
-  <table><tr><th>#</th><th>الموظف</th><th>الطلبات</th></tr>
-  ${topCashiers.map(([n, c], i) => `<tr><td>${i + 1}</td><td>${n}</td><td>${c} طلب</td></tr>`).join("")}
-  </table>` : ""}
-  <p class="footer">أُنشئ بواسطة تطبيق فوترة · ${new Date().toLocaleString("ar-SA")}</p>
-</body></html>`;
-
-    if (Platform.OS === "web") {
-      const win = window.open("", "_blank");
-      if (win) { win.document.write(html); win.document.close(); setTimeout(() => win.print(), 300); }
-      return;
+    const todayOrders = orders.filter((o) => isInFilter(o.createdAt, "today"));
+    const text = buildReportText(todayOrders, t("dailyReportBtn"));
+    if (Platform.OS === "web" && typeof navigator !== "undefined" && navigator.clipboard) {
+      try { await navigator.clipboard.writeText(text); } catch (_) {}
     }
-    try {
-      const { uri } = await Print.printToFileAsync({ html, base64: false });
-      await Sharing.shareAsync(uri, { mimeType: "application/pdf", dialogTitle: `تقرير ${label}` });
-    } catch {
-      Alert.alert(t("errTitle"), "تعذّر إنشاء PDF");
-    }
+    try { await Share.share({ message: text }); } catch (_) {}
+  }
+
+  async function handleShare() {
+    Haptics.selectionAsync();
+    const text = buildReportText(filtered, filterLabel(filter));
+    try { await Share.share({ message: text }); } catch (_) {}
   }
 
   return (
@@ -944,10 +837,19 @@ export default function ReportsScreen() {
       <View style={styles.headerRow}>
         <Text style={styles.screenTitle}>{t("titleReports")}</Text>
         <View style={{ flexDirection: "row", gap: 8 }}>
-          <TouchableOpacity style={styles.shareBtn} onPress={handlePrintPDF} activeOpacity={0.75}>
-            <Feather name="file-text" size={18} color={Colors.primary} />
+          <TouchableOpacity
+            style={[styles.shareBtn, { backgroundColor: Colors.primary + "12" }]}
+            onPress={handleDailyReport}
+            activeOpacity={0.75}
+          >
+            <Feather name="calendar" size={16} color={Colors.primary} />
+            <Text style={{ fontSize: 11, fontWeight: "700", color: Colors.primary }}>{t("dailyReportBtn")}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.shareBtn} onPress={handleShare} activeOpacity={0.75}>
+          <TouchableOpacity
+            style={styles.shareBtn}
+            onPress={handleShare}
+            activeOpacity={0.75}
+          >
             <Feather name="share-2" size={18} color={Colors.primary} />
           </TouchableOpacity>
         </View>
@@ -976,31 +878,6 @@ export default function ReportsScreen() {
           </TouchableOpacity>
         ))}
       </View>
-
-      {/* Custom date range inputs */}
-      {filter === "custom" && (
-        <View style={styles.customRangeRow}>
-          <Feather name="calendar" size={14} color={Colors.textMuted} />
-          <Text style={styles.customRangeLabel}>{t("repFrom")}</Text>
-          <TextInput
-            style={styles.customRangeInput}
-            value={customFrom}
-            onChangeText={setCustomFrom}
-            placeholder="2025-01-01"
-            placeholderTextColor={Colors.textMuted}
-            keyboardType="numeric"
-          />
-          <Text style={styles.customRangeLabel}>{t("repTo")}</Text>
-          <TextInput
-            style={styles.customRangeInput}
-            value={customTo}
-            onChangeText={setCustomTo}
-            placeholder="2025-12-31"
-            placeholderTextColor={Colors.textMuted}
-            keyboardType="numeric"
-          />
-        </View>
-      )}
 
       {/* Tab bar */}
       <View style={styles.tabBar}>
@@ -1089,7 +966,6 @@ const styles = StyleSheet.create({
     color: Colors.text,
   },
   shareBtn: {
-    width: 38,
     height: 38,
     borderRadius: 10,
     backgroundColor: Colors.surface,
@@ -1097,6 +973,9 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     alignItems: "center",
     justifyContent: "center",
+    flexDirection: "row",
+    gap: 5,
+    paddingHorizontal: 10,
   },
 
   // Filter pills
@@ -1106,32 +985,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     flexWrap: "wrap",
-  },
-  customRangeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingBottom: 8,
-    flexWrap: "wrap",
-  },
-  customRangeLabel: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: Colors.textSecondary,
-  },
-  customRangeInput: {
-    flex: 1,
-    minWidth: 100,
-    maxWidth: 130,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    fontSize: 13,
-    color: Colors.text,
   },
   filterBtn: {
     paddingHorizontal: 14,

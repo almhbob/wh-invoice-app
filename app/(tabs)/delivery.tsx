@@ -78,7 +78,13 @@ const URGENCY_COLOR: Record<Urgency, string> = {
   none: Colors.textMuted,
 };
 
-// URGENCY_LABEL moved inside DeliveryCard to use translations
+const URGENCY_LABEL: Record<Urgency, string> = {
+  overdue: "متأخر",
+  urgent: "عاجل",
+  soon: "قريباً",
+  ok: "",
+  none: "",
+};
 
 const URGENCY_RANK: Record<Urgency, number> = {
   overdue: 0, urgent: 1, soon: 2, ok: 3, none: 4,
@@ -107,7 +113,6 @@ function openWhatsApp(phone: string, message?: string) {
 // ── Stats Bar ─────────────────────────────────────────────────────────────────
 
 function StatsBar({ deliveryOrders }: { deliveryOrders: Order[] }) {
-  const { t } = useLang();
   const pendingCount = deliveryOrders.filter((o) => !isDelivered(o)).length;
   const deliveredCount = deliveryOrders.filter((o) => isDelivered(o)).length;
   const todayCount = deliveryOrders.filter((o) => isToday(o.createdAt)).length;
@@ -121,25 +126,25 @@ function StatsBar({ deliveryOrders }: { deliveryOrders: Order[] }) {
       <View style={styles.statsRow}>
         <View style={[styles.statCard, { borderColor: Colors.gold }]}>
           <Text style={[styles.statNum, { color: Colors.gold }]}>{pendingCount}</Text>
-          <Text style={styles.statLabel}>{t("delPending")}</Text>
+          <Text style={styles.statLabel}>بانتظار</Text>
         </View>
         <View style={[styles.statCard, { borderColor: "#16a34a" }]}>
           <Text style={[styles.statNum, { color: "#16a34a" }]}>{deliveredCount}</Text>
-          <Text style={styles.statLabel}>{t("delDelivered")}</Text>
+          <Text style={styles.statLabel}>تم التوصيل</Text>
         </View>
         <View style={[styles.statCard, { borderColor: Colors.primary }]}>
           <Text style={[styles.statNum, { color: Colors.primary }]}>{todayCount}</Text>
-          <Text style={styles.statLabel}>{t("delTodayCount")}</Text>
+          <Text style={styles.statLabel}>طلبات اليوم</Text>
         </View>
         {overdueCount > 0 ? (
           <View style={[styles.statCard, { borderColor: "#dc2626" }]}>
             <Text style={[styles.statNum, { color: "#dc2626" }]}>{overdueCount}</Text>
-            <Text style={styles.statLabel}>{t("delOverdue")}</Text>
+            <Text style={styles.statLabel}>متأخرة</Text>
           </View>
         ) : (
           <View style={[styles.statCard, { borderColor: Colors.border }]}>
             <Text style={[styles.statNum, { color: Colors.textMuted }]}>{deliveryOrders.length}</Text>
-            <Text style={styles.statLabel}>{t("delAllTotal")}</Text>
+            <Text style={styles.statLabel}>الإجمالي</Text>
           </View>
         )}
       </View>
@@ -147,12 +152,12 @@ function StatsBar({ deliveryOrders }: { deliveryOrders: Order[] }) {
       <View style={styles.statsRow2}>
         <View style={styles.revenueCard}>
           <Feather name="dollar-sign" size={14} color={Colors.success} />
-          <Text style={styles.revenueLabel}>{t("delRevenue")}</Text>
+          <Text style={styles.revenueLabel}>إجمالي التوصيل</Text>
           <Text style={styles.revenueValue}>{fmtCurrency(totalRevenue)}</Text>
         </View>
         <View style={styles.completionCard}>
           <View style={styles.completionTop}>
-            <Text style={styles.completionLabel}>{t("delCompletionRate")}</Text>
+            <Text style={styles.completionLabel}>نسبة الإنجاز</Text>
             <Text style={styles.completionPct}>{completionPct}%</Text>
           </View>
           <View style={styles.progressBg}>
@@ -179,7 +184,6 @@ function DriverModal({
   onClose: () => void;
   onAssign: (id: string, driver: { name: string; employeeId: string }) => void;
 }) {
-  const { t } = useLang();
   const { employees } = useEmployee();
   const [driverSearch, setDriverSearch] = useState("");
   const active = employees
@@ -196,7 +200,7 @@ function DriverModal({
       <Pressable style={styles.modalOverlay} onPress={onClose}>
         <Pressable style={styles.modalSheet} onPress={() => {}}>
           <View style={styles.modalHandle} />
-          <Text style={styles.modalTitle}>{t("delChooseDriver")}</Text>
+          <Text style={styles.modalTitle}>اختر السائق</Text>
 
           {/* Search */}
           <View style={styles.driverSearchRow}>
@@ -205,7 +209,7 @@ function DriverModal({
               style={styles.driverSearchInput}
               value={driverSearch}
               onChangeText={setDriverSearch}
-              placeholder={t("delSearchDriver")}
+              placeholder="ابحث باسم السائق..."
               placeholderTextColor={Colors.textMuted}
               textAlign="right"
             />
@@ -220,7 +224,7 @@ function DriverModal({
             <View style={styles.currentDriverRow}>
               <Feather name="user-check" size={14} color={Colors.success} />
               <Text style={styles.currentDriverText}>
-                {t("delCurrentDriver")}{" "}
+                السائق الحالي:{" "}
                 <Text style={{ fontWeight: "800" }}>{currentDriver.name}</Text>
               </Text>
               <TouchableOpacity
@@ -229,7 +233,7 @@ function DriverModal({
                   onClose();
                 }}
               >
-                <Text style={styles.removeDriverText}>{t("delRemoveDriver")}</Text>
+                <Text style={styles.removeDriverText}>إلغاء الإسناد</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -286,24 +290,15 @@ function DriverModal({
 function DeliveryCard({
   order,
   lang,
-  deliveringId,
   onMarkDelivered,
   onOpenDriverModal,
 }: {
   order: Order;
   lang: string;
-  deliveringId: string | null;
   onMarkDelivered: (id: string) => void;
   onOpenDriverModal: (order: Order) => void;
 }) {
   const { t } = useLang();
-  const urgencyLabels: Record<Urgency, string> = {
-    overdue: t("delOverdue"),
-    urgent: t("delUrgent"),
-    soon: t("delSoon"),
-    ok: "",
-    none: "",
-  };
   const delivered = isDelivered(order);
   const urgency = getUrgency(order);
   const urgencyColor = URGENCY_COLOR[urgency];
@@ -320,13 +315,13 @@ function DeliveryCard({
             <Text style={styles.orderNum}>#{order.orderNumber}</Text>
             {ready && (
               <View style={[styles.urgencyBadge, { backgroundColor: "#7c3aed20" }]}>
-                <Text style={[styles.urgencyText, { color: "#7c3aed" }]}>{t("delOrderReady")}</Text>
+                <Text style={[styles.urgencyText, { color: "#7c3aed" }]}>✓ جاهز</Text>
               </View>
             )}
             {!delivered && !ready && urgency !== "none" && (
               <View style={[styles.urgencyBadge, { backgroundColor: urgencyColor + "20" }]}>
                 <Text style={[styles.urgencyText, { color: urgencyColor }]}>
-                  {urgencyLabels[urgency]}
+                  {URGENCY_LABEL[urgency]}
                 </Text>
               </View>
             )}
@@ -383,7 +378,7 @@ function DeliveryCard({
           </Text>
           <View style={styles.mapBtn}>
             <Feather name="navigation" size={12} color="#fff" />
-            <Text style={styles.mapBtnText}>{t("delMapBtn")}</Text>
+            <Text style={styles.mapBtnText}>خريطة</Text>
           </View>
         </TouchableOpacity>
       ) : null}
@@ -437,13 +432,13 @@ function DeliveryCard({
         <Feather name="truck" size={14} color={hasDriver ? Colors.primary : Colors.textMuted} />
         {hasDriver ? (
           <Text style={styles.driverAssignedText}>
-            {t("delDriverLabel")}{" "}
+            السائق:{" "}
             <Text style={{ fontWeight: "800", color: Colors.primary }}>
               {order.deliveryDriver!.name}
             </Text>
           </Text>
         ) : (
-          <Text style={styles.driverUnassignedText}>{t("delAssignDriverHint")}</Text>
+          <Text style={styles.driverUnassignedText}>اضغط لإسناد سائق</Text>
         )}
         <Feather name="chevron-left" size={14} color={Colors.textMuted} />
       </TouchableOpacity>
@@ -462,22 +457,22 @@ function DeliveryCard({
           activeOpacity={0.8}
         >
           <Feather name="message-circle" size={15} color="#fff" />
-          <Text style={styles.waReadyBtnText}>{t("delWaReadyBtn")}</Text>
+          <Text style={styles.waReadyBtnText}>WhatsApp — طلبك جاهز</Text>
         </TouchableOpacity>
       )}
 
       {/* Mark delivered */}
       {!delivered && (
         <TouchableOpacity
-          style={[styles.deliverBtn, deliveringId === order.id && { opacity: 0.6 }]}
-          onPress={() => deliveringId !== order.id && onMarkDelivered(order.id)}
+          style={styles.deliverBtn}
+          onPress={() => {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            onMarkDelivered(order.id);
+          }}
           activeOpacity={0.8}
-          disabled={deliveringId === order.id}
         >
-          <Feather name={deliveringId === order.id ? "loader" : "check-circle"} size={16} color="#fff" />
-          <Text style={styles.deliverBtnText}>
-            {deliveringId === order.id ? "..." : t("markDelivered")}
-          </Text>
+          <Feather name="check-circle" size={16} color="#fff" />
+          <Text style={styles.deliverBtnText}>{t("markDelivered")}</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -497,7 +492,6 @@ export default function DeliveryScreen() {
   const [tab, setTab] = useState<TabKey>("all");
   const [sort, setSort] = useState<SortKey>("time");
   const [driverModalOrder, setDriverModalOrder] = useState<Order | null>(null);
-  const [deliveringId, setDeliveringId] = useState<string | null>(null);
 
   const deliveryOrders = useMemo(
     () => orders.filter((o) => o.orderType === "delivery"),
@@ -572,7 +566,7 @@ export default function DeliveryScreen() {
             color={Colors.primary}
           />
           <Text style={styles.sortBtnText}>
-            {sort === "time" ? t("delSortByTime") : t("delSortByDate")}
+            {sort === "time" ? "حسب الوقت" : "حسب التاريخ"}
           </Text>
         </TouchableOpacity>
       </View>
@@ -596,12 +590,7 @@ export default function DeliveryScreen() {
           <DeliveryCard
             order={item}
             lang={lang}
-            deliveringId={deliveringId}
-            onMarkDelivered={async (id) => {
-              setDeliveringId(id);
-              try { await updateDeliveryStatus(id, "delivered"); Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success); }
-              finally { setDeliveringId(null); }
-            }}
+            onMarkDelivered={(id) => updateDeliveryStatus(id, "delivered")}
             onOpenDriverModal={setDriverModalOrder}
           />
         )}

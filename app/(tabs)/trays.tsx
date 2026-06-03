@@ -3,7 +3,6 @@ import * as Haptics from "expo-haptics";
 import * as Linking from "expo-linking";
 import React, { useMemo, useState } from "react";
 import {
-  Alert,
   FlatList,
   StyleSheet,
   Text,
@@ -31,7 +30,6 @@ export default function TraysScreen() {
   const { currentEmployee } = useEmployee();
   const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<"pending" | "returned">("pending");
-  const [returningId, setReturningId] = useState<string | null>(null);
 
   const trayOrders = useMemo(
     () => orders.filter((o) => o.insuranceAmount && o.insuranceAmount > 0),
@@ -45,30 +43,12 @@ export default function TraysScreen() {
 
   const displayed = tab === "pending" ? pending : returned;
 
-  const handleMarkReturned = (id: string, orderNum?: number, customerName?: string) => {
-    Alert.alert(
-      t("traysMarkRet"),
-      `${customerName ?? ""} — #${orderNum ?? ""}`,
-      [
-        { text: t("cancel"), style: "cancel" },
-        {
-          text: t("traysMarkRet"),
-          onPress: async () => {
-            setReturningId(id);
-            try {
-              await markTrayReturned(
-                id,
-                currentEmployee
-                  ? { name: currentEmployee.name, employeeId: currentEmployee.employeeId }
-                  : undefined
-              );
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            } finally {
-              setReturningId(null);
-            }
-          },
-        },
-      ]
+  const handleMarkReturned = (id: string) => {
+    markTrayReturned(
+      id,
+      currentEmployee
+        ? { name: currentEmployee.name, employeeId: currentEmployee.employeeId }
+        : undefined
     );
   };
 
@@ -130,26 +110,16 @@ export default function TraysScreen() {
         }
         renderItem={({ item: order }) => {
           const isReturned = !!order.trayReturned;
-          const daysSince = Math.floor((Date.now() - new Date(order.createdAt).getTime()) / 86400000);
-          const isOverdue = !isReturned && daysSince > 3;
           return (
-            <View style={[styles.card, { borderLeftColor: isOverdue ? Colors.accent : isReturned ? "#16a34a" : Colors.gold }]}>
+            <View style={[styles.card, { borderLeftColor: isReturned ? "#16a34a" : Colors.gold }]}>
               <View style={styles.cardHeader}>
                 <View>
                   <Text style={styles.orderNum}>#{order.orderNumber}</Text>
                   <Text style={styles.orderDate}>{fmtDate(order.createdAt, lang)}</Text>
                 </View>
-                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                  {isOverdue && (
-                    <View style={styles.overdueBadge}>
-                      <Feather name="alert-circle" size={11} color="#fff" />
-                      <Text style={styles.overdueText}>{t("trayOverdue")} {daysSince} {t("trayOverdueDays")}</Text>
-                    </View>
-                  )}
-                  <View style={[styles.amountBadge, { backgroundColor: Colors.gold + "20" }]}>
-                    <Feather name="shield" size={12} color={Colors.gold} />
-                    <Text style={styles.amountText}>{fmtCurrency(order.insuranceAmount ?? 0)}</Text>
-                  </View>
+                <View style={[styles.amountBadge, { backgroundColor: Colors.gold + "20" }]}>
+                  <Feather name="shield" size={12} color={Colors.gold} />
+                  <Text style={styles.amountText}>{fmtCurrency(order.insuranceAmount ?? 0)}</Text>
                 </View>
               </View>
 
@@ -183,14 +153,13 @@ export default function TraysScreen() {
               )}
 
               <TouchableOpacity
-                style={[styles.returnBtn, isReturned && styles.returnBtnDone, returningId === order.id && { opacity: 0.6 }]}
-                onPress={() => !isReturned && returningId !== order.id && handleMarkReturned(order.id, order.orderNumber, order.customerName)}
+                style={[styles.returnBtn, isReturned && styles.returnBtnDone]}
+                onPress={() => !isReturned && handleMarkReturned(order.id)}
                 activeOpacity={0.8}
-                disabled={isReturned || returningId === order.id}
               >
-                <Feather name={isReturned ? "check-circle" : returningId === order.id ? "loader" : "rotate-ccw"} size={14} color={isReturned ? "#16a34a" : Colors.primary} />
+                <Feather name={isReturned ? "check-circle" : "rotate-ccw"} size={14} color={isReturned ? "#16a34a" : Colors.primary} />
                 <Text style={[styles.returnBtnText, isReturned && { color: "#16a34a" }]}>
-                  {returningId === order.id ? "..." : isReturned ? t("traysReturned2") : t("traysMarkRet")}
+                  {isReturned ? t("traysReturned2") : t("traysMarkRet")}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -235,8 +204,6 @@ const styles = StyleSheet.create({
   orderDate: { fontSize: 11, color: Colors.textMuted, marginTop: 2 },
   amountBadge: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
   amountText: { fontSize: 13, fontWeight: "700", color: Colors.gold },
-  overdueBadge: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 20, backgroundColor: Colors.accent },
-  overdueText: { fontSize: 11, fontWeight: "700", color: "#fff" },
   customerRow: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 6 },
   customerName: { flex: 1, fontSize: 14, fontWeight: "700", color: Colors.text },
   customerPhone: { fontSize: 12, color: Colors.textMuted },
