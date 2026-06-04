@@ -648,8 +648,6 @@ export default function CashierScreen() {
   };
 
   const handleSubmit = () => {
-    if (!customerName.trim()) { Alert.alert("خطأ", t("errName")); return; }
-    if (!customerPhone.trim()) { Alert.alert("خطأ", t("errPhone")); return; }
     const filteredItems = items.filter((i) => i.name.trim() && i.quantity > 0);
     if (filteredItems.length === 0 && !chocoCard) { Alert.alert("خطأ", t("errItems")); return; }
     if (!currentEmployee) {
