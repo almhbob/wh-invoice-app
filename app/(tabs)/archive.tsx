@@ -492,14 +492,7 @@ const styles = StyleSheet.create({
   customerRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   customerName: { fontSize: 14, fontWeight: "700", color: Colors.primary },
   customerPhone: { fontSize: 13, color: Colors.textSecondary },
-<<<<<<< ours
-  deptSection: {
-    borderLeftWidth: 3, paddingLeft: 12, gap: 4,
-    paddingVertical: 6,
-  },
-=======
   deptSection: { borderRightWidth: 3, paddingRight: 12, paddingLeft: 4, gap: 4, paddingVertical: 6 },
->>>>>>> theirs
   deptSectionTitle: { fontSize: 12, fontWeight: "700", marginBottom: 2 },
   archiveItem: { fontSize: 13, color: Colors.text, lineHeight: 20 },
   statusRow: {
