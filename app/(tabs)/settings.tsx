@@ -347,7 +347,7 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: "#F0F4F8",
+    backgroundColor: Colors.background,
   },
 
   // Title bar
@@ -542,7 +542,8 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.borderLight,
   },
   langOptionActive: {
-    // subtle highlight via text color, no background needed
+    backgroundColor: Colors.surfaceSecondary,
+    borderRadius: 12,
   },
   langOptionLeft: {
     flex: 1,

@@ -10,6 +10,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -17,7 +18,6 @@ import { Colors } from "@/constants/colors";
 import { canDo, ROLE_CAN_ACCESS_ADMIN } from "@/constants/rbac";
 import { useCompany } from "@/context/CompanyContext";
 import { useEmployee } from "@/context/EmployeeContext";
-import { useLang } from "@/context/LanguageContext";
 import { Department, Order, useOrders } from "@/context/OrdersContext";
 import { usePriceChange } from "@/context/PriceChangeContext";
 
@@ -38,7 +38,7 @@ function formatTime(d: Date) {
   return d.toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true });
 }
 
-function formatDateFull(d: Date) {
+function formatDate(d: Date) {
   return d.toLocaleDateString("ar-SA", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
 }
 
@@ -55,105 +55,150 @@ function fmtAgo(iso: string): string {
 // ── Status config ──────────────────────────────────────────────────────────────
 
 const STATUS_CFG = {
-  pending:     { label: "انتظار",   bg: "#FEF3C7", text: "#92400E", dot: "#F59E0B" },
-  in_progress: { label: "جاري",    bg: "#DBEAFE", text: "#1E40AF", dot: "#3B82F6" },
-  done:        { label: "مكتمل",   bg: "#D1FAE5", text: "#065F46", dot: "#10B981" },
-  cancelled:   { label: "ملغي",    bg: "#FEE2E2", text: "#991B1B", dot: "#EF4444" },
+  pending:     { label: "انتظار",  bg: "#FEF3C7", text: "#92400E", dot: "#F59E0B" },
+  in_progress: { label: "جاري",   bg: "#DBEAFE", text: "#1E40AF", dot: "#3B82F6" },
+  done:        { label: "مكتمل",  bg: "#D1FAE5", text: "#065F46", dot: "#10B981" },
+  cancelled:   { label: "ملغي",   bg: "#FEE2E2", text: "#991B1B", dot: "#EF4444" },
 };
+
+// ── Action definitions ─────────────────────────────────────────────────────────
+
+const ACTIONS_BASE = [
+  { label: "كاشير",    icon: "file-text",   route: "cashier",   grad: ["#C9A84C", "#8B6508"] as [string, string] },
+  { label: "الأرشيف",  icon: "archive",     route: "archive",   grad: ["#2563EB", "#1D4ED8"] as [string, string] },
+  { label: "التقارير", icon: "bar-chart-2", route: "reports",   grad: ["#7C3AED", "#6D28D9"] as [string, string] },
+  { label: "توصيل",    icon: "truck",       route: "delivery",  grad: ["#0D9488", "#0F766E"] as [string, string] },
+  { label: "العملاء",  icon: "users",       route: "customers", grad: ["#0369A1", "#075985"] as [string, string] },
+  { label: "حلا",      icon: "coffee",      route: "halwa",     grad: ["#B45309", "#92400E"] as [string, string] },
+  { label: "مولي",     icon: "package",     route: "mawali",    grad: ["#0E7490", "#155E75"] as [string, string] },
+  { label: "شوكولاتة", icon: "gift",        route: "chocolate", grad: ["#78350F", "#451A03"] as [string, string] },
+  { label: "كيك",      icon: "layers",      route: "cake",      grad: ["#9D174D", "#831843"] as [string, string] },
+  { label: "تغليف",    icon: "box",         route: "packaging", grad: ["#166534", "#14532D"] as [string, string] },
+];
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
-function KpiCard({
-  icon, label, value, sub, accent, gradient,
-}: {
-  icon: string; label: string; value: string | number; sub?: string;
-  accent: string; gradient: [string, string];
-}) {
-  return (
-    <View style={[kpi.card, { borderTopColor: accent }]}>
-      <LinearGradient colors={gradient} style={kpi.iconWrap} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-        <Feather name={icon as any} size={20} color="#fff" />
-      </LinearGradient>
-      <View style={kpi.body}>
-        <Text style={kpi.value} numberOfLines={1}>{value}</Text>
-        <Text style={kpi.label}>{label}</Text>
-        {!!sub && <Text style={kpi.sub}>{sub}</Text>}
-      </View>
-    </View>
-  );
-}
-
 function ActionTile({
-  label, icon, accent, gradStart, gradEnd, badge, onPress,
+  label, icon, grad, badge, size, onPress,
 }: {
-  label: string; icon: string; accent: string;
-  gradStart: string; gradEnd: string;
-  badge?: number; onPress: () => void;
+  label: string; icon: string; grad: [string, string];
+  badge?: number; size: number; onPress: () => void;
 }) {
   const scale = useRef(new Animated.Value(1)).current;
-  const press  = () => { Animated.spring(scale, { toValue: 0.92, useNativeDriver: true, speed: 50 }).start(() => Animated.spring(scale, { toValue: 1, useNativeDriver: true, speed: 50 }).start()); onPress(); };
+  const press = () => {
+    Animated.sequence([
+      Animated.spring(scale, { toValue: 0.92, useNativeDriver: true, speed: 60 }),
+      Animated.spring(scale, { toValue: 1,    useNativeDriver: true, speed: 60 }),
+    ]).start();
+    onPress();
+  };
+  const isWide = size >= 120;
   return (
-    <Animated.View style={[at.wrap, { transform: [{ scale }] }]}>
-      <TouchableOpacity style={at.touch} onPress={press} activeOpacity={0.85}>
-        <LinearGradient colors={[gradStart, gradEnd]} style={at.gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-          <View style={at.iconCircle}>
-            <Feather name={icon as any} size={26} color={accent} />
+    <Animated.View style={{ width: size, transform: [{ scale }] }}>
+      <TouchableOpacity onPress={press} activeOpacity={0.85} style={{ borderRadius: 16, overflow: "hidden" }}>
+        <LinearGradient colors={grad} style={{ height: isWide ? 108 : 88, alignItems: "center", justifyContent: "center", gap: 8, paddingHorizontal: 8 }} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+          <View style={{ width: isWide ? 50 : 42, height: isWide ? 50 : 42, borderRadius: isWide ? 25 : 21, backgroundColor: "rgba(255,255,255,0.18)", alignItems: "center", justifyContent: "center" }}>
+            <Feather name={icon as any} size={isWide ? 24 : 20} color="rgba(255,255,255,0.95)" />
           </View>
-          <Text style={[at.label, { color: "#fff" }]} numberOfLines={2}>{label}</Text>
-          {!!badge && (
-            <View style={at.badgeBox}>
-              <Text style={at.badgeText}>{badge > 99 ? "99+" : badge}</Text>
-            </View>
-          )}
+          <Text style={{ color: "#fff", fontSize: isWide ? 12 : 11, fontWeight: "800", textAlign: "center" }} numberOfLines={1}>{label}</Text>
         </LinearGradient>
+        {!!badge && (
+          <View style={{ position: "absolute", top: 7, right: 7, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: "#EF4444", alignItems: "center", justifyContent: "center", paddingHorizontal: 4, borderWidth: 2, borderColor: "#fff" }}>
+            <Text style={{ color: "#fff", fontSize: 9, fontWeight: "900" }}>{badge > 99 ? "99+" : badge}</Text>
+          </View>
+        )}
       </TouchableOpacity>
     </Animated.View>
   );
 }
 
+function KpiCard({
+  icon, label, value, sub, grad, cardWidth, grow,
+}: {
+  icon: string; label: string; value: string | number;
+  sub?: string; grad: [string, string]; cardWidth?: number; grow?: boolean;
+}) {
+  return (
+    <View style={[kpi.card, grow ? { flex: 1 } : { width: cardWidth }]}>
+      <LinearGradient colors={grad} style={kpi.icon} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+        <Feather name={icon as any} size={20} color="#fff" />
+      </LinearGradient>
+      <View style={kpi.body}>
+        <Text style={kpi.value} numberOfLines={1}>{value}</Text>
+        <Text style={kpi.label} numberOfLines={1}>{label}</Text>
+        {!!sub && <Text style={kpi.sub} numberOfLines={1}>{sub}</Text>}
+      </View>
+    </View>
+  );
+}
+
+function AlertRow({ text, color, icon, onPress }: { text: string; color: string; icon: string; onPress?: () => void }) {
+  return (
+    <TouchableOpacity style={[al.wrap, { borderColor: color }]} onPress={onPress} activeOpacity={0.8}>
+      <View style={[al.dot, { backgroundColor: color }]} />
+      <Feather name={icon as any} size={13} color={color} />
+      <Text style={[al.txt, { color }]} numberOfLines={1}>{text}</Text>
+      {onPress && <Feather name="chevron-left" size={12} color={color} />}
+    </TouchableOpacity>
+  );
+}
+
 function OrderRow({ order, onPress }: { order: Order; onPress: () => void }) {
-  const status = overallStatus(order);
-  const cfg    = STATUS_CFG[status];
+  const cfg = STATUS_CFG[overallStatus(order)];
   return (
     <TouchableOpacity style={or.row} onPress={onPress} activeOpacity={0.7}>
-      <View style={or.numCol}>
-        <Text style={or.num}>#{order.orderNumber}</Text>
-      </View>
-      <View style={or.nameCol}>
+      <Text style={or.num}>#{order.orderNumber}</Text>
+      <View style={or.mid}>
         <Text style={or.name} numberOfLines={1}>{order.customerName || "—"}</Text>
         <Text style={or.ago}>{fmtAgo(order.createdAt)}</Text>
       </View>
-      <View style={or.statusCol}>
-        <View style={[or.pill, { backgroundColor: cfg.bg }]}>
-          <View style={[or.dot, { backgroundColor: cfg.dot }]} />
-          <Text style={[or.pillText, { color: cfg.text }]}>{cfg.label}</Text>
-        </View>
+      <View style={[or.pill, { backgroundColor: cfg.bg }]}>
+        <View style={[or.dot, { backgroundColor: cfg.dot }]} />
+        <Text style={[or.pillTxt, { color: cfg.text }]}>{cfg.label}</Text>
       </View>
       <Text style={or.amount}>{(order.totalAmount ?? 0).toFixed(0)} ﷼</Text>
     </TouchableOpacity>
   );
 }
 
-function AlertBanner({ text, color, icon, onPress }: { text: string; color: string; icon: string; onPress?: () => void }) {
+function SectionHead({ icon, title, cta, onCta }: { icon: string; title: string; cta?: string; onCta?: () => void }) {
   return (
-    <TouchableOpacity style={[ab.wrap, { borderColor: color, backgroundColor: color + "12" }]} onPress={onPress} activeOpacity={0.8}>
-      <View style={[ab.iconBox, { backgroundColor: color + "25" }]}>
-        <Feather name={icon as any} size={15} color={color} />
+    <View style={sec.row}>
+      <View style={sec.left}>
+        <View style={sec.iconBox}>
+          <Feather name={icon as any} size={13} color={Colors.gold} />
+        </View>
+        <Text style={sec.title}>{title}</Text>
       </View>
-      <Text style={[ab.text, { color }]}>{text}</Text>
-      {onPress && <Feather name="chevron-left" size={14} color={color} />}
-    </TouchableOpacity>
+      {!!cta && (
+        <TouchableOpacity onPress={onCta} style={sec.cta}>
+          <Text style={sec.ctaTxt}>{cta}</Text>
+          <Feather name="chevron-left" size={11} color={Colors.gold} />
+        </TouchableOpacity>
+      )}
+    </View>
   );
 }
 
 // ── Main screen ────────────────────────────────────────────────────────────────
 
-const IS_WEB = Platform.OS === "web";
-
 export default function HomeScreen() {
-  const router   = useRouter();
-  const insets   = useSafeAreaInsets();
-  const { t }    = useLang();
+  const router  = useRouter();
+  const insets  = useSafeAreaInsets();
+  const { width: winW } = useWindowDimensions();
+
+  // Responsive breakpoint — wide enough to show sidebar + side-by-side layout
+  const isWide = winW >= 700;
+  const PADDING = isWide ? 24 : 16;
+  const TILE_GAP = isWide ? 12 : 10;
+  const TILE_COLS = isWide ? 4 : 2;
+  const TILE_W = isWide
+    ? 120
+    : Math.floor((winW - PADDING * 2 - TILE_GAP) / 2);
+  const KPI_W = isWide
+    ? undefined            // flex:1 handled below
+    : Math.floor((winW - PADDING * 2 - 10) / 2);
+
   const { company }         = useCompany();
   const { currentEmployee } = useEmployee();
   const { orders }          = useOrders();
@@ -165,293 +210,272 @@ export default function HomeScreen() {
     return () => clearInterval(id);
   }, []);
 
-  const isAdmin = canDo(currentEmployee?.role, ROLE_CAN_ACCESS_ADMIN);
+  const isAdmin  = canDo(currentEmployee?.role, ROLE_CAN_ACCESS_ADMIN);
   const todayStr = new Date().toDateString();
 
   const todayOrders = useMemo(
     () => orders.filter(o => new Date(o.createdAt).toDateString() === todayStr),
-    [orders, todayStr]
+    [orders, todayStr],
   );
   const todayRevenue = useMemo(
     () => todayOrders.reduce((s, o) => s + (o.totalAmount ?? 0), 0),
-    [todayOrders]
+    [todayOrders],
   );
-  const avgTicket = todayOrders.length ? todayRevenue / todayOrders.length : 0;
-  const pendingCnt = useMemo(
-    () => orders.filter(o => overallStatus(o) === "pending").length,
-    [orders]
-  );
-  const inProgressCnt = useMemo(
-    () => orders.filter(o => overallStatus(o) === "in_progress").length,
-    [orders]
-  );
+  const avgTicket  = todayOrders.length ? todayRevenue / todayOrders.length : 0;
+  const pendingCnt = useMemo(() => orders.filter(o => overallStatus(o) === "pending").length,     [orders]);
+  const inProgCnt  = useMemo(() => orders.filter(o => overallStatus(o) === "in_progress").length, [orders]);
   const recentOrders = useMemo(
     () => [...orders]
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      .slice(0, 10),
-    [orders]
+      .slice(0, 12),
+    [orders],
+  );
+  const uniqueCustomers = useMemo(
+    () => new Set(todayOrders.map(o => o.customerName).filter(Boolean)).size || todayOrders.length,
+    [todayOrders],
   );
 
-  const navigate = (route: string) => router.navigate(`/(tabs)/${route}` as any);
+  const go = (route: string) => router.navigate(`/(tabs)/${route}` as any);
 
   const actions = [
-    { label: "كاشير",     icon: "file-text", route: "cashier",   gradStart: "#B8860B", gradEnd: "#8B6914", accent: "#FBBF24" },
-    { label: "الأرشيف",   icon: "archive",   route: "archive",   gradStart: "#1E3A5F", gradEnd: "#0F2340", accent: "#93C5FD" },
-    { label: "التقارير",  icon: "bar-chart-2", route: "reports", gradStart: "#5B21B6", gradEnd: "#3B0764", accent: "#C4B5FD" },
-    { label: "توصيل",     icon: "truck",     route: "delivery",  gradStart: "#0F766E", gradEnd: "#134E4A", accent: "#6EE7B7" },
-    { label: "العملاء",   icon: "users",     route: "customers", gradStart: "#0369A1", gradEnd: "#0C4A6E", accent: "#7DD3FC" },
-    { label: "حلا",       icon: "coffee",    route: "halwa",     gradStart: "#7C2D12", gradEnd: "#431407", accent: "#FCA5A5" },
-    { label: "مولي",      icon: "package",   route: "mawali",    gradStart: "#164E63", gradEnd: "#0C4A6E", accent: "#A5F3FC" },
-    { label: "شوكولاتة",  icon: "gift",      route: "chocolate", gradStart: "#3B1A0A", gradEnd: "#1C0A00", accent: "#D4956A" },
-    { label: "كيك",       icon: "layers",    route: "cake",      gradStart: "#831843", gradEnd: "#4C0519", accent: "#F9A8D4" },
-    { label: "التغليف",   icon: "box",       route: "packaging", gradStart: "#14532D", gradEnd: "#052E16", accent: "#86EFAC" },
-    ...(isAdmin ? [{ label: "الإدارة", icon: "settings", route: "admin", gradStart: "#1E3A5F", gradEnd: "#0A1628", accent: "#93C5FD", badge: pendingCount || undefined }] : []),
-  ] as { label: string; icon: string; route: string; gradStart: string; gradEnd: string; accent: string; badge?: number }[];
+    ...ACTIONS_BASE,
+    ...(isAdmin
+      ? [{ label: "الإدارة", icon: "settings", route: "admin", grad: ["#374151", "#1F2937"] as [string, string], badge: pendingCount || undefined }]
+      : []),
+  ];
 
   return (
-    <View style={styles.screen}>
-      {/* ── POS Header ─────────────────────────────────────────────────────── */}
-      <LinearGradient
-        colors={["#0F1C35", "#1A2E50"]}
-        style={[styles.header, { paddingTop: insets.top + 12 }]}
-        start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-      >
-        {/* Left: company */}
-        <View style={styles.headerLeft}>
-          <View style={styles.logoPlaceholder}>
-            <Feather name="shopping-bag" size={18} color={Colors.gold} />
-          </View>
-          <View>
-            <Text style={styles.companyName} numberOfLines={1}>{company.name || "فاتورة"}</Text>
-            <Text style={styles.empName} numberOfLines={1}>
-              {currentEmployee ? `${currentEmployee.name} · ${currentEmployee.role}` : ""}
-            </Text>
-          </View>
-        </View>
+    <View style={s.screen}>
 
-        {/* Center: clock */}
-        <View style={styles.clockBox}>
-          <Text style={styles.clockTime}>{formatTime(now)}</Text>
-          <Text style={styles.clockDate}>{formatDateFull(now)}</Text>
-        </View>
+      {/* ── Wide header (desktop / tablet) ──────────────────────────────────── */}
+      {isWide && (
+        <LinearGradient
+          colors={["#0A1628", "#122044"]}
+          style={[s.wideHeader, { paddingTop: insets.top + 14 }]}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+        >
+          <View style={s.hBrand}>
+            <LinearGradient colors={[Colors.gold, "#8B6508"]} style={s.hLogo} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+              <Feather name="shopping-bag" size={20} color="#fff" />
+            </LinearGradient>
+            <View>
+              <Text style={s.hCompany} numberOfLines={1}>{company?.name || "فاتورة"}</Text>
+              {currentEmployee && <Text style={s.hEmp} numberOfLines={1}>{currentEmployee.name}</Text>}
+            </View>
+          </View>
+          <View style={s.hClock}>
+            <Text style={s.hTime}>{formatTime(now)}</Text>
+            <Text style={s.hDate}>{formatDate(now)}</Text>
+          </View>
+          <View style={s.hRight}>
+            <View style={s.liveChip}>
+              <View style={s.liveDot} />
+              <Text style={s.liveTxt}>مباشر</Text>
+            </View>
+            <TouchableOpacity style={s.newBtn} onPress={() => go("cashier")}>
+              <Feather name="plus" size={14} color="#0A1628" />
+              <Text style={s.newBtnTxt}>فاتورة جديدة</Text>
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
+      )}
 
-        {/* Right: live indicator */}
-        <View style={styles.headerRight}>
-          <View style={styles.liveDot} />
-          <Text style={styles.liveText}>مباشر</Text>
-          <TouchableOpacity style={styles.newOrderBtn} onPress={() => navigate("cashier")}>
-            <Feather name="plus" size={14} color="#fff" />
-            <Text style={styles.newOrderText}>فاتورة جديدة</Text>
+      {/* ── Narrow top bar (mobile — below _layout header) ────────────────── */}
+      {!isWide && (
+        <View style={s.narrowBar}>
+          <View style={s.nClockRow}>
+            <Feather name="clock" size={12} color={Colors.gold} />
+            <Text style={s.nTime}>{formatTime(now)}</Text>
+          </View>
+          <TouchableOpacity style={s.nNewBtn} onPress={() => go("cashier")}>
+            <Feather name="plus" size={13} color="#fff" />
+            <Text style={s.nNewTxt}>فاتورة جديدة</Text>
           </TouchableOpacity>
         </View>
-      </LinearGradient>
+      )}
 
       {/* ── Scrollable body ─────────────────────────────────────────────────── */}
       <ScrollView
-        style={styles.body}
-        contentContainerStyle={[styles.bodyContent, { paddingBottom: insets.bottom + 80 }]}
+        style={s.body}
+        contentContainerStyle={[s.content, {
+          paddingHorizontal: PADDING,
+          paddingBottom: insets.bottom + 90,
+        }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Alerts */}
         {(pendingCount > 0 || pendingCnt > 0) && (
-          <View style={styles.alertsRow}>
+          <View style={s.alerts}>
             {pendingCount > 0 && (
-              <AlertBanner
-                text={`${pendingCount} طلب تغيير سعر يحتاج موافقة`}
-                color="#F59E0B" icon="alert-triangle"
-                onPress={() => navigate("admin")}
-              />
+              <AlertRow text={`${pendingCount} طلب تغيير سعر ينتظر الموافقة`} color="#F59E0B" icon="alert-triangle" onPress={() => go("admin")} />
             )}
             {pendingCnt > 0 && (
-              <AlertBanner
-                text={`${pendingCnt} فاتورة لم تبدأ في التنفيذ بعد`}
-                color="#3B82F6" icon="clock"
-                onPress={() => navigate("archive")}
-              />
+              <AlertRow text={`${pendingCnt} فاتورة لم تبدأ بعد`} color="#3B82F6" icon="clock" onPress={() => go("archive")} />
             )}
           </View>
         )}
 
-        {/* KPI Row */}
-        <View style={styles.kpiRow}>
-          <KpiCard
-            icon="trending-up" label="إيرادات اليوم"
-            value={`${todayRevenue.toLocaleString("ar-SA", { minimumFractionDigits: 0 })} ﷼`}
-            sub={`متوسط الفاتورة: ${avgTicket.toFixed(0)} ﷼`}
-            accent="#10B981" gradient={["#059669", "#065F46"]}
-          />
-          <KpiCard
-            icon="file-text" label="فواتير اليوم"
-            value={todayOrders.length}
-            sub={`الإجمالي: ${orders.length} فاتورة`}
-            accent="#3B82F6" gradient={["#2563EB", "#1E3A8A"]}
-          />
-          <KpiCard
-            icon="clock" label="في الانتظار"
-            value={pendingCnt}
-            sub={`${inProgressCnt} قيد التنفيذ`}
-            accent="#F59E0B" gradient={["#D97706", "#92400E"]}
-          />
-          <KpiCard
-            icon="award" label="متوسط الفاتورة"
-            value={`${avgTicket.toFixed(0)} ﷼`}
-            sub="متوسط اليوم"
-            accent="#8B5CF6" gradient={["#7C3AED", "#4C1D95"]}
-          />
+        {/* KPI cards — 2×2 on narrow, 4-in-row on wide */}
+        <View style={[s.kpiRow, { gap: isWide ? 16 : 10 }]}>
+          {[
+            { icon: "trending-up", label: "إيرادات اليوم",   value: `${todayRevenue.toLocaleString("ar-SA")} ﷼`, sub: `${todayOrders.length} فاتورة`, grad: ["#059669", "#064E3B"] as [string,string] },
+            { icon: "clock",       label: "انتظار / تنفيذ",  value: `${pendingCnt} / ${inProgCnt}`,               sub: `${orders.length} إجمالي`,       grad: ["#D97706", "#78350F"] as [string,string] },
+            { icon: "award",       label: "متوسط الفاتورة",  value: `${avgTicket.toFixed(0)} ﷼`,                  sub: "اليوم",                          grad: ["#7C3AED", "#4C1D95"] as [string,string] },
+            { icon: "users",       label: "عملاء اليوم",     value: uniqueCustomers,                               sub: "زبون",                           grad: ["#0369A1", "#0C4A6E"] as [string,string] },
+          ].map(k => (
+            <KpiCard key={k.label} {...k} cardWidth={KPI_W ?? undefined} grow={isWide} />
+          ))}
         </View>
 
-        {/* Main grid: actions + orders */}
-        <View style={IS_WEB ? styles.mainGridWeb : styles.mainGridMobile}>
+        {/* Main content — side by side on wide, stacked on narrow */}
+        <View style={isWide ? s.mainWide : s.mainNarrow}>
 
-          {/* Quick Actions */}
-          <View style={IS_WEB ? styles.actionsColWeb : styles.actionsColMobile}>
-            <View style={styles.sectionHeader}>
-              <Feather name="grid" size={16} color={Colors.gold} />
-              <Text style={styles.sectionTitle}>الوصول السريع</Text>
-            </View>
-            <View style={styles.actionsGrid}>
-              {actions.map((a) => (
+          {/* Quick actions */}
+          <View style={isWide ? s.actWide : {}}>
+            <SectionHead icon="grid" title="الوصول السريع" />
+            <View style={[s.tileGrid, { gap: TILE_GAP }]}>
+              {actions.map(a => (
                 <ActionTile
                   key={a.route}
-                  label={a.label} icon={a.icon} accent={a.accent}
-                  gradStart={a.gradStart} gradEnd={a.gradEnd}
-                  badge={a.badge}
-                  onPress={() => navigate(a.route)}
+                  label={a.label} icon={a.icon} grad={a.grad}
+                  badge={(a as any).badge}
+                  size={TILE_W}
+                  onPress={() => go(a.route)}
                 />
               ))}
             </View>
           </View>
 
-          {/* Recent Orders */}
-          <View style={IS_WEB ? styles.ordersColWeb : styles.ordersColMobile}>
-            <View style={styles.sectionHeader}>
-              <Feather name="list" size={16} color={Colors.gold} />
-              <Text style={styles.sectionTitle}>آخر الفواتير</Text>
-              <TouchableOpacity onPress={() => navigate("archive")} style={styles.seeAll}>
-                <Text style={styles.seeAllText}>عرض الكل</Text>
-                <Feather name="chevron-left" size={13} color={Colors.gold} />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.ordersCard}>
-              {/* Table header */}
-              <View style={[or.row, or.headerRow]}>
-                <Text style={[or.headerCell, or.numCol]}>رقم</Text>
-                <Text style={[or.headerCell, or.nameCol]}>العميل</Text>
-                <Text style={[or.headerCell, or.statusCol]}>الحالة</Text>
-                <Text style={[or.headerCell, { textAlign: "left" }]}>المبلغ</Text>
+          {/* Recent orders */}
+          <View style={isWide ? s.ordWide : {}}>
+            <SectionHead icon="list" title="آخر الفواتير" cta="عرض الكل" onCta={() => go("archive")} />
+            <View style={s.ordCard}>
+              <View style={or.header}>
+                <Text style={[or.hCell, { width: 54 }]}>رقم</Text>
+                <Text style={[or.hCell, { flex: 1 }]}>العميل</Text>
+                <Text style={[or.hCell, { width: 76 }]}>الحالة</Text>
+                <Text style={[or.hCell, { width: 64, textAlign: "left" }]}>المبلغ</Text>
               </View>
-
               {recentOrders.length === 0 ? (
-                <View style={styles.emptyOrders}>
-                  <Feather name="inbox" size={36} color={Colors.textMuted} />
-                  <Text style={styles.emptyText}>لا توجد فواتير بعد</Text>
+                <View style={s.empty}>
+                  <Feather name="inbox" size={38} color={Colors.textMuted} />
+                  <Text style={s.emptyTxt}>لا توجد فواتير بعد</Text>
                 </View>
               ) : (
                 recentOrders.map(o => (
-                  <OrderRow key={o.id} order={o} onPress={() => navigate("archive")} />
+                  <OrderRow key={o.id} order={o} onPress={() => go("archive")} />
                 ))
               )}
             </View>
           </View>
+
         </View>
       </ScrollView>
     </View>
   );
 }
 
-// ── Styles ─────────────────────────────────────────────────────────────────────
+// ── Static styles ──────────────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
-  screen:      { flex: 1, backgroundColor: "#EEF2F7" },
+const s = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: "#EFF3FA" },
 
-  // Header
-  header:      { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingBottom: 16, gap: 12 },
-  headerLeft:  { flexDirection: "row", alignItems: "center", gap: 10, flex: 1 },
-  logoPlaceholder: { width: 40, height: 40, borderRadius: 10, backgroundColor: "rgba(201,168,76,0.2)", borderWidth: 1, borderColor: Colors.gold + "40", alignItems: "center", justifyContent: "center" },
-  companyName: { color: "#fff", fontSize: 15, fontWeight: "800" },
-  empName:     { color: "rgba(255,255,255,0.55)", fontSize: 11 },
-  clockBox:    { alignItems: "center", flex: 1.5 },
-  clockTime:   { color: "#fff", fontSize: IS_WEB ? 26 : 20, fontWeight: "900", letterSpacing: 1, fontVariant: ["tabular-nums" as any] },
-  clockDate:   { color: "rgba(255,255,255,0.55)", fontSize: 10, marginTop: 2 },
-  headerRight: { flexDirection: "row", alignItems: "center", gap: 10, flex: 1, justifyContent: "flex-end" },
-  liveDot:     { width: 7, height: 7, borderRadius: 4, backgroundColor: "#10B981" },
-  liveText:    { color: "#10B981", fontSize: 11, fontWeight: "700" },
-  newOrderBtn: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: Colors.gold, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 },
-  newOrderText: { color: "#fff", fontSize: 12, fontWeight: "800" },
+  // Wide header
+  wideHeader: { flexDirection: "row", alignItems: "center", paddingHorizontal: 28, paddingBottom: 18, gap: 16 },
+  hBrand:     { flexDirection: "row", alignItems: "center", gap: 12, flex: 1 },
+  hLogo:      { width: 44, height: 44, borderRadius: 13, alignItems: "center", justifyContent: "center" },
+  hCompany:   { color: "#fff", fontSize: 15, fontWeight: "800" },
+  hEmp:       { color: "rgba(255,255,255,0.5)", fontSize: 11, marginTop: 2 },
+  hClock:     { alignItems: "center", flex: 2 },
+  hTime:      { color: "#fff", fontSize: 28, fontWeight: "900", letterSpacing: 1.5, fontVariant: ["tabular-nums" as any] },
+  hDate:      { color: "rgba(255,255,255,0.45)", fontSize: 10, marginTop: 3 },
+  hRight:     { flexDirection: "row", alignItems: "center", gap: 12, flex: 1, justifyContent: "flex-end" },
+  liveChip:   { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "rgba(16,185,129,0.15)", borderWidth: 1, borderColor: "rgba(16,185,129,0.4)", borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 },
+  liveDot:    { width: 7, height: 7, borderRadius: 4, backgroundColor: "#10B981" },
+  liveTxt:    { color: "#10B981", fontSize: 11, fontWeight: "700" },
+  newBtn:     { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: Colors.gold, borderRadius: 22, paddingHorizontal: 18, paddingVertical: 10 },
+  newBtnTxt:  { color: "#0A1628", fontSize: 13, fontWeight: "900" },
+
+  // Narrow bar
+  narrowBar:  { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 10, backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: Colors.border },
+  nClockRow:  { flexDirection: "row", alignItems: "center", gap: 6 },
+  nTime:      { color: Colors.text, fontSize: 15, fontWeight: "800", fontVariant: ["tabular-nums" as any] },
+  nNewBtn:    { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: Colors.gold, borderRadius: 18, paddingHorizontal: 14, paddingVertical: 7 },
+  nNewTxt:    { color: "#fff", fontSize: 12, fontWeight: "900" },
 
   // Body
-  body:        { flex: 1 },
-  bodyContent: { paddingHorizontal: 16, paddingTop: 16, gap: 16 },
+  body:       { flex: 1 },
+  content:    { paddingTop: 16, gap: 16 },
 
   // Alerts
-  alertsRow:   { gap: 8 },
+  alerts:     { gap: 8 },
 
-  // KPI
-  kpiRow:      { flexDirection: "row", gap: 12, flexWrap: "wrap" },
+  // KPI row
+  kpiRow:     { flexDirection: "row", flexWrap: "wrap" },
 
-  // Section header
-  sectionHeader:  { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 12 },
-  sectionTitle:   { fontSize: 15, fontWeight: "800", color: Colors.text, flex: 1 },
-  seeAll:         { flexDirection: "row", alignItems: "center", gap: 2 },
-  seeAllText:     { fontSize: 12, color: Colors.gold, fontWeight: "700" },
+  // Main layout
+  mainWide:   { flexDirection: "row", gap: 24, alignItems: "flex-start" },
+  mainNarrow: { gap: 20 },
+  actWide:    { flex: 1 },
+  ordWide:    { width: 420 },
 
-  // Main grid
-  mainGridWeb:    { flexDirection: "row", gap: 16, alignItems: "flex-start" },
-  mainGridMobile: { flexDirection: "column", gap: 16 },
-  actionsColWeb:  { flex: 1 },
-  actionsColMobile: {},
-  ordersColWeb:   { width: 400 },
-  ordersColMobile: {},
-
-  // Actions grid
-  actionsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
+  // Tile grid
+  tileGrid:   { flexDirection: "row", flexWrap: "wrap" },
 
   // Orders card
-  ordersCard:  { backgroundColor: "#fff", borderRadius: 16, overflow: "hidden", shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8, elevation: 3 },
+  ordCard:    { backgroundColor: "#fff", borderRadius: 18, overflow: "hidden", shadowColor: "#0A1628", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.07, shadowRadius: 12, elevation: 4 },
 
-  // Empty
-  emptyOrders: { alignItems: "center", paddingVertical: 40, gap: 10 },
-  emptyText:   { color: Colors.textMuted, fontSize: 13 },
+  // Empty state
+  empty:      { alignItems: "center", paddingVertical: 48, gap: 12 },
+  emptyTxt:   { color: Colors.textMuted, fontSize: 14 },
 });
 
 const kpi = StyleSheet.create({
-  card:     { flex: 1, minWidth: IS_WEB ? 180 : 150, backgroundColor: "#fff", borderRadius: 16, padding: 16, flexDirection: "row", alignItems: "center", gap: 14, borderTopWidth: 3, shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.07, shadowRadius: 8, elevation: 3 },
-  iconWrap: { width: 48, height: 48, borderRadius: 14, alignItems: "center", justifyContent: "center" },
-  body:     { flex: 1 },
-  value:    { fontSize: IS_WEB ? 22 : 20, fontWeight: "900", color: Colors.text },
-  label:    { fontSize: 11, color: Colors.textMuted, marginTop: 1 },
-  sub:      { fontSize: 10, color: Colors.textSecondary, marginTop: 3 },
-});
-
-const at = StyleSheet.create({
-  wrap:      { width: IS_WEB ? 120 : "30%", minWidth: IS_WEB ? 110 : 90 },
-  touch:     { borderRadius: 16, overflow: "hidden" },
-  gradient:  { paddingVertical: 18, paddingHorizontal: 10, alignItems: "center", gap: 10, minHeight: 110 },
-  iconCircle: { width: 52, height: 52, borderRadius: 26, backgroundColor: "rgba(255,255,255,0.18)", alignItems: "center", justifyContent: "center" },
-  label:     { fontSize: 12, fontWeight: "800", textAlign: "center" },
-  badgeBox:  { position: "absolute", top: 8, right: 8, minWidth: 20, height: 20, borderRadius: 10, backgroundColor: "#EF4444", alignItems: "center", justifyContent: "center", paddingHorizontal: 5 },
-  badgeText: { color: "#fff", fontSize: 10, fontWeight: "900" },
+  card:  {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    shadowColor: "#0A1628",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  icon:  { width: 46, height: 46, borderRadius: 13, alignItems: "center", justifyContent: "center", flexShrink: 0 },
+  body:  { flex: 1 },
+  value: { fontSize: 18, fontWeight: "900", color: Colors.text },
+  label: { fontSize: 10, color: Colors.textMuted, marginTop: 2 },
+  sub:   { fontSize: 10, color: Colors.textSecondary, marginTop: 2 },
 });
 
 const or = StyleSheet.create({
-  row:       { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: "#F1F5F9" },
-  headerRow: { backgroundColor: "#F8FAFC", paddingVertical: 10 },
-  headerCell: { fontSize: 11, fontWeight: "700", color: Colors.textMuted, textTransform: "uppercase" as const },
-  numCol:    { width: 50 },
-  nameCol:   { flex: 1, paddingHorizontal: 4 },
-  statusCol: { width: 90 },
-  num:       { fontSize: 13, fontWeight: "800", color: Colors.primary },
-  name:      { fontSize: 13, fontWeight: "700", color: Colors.text },
-  ago:       { fontSize: 10, color: Colors.textMuted, marginTop: 1 },
-  pill:      { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 20, alignSelf: "flex-start" },
-  dot:       { width: 6, height: 6, borderRadius: 3 },
-  pillText:  { fontSize: 11, fontWeight: "700" },
-  amount:    { fontSize: 13, fontWeight: "800", color: Colors.text, textAlign: "left", minWidth: 60 },
+  row:    { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: "#F1F5F9" },
+  header: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 9, backgroundColor: "#F8FAFC", borderBottomWidth: 1, borderBottomColor: "#EEF2F7" },
+  hCell:  { fontSize: 10, fontWeight: "700", color: Colors.textMuted },
+  num:    { width: 54, fontSize: 13, fontWeight: "800", color: Colors.primary },
+  mid:    { flex: 1, paddingHorizontal: 4 },
+  name:   { fontSize: 12, fontWeight: "700", color: Colors.text },
+  ago:    { fontSize: 10, color: Colors.textMuted, marginTop: 1 },
+  pill:   { width: 76, flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 20 },
+  dot:    { width: 5, height: 5, borderRadius: 3 },
+  pillTxt:{ fontSize: 10, fontWeight: "700" },
+  amount: { width: 64, fontSize: 12, fontWeight: "800", color: Colors.text, textAlign: "left" },
 });
 
-const ab = StyleSheet.create({
-  wrap:    { flexDirection: "row", alignItems: "center", gap: 10, borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10 },
-  iconBox: { width: 30, height: 30, borderRadius: 8, alignItems: "center", justifyContent: "center" },
-  text:    { flex: 1, fontSize: 13, fontWeight: "600" },
+const al = StyleSheet.create({
+  wrap: { flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1.5, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: "#fff" },
+  dot:  { width: 7, height: 7, borderRadius: 4 },
+  txt:  { flex: 1, fontSize: 12, fontWeight: "700" },
+});
+
+const sec = StyleSheet.create({
+  row:    { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 },
+  left:   { flexDirection: "row", alignItems: "center", gap: 8 },
+  iconBox:{ width: 26, height: 26, borderRadius: 7, backgroundColor: "rgba(201,168,76,0.12)", alignItems: "center", justifyContent: "center" },
+  title:  { fontSize: 14, fontWeight: "800", color: Colors.text },
+  cta:    { flexDirection: "row", alignItems: "center", gap: 3 },
+  ctaTxt: { fontSize: 12, color: Colors.gold, fontWeight: "700" },
 });

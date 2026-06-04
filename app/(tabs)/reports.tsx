@@ -86,7 +86,7 @@ function StatCard({
   sub?: string;
 }) {
   return (
-    <View style={[styles.statCard, { borderLeftColor: color }]}>
+    <View style={[styles.statCard, { borderRightColor: color }]}>
       <View style={[styles.statIcon, { backgroundColor: color + "22" }]}>
         <Feather name={icon as any} size={18} color={color} />
       </View>
@@ -1472,7 +1472,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    borderLeftWidth: 4,
+    borderRightWidth: 4,
     shadowColor: "#000",
     shadowOpacity: 0.05,
     shadowRadius: 4,
