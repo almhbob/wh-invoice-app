@@ -96,7 +96,7 @@ function ArchiveCard({ order, canDelete, canEdit, onDelete, onEdit }: { order: O
         const deptItems = order.items.filter((i) => i.department === key);
         if (deptItems.length === 0) return null;
         return (
-          <View key={key} style={[styles.deptSection, { borderLeftColor: meta.color }]}>
+          <View key={key} style={[styles.deptSection, { borderRightColor: meta.color }]}>
             <Text style={[styles.deptSectionTitle, { color: meta.color }]}>{meta.label}</Text>
             {deptItems.map((item, i) => (
               <Text key={i} style={styles.archiveItem}>
@@ -204,7 +204,7 @@ function StatusRow({ status }: { status?: OrderStatus }) {
 function DeletedCard({ order, onRestore }: { order: Order; onRestore: (id: string) => void }) {
   const { lang } = useLang();
   return (
-    <View style={[styles.archiveCard, { borderLeftWidth: 3, borderLeftColor: Colors.accent }]}>
+    <View style={[styles.archiveCard, { borderRightWidth: 3, borderRightColor: Colors.accent }]}>
       <View style={styles.archiveHeader}>
         <View style={styles.archiveHeaderLeft}>
           <Text style={styles.archiveNum}>#{order.orderNumber}</Text>
@@ -492,10 +492,14 @@ const styles = StyleSheet.create({
   customerRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   customerName: { fontSize: 14, fontWeight: "700", color: Colors.primary },
   customerPhone: { fontSize: 13, color: Colors.textSecondary },
+<<<<<<< ours
   deptSection: {
     borderLeftWidth: 3, paddingLeft: 12, gap: 4,
     paddingVertical: 6,
   },
+=======
+  deptSection: { borderRightWidth: 3, paddingRight: 12, paddingLeft: 4, gap: 4, paddingVertical: 6 },
+>>>>>>> theirs
   deptSectionTitle: { fontSize: 12, fontWeight: "700", marginBottom: 2 },
   archiveItem: { fontSize: 13, color: Colors.text, lineHeight: 20 },
   statusRow: {

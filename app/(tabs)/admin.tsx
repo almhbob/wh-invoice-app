@@ -79,7 +79,7 @@ function StatCard({
   icon: any; label: string; value: string | number; color: string; sub?: string;
 }) {
   return (
-    <View style={[styles.statCard, { borderLeftColor: color }]}>
+    <View style={[styles.statCard, { borderRightColor: color }]}>
       <View style={[styles.statIconBox, { backgroundColor: color + "18" }]}>
         <Feather name={icon} size={18} color={color} />
       </View>
@@ -337,7 +337,7 @@ function OperationsSection({ orders }: { orders: Order[] }) {
         { dept: "halwa" as Department, label: "قسم الحلا", stats: halwa, color: Colors.halwa },
         { dept: "mawali" as Department, label: "قسم الموالح", stats: mawali, color: Colors.mawali },
       ].map(({ label, stats, color }) => (
-        <View key={label} style={[styles.deptCard, { borderLeftColor: color }]}>
+        <View key={label} style={[styles.deptCard, { borderRightColor: color }]}>
           <Text style={[styles.deptCardTitle, { color }]}>{label}</Text>
           <View style={styles.deptCardStats}>
             <View style={styles.deptStat}>
@@ -1472,7 +1472,7 @@ const styles = StyleSheet.create({
   statCard: {
     flexDirection: "row", alignItems: "center", gap: 12,
     backgroundColor: Colors.surfaceSecondary, borderRadius: 12, padding: 12,
-    borderLeftWidth: 4,
+    borderRightWidth: 4,
   },
   statIconBox: { width: 40, height: 40, borderRadius: 10, alignItems: "center", justifyContent: "center" },
   statValue: { fontSize: 17, fontWeight: "800", color: Colors.primary },
@@ -1481,7 +1481,7 @@ const styles = StyleSheet.create({
 
   // dept breakdown
   deptCard: {
-    borderLeftWidth: 4, paddingLeft: 12, paddingVertical: 12,
+    borderRightWidth: 4, paddingRight: 12, paddingLeft: 8, paddingVertical: 12,
     backgroundColor: Colors.surfaceSecondary, borderRadius: 12,
   },
   deptCardTitle: { fontSize: 13, fontWeight: "700", marginBottom: 10 },
