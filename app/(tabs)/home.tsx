@@ -1,10 +1,8 @@
 import { Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
-  Animated,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,15 +13,15 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Colors } from "@/constants/colors";
-import { canDo, ROLE_CAN_ACCESS_ADMIN } from "@/constants/rbac";
-import { useCompany } from "@/context/CompanyContext";
-import { useEmployee } from "@/context/EmployeeContext";
 import { Department, Order, useOrders } from "@/context/OrdersContext";
-import { usePriceChange } from "@/context/PriceChangeContext";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 const DEPARTMENTS: Department[] = ["halwa", "mawali", "chocolate", "cake", "packaging"];
+
+const DEPT_LABELS: Record<Department, string> = {
+  halwa: "حلا", mawali: "مولي", chocolate: "شوكو", cake: "كيك", packaging: "تغليف",
+};
 
 function overallStatus(order: Order): "pending" | "in_progress" | "done" | "cancelled" {
   const statuses = DEPARTMENTS.map(d => order.departmentStatuses?.[d]).filter(Boolean);
@@ -34,343 +32,347 @@ function overallStatus(order: Order): "pending" | "in_progress" | "done" | "canc
   return "pending";
 }
 
-function formatTime(d: Date) {
-  return d.toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true });
-}
-
-function formatDate(d: Date) {
-  return d.toLocaleDateString("ar-SA", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
-}
-
 function fmtAgo(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime();
   const m = Math.floor(ms / 60000);
-  if (m < 1)  return "الآن";
-  if (m < 60) return `منذ ${m} د`;
+  if (m < 1) return "الآن";
+  if (m < 60) return `${m}د`;
   const h = Math.floor(m / 60);
-  if (h < 24) return `منذ ${h} س`;
-  return `منذ ${Math.floor(h / 24)} ي`;
+  if (h < 24) return `${h}س`;
+  return `${Math.floor(h / 24)}ي`;
 }
 
-// ── Status config ──────────────────────────────────────────────────────────────
+function formatClock(d: Date) {
+  return d.toLocaleTimeString("ar-SA", {
+    hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true,
+  });
+}
 
-const STATUS_CFG = {
-  pending:     { label: "انتظار",  bg: "#FEF3C7", text: "#92400E", dot: "#F59E0B" },
-  in_progress: { label: "جاري",   bg: "#DBEAFE", text: "#1E40AF", dot: "#3B82F6" },
-  done:        { label: "مكتمل",  bg: "#D1FAE5", text: "#065F46", dot: "#10B981" },
-  cancelled:   { label: "ملغي",   bg: "#FEE2E2", text: "#991B1B", dot: "#EF4444" },
-};
+// ── Column configs ─────────────────────────────────────────────────────────────
 
-// ── Action definitions ─────────────────────────────────────────────────────────
-
-const ACTIONS_BASE = [
-  { label: "كاشير",    icon: "file-text",   route: "cashier",   grad: ["#C9A84C", "#8B6508"] as [string, string] },
-  { label: "الأرشيف",  icon: "archive",     route: "archive",   grad: ["#2563EB", "#1D4ED8"] as [string, string] },
-  { label: "التقارير", icon: "bar-chart-2", route: "reports",   grad: ["#7C3AED", "#6D28D9"] as [string, string] },
-  { label: "توصيل",    icon: "truck",       route: "delivery",  grad: ["#0D9488", "#0F766E"] as [string, string] },
-  { label: "العملاء",  icon: "users",       route: "customers", grad: ["#0369A1", "#075985"] as [string, string] },
-  { label: "حلا",      icon: "coffee",      route: "halwa",     grad: ["#B45309", "#92400E"] as [string, string] },
-  { label: "مولي",     icon: "package",     route: "mawali",    grad: ["#0E7490", "#155E75"] as [string, string] },
-  { label: "شوكولاتة", icon: "gift",        route: "chocolate", grad: ["#78350F", "#451A03"] as [string, string] },
-  { label: "كيك",      icon: "layers",      route: "cake",      grad: ["#9D174D", "#831843"] as [string, string] },
-  { label: "تغليف",    icon: "box",         route: "packaging", grad: ["#166534", "#14532D"] as [string, string] },
+const COLS = [
+  {
+    key:       "pending" as const,
+    label:     "انتظار",
+    icon:      "clock" as const,
+    color:     "#F59E0B",
+    textColor: "#92400E",
+    headerBg:  "#FEF3C7",
+    cardBorder:"#FCD34D",
+    cardBg:    "#FFFBEB",
+  },
+  {
+    key:       "in_progress" as const,
+    label:     "قيد التنفيذ",
+    icon:      "zap" as const,
+    color:     "#3B82F6",
+    textColor: "#1E40AF",
+    headerBg:  "#DBEAFE",
+    cardBorder:"#93C5FD",
+    cardBg:    "#EFF6FF",
+  },
+  {
+    key:       "done" as const,
+    label:     "جاهز للاستلام",
+    icon:      "check-circle" as const,
+    color:     "#10B981",
+    textColor: "#065F46",
+    headerBg:  "#D1FAE5",
+    cardBorder:"#6EE7B7",
+    cardBg:    "#F0FDF4",
+  },
 ];
 
 // ── Sub-components ─────────────────────────────────────────────────────────────
 
-function ActionTile({
-  label, icon, grad, badge, size, onPress,
-}: {
-  label: string; icon: string; grad: [string, string];
-  badge?: number; size: number; onPress: () => void;
-}) {
-  const scale = useRef(new Animated.Value(1)).current;
-  const press = () => {
-    Animated.sequence([
-      Animated.spring(scale, { toValue: 0.92, useNativeDriver: true, speed: 60 }),
-      Animated.spring(scale, { toValue: 1,    useNativeDriver: true, speed: 60 }),
-    ]).start();
-    onPress();
-  };
-  const isWide = size >= 120;
+function DeptDots({ order }: { order: Order }) {
+  const depts = DEPARTMENTS.filter(d => order.departmentStatuses?.[d]);
+  if (depts.length === 0) return null;
   return (
-    <Animated.View style={{ width: size, transform: [{ scale }] }}>
-      <TouchableOpacity onPress={press} activeOpacity={0.85} style={{ borderRadius: 16, overflow: "hidden" }}>
-        <LinearGradient colors={grad} style={{ height: isWide ? 108 : 88, alignItems: "center", justifyContent: "center", gap: 8, paddingHorizontal: 8 }} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-          <View style={{ width: isWide ? 50 : 42, height: isWide ? 50 : 42, borderRadius: isWide ? 25 : 21, backgroundColor: "rgba(255,255,255,0.18)", alignItems: "center", justifyContent: "center" }}>
-            <Feather name={icon as any} size={isWide ? 24 : 20} color="rgba(255,255,255,0.95)" />
+    <View style={dd.row}>
+      {depts.map(d => {
+        const st = order.departmentStatuses[d];
+        const c = st === "done" ? "#10B981" : st === "in_progress" ? "#F59E0B" : st === "cancelled" ? "#EF4444" : "#CBD5E1";
+        return (
+          <View key={d} style={dd.item}>
+            <View style={[dd.dot, { backgroundColor: c }]} />
+            <Text style={[dd.lbl, { color: c }]}>{DEPT_LABELS[d]}</Text>
           </View>
-          <Text style={{ color: "#fff", fontSize: isWide ? 12 : 11, fontWeight: "800", textAlign: "center" }} numberOfLines={1}>{label}</Text>
-        </LinearGradient>
-        {!!badge && (
-          <View style={{ position: "absolute", top: 7, right: 7, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: "#EF4444", alignItems: "center", justifyContent: "center", paddingHorizontal: 4, borderWidth: 2, borderColor: "#fff" }}>
-            <Text style={{ color: "#fff", fontSize: 9, fontWeight: "900" }}>{badge > 99 ? "99+" : badge}</Text>
-          </View>
-        )}
-      </TouchableOpacity>
-    </Animated.View>
+        );
+      })}
+    </View>
   );
 }
 
-function KpiCard({
-  icon, label, value, sub, grad, cardWidth, grow,
-}: {
-  icon: string; label: string; value: string | number;
-  sub?: string; grad: [string, string]; cardWidth?: number; grow?: boolean;
+function OrderCard({ order, col, onPress }: {
+  order: Order; col: typeof COLS[0]; onPress: () => void;
+}) {
+  const isDone = col.key === "done";
+  const itemsText = order.items
+    .filter(i => i.name.trim())
+    .slice(0, 3)
+    .map(i => `${i.name} ×${i.quantity}`)
+    .join(" · ");
+
+  return (
+    <TouchableOpacity
+      style={[oc.wrap, { backgroundColor: col.cardBg, borderColor: col.cardBorder }, isDone && oc.doneGlow]}
+      onPress={onPress}
+      activeOpacity={0.72}
+    >
+      {/* Row 1: order number + time */}
+      <View style={oc.topRow}>
+        <View style={[oc.numBadge, { backgroundColor: col.color + "25" }]}>
+          <Text style={[oc.numText, { color: col.textColor }]}>#{order.orderNumber}</Text>
+        </View>
+        <View style={{ flex: 1 }} />
+        <Text style={oc.ago}>{fmtAgo(order.createdAt)}</Text>
+        {isDone && (
+          <View style={oc.readyPill}>
+            <Feather name="check" size={9} color="#065F46" />
+            <Text style={oc.readyText}>جاهز</Text>
+          </View>
+        )}
+      </View>
+
+      {/* Row 2: customer */}
+      <Text style={oc.customer} numberOfLines={1}>
+        {order.customerName || "— بدون اسم"}
+      </Text>
+      {!!order.customerPhone && (
+        <Text style={oc.phone} numberOfLines={1}>{order.customerPhone}</Text>
+      )}
+
+      {/* Row 3: items summary */}
+      {!!itemsText && (
+        <Text style={oc.items} numberOfLines={2}>{itemsText}</Text>
+      )}
+
+      {/* Row 4: dept dots + amount */}
+      <View style={oc.bottomRow}>
+        <DeptDots order={order} />
+        <Text style={[oc.amount, { color: col.textColor }]}>
+          {(order.totalAmount ?? 0).toFixed(0)} ﷼
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+function ColumnHeader({ col, count, totalAmount }: {
+  col: typeof COLS[0]; count: number; totalAmount: number;
 }) {
   return (
-    <View style={[kpi.card, grow ? { flex: 1 } : { width: cardWidth }]}>
-      <LinearGradient colors={grad} style={kpi.icon} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-        <Feather name={icon as any} size={20} color="#fff" />
-      </LinearGradient>
-      <View style={kpi.body}>
-        <Text style={kpi.value} numberOfLines={1}>{value}</Text>
-        <Text style={kpi.label} numberOfLines={1}>{label}</Text>
-        {!!sub && <Text style={kpi.sub} numberOfLines={1}>{sub}</Text>}
+    <View style={[ch.wrap, { backgroundColor: col.headerBg }]}>
+      <View style={[ch.bar, { backgroundColor: col.color }]} />
+      <Feather name={col.icon} size={13} color={col.color} />
+      <Text style={[ch.label, { color: col.textColor }]}>{col.label}</Text>
+      <View style={{ flex: 1 }} />
+      {count > 0 && (
+        <Text style={[ch.amt, { color: col.textColor }]}>
+          {totalAmount.toFixed(0)} ﷼
+        </Text>
+      )}
+      <View style={[ch.badge, { backgroundColor: col.color }]}>
+        <Text style={ch.badgeNum}>{count}</Text>
       </View>
     </View>
   );
 }
 
-function AlertRow({ text, color, icon, onPress }: { text: string; color: string; icon: string; onPress?: () => void }) {
+function EmptyCol({ col }: { col: typeof COLS[0] }) {
+  const msgs = {
+    pending:     "لا توجد طلبات جديدة",
+    in_progress: "لا توجد طلبات جارية",
+    done:        "لا توجد طلبات جاهزة",
+  } as const;
   return (
-    <TouchableOpacity style={[al.wrap, { borderColor: color }]} onPress={onPress} activeOpacity={0.8}>
-      <View style={[al.dot, { backgroundColor: color }]} />
-      <Feather name={icon as any} size={13} color={color} />
-      <Text style={[al.txt, { color }]} numberOfLines={1}>{text}</Text>
-      {onPress && <Feather name="chevron-left" size={12} color={color} />}
-    </TouchableOpacity>
-  );
-}
-
-function OrderRow({ order, onPress }: { order: Order; onPress: () => void }) {
-  const cfg = STATUS_CFG[overallStatus(order)];
-  return (
-    <TouchableOpacity style={or.row} onPress={onPress} activeOpacity={0.7}>
-      <Text style={or.num}>#{order.orderNumber}</Text>
-      <View style={or.mid}>
-        <Text style={or.name} numberOfLines={1}>{order.customerName || "—"}</Text>
-        <Text style={or.ago}>{fmtAgo(order.createdAt)}</Text>
+    <View style={ec.wrap}>
+      <View style={[ec.circle, { backgroundColor: col.color + "18" }]}>
+        <Feather name={col.icon} size={26} color={col.color + "90"} />
       </View>
-      <View style={[or.pill, { backgroundColor: cfg.bg }]}>
-        <View style={[or.dot, { backgroundColor: cfg.dot }]} />
-        <Text style={[or.pillTxt, { color: cfg.text }]}>{cfg.label}</Text>
-      </View>
-      <Text style={or.amount}>{(order.totalAmount ?? 0).toFixed(0)} ﷼</Text>
-    </TouchableOpacity>
-  );
-}
-
-function SectionHead({ icon, title, cta, onCta }: { icon: string; title: string; cta?: string; onCta?: () => void }) {
-  return (
-    <View style={sec.row}>
-      <View style={sec.left}>
-        <View style={sec.iconBox}>
-          <Feather name={icon as any} size={13} color={Colors.gold} />
-        </View>
-        <Text style={sec.title}>{title}</Text>
-      </View>
-      {!!cta && (
-        <TouchableOpacity onPress={onCta} style={sec.cta}>
-          <Text style={sec.ctaTxt}>{cta}</Text>
-          <Feather name="chevron-left" size={11} color={Colors.gold} />
-        </TouchableOpacity>
-      )}
+      <Text style={[ec.txt, { color: col.color + "AA" }]}>{msgs[col.key]}</Text>
     </View>
   );
 }
 
 // ── Main screen ────────────────────────────────────────────────────────────────
 
-export default function HomeScreen() {
+export default function LiveOrdersBoard() {
   const router  = useRouter();
   const insets  = useSafeAreaInsets();
   const { width: winW } = useWindowDimensions();
+  const isWide  = winW >= 700;
+  const { orders } = useOrders();
 
-  // Responsive breakpoint — wide enough to show sidebar + side-by-side layout
-  const isWide = winW >= 700;
-  const PADDING = isWide ? 24 : 16;
-  const TILE_GAP = isWide ? 12 : 10;
-  const TILE_COLS = isWide ? 4 : 2;
-  const TILE_W = isWide
-    ? 120
-    : Math.floor((winW - PADDING * 2 - TILE_GAP) / 2);
-  const KPI_W = isWide
-    ? undefined            // flex:1 handled below
-    : Math.floor((winW - PADDING * 2 - 10) / 2);
+  const [now, setNow]           = useState(new Date());
+  const [activeTab, setActiveTab] = useState<"pending" | "in_progress" | "done">("in_progress");
 
-  const { company }         = useCompany();
-  const { currentEmployee } = useEmployee();
-  const { orders }          = useOrders();
-  const { pendingCount }    = usePriceChange();
-
-  const [now, setNow] = useState(new Date());
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(id);
   }, []);
 
-  const isAdmin  = canDo(currentEmployee?.role, ROLE_CAN_ACCESS_ADMIN);
   const todayStr = new Date().toDateString();
 
-  const todayOrders = useMemo(
-    () => orders.filter(o => new Date(o.createdAt).toDateString() === todayStr),
+  const activeOrders = useMemo(
+    () => orders.filter(o => {
+      if (overallStatus(o) === "cancelled") return false;
+      return new Date(o.createdAt).toDateString() === todayStr;
+    }),
     [orders, todayStr],
   );
-  const todayRevenue = useMemo(
-    () => todayOrders.reduce((s, o) => s + (o.totalAmount ?? 0), 0),
-    [todayOrders],
-  );
-  const avgTicket  = todayOrders.length ? todayRevenue / todayOrders.length : 0;
-  const pendingCnt = useMemo(() => orders.filter(o => overallStatus(o) === "pending").length,     [orders]);
-  const inProgCnt  = useMemo(() => orders.filter(o => overallStatus(o) === "in_progress").length, [orders]);
-  const recentOrders = useMemo(
-    () => [...orders]
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      .slice(0, 12),
-    [orders],
-  );
-  const uniqueCustomers = useMemo(
-    () => new Set(todayOrders.map(o => o.customerName).filter(Boolean)).size || todayOrders.length,
-    [todayOrders],
-  );
+
+  const buckets = useMemo(() => ({
+    pending:     activeOrders.filter(o => overallStatus(o) === "pending")
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()),
+    in_progress: activeOrders.filter(o => overallStatus(o) === "in_progress")
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()),
+    done:        activeOrders.filter(o => overallStatus(o) === "done")
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
+  }), [activeOrders]);
+
+  const colTotals = useMemo(() => ({
+    pending:     buckets.pending.reduce((s, o) => s + (o.totalAmount ?? 0), 0),
+    in_progress: buckets.in_progress.reduce((s, o) => s + (o.totalAmount ?? 0), 0),
+    done:        buckets.done.reduce((s, o) => s + (o.totalAmount ?? 0), 0),
+  }), [buckets]);
 
   const go = (route: string) => router.navigate(`/(tabs)/${route}` as any);
-
-  const actions = [
-    ...ACTIONS_BASE,
-    ...(isAdmin
-      ? [{ label: "الإدارة", icon: "settings", route: "admin", grad: ["#374151", "#1F2937"] as [string, string], badge: pendingCount || undefined }]
-      : []),
-  ];
 
   return (
     <View style={s.screen}>
 
-      {/* ── Wide header (desktop / tablet) ──────────────────────────────────── */}
-      {isWide && (
+      {/* ── Board header ─────────────────────────────────────────────────────── */}
+      {isWide ? (
         <LinearGradient
           colors={["#0A1628", "#122044"]}
-          style={[s.wideHeader, { paddingTop: insets.top + 14 }]}
-          start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+          style={s.wideHeader}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
         >
-          <View style={s.hBrand}>
-            <LinearGradient colors={[Colors.gold, "#8B6508"]} style={s.hLogo} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-              <Feather name="shopping-bag" size={20} color="#fff" />
-            </LinearGradient>
-            <View>
-              <Text style={s.hCompany} numberOfLines={1}>{company?.name || "فاتورة"}</Text>
-              {currentEmployee && <Text style={s.hEmp} numberOfLines={1}>{currentEmployee.name}</Text>}
-            </View>
-          </View>
-          <View style={s.hClock}>
-            <Text style={s.hTime}>{formatTime(now)}</Text>
-            <Text style={s.hDate}>{formatDate(now)}</Text>
-          </View>
-          <View style={s.hRight}>
+          <View style={s.hLeft}>
             <View style={s.liveChip}>
               <View style={s.liveDot} />
               <Text style={s.liveTxt}>مباشر</Text>
             </View>
-            <TouchableOpacity style={s.newBtn} onPress={() => go("cashier")}>
-              <Feather name="plus" size={14} color="#0A1628" />
-              <Text style={s.newBtnTxt}>فاتورة جديدة</Text>
-            </TouchableOpacity>
+            <Text style={s.clock}>{formatClock(now)}</Text>
           </View>
-        </LinearGradient>
-      )}
 
-      {/* ── Narrow top bar (mobile — below _layout header) ────────────────── */}
-      {!isWide && (
-        <View style={s.narrowBar}>
-          <View style={s.nClockRow}>
-            <Feather name="clock" size={12} color={Colors.gold} />
-            <Text style={s.nTime}>{formatTime(now)}</Text>
+          <View style={s.hCenter}>
+            <Text style={s.hTitle}>لوحة الطلبات الحية</Text>
+            <Text style={s.hSub}>
+              {activeOrders.length} طلب اليوم
+              {buckets.done.length > 0 ? ` · ${buckets.done.length} جاهز للاستلام` : ""}
+            </Text>
           </View>
-          <TouchableOpacity style={s.nNewBtn} onPress={() => go("cashier")}>
-            <Feather name="plus" size={13} color="#fff" />
-            <Text style={s.nNewTxt}>فاتورة جديدة</Text>
+
+          <TouchableOpacity style={s.newBtn} onPress={() => go("cashier")}>
+            <Feather name="plus" size={14} color="#0A1628" />
+            <Text style={s.newBtnTxt}>فاتورة جديدة</Text>
           </TouchableOpacity>
+        </LinearGradient>
+      ) : (
+        <View style={s.narrowBar}>
+          <View style={s.nLeft}>
+            <View style={s.liveChipSm}>
+              <View style={s.liveDotSm} />
+              <Text style={s.liveTxtSm}>مباشر</Text>
+            </View>
+            <Text style={s.clockSm}>{formatClock(now)}</Text>
+          </View>
+          <Text style={s.narrowStats}>
+            {activeOrders.length} طلب{buckets.done.length > 0 ? ` · ${buckets.done.length} جاهز` : ""}
+          </Text>
         </View>
       )}
 
-      {/* ── Scrollable body ─────────────────────────────────────────────────── */}
-      <ScrollView
-        style={s.body}
-        contentContainerStyle={[s.content, {
-          paddingHorizontal: PADDING,
-          paddingBottom: insets.bottom + 90,
-        }]}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Alerts */}
-        {(pendingCount > 0 || pendingCnt > 0) && (
-          <View style={s.alerts}>
-            {pendingCount > 0 && (
-              <AlertRow text={`${pendingCount} طلب تغيير سعر ينتظر الموافقة`} color="#F59E0B" icon="alert-triangle" onPress={() => go("admin")} />
-            )}
-            {pendingCnt > 0 && (
-              <AlertRow text={`${pendingCnt} فاتورة لم تبدأ بعد`} color="#3B82F6" icon="clock" onPress={() => go("archive")} />
-            )}
-          </View>
-        )}
-
-        {/* KPI cards — 2×2 on narrow, 4-in-row on wide */}
-        <View style={[s.kpiRow, { gap: isWide ? 16 : 10 }]}>
-          {[
-            { icon: "trending-up", label: "إيرادات اليوم",   value: `${todayRevenue.toLocaleString("ar-SA")} ﷼`, sub: `${todayOrders.length} فاتورة`, grad: ["#059669", "#064E3B"] as [string,string] },
-            { icon: "clock",       label: "انتظار / تنفيذ",  value: `${pendingCnt} / ${inProgCnt}`,               sub: `${orders.length} إجمالي`,       grad: ["#D97706", "#78350F"] as [string,string] },
-            { icon: "award",       label: "متوسط الفاتورة",  value: `${avgTicket.toFixed(0)} ﷼`,                  sub: "اليوم",                          grad: ["#7C3AED", "#4C1D95"] as [string,string] },
-            { icon: "users",       label: "عملاء اليوم",     value: uniqueCustomers,                               sub: "زبون",                           grad: ["#0369A1", "#0C4A6E"] as [string,string] },
-          ].map(k => (
-            <KpiCard key={k.label} {...k} cardWidth={KPI_W ?? undefined} grow={isWide} />
+      {/* ── Wide: 3-column kanban ─────────────────────────────────────────────── */}
+      {isWide ? (
+        <View style={s.boardWide}>
+          {COLS.map((col, ci) => (
+            <View
+              key={col.key}
+              style={[s.colWide, ci < COLS.length - 1 && s.colDivider]}
+            >
+              <ColumnHeader
+                col={col}
+                count={buckets[col.key].length}
+                totalAmount={colTotals[col.key]}
+              />
+              <ScrollView
+                style={s.colScroll}
+                contentContainerStyle={s.colContent}
+                showsVerticalScrollIndicator={false}
+              >
+                {buckets[col.key].length === 0 ? (
+                  <EmptyCol col={col} />
+                ) : (
+                  buckets[col.key].map(o => (
+                    <OrderCard
+                      key={o.id}
+                      order={o}
+                      col={col}
+                      onPress={() => go("archive")}
+                    />
+                  ))
+                )}
+              </ScrollView>
+            </View>
           ))}
         </View>
-
-        {/* Main content — side by side on wide, stacked on narrow */}
-        <View style={isWide ? s.mainWide : s.mainNarrow}>
-
-          {/* Quick actions */}
-          <View style={isWide ? s.actWide : {}}>
-            <SectionHead icon="grid" title="الوصول السريع" />
-            <View style={[s.tileGrid, { gap: TILE_GAP }]}>
-              {actions.map(a => (
-                <ActionTile
-                  key={a.route}
-                  label={a.label} icon={a.icon} grad={a.grad}
-                  badge={(a as any).badge}
-                  size={TILE_W}
-                  onPress={() => go(a.route)}
-                />
-              ))}
-            </View>
+      ) : (
+        /* ── Narrow: tab switcher + single column ────────────────────────────── */
+        <View style={s.boardNarrow}>
+          {/* Tab switcher */}
+          <View style={s.tabRow}>
+            {COLS.map(col => {
+              const isActive = activeTab === col.key;
+              const cnt = buckets[col.key].length;
+              return (
+                <TouchableOpacity
+                  key={col.key}
+                  style={[s.tab, isActive && { borderBottomColor: col.color, borderBottomWidth: 2 }]}
+                  onPress={() => setActiveTab(col.key)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[s.tabLabel, isActive && { color: col.color, fontWeight: "800" }]}>
+                    {col.label}
+                  </Text>
+                  {cnt > 0 && (
+                    <View style={[s.tabBadge, { backgroundColor: col.color }]}>
+                      <Text style={s.tabBadgeNum}>{cnt}</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
           </View>
 
-          {/* Recent orders */}
-          <View style={isWide ? s.ordWide : {}}>
-            <SectionHead icon="list" title="آخر الفواتير" cta="عرض الكل" onCta={() => go("archive")} />
-            <View style={s.ordCard}>
-              <View style={or.header}>
-                <Text style={[or.hCell, { width: 54 }]}>رقم</Text>
-                <Text style={[or.hCell, { flex: 1 }]}>العميل</Text>
-                <Text style={[or.hCell, { width: 76 }]}>الحالة</Text>
-                <Text style={[or.hCell, { width: 64, textAlign: "left" }]}>المبلغ</Text>
-              </View>
-              {recentOrders.length === 0 ? (
-                <View style={s.empty}>
-                  <Feather name="inbox" size={38} color={Colors.textMuted} />
-                  <Text style={s.emptyTxt}>لا توجد فواتير بعد</Text>
-                </View>
+          {/* Active column content */}
+          {COLS.filter(c => c.key === activeTab).map(col => (
+            <ScrollView
+              key={col.key}
+              style={s.colScroll}
+              contentContainerStyle={[s.colContent, { paddingBottom: insets.bottom + 90 }]}
+              showsVerticalScrollIndicator={false}
+            >
+              {buckets[col.key].length === 0 ? (
+                <EmptyCol col={col} />
               ) : (
-                recentOrders.map(o => (
-                  <OrderRow key={o.id} order={o} onPress={() => go("archive")} />
+                buckets[col.key].map(o => (
+                  <OrderCard
+                    key={o.id}
+                    order={o}
+                    col={col}
+                    onPress={() => go("archive")}
+                  />
                 ))
               )}
-            </View>
-          </View>
-
+            </ScrollView>
+          ))}
         </View>
-      </ScrollView>
+      )}
     </View>
   );
 }
@@ -378,104 +380,96 @@ export default function HomeScreen() {
 // ── Static styles ──────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#EFF3FA" },
+  screen: { flex: 1, backgroundColor: "#F1F5F9" },
 
   // Wide header
-  wideHeader: { flexDirection: "row", alignItems: "center", paddingHorizontal: 28, paddingBottom: 18, gap: 16 },
-  hBrand:     { flexDirection: "row", alignItems: "center", gap: 12, flex: 1 },
-  hLogo:      { width: 44, height: 44, borderRadius: 13, alignItems: "center", justifyContent: "center" },
-  hCompany:   { color: "#fff", fontSize: 15, fontWeight: "800" },
-  hEmp:       { color: "rgba(255,255,255,0.5)", fontSize: 11, marginTop: 2 },
-  hClock:     { alignItems: "center", flex: 2 },
-  hTime:      { color: "#fff", fontSize: 28, fontWeight: "900", letterSpacing: 1.5, fontVariant: ["tabular-nums" as any] },
-  hDate:      { color: "rgba(255,255,255,0.45)", fontSize: 10, marginTop: 3 },
-  hRight:     { flexDirection: "row", alignItems: "center", gap: 12, flex: 1, justifyContent: "flex-end" },
-  liveChip:   { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "rgba(16,185,129,0.15)", borderWidth: 1, borderColor: "rgba(16,185,129,0.4)", borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 },
+  wideHeader: { flexDirection: "row", alignItems: "center", paddingHorizontal: 24, paddingVertical: 16, gap: 16 },
+  hLeft:      { flexDirection: "row", alignItems: "center", gap: 10 },
+  liveChip:   { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: "rgba(16,185,129,0.15)", borderWidth: 1, borderColor: "rgba(16,185,129,0.35)", borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5 },
   liveDot:    { width: 7, height: 7, borderRadius: 4, backgroundColor: "#10B981" },
   liveTxt:    { color: "#10B981", fontSize: 11, fontWeight: "700" },
-  newBtn:     { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: Colors.gold, borderRadius: 22, paddingHorizontal: 18, paddingVertical: 10 },
+  clock:      { color: "#fff", fontSize: 22, fontWeight: "900", fontVariant: ["tabular-nums" as any] },
+  hCenter:    { flex: 1, alignItems: "center" },
+  hTitle:     { color: "#fff", fontSize: 15, fontWeight: "900" },
+  hSub:       { color: "rgba(255,255,255,0.5)", fontSize: 11, marginTop: 2 },
+  newBtn:     { flexDirection: "row", alignItems: "center", gap: 7, backgroundColor: Colors.gold, borderRadius: 22, paddingHorizontal: 18, paddingVertical: 10 },
   newBtnTxt:  { color: "#0A1628", fontSize: 13, fontWeight: "900" },
 
   // Narrow bar
-  narrowBar:  { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 10, backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: Colors.border },
-  nClockRow:  { flexDirection: "row", alignItems: "center", gap: 6 },
-  nTime:      { color: Colors.text, fontSize: 15, fontWeight: "800", fontVariant: ["tabular-nums" as any] },
-  nNewBtn:    { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: Colors.gold, borderRadius: 18, paddingHorizontal: 14, paddingVertical: 7 },
-  nNewTxt:    { color: "#fff", fontSize: 12, fontWeight: "900" },
+  narrowBar:   { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 14, paddingVertical: 9, backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: "#E2E8F0" },
+  nLeft:       { flexDirection: "row", alignItems: "center", gap: 8 },
+  liveChipSm:  { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "rgba(16,185,129,0.1)", borderRadius: 12, paddingHorizontal: 7, paddingVertical: 3 },
+  liveDotSm:   { width: 5, height: 5, borderRadius: 3, backgroundColor: "#10B981" },
+  liveTxtSm:   { color: "#10B981", fontSize: 9, fontWeight: "700" },
+  clockSm:     { color: Colors.text, fontSize: 14, fontWeight: "800", fontVariant: ["tabular-nums" as any] },
+  narrowStats: { fontSize: 11, color: Colors.textMuted, fontWeight: "600" },
 
-  // Body
-  body:       { flex: 1 },
-  content:    { paddingTop: 16, gap: 16 },
+  // Wide board
+  boardWide:  { flex: 1, flexDirection: "row", overflow: "hidden" as any },
+  colWide:    { flex: 1, overflow: "hidden" as any },
+  colDivider: { borderRightWidth: StyleSheet.hairlineWidth, borderRightColor: "#CBD5E1" },
 
-  // Alerts
-  alerts:     { gap: 8 },
+  // Narrow board
+  boardNarrow: { flex: 1 },
+  tabRow:      { flexDirection: "row", backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: "#E2E8F0" },
+  tab:         { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 11, borderBottomWidth: 2, borderBottomColor: "transparent" },
+  tabLabel:    { fontSize: 12, fontWeight: "600", color: Colors.textMuted },
+  tabBadge:    { minWidth: 18, height: 18, borderRadius: 9, alignItems: "center", justifyContent: "center", paddingHorizontal: 4 },
+  tabBadgeNum: { color: "#fff", fontSize: 10, fontWeight: "900" },
 
-  // KPI row
-  kpiRow:     { flexDirection: "row", flexWrap: "wrap" },
-
-  // Main layout
-  mainWide:   { flexDirection: "row", gap: 24, alignItems: "flex-start" },
-  mainNarrow: { gap: 20 },
-  actWide:    { flex: 1 },
-  ordWide:    { width: 420 },
-
-  // Tile grid
-  tileGrid:   { flexDirection: "row", flexWrap: "wrap" },
-
-  // Orders card
-  ordCard:    { backgroundColor: "#fff", borderRadius: 18, overflow: "hidden", shadowColor: "#0A1628", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.07, shadowRadius: 12, elevation: 4 },
-
-  // Empty state
-  empty:      { alignItems: "center", paddingVertical: 48, gap: 12 },
-  emptyTxt:   { color: Colors.textMuted, fontSize: 14 },
+  // Shared column
+  colScroll:  { flex: 1 },
+  colContent: { padding: 10, gap: 8 },
 });
 
-const kpi = StyleSheet.create({
-  card:  {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    shadowColor: "#0A1628",
+const oc = StyleSheet.create({
+  wrap: {
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 12,
+    gap: 6,
+    shadowColor: "#0F172A",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.07,
     shadowRadius: 8,
-    elevation: 3,
+    elevation: 2,
   },
-  icon:  { width: 46, height: 46, borderRadius: 13, alignItems: "center", justifyContent: "center", flexShrink: 0 },
-  body:  { flex: 1 },
-  value: { fontSize: 18, fontWeight: "900", color: Colors.text },
-  label: { fontSize: 10, color: Colors.textMuted, marginTop: 2 },
-  sub:   { fontSize: 10, color: Colors.textSecondary, marginTop: 2 },
+  doneGlow: {
+    shadowOpacity: 0.13,
+    shadowRadius: 14,
+    elevation: 5,
+  },
+  topRow:    { flexDirection: "row", alignItems: "center", gap: 8 },
+  numBadge:  { paddingHorizontal: 9, paddingVertical: 3, borderRadius: 8 },
+  numText:   { fontSize: 13, fontWeight: "900" },
+  ago:       { fontSize: 10, color: Colors.textMuted, fontVariant: ["tabular-nums" as any] },
+  readyPill: { flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: "#D1FAE5", borderRadius: 10, paddingHorizontal: 7, paddingVertical: 3 },
+  readyText: { fontSize: 9, fontWeight: "800", color: "#065F46" },
+  customer:  { fontSize: 13, fontWeight: "800", color: "#1E293B" },
+  phone:     { fontSize: 10, color: Colors.textMuted },
+  items:     { fontSize: 11, color: "#64748B", lineHeight: 16 },
+  bottomRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 2 },
+  amount:    { fontSize: 13, fontWeight: "900" },
 });
 
-const or = StyleSheet.create({
-  row:    { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: "#F1F5F9" },
-  header: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 9, backgroundColor: "#F8FAFC", borderBottomWidth: 1, borderBottomColor: "#EEF2F7" },
-  hCell:  { fontSize: 10, fontWeight: "700", color: Colors.textMuted },
-  num:    { width: 54, fontSize: 13, fontWeight: "800", color: Colors.primary },
-  mid:    { flex: 1, paddingHorizontal: 4 },
-  name:   { fontSize: 12, fontWeight: "700", color: Colors.text },
-  ago:    { fontSize: 10, color: Colors.textMuted, marginTop: 1 },
-  pill:   { width: 76, flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 20 },
-  dot:    { width: 5, height: 5, borderRadius: 3 },
-  pillTxt:{ fontSize: 10, fontWeight: "700" },
-  amount: { width: 64, fontSize: 12, fontWeight: "800", color: Colors.text, textAlign: "left" },
+const ch = StyleSheet.create({
+  wrap:     { flexDirection: "row", alignItems: "center", gap: 7, paddingHorizontal: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "rgba(0,0,0,0.06)" },
+  bar:      { width: 3, height: 18, borderRadius: 2 },
+  label:    { fontSize: 13, fontWeight: "800" },
+  badge:    { minWidth: 22, height: 22, borderRadius: 11, alignItems: "center", justifyContent: "center", paddingHorizontal: 5 },
+  badgeNum: { color: "#fff", fontSize: 11, fontWeight: "900" },
+  amt:      { fontSize: 11, fontWeight: "700", opacity: 0.7 },
 });
 
-const al = StyleSheet.create({
-  wrap: { flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1.5, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: "#fff" },
-  dot:  { width: 7, height: 7, borderRadius: 4 },
-  txt:  { flex: 1, fontSize: 12, fontWeight: "700" },
+const ec = StyleSheet.create({
+  wrap:   { alignItems: "center", justifyContent: "center", paddingVertical: 56, gap: 12 },
+  circle: { width: 64, height: 64, borderRadius: 32, alignItems: "center", justifyContent: "center" },
+  txt:    { fontSize: 12, fontWeight: "600", textAlign: "center" },
 });
 
-const sec = StyleSheet.create({
-  row:    { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 },
-  left:   { flexDirection: "row", alignItems: "center", gap: 8 },
-  iconBox:{ width: 26, height: 26, borderRadius: 7, backgroundColor: "rgba(201,168,76,0.12)", alignItems: "center", justifyContent: "center" },
-  title:  { fontSize: 14, fontWeight: "800", color: Colors.text },
-  cta:    { flexDirection: "row", alignItems: "center", gap: 3 },
-  ctaTxt: { fontSize: 12, color: Colors.gold, fontWeight: "700" },
+const dd = StyleSheet.create({
+  row:  { flexDirection: "row", gap: 5, flexWrap: "wrap" },
+  item: { flexDirection: "row", alignItems: "center", gap: 2 },
+  dot:  { width: 6, height: 6, borderRadius: 3 },
+  lbl:  { fontSize: 9, fontWeight: "700" },
 });

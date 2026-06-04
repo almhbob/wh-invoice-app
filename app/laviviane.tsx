@@ -39,7 +39,7 @@ export default function LavivianeEntry() {
     };
   }, []);
 
-  if (ready) return <Redirect href="/(tabs)/cashier" />;
+  if (ready) return <Redirect href="/(tabs)/home" />;
 
   return (
     <View style={styles.container}>
