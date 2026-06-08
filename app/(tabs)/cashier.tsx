@@ -18,6 +18,7 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -96,6 +97,8 @@ export default function CashierScreen() {
   ], [t]);
   const { company } = useCompany();
   const isLaviviane = company.id === LAVIVIANE_COMPANY_ID;
+  const { width: winW } = useWindowDimensions();
+  const isWide = Platform.OS === "web" && winW >= 768;
 
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -121,6 +124,8 @@ export default function CashierScreen() {
   const [receiptQr, setReceiptQr] = useState<string>("");
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [catalogQtys, setCatalogQtys] = useState<Record<string, number>>({});
+  const [chocoCard, setChocoCard] = useState<string | null>(null);
+  const chocoPrice = chocoCard ? 25 : 0;
 
   // Daily closing modal
   const [showClosing, setShowClosing] = useState(false);
