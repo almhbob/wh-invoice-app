@@ -53,8 +53,33 @@ import QRCode from "qrcode";
 const DEPT_CYCLE: Partial<Record<Department, Department>> = {
   halwa: "mawali", mawali: "chocolate", chocolate: "cake", cake: "packaging", packaging: "halwa",
 };
-// Display order for cashier items — most important depts first
 const DEPT_DISPLAY_ORDER: Department[] = ["cake", "halwa", "chocolate", "mawali", "packaging"];
+
+// ── Checkout date/time chip data (desktop POS panel) ───────────────────────────
+const _DAY_AR = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
+const _MON_AR = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
+function buildCheckoutDays() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  return Array.from({ length: 10 }, (_, i) => {
+    const d = new Date(today); d.setDate(today.getDate() + i);
+    const iso = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+    const label = i === 0 ? "اليوم" : i === 1 ? "غداً" : _DAY_AR[d.getDay()];
+    return { label, sub: `${d.getDate()} ${_MON_AR[d.getMonth()]}`, value: iso };
+  });
+}
+function buildCheckoutTimes() {
+  const out: { display: string; value: string }[] = [];
+  for (let h = 8; h <= 23; h++) {
+    for (const m of [0, 30]) {
+      if (h === 23 && m === 30) continue;
+      const p = h < 12 ? "ص" : "م"; const h12 = h > 12 ? h - 12 : h === 0 ? 12 : h;
+      out.push({ display: `${h12}:${m === 0 ? "00" : "30"} ${p}`, value: `${String(h).padStart(2,"0")}:${m === 0 ? "00" : "30"}` });
+    }
+  }
+  return out;
+}
+const CHECKOUT_DAYS = buildCheckoutDays();
+const CHECKOUT_TIMES = buildCheckoutTimes();
 
 function formatNow() {
   const d = new Date();
@@ -1519,7 +1544,7 @@ export default function CashierScreen() {
     <InlineCatalog selected={catalogQtys} onAdd={addFromCatalog} onRemove={removeFromCatalog} />
       <View style={[styles.checkoutPanel, { width: 420 }]}>
 
-        {/* Customer section */}
+        {/* Customer section — compact */}
         <View style={styles.checkoutCustomerSection}>
           <TextInput
             style={styles.checkoutInputField}
@@ -1529,29 +1554,31 @@ export default function CashierScreen() {
             placeholderTextColor="rgba(255,255,255,0.3)"
             textAlign="right"
           />
-          <View style={styles.checkoutPhoneRow}>
-            <TextInput
-              style={[styles.checkoutInputField, { flex: 1 }]}
-              value={customerPhone}
-              onChangeText={setCustomerPhone}
-              placeholder="رقم الهاتف *"
-              placeholderTextColor="rgba(255,255,255,0.3)"
-              keyboardType="phone-pad"
-              textAlign="right"
-            />
-            <Feather name="phone" size={15} color="rgba(255,255,255,0.3)" />
-          </View>
-          <View style={styles.checkoutPhoneRow}>
-            <TextInput
-              style={[styles.checkoutInputField, { flex: 1 }]}
-              value={customerPhone2}
-              onChangeText={setCustomerPhone2}
-              placeholder="هاتف ثانٍ (اختياري)"
-              placeholderTextColor="rgba(255,255,255,0.18)"
-              keyboardType="phone-pad"
-              textAlign="right"
-            />
-            <Feather name="phone-call" size={15} color="rgba(255,255,255,0.18)" />
+          {/* Both phones on one row */}
+          <View style={styles.checkoutPhonesRow}>
+            <View style={styles.checkoutPhoneHalf}>
+              <TextInput
+                style={[styles.checkoutInputField, { flex: 1 }]}
+                value={customerPhone}
+                onChangeText={setCustomerPhone}
+                placeholder="الهاتف *"
+                placeholderTextColor="rgba(255,255,255,0.3)"
+                keyboardType="phone-pad"
+                textAlign="right"
+              />
+              <Feather name="phone" size={13} color="rgba(255,255,255,0.25)" style={{ position: "absolute", left: 10, top: 11 } as any} />
+            </View>
+            <View style={styles.checkoutPhoneHalf}>
+              <TextInput
+                style={[styles.checkoutInputField, { flex: 1 }]}
+                value={customerPhone2}
+                onChangeText={setCustomerPhone2}
+                placeholder="هاتف 2"
+                placeholderTextColor="rgba(255,255,255,0.18)"
+                keyboardType="phone-pad"
+                textAlign="right"
+              />
+            </View>
           </View>
           {suggestedCustomer && (
             <TouchableOpacity
@@ -1591,28 +1618,46 @@ export default function CashierScreen() {
           ))}
         </View>
 
-        {/* Compact delivery date/time + address */}
+        {/* Delivery date chips + time chips + address */}
         {orderType === "delivery" && (
           <>
-            <View style={styles.checkoutDelivRow}>
-              <TextInput
-                style={[styles.checkoutInputField, { flex: 1 }]}
-                value={deliveryDate}
-                onChangeText={setDeliveryDate}
-                placeholder="تاريخ التسليم"
-                placeholderTextColor="rgba(255,255,255,0.3)"
-                textAlign="right"
-              />
-              <TextInput
-                style={[styles.checkoutInputField, { flex: 1 }]}
-                value={deliveryTime}
-                onChangeText={setDeliveryTime}
-                placeholder="الوقت"
-                placeholderTextColor="rgba(255,255,255,0.3)"
-                textAlign="right"
-              />
-            </View>
-            <View style={[styles.checkoutDelivRow, { paddingTop: 0 }]}>
+            {/* Day chips */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.checkoutDayScroll} contentContainerStyle={styles.checkoutDayScrollContent}>
+              {CHECKOUT_DAYS.map(day => {
+                const active = deliveryDate === day.value;
+                return (
+                  <TouchableOpacity
+                    key={day.value}
+                    style={[styles.checkoutDayChip, active && styles.checkoutDayChipActive]}
+                    onPress={() => { Haptics.selectionAsync(); setDeliveryDate(active ? "" : day.value); }}
+                    activeOpacity={0.75}
+                  >
+                    <Text style={[styles.checkoutDayLabel, active && styles.checkoutDayLabelActive]}>{day.label}</Text>
+                    <Text style={[styles.checkoutDaySub, active && styles.checkoutDaySubActive]}>{day.sub}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            {/* Time chips */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.checkoutTimeScroll} contentContainerStyle={styles.checkoutTimeScrollContent}>
+              {CHECKOUT_TIMES.map(slot => {
+                const active = deliveryTime === slot.value;
+                return (
+                  <TouchableOpacity
+                    key={slot.value}
+                    style={[styles.checkoutTimeChip, active && styles.checkoutTimeChipActive]}
+                    onPress={() => { Haptics.selectionAsync(); setDeliveryTime(active ? "" : slot.value); }}
+                    activeOpacity={0.75}
+                  >
+                    <Text style={[styles.checkoutTimeText, active && styles.checkoutTimeTextActive]}>{slot.display}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            {/* Address */}
+            <View style={[styles.checkoutDelivRow, { paddingTop: 0, paddingBottom: 8 }]}>
               <TextInput
                 style={[styles.checkoutInputField, { flex: 1 }]}
                 value={deliveryAddress}
@@ -2965,12 +3010,14 @@ const styles = StyleSheet.create({
 
   checkoutCustomerSection: {
     paddingHorizontal: 12,
-    paddingTop: 12,
+    paddingTop: 10,
     paddingBottom: 4,
-    gap: 8,
+    gap: 6,
     borderBottomWidth: 1,
     borderBottomColor: "rgba(255,255,255,0.1)",
   },
+  checkoutPhonesRow: { flexDirection: "row" as const, gap: 6 },
+  checkoutPhoneHalf: { flex: 1 },
   checkoutInputField: {
     backgroundColor: "rgba(255,255,255,0.07)",
     borderRadius: 10,
@@ -3160,6 +3207,33 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.35, shadowRadius: 8, elevation: 5,
   },
   checkoutSubmitText: { color: Colors.primary, fontSize: 16, fontWeight: "900" as const },
+
+  // checkout date chips (dark themed)
+  checkoutDayScroll: { borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.08)" },
+  checkoutDayScrollContent: { flexDirection: "row" as const, paddingHorizontal: 10, paddingVertical: 8, gap: 6 },
+  checkoutDayChip: {
+    alignItems: "center" as const, justifyContent: "center" as const,
+    paddingVertical: 7, paddingHorizontal: 11, borderRadius: 10, gap: 1,
+    borderWidth: 1, borderColor: "rgba(255,255,255,0.15)",
+    backgroundColor: "rgba(255,255,255,0.05)", minWidth: 60,
+  },
+  checkoutDayChipActive: { backgroundColor: Colors.gold, borderColor: Colors.gold },
+  checkoutDayLabel: { fontSize: 11, fontWeight: "700" as const, color: "rgba(255,255,255,0.75)" },
+  checkoutDayLabelActive: { color: Colors.primary },
+  checkoutDaySub: { fontSize: 9, color: "rgba(255,255,255,0.4)" },
+  checkoutDaySubActive: { color: Colors.primary + "cc" },
+
+  // checkout time chips (dark themed)
+  checkoutTimeScroll: { borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.08)" },
+  checkoutTimeScrollContent: { flexDirection: "row" as const, paddingHorizontal: 10, paddingVertical: 7, gap: 5 },
+  checkoutTimeChip: {
+    paddingVertical: 5, paddingHorizontal: 10, borderRadius: 8,
+    borderWidth: 1, borderColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "rgba(255,255,255,0.04)",
+  },
+  checkoutTimeChipActive: { backgroundColor: "rgba(201,168,76,0.25)", borderColor: Colors.gold },
+  checkoutTimeText: { fontSize: 11, fontWeight: "600" as const, color: "rgba(255,255,255,0.6)" },
+  checkoutTimeTextActive: { color: Colors.gold, fontWeight: "800" as const },
 
   // checkout notes
   checkoutNotesRow: {
