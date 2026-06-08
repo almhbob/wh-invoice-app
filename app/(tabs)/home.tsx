@@ -45,7 +45,7 @@ function fmtDate(d: Date) {
 
 const ROLE_AR: Record<string, string> = {
   cashier: "كاشير", admin: "مدير", branch_supervisor: "مشرف فرع",
-  dept_supervisor: "مشرف قسم", halwa: "قسم الحلا", mawali: "قسم المولي",
+  dept_supervisor: "مشرف قسم", halwa: "قسم الحلا", mawali: "قسم الموالح",
   chocolate: "قسم الشوكولاتة", cake: "قسم الكيك", packaging: "قسم التغليف", guest: "زائر",
 };
 
@@ -56,7 +56,7 @@ const TILES: { label: string; icon: string; route: string; accent: string }[] = 
   { label: "الأرشيف",   icon: "archive",     route: "archive",   accent: "#60A5FA" },
   { label: "التقارير",  icon: "bar-chart-2", route: "reports",   accent: "#A78BFA" },
   { label: "حلا",        icon: "coffee",      route: "halwa",     accent: Colors.halwaLight },
-  { label: "مولي",       icon: "package",     route: "mawali",    accent: Colors.mawaliLight },
+  { label: "موالح",      icon: "package",     route: "mawali",    accent: Colors.mawaliLight },
   { label: "شوكولاتة",   icon: "gift",        route: "chocolate", accent: Colors.chocolateLight },
   { label: "كيك",        icon: "layers",      route: "cake",      accent: Colors.cakeLight },
   { label: "تغليف",      icon: "box",         route: "packaging", accent: Colors.packagingLight },
