@@ -1541,6 +1541,18 @@ export default function CashierScreen() {
             />
             <Feather name="phone" size={15} color="rgba(255,255,255,0.3)" />
           </View>
+          <View style={styles.checkoutPhoneRow}>
+            <TextInput
+              style={[styles.checkoutInputField, { flex: 1 }]}
+              value={customerPhone2}
+              onChangeText={setCustomerPhone2}
+              placeholder="هاتف ثانٍ (اختياري)"
+              placeholderTextColor="rgba(255,255,255,0.18)"
+              keyboardType="phone-pad"
+              textAlign="right"
+            />
+            <Feather name="phone-call" size={15} color="rgba(255,255,255,0.18)" />
+          </View>
           {suggestedCustomer && (
             <TouchableOpacity
               style={styles.checkoutAutofillChip}
@@ -1579,26 +1591,38 @@ export default function CashierScreen() {
           ))}
         </View>
 
-        {/* Compact delivery date/time */}
+        {/* Compact delivery date/time + address */}
         {orderType === "delivery" && (
-          <View style={styles.checkoutDelivRow}>
-            <TextInput
-              style={[styles.checkoutInputField, { flex: 1 }]}
-              value={deliveryDate}
-              onChangeText={setDeliveryDate}
-              placeholder="تاريخ التسليم"
-              placeholderTextColor="rgba(255,255,255,0.3)"
-              textAlign="right"
-            />
-            <TextInput
-              style={[styles.checkoutInputField, { flex: 1 }]}
-              value={deliveryTime}
-              onChangeText={setDeliveryTime}
-              placeholder="الوقت"
-              placeholderTextColor="rgba(255,255,255,0.3)"
-              textAlign="right"
-            />
-          </View>
+          <>
+            <View style={styles.checkoutDelivRow}>
+              <TextInput
+                style={[styles.checkoutInputField, { flex: 1 }]}
+                value={deliveryDate}
+                onChangeText={setDeliveryDate}
+                placeholder="تاريخ التسليم"
+                placeholderTextColor="rgba(255,255,255,0.3)"
+                textAlign="right"
+              />
+              <TextInput
+                style={[styles.checkoutInputField, { flex: 1 }]}
+                value={deliveryTime}
+                onChangeText={setDeliveryTime}
+                placeholder="الوقت"
+                placeholderTextColor="rgba(255,255,255,0.3)"
+                textAlign="right"
+              />
+            </View>
+            <View style={[styles.checkoutDelivRow, { paddingTop: 0 }]}>
+              <TextInput
+                style={[styles.checkoutInputField, { flex: 1 }]}
+                value={deliveryAddress}
+                onChangeText={setDeliveryAddress}
+                placeholder="عنوان التوصيل"
+                placeholderTextColor="rgba(255,255,255,0.3)"
+                textAlign="right"
+              />
+            </View>
+          </>
         )}
 
         {/* Header (stats + search + shift) */}
@@ -1673,6 +1697,20 @@ export default function CashierScreen() {
               )}
             </>
           )}
+
+          {/* Notes field */}
+          <View style={styles.checkoutNotesRow}>
+            <Feather name="file-text" size={13} color="rgba(255,255,255,0.25)" />
+            <TextInput
+              style={styles.checkoutNotesInput}
+              value={notes}
+              onChangeText={setNotes}
+              placeholder="ملاحظات الطلب..."
+              placeholderTextColor="rgba(255,255,255,0.2)"
+              textAlign="right"
+              multiline
+            />
+          </View>
         </ScrollView>
 
         {/* Bottom checkout section */}
@@ -1704,6 +1742,40 @@ export default function CashierScreen() {
               </TouchableOpacity>
             ))}
           </View>
+
+          {/* Discount row */}
+          <TouchableOpacity
+            style={styles.checkoutDiscountRow}
+            onPress={() => { Haptics.selectionAsync(); setDiscountEnabled(v => !v); if (discountEnabled) { setDiscountValue(""); setDiscountReason(""); } }}
+            activeOpacity={0.8}
+          >
+            <Feather name="tag" size={13} color={discountEnabled ? Colors.warning : "rgba(255,255,255,0.35)"} />
+            <Text style={[styles.checkoutDiscountLabel, discountEnabled && { color: Colors.warning }]}>خصم</Text>
+            {discountEnabled && (
+              <>
+                <TouchableOpacity
+                  onPress={() => setDiscountType(t => t === "percentage" ? "fixed" : "percentage")}
+                  style={styles.checkoutDiscountTypeBtn}
+                >
+                  <Text style={styles.checkoutDiscountTypeText}>{discountType === "percentage" ? "%" : "ر.س"}</Text>
+                </TouchableOpacity>
+                <TextInput
+                  style={styles.checkoutDiscountInput}
+                  value={discountValue}
+                  onChangeText={setDiscountValue}
+                  placeholder="0"
+                  placeholderTextColor="rgba(255,255,255,0.3)"
+                  keyboardType="decimal-pad"
+                  textAlign="center"
+                  onPress={(e) => e.stopPropagation?.()}
+                />
+              </>
+            )}
+            <View style={{ flex: 1 }} />
+            <View style={[styles.checkoutDiscountToggle, discountEnabled && { backgroundColor: Colors.warning }]}>
+              <View style={[styles.checkoutDiscountThumb, discountEnabled && styles.checkoutDiscountThumbOn]} />
+            </View>
+          </TouchableOpacity>
 
           {/* Totals */}
           <View style={styles.checkoutTotalsBox}>
@@ -3088,6 +3160,56 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.35, shadowRadius: 8, elevation: 5,
   },
   checkoutSubmitText: { color: Colors.primary, fontSize: 16, fontWeight: "900" as const },
+
+  // checkout notes
+  checkoutNotesRow: {
+    flexDirection: "row" as const, alignItems: "flex-start" as const, gap: 8,
+    marginHorizontal: 12, marginTop: 8, marginBottom: 4,
+    backgroundColor: "rgba(255,255,255,0.04)",
+    borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8,
+    borderWidth: 1, borderColor: "rgba(255,255,255,0.08)",
+  },
+  checkoutNotesInput: {
+    flex: 1, fontSize: 13, color: "rgba(255,255,255,0.85)",
+    paddingVertical: 0, minHeight: 36,
+    ...(Platform.OS === "web" ? { outlineStyle: "none" } as any : {}),
+  },
+
+  // checkout discount row
+  checkoutDiscountRow: {
+    flexDirection: "row" as const, alignItems: "center" as const, gap: 8,
+    paddingHorizontal: 4, paddingVertical: 6,
+  },
+  checkoutDiscountLabel: {
+    fontSize: 12, fontWeight: "700" as const, color: "rgba(255,255,255,0.35)",
+  },
+  checkoutDiscountTypeBtn: {
+    backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 6,
+    paddingHorizontal: 8, paddingVertical: 3,
+    borderWidth: 1, borderColor: "rgba(255,255,255,0.15)",
+  },
+  checkoutDiscountTypeText: {
+    fontSize: 12, fontWeight: "700" as const, color: "rgba(255,255,255,0.7)",
+  },
+  checkoutDiscountInput: {
+    width: 64, backgroundColor: "rgba(255,255,255,0.08)", borderRadius: 8,
+    paddingHorizontal: 8, paddingVertical: 5,
+    fontSize: 14, fontWeight: "700" as const, color: Colors.warning,
+    borderWidth: 1, borderColor: "rgba(255,255,255,0.15)",
+    ...(Platform.OS === "web" ? { outlineStyle: "none" } as any : {}),
+  },
+  checkoutDiscountToggle: {
+    width: 32, height: 18, borderRadius: 9,
+    backgroundColor: "rgba(255,255,255,0.12)",
+    justifyContent: "center" as const, paddingHorizontal: 2,
+  },
+  checkoutDiscountThumb: {
+    width: 14, height: 14, borderRadius: 7, backgroundColor: "rgba(255,255,255,0.4)",
+  },
+  checkoutDiscountThumbOn: {
+    backgroundColor: "#fff",
+    transform: [{ translateX: 14 }],
+  },
 
   // reference images for special cake
   refImgHeader: { flexDirection: "row", alignItems: "flex-start", gap: 10, marginBottom: 12 },

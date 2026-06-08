@@ -274,6 +274,7 @@ function DesktopSidebar({ activePath, navigate, isRTL }: { activePath: string; n
 
         {/* Navigation */}
         <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8 }}>
+          <SideNavItem label={t("tabHome")} icon="home" active={activePath.includes("home")} accent={Colors.primaryLight} onPress={() => navigate("home")} />
           <SideNavItem label={t("tabCashier")} icon="file-text" active={isCashier} accent={Colors.gold} onPress={() => navigate("cashier")} />
 
           <SideNavItem
@@ -437,6 +438,7 @@ function BarItem({ label, icon, sf, active, accent, badge, onPress }: {
 // ── Root layout ────────────────────────────────────────────────────────────────
 
 const SCREEN_META: Record<string, { titleKey: string; accent: string }> = {
+  home:             { titleKey: "titleHome",       accent: Colors.primaryLight },
   cashier:          { titleKey: "titleCashier",   accent: Colors.gold },
   halwa:            { titleKey: "titleHalwa",      accent: Colors.halwa },
   mawali:           { titleKey: "titleMawali",     accent: Colors.mawali },
@@ -476,6 +478,7 @@ export default function TabLayout() {
 
   const screens = (
     <>
+      <Tabs.Screen name="home"             options={{ title: t("titleHome"),      headerShown: false }} />
       <Tabs.Screen name="cashier"          options={{ title: t("titleCashier"),   headerShown: false }} />
       <Tabs.Screen name="halwa"            options={{ title: t("titleHalwa"),     headerShown: false }} />
       <Tabs.Screen name="mawali"           options={{ title: t("titleMawali"),    headerShown: false }} />
