@@ -6,6 +6,7 @@ const translations = {
   appSub:           { ar: "Maison de Pâtisserie", en: "Maison de Pâtisserie", ur: "Maison de Pâtisserie", hi: "Maison de Pâtisserie", bn: "Maison de Pâtisserie" },
 
   // ── Tabs ───────────────────────────────────────────────────────
+  tabHome:          { ar: "الرئيسية",         en: "Home",             ur: "ہوم",               hi: "होम",              bn: "হোম" },
   tabCashier:       { ar: "كاشير",            en: "Cashier",          ur: "کاشیر",            hi: "कैशियर",           bn: "ক্যাশিয়ার" },
   tabHalwa:         { ar: "حلويات",           en: "Sweets",           ur: "حلوا",              hi: "मिठाई",            bn: "মিষ্টি" },
   tabMawali:        { ar: "موالح",            en: "Savory",           ur: "نمکین",             hi: "नमकीन",            bn: "বেকারি" },
@@ -22,6 +23,7 @@ const translations = {
   tabTrays:         { ar: "الصواني",          en: "Trays",            ur: "ٹرے",               hi: "ट्रे",             bn: "ট্রে" },
 
   // ── Tab screen titles ──────────────────────────────────────────
+  titleHome:        { ar: "لوحة التحكم",      en: "Dashboard",        ur: "ڈیش بورڈ",          hi: "डैशबोर्ड",         bn: "ড্যাশবোর্ড" },
   titleCashier:     { ar: "كاشير",            en: "Cashier",          ur: "کاشیر",            hi: "कैशियर",           bn: "ক্যাশিয়ার" },
   titleHalwa:       { ar: "قسم الحلويات",      en: "Sweets Dept.",     ur: "حلوائی قسم",         hi: "मिठाई विभाग",      bn: "মিষ্টি বিভাগ" },
   titleMawali:      { ar: "قسم الموالح",      en: "Savory Dept.",     ur: "نمکین قسم",          hi: "नमकीन विभाग",      bn: "বেকারি বিভাগ" },

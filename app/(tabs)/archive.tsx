@@ -3,6 +3,7 @@ import React, { useMemo, useState } from "react";
 import {
   Alert,
   FlatList,
+  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -18,6 +19,14 @@ import { useLang } from "@/context/LanguageContext";
 import { useEmployee } from "@/context/EmployeeContext";
 import { Department, Order, OrderStatus, PAYMENT_LABELS, useOrders } from "@/context/OrdersContext";
 import { fmtDate } from "@/utils/dateUtils";
+
+const MONTH_AR = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
+const DAY_AR   = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
+function formatDateAr(iso: string): string {
+  if (!iso) return "تصفية بالتاريخ";
+  const d = new Date(iso + "T12:00:00");
+  return `${DAY_AR[d.getDay()]} ${d.getDate()} ${MONTH_AR[d.getMonth()]} ${d.getFullYear()}`;
+}
 
 const DEPT_META: Record<string, { label: string; shortLabel: string; color: string }> = {
   halwa:     { label: "قسم الحلا",      shortLabel: "حلا",      color: Colors.halwa },
@@ -372,14 +381,32 @@ export default function ArchiveScreen() {
 
             <View style={[styles.searchRow, { marginHorizontal: 0, marginTop: 6 }]}>
               <Feather name="calendar" size={14} color={Colors.textMuted} />
-              <TextInput
-                style={styles.searchInput}
-                value={dateFilter}
-                onChangeText={setDateFilter}
-                placeholder="تصفية بالتاريخ (مثال: 2025-01-15)"
-                placeholderTextColor={Colors.textMuted}
-                textAlign="right"
-              />
+              {Platform.OS === "web" ? (
+                <View style={styles.webDateWrapper}>
+                  <Text style={[styles.searchInput, { flex: 1, paddingVertical: 0, color: dateFilter ? Colors.text : Colors.textMuted }]}>
+                    {formatDateAr(dateFilter)}
+                  </Text>
+                  <input
+                    type="date"
+                    value={dateFilter}
+                    onChange={(e: any) => setDateFilter(e.target.value)}
+                    style={{
+                      position: "absolute", inset: 0, opacity: 0, cursor: "pointer",
+                      width: "100%", height: "100%",
+                    } as any}
+                  />
+                </View>
+              ) : (
+                <TextInput
+                  style={styles.searchInput}
+                  value={dateFilter}
+                  onChangeText={setDateFilter}
+                  placeholder="تصفية بالتاريخ"
+                  placeholderTextColor={Colors.textMuted}
+                  textAlign="right"
+                  keyboardType="numeric"
+                />
+              )}
               {dateFilter ? (
                 <TouchableOpacity onPress={() => setDateFilter("")}>
                   <Feather name="x" size={14} color={Colors.textMuted} />
@@ -461,6 +488,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05, shadowRadius: 4, elevation: 2,
   },
   searchInput: { flex: 1, fontSize: 13, color: Colors.text },
+  webDateWrapper: { flex: 1, position: "relative" as const, flexDirection: "row" as const, alignItems: "center" as const },
   filterBar: { marginHorizontal: 16, marginTop: 10 },
   filterGroup: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
   chip: {

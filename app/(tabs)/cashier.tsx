@@ -4,6 +4,8 @@ import * as ImagePicker from "expo-image-picker";
 import * as Linking from "expo-linking";
 import { Image } from "expo-image";
 import React, { useEffect, useMemo, useState } from "react";
+import { InlineCatalog } from "@/components/InlineCatalog";
+import { Product } from "@/context/ProductsContext";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -52,8 +54,33 @@ import QRCode from "qrcode";
 const DEPT_CYCLE: Partial<Record<Department, Department>> = {
   halwa: "mawali", mawali: "chocolate", chocolate: "cake", cake: "packaging", packaging: "halwa",
 };
-// Display order for cashier items — most important depts first
 const DEPT_DISPLAY_ORDER: Department[] = ["cake", "halwa", "chocolate", "mawali", "packaging"];
+
+// ── Checkout date/time chip data (desktop POS panel) ───────────────────────────
+const _DAY_AR = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
+const _MON_AR = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
+function buildCheckoutDays() {
+  const today = new Date(); today.setHours(0,0,0,0);
+  return Array.from({ length: 10 }, (_, i) => {
+    const d = new Date(today); d.setDate(today.getDate() + i);
+    const iso = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+    const label = i === 0 ? "اليوم" : i === 1 ? "غداً" : _DAY_AR[d.getDay()];
+    return { label, sub: `${d.getDate()} ${_MON_AR[d.getMonth()]}`, value: iso };
+  });
+}
+function buildCheckoutTimes() {
+  const out: { display: string; value: string }[] = [];
+  for (let h = 8; h <= 23; h++) {
+    for (const m of [0, 30]) {
+      if (h === 23 && m === 30) continue;
+      const p = h < 12 ? "ص" : "م"; const h12 = h > 12 ? h - 12 : h === 0 ? 12 : h;
+      out.push({ display: `${h12}:${m === 0 ? "00" : "30"} ${p}`, value: `${String(h).padStart(2,"0")}:${m === 0 ? "00" : "30"}` });
+    }
+  }
+  return out;
+}
+const CHECKOUT_DAYS = buildCheckoutDays();
+const CHECKOUT_TIMES = buildCheckoutTimes();
 
 function formatNow() {
   const d = new Date();
@@ -122,6 +149,9 @@ export default function CashierScreen() {
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [receiptQr, setReceiptQr] = useState<string>("");
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+  const [catalogQtys, setCatalogQtys] = useState<Record<string, number>>({});
+  const [chocoCard, setChocoCard] = useState<string | null>(null);
+  const chocoPrice = chocoCard ? 25 : 0;
 
   // Chocolate card add-on
   const [chocoCard, setChocoCard] = useState<ChocolateCardValue | null>(null);
@@ -292,6 +322,46 @@ export default function CashierScreen() {
     setDiscountValue(""); setDiscountReason("");
     setDetectedOffer(null); setAppliedOfferId(null);
     setChocoCard(null);
+    setCatalogQtys({});
+  };
+
+  const addFromCatalog = (product: Product) => {
+    setCatalogQtys(prev => ({ ...prev, [product.id]: (prev[product.id] ?? 0) + 1 }));
+    setItems(prev => {
+      const existing = prev.find(i => i.name === product.name);
+      if (existing) {
+        return prev.map(i => i.id === existing.id ? { ...i, quantity: i.quantity + 1 } : i);
+      }
+      const clean = prev.filter(i => i.name.trim());
+      return [
+        ...clean,
+        {
+          id: Date.now().toString() + Math.random().toString(36).substring(2, 8),
+          name: product.name,
+          quantity: 1,
+          price: product.price,
+          department: product.department as any,
+        },
+      ];
+    });
+  };
+
+  const removeFromCatalog = (product: Product) => {
+    setCatalogQtys(prev => {
+      const next = { ...prev };
+      if ((next[product.id] ?? 0) <= 1) delete next[product.id];
+      else next[product.id]--;
+      return next;
+    });
+    setItems(prev => {
+      const existing = prev.find(i => i.name === product.name);
+      if (!existing) return prev;
+      if (existing.quantity <= 1) {
+        const next = prev.filter(i => i.id !== existing.id);
+        return next.length === 0 ? [newItem("halwa")] : next;
+      }
+      return prev.map(i => i.id === existing.id ? { ...i, quantity: i.quantity - 1 } : i);
+    });
   };
 
   // ── Totals ──────────────────────────────────────────────────────────────
@@ -682,7 +752,8 @@ export default function CashierScreen() {
       orders={orders}
     />
 
-    <View style={isWide ? styles.wideContainer : { flex: 1 }}>
+    <>
+    {!isWide && (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -1480,6 +1551,387 @@ export default function CashierScreen() {
       )}
     </ScrollView>
     </KeyboardAvoidingView>
+    )}
+
+    {/* ─── Desktop wide layout: catalog + checkout panel ─────────── */}
+    {isWide && (
+    <View style={styles.wideContainer}>
+    <InlineCatalog selected={catalogQtys} onAdd={addFromCatalog} onRemove={removeFromCatalog} />
+      <View style={[styles.checkoutPanel, { width: 420 }]}>
+        {/* ── Single outer ScrollView: everything above the sticky payment footer ── */}
+        <ScrollView
+          style={{ flex: 1 }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+
+        {/* Customer section — compact */}
+        <View style={styles.checkoutCustomerSection}>
+          <TextInput
+            style={styles.checkoutInputField}
+            value={customerName}
+            onChangeText={setCustomerName}
+            placeholder="اسم العميل *"
+            placeholderTextColor="rgba(255,255,255,0.3)"
+            textAlign="right"
+          />
+          {/* Both phones on one row */}
+          <View style={styles.checkoutPhonesRow}>
+            <View style={styles.checkoutPhoneHalf}>
+              <TextInput
+                style={[styles.checkoutInputField, { flex: 1 }]}
+                value={customerPhone}
+                onChangeText={setCustomerPhone}
+                placeholder="الهاتف *"
+                placeholderTextColor="rgba(255,255,255,0.3)"
+                keyboardType="phone-pad"
+                textAlign="right"
+              />
+              <Feather name="phone" size={13} color="rgba(255,255,255,0.25)" style={{ position: "absolute", left: 10, top: 11 } as any} />
+            </View>
+            <View style={styles.checkoutPhoneHalf}>
+              <TextInput
+                style={[styles.checkoutInputField, { flex: 1 }]}
+                value={customerPhone2}
+                onChangeText={setCustomerPhone2}
+                placeholder="هاتف 2"
+                placeholderTextColor="rgba(255,255,255,0.18)"
+                keyboardType="phone-pad"
+                textAlign="right"
+              />
+            </View>
+          </View>
+          {suggestedCustomer && (
+            <TouchableOpacity
+              style={styles.checkoutAutofillChip}
+              onPress={() => {
+                Haptics.selectionAsync();
+                setCustomerName(suggestedCustomer.name);
+                if (suggestedCustomer.phone2) setCustomerPhone2(suggestedCustomer.phone2);
+                if (suggestedCustomer.address) setDeliveryAddress(suggestedCustomer.address);
+              }}
+            >
+              <Feather name="user-check" size={12} color={Colors.gold} />
+              <Text style={styles.checkoutAutofillText}>
+                استخدم: <Text style={{ fontWeight: "800" }}>{suggestedCustomer.name}</Text>
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Order type */}
+        <View style={styles.checkoutOrderTypeRow}>
+          {(["pickup", "delivery"] as const).map((ot) => (
+            <TouchableOpacity
+              key={ot}
+              style={[styles.checkoutOrderTypeBtn, orderType === ot && styles.checkoutOrderTypeBtnActive]}
+              onPress={() => { Haptics.selectionAsync(); setOrderType(ot); }}
+            >
+              <Feather
+                name={ot === "pickup" ? "shopping-bag" : "truck"}
+                size={14}
+                color={orderType === ot ? Colors.primary : "rgba(255,255,255,0.5)"}
+              />
+              <Text style={[styles.checkoutOrderTypeBtnText, orderType === ot && { color: Colors.primary, fontWeight: "800" as const }]}>
+                {ot === "pickup" ? t("pickup") : t("delivery")}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Delivery date chips + time chips + address */}
+        {orderType === "delivery" && (
+          <>
+            {/* Day chips */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.checkoutDayScroll} contentContainerStyle={styles.checkoutDayScrollContent}>
+              {CHECKOUT_DAYS.map(day => {
+                const active = deliveryDate === day.value;
+                return (
+                  <TouchableOpacity
+                    key={day.value}
+                    style={[styles.checkoutDayChip, active && styles.checkoutDayChipActive]}
+                    onPress={() => { Haptics.selectionAsync(); setDeliveryDate(active ? "" : day.value); }}
+                    activeOpacity={0.75}
+                  >
+                    <Text style={[styles.checkoutDayLabel, active && styles.checkoutDayLabelActive]}>{day.label}</Text>
+                    <Text style={[styles.checkoutDaySub, active && styles.checkoutDaySubActive]}>{day.sub}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            {/* Time chips */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.checkoutTimeScroll} contentContainerStyle={styles.checkoutTimeScrollContent}>
+              {CHECKOUT_TIMES.map(slot => {
+                const active = deliveryTime === slot.value;
+                return (
+                  <TouchableOpacity
+                    key={slot.value}
+                    style={[styles.checkoutTimeChip, active && styles.checkoutTimeChipActive]}
+                    onPress={() => { Haptics.selectionAsync(); setDeliveryTime(active ? "" : slot.value); }}
+                    activeOpacity={0.75}
+                  >
+                    <Text style={[styles.checkoutTimeText, active && styles.checkoutTimeTextActive]}>{slot.display}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            {/* Address */}
+            <View style={[styles.checkoutDelivRow, { paddingTop: 0, paddingBottom: 8 }]}>
+              <TextInput
+                style={[styles.checkoutInputField, { flex: 1 }]}
+                value={deliveryAddress}
+                onChangeText={setDeliveryAddress}
+                placeholder="عنوان التوصيل"
+                placeholderTextColor="rgba(255,255,255,0.3)"
+                textAlign="right"
+              />
+            </View>
+          </>
+        )}
+
+        {/* Header (stats + search + shift) */}
+        <View style={styles.checkoutHeader}>
+          <View style={{ flex: 1, flexDirection: "row" as const, alignItems: "center" as const, gap: 8 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.checkoutTitle}>الطلب الحالي</Text>
+              <Text style={styles.checkoutSubtitle}>{todayOrders.length} طلب اليوم · {todayTotal.toFixed(0)} ر.س</Text>
+            </View>
+            {(validItems.length > 0 || !!chocoCard) && (
+              <View style={styles.cartBadge}>
+                <Text style={styles.cartBadgeText}>{validItems.length + (chocoCard ? 1 : 0)} صنف</Text>
+              </View>
+            )}
+          </View>
+          <TouchableOpacity
+            style={styles.checkoutSearchBtn}
+            onPress={() => { Haptics.selectionAsync(); setSearchQuery(""); setShowSearch(true); }}
+          >
+            <Feather name="search" size={16} color="rgba(255,255,255,0.7)" />
+          </TouchableOpacity>
+          {canCloseShift && (
+            <TouchableOpacity
+              style={styles.checkoutCloseShiftBtn}
+              onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); setShowClosing(true); }}
+            >
+              <Feather name="moon" size={14} color={Colors.gold} />
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Employee badge */}
+        {currentEmployee ? (
+          <View style={styles.checkoutEmpRow}>
+            <Feather name="user-check" size={13} color="#4ade80" />
+            <Text style={styles.checkoutEmpText}>{currentEmployee.name} · #{currentEmployee.employeeId}</Text>
+            <TouchableOpacity onPress={() => setCurrentEmployee(null)} style={{ marginLeft: "auto" as any }}>
+              <Text style={{ color: "#f87171", fontSize: 11, fontWeight: "700" }}>{t("switchBtn")}</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={[styles.checkoutEmpRow, { borderColor: "rgba(248,113,113,0.3)", backgroundColor: "rgba(248,113,113,0.08)" }]}>
+            <Feather name="alert-circle" size={13} color="#f87171" />
+            <Text style={[styles.checkoutEmpText, { color: "#f87171" }]}>يجب تسجيل الدخول أولاً</Text>
+          </View>
+        )}
+
+        {/* Items live list */}
+        <View style={styles.checkoutItemsList}>
+          {validItems.length === 0 && !chocoCard ? (
+            <View style={styles.checkoutEmpty}>
+              <Feather name="shopping-bag" size={42} color="rgba(255,255,255,0.12)" />
+              <Text style={styles.checkoutEmptyText}>لا توجد أصناف بعد</Text>
+              <Text style={styles.checkoutEmptyHint}>ابدأ بالإضافة من معرض المنتجات أو يدوياً</Text>
+            </View>
+          ) : (
+            <>
+              {validItems.map((item) => {
+                const dc = DEPT_OPTIONS.find((d) => d.value === item.department)!;
+                const lt = (item.price || 0) * item.quantity;
+                return (
+                  <View key={item.id} style={styles.checkoutItem}>
+                    <View style={[styles.checkoutItemAccent, { backgroundColor: dc.color }]} />
+                    <Text style={styles.checkoutItemName} numberOfLines={1}>{item.name}</Text>
+                    <Text style={styles.checkoutItemQty}>×{item.quantity}</Text>
+                    <Text style={[styles.checkoutItemAmt, !item.price && { color: "#f87171" }]}>
+                      {lt > 0 ? `${lt.toFixed(0)} ر.س` : "—"}
+                    </Text>
+                  </View>
+                );
+              })}
+              {chocoCard && chocoPrice > 0 && (
+                <View style={styles.checkoutItem}>
+                  <View style={[styles.checkoutItemAccent, { backgroundColor: Colors.chocolate }]} />
+                  <Text style={styles.checkoutItemName}>كرت شوكولاتة</Text>
+                  <Text style={styles.checkoutItemQty}>×1</Text>
+                  <Text style={styles.checkoutItemAmt}>{chocoPrice.toFixed(0)} ر.س</Text>
+                </View>
+              )}
+            </>
+          )}
+
+          {/* Notes field */}
+          <View style={styles.checkoutNotesRow}>
+            <Feather name="file-text" size={13} color="rgba(255,255,255,0.25)" />
+            <TextInput
+              style={styles.checkoutNotesInput}
+              value={notes}
+              onChangeText={setNotes}
+              placeholder="ملاحظات الطلب..."
+              placeholderTextColor="rgba(255,255,255,0.2)"
+              textAlign="right"
+              multiline
+            />
+          </View>
+        </View>{/* end items list */}
+        </ScrollView>{/* end outer scrollable area */}
+
+        {/* Bottom checkout section — sticky, always visible */}
+        <View style={styles.checkoutBottom}>
+          {/* Dept pills */}
+          {(halwaCount + mawaliCount + chocolateCount + cakeCount + packagingCount > 0) && (
+            <View style={styles.checkoutDeptRow}>
+              {halwaCount > 0 && <View style={[styles.deptPill, { backgroundColor: Colors.halwa }]}><Text style={styles.deptPillText}>{t("deptHalwaShort")} {halwaCount}</Text></View>}
+              {mawaliCount > 0 && <View style={[styles.deptPill, { backgroundColor: Colors.mawali }]}><Text style={styles.deptPillText}>{t("deptMawaliShort")} {mawaliCount}</Text></View>}
+              {chocolateCount > 0 && <View style={[styles.deptPill, { backgroundColor: Colors.chocolate }]}><Text style={styles.deptPillText}>{t("deptChocolateShort")} {chocolateCount}</Text></View>}
+              {cakeCount > 0 && <View style={[styles.deptPill, { backgroundColor: Colors.cake }]}><Text style={styles.deptPillText}>{t("deptCakeShort")} {cakeCount}</Text></View>}
+              {packagingCount > 0 && <View style={[styles.deptPill, { backgroundColor: Colors.packaging }]}><Text style={styles.deptPillText}>{t("deptPackagingShort")} {packagingCount}</Text></View>}
+            </View>
+          )}
+
+          {/* Payment methods */}
+          <Text style={styles.checkoutSectionLabel}>{t("paymentMethod")}</Text>
+          <View style={styles.checkoutPayRow}>
+            {PAYMENT_OPTIONS.map((opt) => (
+              <TouchableOpacity
+                key={opt.value}
+                style={[styles.checkoutPayBtn, paymentMethod === opt.value && styles.checkoutPayBtnActive]}
+                onPress={() => { Haptics.selectionAsync(); setPaymentMethod(opt.value); }}
+              >
+                <Feather name={opt.icon as any} size={14} color={paymentMethod === opt.value ? Colors.primary : "rgba(255,255,255,0.6)"} />
+                <Text style={[styles.checkoutPayBtnText, paymentMethod === opt.value && { color: Colors.primary }]}>
+                  {PAYMENT_LABELS[opt.value]}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Discount row */}
+          <TouchableOpacity
+            style={styles.checkoutDiscountRow}
+            onPress={() => { Haptics.selectionAsync(); setDiscountEnabled(v => !v); if (discountEnabled) { setDiscountValue(""); setDiscountReason(""); } }}
+            activeOpacity={0.8}
+          >
+            <Feather name="tag" size={13} color={discountEnabled ? Colors.warning : "rgba(255,255,255,0.35)"} />
+            <Text style={[styles.checkoutDiscountLabel, discountEnabled && { color: Colors.warning }]}>خصم</Text>
+            {discountEnabled && (
+              <>
+                <TouchableOpacity
+                  onPress={() => setDiscountType(t => t === "percentage" ? "fixed" : "percentage")}
+                  style={styles.checkoutDiscountTypeBtn}
+                >
+                  <Text style={styles.checkoutDiscountTypeText}>{discountType === "percentage" ? "%" : "ر.س"}</Text>
+                </TouchableOpacity>
+                <TextInput
+                  style={styles.checkoutDiscountInput}
+                  value={discountValue}
+                  onChangeText={setDiscountValue}
+                  placeholder="0"
+                  placeholderTextColor="rgba(255,255,255,0.3)"
+                  keyboardType="decimal-pad"
+                  textAlign="center"
+                  onPress={(e) => e.stopPropagation?.()}
+                />
+              </>
+            )}
+            <View style={{ flex: 1 }} />
+            <View style={[styles.checkoutDiscountToggle, discountEnabled && { backgroundColor: Colors.warning }]}>
+              <View style={[styles.checkoutDiscountThumb, discountEnabled && styles.checkoutDiscountThumbOn]} />
+            </View>
+          </TouchableOpacity>
+
+          {/* Totals */}
+          <View style={styles.checkoutTotalsBox}>
+            {hasPrices ? (
+              <>
+                <View style={styles.checkoutTotalRow}>
+                  <Text style={styles.checkoutTotalLabel}>{t("subtotal")}</Text>
+                  <Text style={styles.checkoutTotalValue}>{subtotal.toFixed(2)} ر.س</Text>
+                </View>
+                {discountAmount > 0 && (
+                  <View style={styles.checkoutTotalRow}>
+                    <Text style={[styles.checkoutTotalLabel, { color: Colors.warning }]}>خصم</Text>
+                    <Text style={[styles.checkoutTotalValue, { color: Colors.warning }]}>-{discountAmount.toFixed(2)} ر.س</Text>
+                  </View>
+                )}
+                {insuranceVal > 0 && (
+                  <View style={styles.checkoutTotalRow}>
+                    <Text style={[styles.checkoutTotalLabel, { color: Colors.goldLight }]}>{t("trayInsurance")}</Text>
+                    <Text style={[styles.checkoutTotalValue, { color: Colors.goldLight }]}>+{insuranceVal.toFixed(2)} ر.س</Text>
+                  </View>
+                )}
+                <View style={styles.checkoutGrandRow}>
+                  <Text style={styles.checkoutGrandLabel}>{t("grandTotalAll")}</Text>
+                  <Text style={styles.checkoutGrandValue}>{grandTotal.toFixed(2)} ر.س</Text>
+                </View>
+              </>
+            ) : (
+              <Text style={[styles.checkoutTotalLabel, { textAlign: "center", paddingVertical: 4 }]}>لا توجد أسعار محددة</Text>
+            )}
+
+            {/* Amount paid */}
+            <View style={styles.checkoutPaidBox}>
+              <Text style={[styles.checkoutTotalLabel, { marginBottom: 4 }]}>{t("paidAmount")}</Text>
+              <View style={styles.checkoutPaidInputRow}>
+                <Text style={styles.checkoutCurrency}>ر.س</Text>
+                <TextInput
+                  style={styles.checkoutPaidField}
+                  value={amountPaid}
+                  onChangeText={setAmountPaid}
+                  placeholder="0.00"
+                  placeholderTextColor="rgba(255,255,255,0.3)"
+                  keyboardType="decimal-pad"
+                  textAlign="right"
+                />
+              </View>
+            </View>
+            {amountPaidVal > 0 && (
+              <View style={[styles.checkoutTotalRow, { gap: 6 }]}>
+                <Feather
+                  name={remainingAmount === 0 ? "check-circle" : "alert-circle"}
+                  size={13}
+                  color={remainingAmount === 0 ? "#4ade80" : "#f87171"}
+                />
+                <Text style={[styles.checkoutTotalLabel, { color: remainingAmount === 0 ? "#4ade80" : "#f87171", flex: 1 }]}>
+                  {remainingAmount === 0 ? t("fullyPaid") : t("remaining")}
+                </Text>
+                {remainingAmount > 0 && (
+                  <Text style={[styles.checkoutTotalValue, { color: "#f87171", fontWeight: "800" }]}>
+                    {remainingAmount.toFixed(2)} ر.س
+                  </Text>
+                )}
+              </View>
+            )}
+          </View>
+
+          {/* Submit button */}
+          <TouchableOpacity
+            style={[styles.checkoutSubmitBtn, isSubmitting && { opacity: 0.6 }]}
+            onPress={handleSubmit}
+            disabled={isSubmitting}
+            activeOpacity={0.85}
+          >
+            <Feather name="send" size={19} color={Colors.primary} />
+            <Text style={styles.checkoutSubmitText}>
+              {isSubmitting ? t("sending") : t("submitInvoice")}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+    )}
+    </>
 
     {/* ─── Desktop checkout panel (right side) ─────────────────────── */}
     {isWide && (
@@ -2773,12 +3225,94 @@ const styles = StyleSheet.create({
   // ─── Wide / desktop two-panel layout ──────────────────────────
   wideContainer: { flex: 1, flexDirection: "row" as const },
 
+  checkoutCustomerSection: {
+    paddingHorizontal: 12,
+    paddingTop: 10,
+    paddingBottom: 4,
+    gap: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.1)",
+  },
+  checkoutPhonesRow: { flexDirection: "row" as const, gap: 6 },
+  checkoutPhoneHalf: { flex: 1 },
+  checkoutInputField: {
+    backgroundColor: "rgba(255,255,255,0.07)",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    fontWeight: "600" as const,
+    color: "#fff",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
+    ...(Platform.OS === "web" ? { outlineStyle: "none" } as any : {}),
+  },
+  checkoutPhoneRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 8,
+  },
+  checkoutAutofillChip: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 6,
+    backgroundColor: Colors.gold + "18",
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderWidth: 1,
+    borderColor: Colors.gold + "35",
+  },
+  checkoutAutofillText: {
+    fontSize: 12,
+    color: Colors.gold,
+    flex: 1,
+  },
+  checkoutOrderTypeRow: {
+    flexDirection: "row" as const,
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.1)",
+  },
+  checkoutOrderTypeBtn: {
+    flex: 1,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    gap: 6,
+    paddingVertical: 9,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "rgba(255,255,255,0.04)",
+  },
+  checkoutOrderTypeBtnActive: {
+    backgroundColor: Colors.gold,
+    borderColor: Colors.gold,
+  },
+  checkoutOrderTypeBtnText: {
+    fontSize: 13,
+    fontWeight: "600" as const,
+    color: "rgba(255,255,255,0.5)",
+  },
+  checkoutDelivRow: {
+    flexDirection: "row" as const,
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(255,255,255,0.1)",
+  },
+
   checkoutPanel: {
     width: 340,
     backgroundColor: Colors.primary,
     borderLeftWidth: 1,
     borderLeftColor: "rgba(255,255,255,0.1)",
     flexDirection: "column" as const,
+    overflow: "hidden" as const,
   },
   checkoutHeader: {
     flexDirection: "row" as const,
@@ -2791,6 +3325,8 @@ const styles = StyleSheet.create({
   },
   checkoutTitle: { fontSize: 18, fontWeight: "900" as const, color: "#fff" },
   checkoutSubtitle: { fontSize: 12, color: "rgba(255,255,255,0.45)", marginTop: 2 },
+  cartBadge: { backgroundColor: Colors.gold, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
+  cartBadgeText: { fontSize: 11, fontWeight: "800" as const, color: Colors.primary },
   checkoutSearchBtn: {
     width: 36, height: 36, borderRadius: 18,
     backgroundColor: "rgba(255,255,255,0.08)",
@@ -2891,6 +3427,83 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.35, shadowRadius: 8, elevation: 5,
   },
   checkoutSubmitText: { color: Colors.primary, fontSize: 16, fontWeight: "900" as const },
+
+  // checkout date chips (dark themed)
+  checkoutDayScroll: { borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.08)" },
+  checkoutDayScrollContent: { flexDirection: "row" as const, paddingHorizontal: 10, paddingVertical: 8, gap: 6 },
+  checkoutDayChip: {
+    alignItems: "center" as const, justifyContent: "center" as const,
+    paddingVertical: 7, paddingHorizontal: 11, borderRadius: 10, gap: 1,
+    borderWidth: 1, borderColor: "rgba(255,255,255,0.15)",
+    backgroundColor: "rgba(255,255,255,0.05)", minWidth: 60,
+  },
+  checkoutDayChipActive: { backgroundColor: Colors.gold, borderColor: Colors.gold },
+  checkoutDayLabel: { fontSize: 11, fontWeight: "700" as const, color: "rgba(255,255,255,0.75)" },
+  checkoutDayLabelActive: { color: Colors.primary },
+  checkoutDaySub: { fontSize: 9, color: "rgba(255,255,255,0.4)" },
+  checkoutDaySubActive: { color: Colors.primary + "cc" },
+
+  // checkout time chips (dark themed)
+  checkoutTimeScroll: { borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.08)" },
+  checkoutTimeScrollContent: { flexDirection: "row" as const, paddingHorizontal: 10, paddingVertical: 7, gap: 5 },
+  checkoutTimeChip: {
+    paddingVertical: 5, paddingHorizontal: 10, borderRadius: 8,
+    borderWidth: 1, borderColor: "rgba(255,255,255,0.12)",
+    backgroundColor: "rgba(255,255,255,0.04)",
+  },
+  checkoutTimeChipActive: { backgroundColor: "rgba(201,168,76,0.25)", borderColor: Colors.gold },
+  checkoutTimeText: { fontSize: 11, fontWeight: "600" as const, color: "rgba(255,255,255,0.6)" },
+  checkoutTimeTextActive: { color: Colors.gold, fontWeight: "800" as const },
+
+  // checkout notes
+  checkoutNotesRow: {
+    flexDirection: "row" as const, alignItems: "flex-start" as const, gap: 8,
+    marginHorizontal: 12, marginTop: 8, marginBottom: 4,
+    backgroundColor: "rgba(255,255,255,0.04)",
+    borderRadius: 10, paddingHorizontal: 10, paddingVertical: 8,
+    borderWidth: 1, borderColor: "rgba(255,255,255,0.08)",
+  },
+  checkoutNotesInput: {
+    flex: 1, fontSize: 13, color: "rgba(255,255,255,0.85)",
+    paddingVertical: 0, minHeight: 36,
+    ...(Platform.OS === "web" ? { outlineStyle: "none" } as any : {}),
+  },
+
+  // checkout discount row
+  checkoutDiscountRow: {
+    flexDirection: "row" as const, alignItems: "center" as const, gap: 8,
+    paddingHorizontal: 4, paddingVertical: 6,
+  },
+  checkoutDiscountLabel: {
+    fontSize: 12, fontWeight: "700" as const, color: "rgba(255,255,255,0.35)",
+  },
+  checkoutDiscountTypeBtn: {
+    backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 6,
+    paddingHorizontal: 8, paddingVertical: 3,
+    borderWidth: 1, borderColor: "rgba(255,255,255,0.15)",
+  },
+  checkoutDiscountTypeText: {
+    fontSize: 12, fontWeight: "700" as const, color: "rgba(255,255,255,0.7)",
+  },
+  checkoutDiscountInput: {
+    width: 64, backgroundColor: "rgba(255,255,255,0.08)", borderRadius: 8,
+    paddingHorizontal: 8, paddingVertical: 5,
+    fontSize: 14, fontWeight: "700" as const, color: Colors.warning,
+    borderWidth: 1, borderColor: "rgba(255,255,255,0.15)",
+    ...(Platform.OS === "web" ? { outlineStyle: "none" } as any : {}),
+  },
+  checkoutDiscountToggle: {
+    width: 32, height: 18, borderRadius: 9,
+    backgroundColor: "rgba(255,255,255,0.12)",
+    justifyContent: "center" as const, paddingHorizontal: 2,
+  },
+  checkoutDiscountThumb: {
+    width: 14, height: 14, borderRadius: 7, backgroundColor: "rgba(255,255,255,0.4)",
+  },
+  checkoutDiscountThumbOn: {
+    backgroundColor: "#fff",
+    transform: [{ translateX: 14 }],
+  },
 
   // reference images for special cake
   refImgHeader: { flexDirection: "row", alignItems: "flex-start", gap: 10, marginBottom: 12 },
