@@ -8,6 +8,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -85,16 +86,16 @@ function StatCard({
   color: string;
   sub?: string;
 }) {
+  const { width } = useWindowDimensions();
+  const cardW = Math.floor((width - 44) / 2);
   return (
-    <View style={[styles.statCard, { borderRightColor: color }]}>
-      <View style={[styles.statIcon, { backgroundColor: color + "22" }]}>
-        <Feather name={icon as any} size={18} color={color} />
+    <View style={[styles.statCard, { width: cardW, borderTopColor: color, borderColor: color + "28" }]}>
+      <View style={[styles.statIconWrap, { backgroundColor: color + "18" }]}>
+        <Feather name={icon as any} size={20} color={color} />
       </View>
-      <View style={{ flex: 1 }}>
-        <Text style={styles.statValue}>{value}</Text>
-        <Text style={styles.statLabel}>{label}</Text>
-        {sub ? <Text style={styles.statSub}>{sub}</Text> : null}
-      </View>
+      <Text style={[styles.statValue, { color: Colors.text }]}>{value}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
+      {sub ? <Text style={styles.statSub}>{sub}</Text> : null}
     </View>
   );
 }
@@ -116,23 +117,26 @@ function BarRow({
   const displayVal = unit === "count" ? `${value}` : fmtCurrency(value);
   return (
     <View style={styles.barRow}>
-      <Text style={styles.barLabel} numberOfLines={1}>{label}</Text>
-      <View style={styles.barTrack}>
-        <View
-          style={[
-            styles.barFill,
-            { width: `${pct}%` as any, backgroundColor: color },
-          ]}
-        />
+      <View style={styles.barTopRow}>
+        <Text style={styles.barLabel} numberOfLines={1}>{label}</Text>
+        <Text style={[styles.barValue, { color }]}>{displayVal}</Text>
       </View>
-      <Text style={styles.barValue}>{displayVal}</Text>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+        <View style={[styles.barTrack, { flex: 1 }]}>
+          <View style={[styles.barFill, { width: `${pct}%` as any, backgroundColor: color }]} />
+        </View>
+        <Text style={[styles.barPctBadge, { color }]}>{pct.toFixed(0)}%</Text>
+      </View>
     </View>
   );
 }
 
-function SectionHeader({ title }: { title: string }) {
+function SectionHeader({ title, icon, color }: { title: string; icon?: string; color?: string }) {
+  const c = color ?? Colors.primary;
   return (
     <View style={styles.sectionHeader}>
+      <View style={[styles.sectionAccentBar, { backgroundColor: c }]} />
+      {icon ? <Feather name={icon as any} size={13} color={c} /> : null}
       <Text style={styles.sectionHeaderText}>{title}</Text>
     </View>
   );
@@ -151,22 +155,27 @@ function PaymentRow({
 }) {
   const pct = total > 0 ? Math.round((value / total) * 100) : 0;
   return (
-    <View style={styles.payRow}>
-      <View style={[styles.payDot, { backgroundColor: color }]} />
-      <Text style={styles.payLabel}>{label}</Text>
-      <View style={styles.payBarWrap}>
-        <View
-          style={[
-            styles.payBarFill,
-            { width: `${pct}%` as any, backgroundColor: color + "55" },
-          ]}
-        />
+    <View style={[styles.payRow, { borderRightColor: color }]}>
+      <View style={styles.payTopRow}>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <View style={[styles.payDot, { backgroundColor: color }]} />
+          <Text style={styles.payLabel}>{label}</Text>
+        </View>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <View style={[styles.payPctBadge, { backgroundColor: color + "18", borderColor: color + "35" }]}>
+            <Text style={[styles.payPct, { color }]}>{pct}%</Text>
+          </View>
+          <Text style={[styles.payValue, { color }]}>{fmtCurrency(value)}</Text>
+        </View>
       </View>
-      <Text style={styles.payPct}>{pct}%</Text>
-      <Text style={styles.payValue}>{fmtCurrency(value)}</Text>
+      <View style={styles.payBarWrap}>
+        <View style={[styles.payBarFill, { width: `${pct}%` as any, backgroundColor: color }]} />
+      </View>
     </View>
   );
 }
+
+const MEDAL_COLORS = ["#F59E0B", "#9CA3AF", "#CD7F32"];
 
 function CashierRow({
   rank,
@@ -183,10 +192,11 @@ function CashierRow({
   avg: number;
   tFn: (key: import("@/constants/translations").TranslationKey) => string;
 }) {
+  const medalColor = rank <= 3 ? MEDAL_COLORS[rank - 1] : Colors.textMuted;
   return (
-    <View style={styles.cashierRow}>
-      <View style={styles.cashierRankBadge}>
-        <Text style={styles.cashierRank}>{rank}</Text>
+    <View style={[styles.cashierRow, rank === 1 && { backgroundColor: "#F59E0B08", borderRadius: 12 }]}>
+      <View style={[styles.cashierRankBadge, { backgroundColor: medalColor + "20", borderColor: medalColor + "40" }]}>
+        <Text style={[styles.cashierRank, { color: medalColor }]}>{rank}</Text>
       </View>
       <View style={{ flex: 1 }}>
         <Text style={styles.cashierName}>{name}</Text>
@@ -194,7 +204,7 @@ function CashierRow({
           {orderCount} {tFn("custOrderSingular")} · {tFn("repAvgOrder")} {fmtCurrency(avg)}
         </Text>
       </View>
-      <Text style={styles.cashierRevenue}>{fmtCurrency(revenue)}</Text>
+      <Text style={[styles.cashierRevenue, { color: rank === 1 ? "#F59E0B" : Colors.primary }]}>{fmtCurrency(revenue)}</Text>
     </View>
   );
 }
@@ -325,7 +335,7 @@ function ExportTab({ filtered, filterLbl }: { filtered: ReturnType<typeof useOrd
     <View style={{ gap: 0 }}>
       {/* Summary */}
       <View style={styles.card}>
-        <SectionHeader title="ملخص البيانات القابلة للتصدير" />
+        <SectionHeader title="ملخص البيانات القابلة للتصدير" icon="database" color={Colors.primary} />
         <View style={exportStyles.summaryRow}>
           <View style={exportStyles.summaryItem}>
             <Feather name="file-text" size={22} color={Colors.primary} />
@@ -349,7 +359,7 @@ function ExportTab({ filtered, filterLbl }: { filtered: ReturnType<typeof useOrd
 
       {/* Export buttons */}
       <View style={styles.card}>
-        <SectionHeader title="تصدير البيانات" />
+        <SectionHeader title="تصدير البيانات" icon="download" color={Colors.gold} />
         <Text style={exportStyles.hint}>
           {Platform.OS === "web"
             ? "سيتم تحميل ملف CSV مباشرة إلى جهازك."
@@ -527,7 +537,7 @@ function RevenueTab({
       {/* Revenue by department */}
       {byDept.length > 0 && (
         <View style={styles.card}>
-          <SectionHeader title={t("repByDept")} />
+          <SectionHeader title={t("repByDept")} icon="layers" color={Colors.primary} />
           {byDept.map(([dept, rev]) => (
             <BarRow
               key={dept}
@@ -543,7 +553,26 @@ function RevenueTab({
 
       {/* Payment methods */}
       <View style={styles.card}>
-        <SectionHeader title={t("repByPayment")} />
+        <SectionHeader title={t("repByPayment")} icon="credit-card" color={Colors.info} />
+        {/* Segmented total bar */}
+        {paymentTotal > 0 && (
+          <View style={styles.segmentBarWrap}>
+            {Object.entries(byPayment)
+              .filter(([, v]) => v > 0)
+              .map(([pm, val]) => (
+                <View
+                  key={pm}
+                  style={[
+                    styles.segmentPiece,
+                    {
+                      flex: val,
+                      backgroundColor: PAYMENT_COLORS[pm] ?? Colors.primary,
+                    },
+                  ]}
+                />
+              ))}
+          </View>
+        )}
         {Object.entries(byPayment)
           .filter(([, v]) => v > 0)
           .map(([pm, val]) => (
@@ -562,7 +591,7 @@ function RevenueTab({
 
       {/* Delivery vs Pickup */}
       <View style={styles.card}>
-        <SectionHeader title={t("repDelivVsPickup")} />
+        <SectionHeader title={t("repDelivVsPickup")} icon="truck" color={Colors.info} />
         <View style={styles.splitRow}>
           <View style={[styles.splitCard, { borderColor: Colors.info }]}>
             <Feather name="truck" size={20} color={Colors.info} />
@@ -632,27 +661,28 @@ function ProductsTab({
       {/* Top products by quantity */}
       {topByQty.length > 0 ? (
         <View style={styles.card}>
-          <SectionHeader title={t("repTopByQty")} />
-          {topByQty.map(([name, qty], idx) => (
-            <View key={name} style={styles.prodRow}>
-              <Text style={styles.prodRank}>#{idx + 1}</Text>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.prodName} numberOfLines={1}>{name}</Text>
-                <View style={styles.prodBarTrack}>
-                  <View
-                    style={[
-                      styles.prodBarFill,
-                      {
-                        width: `${(qty / maxQty) * 100}%` as any,
-                        backgroundColor: Colors.primary + "40",
-                      },
-                    ]}
-                  />
+          <SectionHeader title={t("repTopByQty")} icon="trending-up" color={Colors.primary} />
+          {topByQty.map(([name, qty], idx) => {
+            const rank = idx + 1;
+            const mc = rank <= 3 ? MEDAL_COLORS[rank - 1] : Colors.primary + "70";
+            const pct = (qty / maxQty) * 100;
+            return (
+              <View key={name} style={styles.prodRow}>
+                <View style={[styles.prodRankBadge, { backgroundColor: mc + "20", borderColor: mc + "40" }]}>
+                  <Text style={[styles.prodRank, { color: mc }]}>{rank}</Text>
+                </View>
+                <View style={{ flex: 1, gap: 5 }}>
+                  <View style={styles.prodTopRow}>
+                    <Text style={styles.prodName} numberOfLines={1}>{name}</Text>
+                    <Text style={[styles.prodQty, { color: mc }]}>{qty} {t("repUnits")}</Text>
+                  </View>
+                  <View style={styles.barTrack}>
+                    <View style={[styles.barFill, { width: `${pct}%` as any, backgroundColor: mc }]} />
+                  </View>
                 </View>
               </View>
-              <Text style={styles.prodQty}>{qty} {t("repUnits")}</Text>
-            </View>
-          ))}
+            );
+          })}
         </View>
       ) : (
         <View style={styles.card}>
@@ -663,14 +693,14 @@ function ProductsTab({
       {/* Top products by revenue */}
       {topByRev.length > 0 && (
         <View style={styles.card}>
-          <SectionHeader title={t("repTopByRevenue")} />
-          {topByRev.map(([name, rev]) => (
+          <SectionHeader title={t("repTopByRevenue")} icon="dollar-sign" color={Colors.gold} />
+          {topByRev.map(([name, rev], idx) => (
             <BarRow
               key={name}
               label={name}
               value={rev}
               max={maxRev}
-              color={Colors.gold}
+              color={idx < 3 ? MEDAL_COLORS[idx] : Colors.gold}
               unit="currency"
             />
           ))}
@@ -680,7 +710,7 @@ function ProductsTab({
       {/* Department order volume */}
       {deptVolume.length > 0 && (
         <View style={styles.card}>
-          <SectionHeader title={t("repDeptVolume")} />
+          <SectionHeader title={t("repDeptVolume")} icon="pie-chart" color={Colors.packaging} />
           {deptVolume.map(([dept, counts]) => (
             <View key={dept} style={styles.deptVolumeRow}>
               <View
@@ -788,7 +818,7 @@ function CashierTab({
 
       {/* Cashier list */}
       <View style={styles.card}>
-        <SectionHeader title={t("repCashierPerf")} />
+        <SectionHeader title={t("repCashierPerf")} icon="award" color={Colors.gold} />
         {cashierStats.map((c, idx) => (
           <CashierRow
             key={c.name}
@@ -894,7 +924,7 @@ function DeliveryTab({
       {/* Avg delivery time */}
       {avgDeliveryTime !== null && (
         <View style={styles.card}>
-          <SectionHeader title={t("repAvgDelivTime")} />
+          <SectionHeader title={t("repAvgDelivTime")} icon="clock" color={Colors.info} />
           <View style={styles.avgTimeRow}>
             <Feather name="clock" size={28} color={Colors.info} />
             <Text style={styles.avgTimeValue}>{avgDeliveryTime} دقيقة</Text>
@@ -904,7 +934,7 @@ function DeliveryTab({
 
       {/* Pending vs Delivered */}
       <View style={styles.card}>
-        <SectionHeader title={t("repDelivStatus")} />
+        <SectionHeader title={t("repDelivStatus")} icon="check-circle" color={Colors.statusDone} />
         <View style={styles.splitRow}>
           <View style={[styles.splitCard, { borderColor: Colors.statusDone }]}>
             <Feather name="check-circle" size={20} color={Colors.statusDone} />
@@ -922,7 +952,7 @@ function DeliveryTab({
       {/* Driver performance */}
       {driverStats.length > 0 && (
         <View style={styles.card}>
-          <SectionHeader title={t("repDriverPerf")} />
+          <SectionHeader title={t("repDriverPerf")} icon="truck" color={Colors.info} />
           {driverStats.map((d, idx) => (
             <DriverRow
               key={d.name}
@@ -1456,48 +1486,51 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  // KPI grid
+  // KPI grid — 2-column wrapping
   kpiGrid: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    paddingHorizontal: 12,
     gap: 10,
+    paddingTop: 8,
     marginBottom: 4,
   },
 
-  // Stat card
+  // Stat card — vertical layout, top color border
   statCard: {
     backgroundColor: Colors.surface,
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    borderRightWidth: 4,
+    gap: 5,
+    borderWidth: 1.5,
+    borderTopWidth: 3,
     shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    elevation: 3,
   },
-  statIcon: {
+  statIconWrap: {
     width: 40,
     height: 40,
-    borderRadius: 10,
+    borderRadius: 11,
     alignItems: "center",
     justifyContent: "center",
+    marginBottom: 2,
   },
   statValue: {
-    fontSize: 17,
-    fontWeight: "800",
+    fontSize: 20,
+    fontWeight: "900",
     color: Colors.text,
+    letterSpacing: -0.5,
   },
   statLabel: {
-    fontSize: 12,
+    fontSize: 11,
     color: Colors.textSecondary,
-    marginTop: 2,
+    fontWeight: "600",
   },
   statSub: {
-    fontSize: 11,
+    fontSize: 10,
     color: Colors.textMuted,
     marginTop: 1,
   },
@@ -1516,58 +1549,82 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
 
-  // Section header
+  // Section header — with left accent bar + icon
   sectionHeader: {
-    marginBottom: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 16,
+    paddingBottom: 10,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
-    paddingBottom: 8,
+  },
+  sectionAccentBar: {
+    width: 3,
+    height: 16,
+    borderRadius: 2,
   },
   sectionHeaderText: {
     fontSize: 14,
     fontWeight: "800",
     color: Colors.text,
+    flex: 1,
   },
 
-  // Bar row
+  // Bar row — label+value on top, bar on bottom with % badge
   barRow: {
+    marginBottom: 14,
+    gap: 6,
+  },
+  barTopRow: {
     flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    gap: 8,
-    marginBottom: 10,
   },
   barLabel: {
-    width: 72,
-    fontSize: 12,
-    color: Colors.textSecondary,
+    flex: 1,
+    fontSize: 13,
+    color: Colors.text,
+    fontWeight: "500",
   },
   barTrack: {
     flex: 1,
-    height: 8,
-    backgroundColor: Colors.border,
-    borderRadius: 4,
+    height: 10,
+    backgroundColor: Colors.surfaceSecondary,
+    borderRadius: 6,
     overflow: "hidden",
   },
   barFill: {
-    height: 8,
-    borderRadius: 4,
+    height: 10,
+    borderRadius: 6,
   },
   barValue: {
-    width: 90,
+    fontSize: 12,
+    fontWeight: "700",
+    textAlign: "right",
+  },
+  barPctBadge: {
+    width: 34,
     fontSize: 11,
-    color: Colors.text,
     fontWeight: "700",
     textAlign: "right",
   },
 
-  // Payment row
+  // Payment row — with right accent border, stacked layout
   payRow: {
+    gap: 8,
+    paddingVertical: 10,
+    paddingRight: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
+    borderRightWidth: 3,
+    borderRadius: 4,
+    marginBottom: 2,
+  },
+  payTopRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    justifyContent: "space-between",
   },
   payDot: {
     width: 10,
@@ -1575,34 +1632,48 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   payLabel: {
-    width: 50,
     fontSize: 13,
+    fontWeight: "600",
     color: Colors.text,
   },
+  payPctBadge: {
+    borderWidth: 1,
+    borderRadius: 20,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  payPct: {
+    fontSize: 11,
+    fontWeight: "800",
+  },
   payBarWrap: {
-    flex: 1,
-    height: 6,
-    backgroundColor: Colors.border,
-    borderRadius: 3,
+    height: 8,
+    backgroundColor: Colors.surfaceSecondary,
+    borderRadius: 4,
     overflow: "hidden",
   },
   payBarFill: {
-    height: 6,
-    borderRadius: 3,
-  },
-  payPct: {
-    width: 34,
-    fontSize: 11,
-    color: Colors.textSecondary,
-    textAlign: "right",
-    fontWeight: "600",
+    height: 8,
+    borderRadius: 4,
   },
   payValue: {
-    width: 80,
-    fontSize: 12,
-    fontWeight: "700",
-    color: Colors.text,
+    fontSize: 13,
+    fontWeight: "800",
     textAlign: "right",
+    minWidth: 80,
+  },
+
+  // Segmented payment bar
+  segmentBarWrap: {
+    flexDirection: "row",
+    height: 14,
+    borderRadius: 7,
+    overflow: "hidden",
+    marginBottom: 16,
+    gap: 2,
+  },
+  segmentPiece: {
+    borderRadius: 7,
   },
 
   // Delivery vs pickup split
@@ -1635,39 +1706,39 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  // Product rows
+  // Product rows — medal ranks + inline bar
   prodRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    marginBottom: 10,
+    gap: 10,
+    marginBottom: 12,
+  },
+  prodRankBadge: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    borderWidth: 1.5,
+    alignItems: "center",
+    justifyContent: "center",
   },
   prodRank: {
-    width: 26,
-    fontSize: 11,
-    fontWeight: "800",
-    color: Colors.textMuted,
+    fontSize: 12,
+    fontWeight: "900",
+  },
+  prodTopRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   prodName: {
+    flex: 1,
     fontSize: 13,
+    fontWeight: "500",
     color: Colors.text,
-    marginBottom: 3,
-  },
-  prodBarTrack: {
-    height: 5,
-    backgroundColor: Colors.border,
-    borderRadius: 3,
-    overflow: "hidden",
-  },
-  prodBarFill: {
-    height: 5,
-    borderRadius: 3,
   },
   prodQty: {
     fontSize: 12,
-    fontWeight: "700",
-    color: Colors.primary,
-    width: 64,
+    fontWeight: "800",
     textAlign: "right",
   },
 
@@ -1736,17 +1807,16 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.border,
   },
   cashierRankBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
-    backgroundColor: Colors.primary + "15",
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    borderWidth: 1.5,
     alignItems: "center",
     justifyContent: "center",
   },
   cashierRank: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: Colors.primary,
+    fontSize: 13,
+    fontWeight: "900",
   },
   cashierName: {
     fontSize: 13,
