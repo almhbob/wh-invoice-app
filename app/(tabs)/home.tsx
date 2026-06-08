@@ -358,8 +358,15 @@ export default function HomeScreen() {
               </View>
               {recentOrders.length === 0 ? (
                 <View style={s.empty}>
-                  <Feather name="inbox" size={38} color={Colors.textMuted} />
+                  <View style={s.emptyIconBox}>
+                    <Feather name="inbox" size={28} color={Colors.textMuted} />
+                  </View>
                   <Text style={s.emptyTxt}>لا توجد فواتير بعد</Text>
+                  <Text style={s.emptySubTxt}>ابدأ باستقبال الطلبات من شاشة الكاشير</Text>
+                  <TouchableOpacity style={s.emptyCta} onPress={() => go("cashier")}>
+                    <Feather name="plus" size={14} color="#fff" />
+                    <Text style={s.emptyCtaTxt}>فاتورة جديدة</Text>
+                  </TouchableOpacity>
                 </View>
               ) : (
                 recentOrders.map(o => (
@@ -426,8 +433,12 @@ const s = StyleSheet.create({
   ordCard:    { backgroundColor: "#fff", borderRadius: 18, overflow: "hidden", shadowColor: "#0A1628", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.07, shadowRadius: 12, elevation: 4 },
 
   // Empty state
-  empty:      { alignItems: "center", paddingVertical: 48, gap: 12 },
-  emptyTxt:   { color: Colors.textMuted, fontSize: 14 },
+  empty:      { alignItems: "center", paddingVertical: 36, gap: 10 },
+  emptyIconBox: { width: 64, height: 64, borderRadius: 32, backgroundColor: Colors.background, borderWidth: 1, borderColor: Colors.border, alignItems: "center", justifyContent: "center", marginBottom: 4 },
+  emptyTxt:   { color: Colors.text, fontSize: 15, fontWeight: "700" },
+  emptySubTxt: { color: Colors.textMuted, fontSize: 12, textAlign: "center" },
+  emptyCta:   { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: Colors.primary, borderRadius: 20, paddingHorizontal: 18, paddingVertical: 9, marginTop: 4 },
+  emptyCtaTxt: { color: "#fff", fontSize: 13, fontWeight: "800" },
 });
 
 const kpi = StyleSheet.create({

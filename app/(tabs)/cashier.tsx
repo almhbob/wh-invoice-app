@@ -1543,6 +1543,12 @@ export default function CashierScreen() {
     <View style={styles.wideContainer}>
     <InlineCatalog selected={catalogQtys} onAdd={addFromCatalog} onRemove={removeFromCatalog} />
       <View style={[styles.checkoutPanel, { width: 420 }]}>
+        {/* ── Single outer ScrollView: everything above the sticky payment footer ── */}
+        <ScrollView
+          style={{ flex: 1 }}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
 
         {/* Customer section — compact */}
         <View style={styles.checkoutCustomerSection}>
@@ -1672,9 +1678,16 @@ export default function CashierScreen() {
 
         {/* Header (stats + search + shift) */}
         <View style={styles.checkoutHeader}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.checkoutTitle}>الطلب الحالي</Text>
-            <Text style={styles.checkoutSubtitle}>{todayOrders.length} طلب اليوم · {todayTotal.toFixed(0)} ر.س</Text>
+          <View style={{ flex: 1, flexDirection: "row" as const, alignItems: "center" as const, gap: 8 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.checkoutTitle}>الطلب الحالي</Text>
+              <Text style={styles.checkoutSubtitle}>{todayOrders.length} طلب اليوم · {todayTotal.toFixed(0)} ر.س</Text>
+            </View>
+            {(validItems.length > 0 || !!chocoCard) && (
+              <View style={styles.cartBadge}>
+                <Text style={styles.cartBadgeText}>{validItems.length + (chocoCard ? 1 : 0)} صنف</Text>
+              </View>
+            )}
           </View>
           <TouchableOpacity
             style={styles.checkoutSearchBtn}
@@ -1709,7 +1722,7 @@ export default function CashierScreen() {
         )}
 
         {/* Items live list */}
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.checkoutItemsList} showsVerticalScrollIndicator={false}>
+        <View style={styles.checkoutItemsList}>
           {validItems.length === 0 && !chocoCard ? (
             <View style={styles.checkoutEmpty}>
               <Feather name="shopping-bag" size={42} color="rgba(255,255,255,0.12)" />
@@ -1756,9 +1769,10 @@ export default function CashierScreen() {
               multiline
             />
           </View>
-        </ScrollView>
+        </View>{/* end items list */}
+        </ScrollView>{/* end outer scrollable area */}
 
-        {/* Bottom checkout section */}
+        {/* Bottom checkout section — sticky, always visible */}
         <View style={styles.checkoutBottom}>
           {/* Dept pills */}
           {(halwaCount + mawaliCount + chocolateCount + cakeCount + packagingCount > 0) && (
@@ -3095,6 +3109,7 @@ const styles = StyleSheet.create({
     borderLeftWidth: 1,
     borderLeftColor: "rgba(255,255,255,0.1)",
     flexDirection: "column" as const,
+    overflow: "hidden" as const,
   },
   checkoutHeader: {
     flexDirection: "row" as const,
@@ -3107,6 +3122,8 @@ const styles = StyleSheet.create({
   },
   checkoutTitle: { fontSize: 18, fontWeight: "900" as const, color: "#fff" },
   checkoutSubtitle: { fontSize: 12, color: "rgba(255,255,255,0.45)", marginTop: 2 },
+  cartBadge: { backgroundColor: Colors.gold, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
+  cartBadgeText: { fontSize: 11, fontWeight: "800" as const, color: Colors.primary },
   checkoutSearchBtn: {
     width: 36, height: 36, borderRadius: 18,
     backgroundColor: "rgba(255,255,255,0.08)",

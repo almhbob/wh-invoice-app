@@ -921,8 +921,28 @@ export default function ReportsScreen() {
       >
         {filtered.length === 0 && (
           <View style={styles.emptyState}>
-            <Feather name="bar-chart-2" size={48} color={Colors.textMuted} />
-            <Text style={styles.emptyStateText}>{t("repNoData")}</Text>
+            <View style={styles.emptyIconRing}>
+              <Feather name="bar-chart-2" size={32} color={Colors.textMuted} />
+            </View>
+            <Text style={styles.emptyStateTitle}>{t("repNoData")}</Text>
+            <Text style={styles.emptyStateHint}>
+              {filter === "today"
+                ? "لا توجد فواتير اليوم بعد. ابدأ بإنشاء فاتورة من شاشة الكاشير."
+                : filter === "week"
+                ? "لا توجد فواتير هذا الأسبوع. حاول توسيع نطاق البحث."
+                : filter === "month"
+                ? "لا توجد فواتير هذا الشهر."
+                : "لا توجد فواتير في النظام بعد."}
+            </Text>
+            {filter !== "all" && (
+              <TouchableOpacity
+                style={styles.emptyStateBtn}
+                onPress={() => { Haptics.selectionAsync(); setFilter("all"); }}
+              >
+                <Feather name="calendar" size={13} color={Colors.primary} />
+                <Text style={styles.emptyStateBtnText}>عرض كل الفواتير</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
@@ -1377,10 +1397,36 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     padding: 48,
-    gap: 12,
+    gap: 14,
+  },
+  emptyIconRing: {
+    width: 80, height: 80, borderRadius: 40,
+    backgroundColor: Colors.surface,
+    borderWidth: 1, borderColor: Colors.border,
+    alignItems: "center", justifyContent: "center",
+    marginBottom: 4,
+  },
+  emptyStateTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: Colors.text,
   },
   emptyStateText: {
     fontSize: 15,
     color: Colors.textMuted,
+  },
+  emptyStateHint: {
+    fontSize: 13, color: Colors.textMuted,
+    textAlign: "center", lineHeight: 20, maxWidth: 280,
+  },
+  emptyStateBtn: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    backgroundColor: Colors.primary + "15",
+    borderWidth: 1, borderColor: Colors.primary + "40",
+    borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8,
+    marginTop: 4,
+  },
+  emptyStateBtnText: {
+    fontSize: 13, fontWeight: "700", color: Colors.primary,
   },
 });

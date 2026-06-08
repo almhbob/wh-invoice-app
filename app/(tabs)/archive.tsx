@@ -20,6 +20,14 @@ import { useEmployee } from "@/context/EmployeeContext";
 import { Department, Order, OrderStatus, PAYMENT_LABELS, useOrders } from "@/context/OrdersContext";
 import { fmtDate } from "@/utils/dateUtils";
 
+const MONTH_AR = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
+const DAY_AR   = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
+function formatDateAr(iso: string): string {
+  if (!iso) return "تصفية بالتاريخ";
+  const d = new Date(iso + "T12:00:00");
+  return `${DAY_AR[d.getDay()]} ${d.getDate()} ${MONTH_AR[d.getMonth()]} ${d.getFullYear()}`;
+}
+
 const DEPT_META: Record<string, { label: string; shortLabel: string; color: string }> = {
   halwa:     { label: "قسم الحلا",      shortLabel: "حلا",      color: Colors.halwa },
   mawali:    { label: "قسم الموالح",    shortLabel: "موالح",    color: Colors.mawali },
@@ -375,8 +383,8 @@ export default function ArchiveScreen() {
               <Feather name="calendar" size={14} color={Colors.textMuted} />
               {Platform.OS === "web" ? (
                 <View style={styles.webDateWrapper}>
-                  <Text style={[styles.searchInput, { flex: 1, paddingVertical: 0 }]}>
-                    {dateFilter || "تصفية بالتاريخ"}
+                  <Text style={[styles.searchInput, { flex: 1, paddingVertical: 0, color: dateFilter ? Colors.text : Colors.textMuted }]}>
+                    {formatDateAr(dateFilter)}
                   </Text>
                   <input
                     type="date"
