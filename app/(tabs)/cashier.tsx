@@ -150,8 +150,6 @@ export default function CashierScreen() {
   const [receiptQr, setReceiptQr] = useState<string>("");
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [catalogQtys, setCatalogQtys] = useState<Record<string, number>>({});
-  const [chocoCard, setChocoCard] = useState<string | null>(null);
-  const chocoPrice = chocoCard ? 25 : 0;
 
   // Chocolate card add-on
   const [chocoCard, setChocoCard] = useState<ChocolateCardValue | null>(null);
