@@ -288,21 +288,64 @@ export default function ArchiveScreen() {
   }, [orders, deptFilter, dateFilter, search]);
 
   const handleDelete = (order: Order) => {
+    const doDelete = () => deleteOrder(
+      order.id,
+      currentEmployee ? { name: currentEmployee.name, employeeId: currentEmployee.employeeId } : undefined
+    );
+    if (Platform.OS === "web") {
+      if ((window as any).confirm(`حذف الفاتورة #${order.orderNumber} — "${order.customerName}"؟\nيمكن استرجاعها لاحقاً.`)) doDelete();
+      return;
+    }
     Alert.alert(
       `حذف الفاتورة #${order.orderNumber}`,
       `هل تريد حذف فاتورة "${order.customerName}"؟ يمكن استرجاعها لاحقاً.`,
-      [
-        { text: "إلغاء", style: "cancel" },
-        {
-          text: "حذف",
-          style: "destructive",
-          onPress: () => deleteOrder(order.id, currentEmployee
-            ? { name: currentEmployee.name, employeeId: currentEmployee.employeeId }
-            : undefined
-          ),
-        },
-      ]
+      [{ text: "إلغاء", style: "cancel" }, { text: "حذف", style: "destructive", onPress: doDelete }]
     );
+  };
+
+  const handlePrint = () => {
+    if (Platform.OS !== "web") return;
+    const rows = filtered.map(o => {
+      const itemsHtml = Object.entries(DEPT_META).map(([key, meta]) => {
+        const di = o.items.filter(i => i.department === key);
+        if (!di.length) return "";
+        return `<div style="margin:3px 0;border-right:3px solid ${meta.color};padding-right:7px">
+          <b style="color:${meta.color}">${meta.label}</b><br/>
+          ${di.map(i => `${i.quantity}× ${i.name}${i.note ? ` (${i.note})` : ""}`).join("<br/>")}
+        </div>`;
+      }).join("");
+      const discount = o.discount?.value && o.discount.value > 0
+        ? (o.discount.type === "percentage" ? `خصم ${o.discount.value}%` : `خصم ${o.discount.value.toFixed(2)} ر.س`)
+        : "";
+      return `<tr>
+        <td>#${o.orderNumber}</td>
+        <td>${o.customerName || "-"}<br/><small>${o.customerPhone || ""}</small></td>
+        <td>${itemsHtml}</td>
+        <td style="font-weight:700">${o.totalAmount != null ? o.totalAmount.toFixed(2) + " ر.س" : "-"}</td>
+        <td>${o.paymentMethod ? (PAYMENT_LABELS[o.paymentMethod] || o.paymentMethod) : "-"}</td>
+        <td>${discount}</td>
+        <td>${fmtDate(o.createdAt, "ar")}</td>
+      </tr>`;
+    }).join("");
+    const title = `أرشيف الفواتير${dateFilter ? ` — ${formatDateAr(dateFilter)}` : ""}${deptFilter !== "all" ? ` — ${DEPT_META[deptFilter]?.label ?? ""}` : ""}`;
+    const html = `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"/>
+<title>${title}</title>
+<style>
+body{font-family:Arial,sans-serif;font-size:12px;direction:rtl;margin:20px}
+h2{text-align:center;margin-bottom:12px}
+table{width:100%;border-collapse:collapse}
+th,td{border:1px solid #ccc;padding:6px 8px;text-align:right;vertical-align:top}
+th{background:#0A1628;color:#fff}
+tr:nth-child(even){background:#f7f7f7}
+@media print{body{margin:0}}
+</style></head><body>
+<h2>${title} — ${filtered.length} فاتورة</h2>
+<table><thead><tr>
+<th>#</th><th>العميل</th><th>الأصناف</th><th>المبلغ</th><th>الدفع</th><th>الخصم</th><th>التاريخ</th>
+</tr></thead><tbody>${rows}</tbody></table>
+</body></html>`;
+    const w = (window as any).open("", "_blank");
+    if (w) { w.document.write(html); w.document.close(); w.print(); }
   };
 
   return (
@@ -417,7 +460,13 @@ export default function ArchiveScreen() {
 
           <View style={styles.countRow}>
             <Feather name="file-text" size={13} color={Colors.textMuted} />
-            <Text style={styles.countText}>{filtered.length} فاتورة</Text>
+            <Text style={[styles.countText, { flex: 1 }]}>{filtered.length} فاتورة</Text>
+            {Platform.OS === "web" && filtered.length > 0 && (
+              <TouchableOpacity style={styles.printBtn} onPress={handlePrint} activeOpacity={0.75}>
+                <Feather name="printer" size={13} color={Colors.primary} />
+                <Text style={styles.printBtnText}>طباعة</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           <EditOrderModal
@@ -503,6 +552,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 8,
   },
   countText: { fontSize: 13, color: Colors.textMuted },
+  printBtn: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    backgroundColor: Colors.primary + "12", borderRadius: 8,
+    paddingHorizontal: 12, paddingVertical: 6,
+    borderWidth: 1, borderColor: Colors.primary + "25",
+  },
+  printBtnText: { fontSize: 12, color: Colors.primary, fontWeight: "700" },
   list: { padding: 16, paddingTop: 4 },
   archiveCard: {
     backgroundColor: Colors.surface, borderRadius: 16, marginBottom: 14, padding: 14,
