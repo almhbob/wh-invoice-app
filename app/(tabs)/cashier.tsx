@@ -751,8 +751,6 @@ export default function CashierScreen() {
       onClose={() => setShowClosing(false)}
       orders={orders}
     />
-
-    <>
     {!isWide && (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
@@ -2118,8 +2116,8 @@ export default function CashierScreen() {
           </TouchableOpacity>
         </View>
       </View>
-    )}
     </View>
+    )}
 
     {/* ─── Invoice Search Modal ─────────────────────────────────── */}
     {showSearch && (
