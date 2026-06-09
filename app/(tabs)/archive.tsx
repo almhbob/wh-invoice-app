@@ -18,7 +18,7 @@ import { canDo, ROLE_CAN_DELETE_ORDERS, ROLE_CAN_EDIT_ORDERS } from "@/constants
 import { useLang } from "@/context/LanguageContext";
 import { useEmployee } from "@/context/EmployeeContext";
 import { Department, Order, OrderStatus, PAYMENT_LABELS, useOrders } from "@/context/OrdersContext";
-import { fmtDate } from "@/utils/dateUtils";
+import { fmtDate, fmtDateTime } from "@/utils/dateUtils";
 
 const MONTH_AR = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
 const DAY_AR   = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
@@ -100,6 +100,22 @@ function ArchiveCard({ order, canDelete, canEdit, onDelete, onEdit }: { order: O
         </View>
       </View>
 
+      {/* Delivery badge */}
+      {order.orderType === "delivery" && (
+        <View style={styles.deliverySection}>
+          <View style={styles.deliveryBadge}>
+            <Feather name="truck" size={11} color={Colors.info} />
+            <Text style={styles.deliveryBadgeText}>توصيل</Text>
+          </View>
+          {order.deliveryAddress ? (
+            <View style={styles.footerItem}>
+              <Feather name="map-pin" size={11} color={Colors.textMuted} />
+              <Text style={styles.footerText}>{order.deliveryAddress}</Text>
+            </View>
+          ) : null}
+        </View>
+      )}
+
       {/* Items grouped by dept */}
       {Object.entries(DEPT_META).map(([key, meta]) => {
         const deptItems = order.items.filter((i) => i.department === key);
@@ -117,35 +133,45 @@ function ArchiveCard({ order, canDelete, canEdit, onDelete, onEdit }: { order: O
         );
       })}
 
-      {/* Employee accountability trail */}
-      <View style={styles.trailBox}>
-        {order.cashierEmployee && (
-          <View style={styles.trailRow}>
-            <Feather name="edit-3" size={11} color={Colors.gold} />
-            <Text style={styles.trailLabel}>أدخله:</Text>
-            <Text style={styles.trailName}>{order.cashierEmployee.name}</Text>
-            <Text style={styles.trailId}>#{order.cashierEmployee.employeeId}</Text>
-          </View>
-        )}
-        {order.departmentReceivers && Object.entries(DEPT_META).map(([key, meta]) => {
-          const receiver = order.departmentReceivers?.[key as Department];
-          if (!receiver) return null;
-          return (
-            <View key={key} style={styles.trailRow}>
-              <Feather name="check-square" size={11} color={meta.color} />
-              <Text style={[styles.trailLabel, { color: meta.color }]}>استلم {meta.shortLabel}:</Text>
-              <Text style={[styles.trailName, { color: meta.color }]}>{receiver.name}</Text>
-              <Text style={styles.trailId}>#{receiver.employeeId}</Text>
-            </View>
-          );
-        })}
-      </View>
+      {/* Notes */}
+      {order.notes ? (
+        <View style={styles.notesRow}>
+          <Feather name="file-text" size={12} color={Colors.textMuted} />
+          <Text style={styles.notesText}>{order.notes}</Text>
+        </View>
+      ) : null}
 
-      {/* Footer: timing & insurance */}
+      {/* Employee accountability trail */}
+      {(order.cashierEmployee || Object.values(order.departmentReceivers ?? {}).some(Boolean)) && (
+        <View style={styles.trailBox}>
+          {order.cashierEmployee && (
+            <View style={styles.trailRow}>
+              <Feather name="edit-3" size={11} color={Colors.gold} />
+              <Text style={styles.trailLabel}>أدخله:</Text>
+              <Text style={styles.trailName}>{order.cashierEmployee.name}</Text>
+              <Text style={styles.trailId}>#{order.cashierEmployee.employeeId}</Text>
+            </View>
+          )}
+          {order.departmentReceivers && Object.entries(DEPT_META).map(([key, meta]) => {
+            const receiver = order.departmentReceivers?.[key as Department];
+            if (!receiver) return null;
+            return (
+              <View key={key} style={styles.trailRow}>
+                <Feather name="check-square" size={11} color={meta.color} />
+                <Text style={[styles.trailLabel, { color: meta.color }]}>استلم {meta.shortLabel}:</Text>
+                <Text style={[styles.trailName, { color: meta.color }]}>{receiver.name}</Text>
+                <Text style={styles.trailId}>#{receiver.employeeId}</Text>
+              </View>
+            );
+          })}
+        </View>
+      )}
+
+      {/* Footer: timing & amounts */}
       <View style={styles.archiveFooter}>
         <View style={styles.footerItem}>
           <Feather name="download" size={11} color={Colors.textMuted} />
-          <Text style={styles.footerText}>{order.receivedAt}</Text>
+          <Text style={styles.footerText}>{fmtDateTime(order.receivedAt, lang)}</Text>
         </View>
         {order.deliveryTime && (
           <View style={styles.footerItem}>
@@ -161,7 +187,7 @@ function ArchiveCard({ order, canDelete, canEdit, onDelete, onEdit }: { order: O
             </Text>
           </View>
         )}
-        {order.insuranceAmount != null && !order.totalAmount && (
+        {order.insuranceAmount != null && order.insuranceAmount > 0 && (
           <View style={styles.footerItem}>
             <Feather name="shield" size={11} color={Colors.gold} />
             <Text style={[styles.footerText, { color: Colors.gold, fontWeight: "700" }]}>
@@ -305,6 +331,7 @@ export default function ArchiveScreen() {
 
   const handlePrint = () => {
     if (Platform.OS !== "web") return;
+    const grandTotal = filtered.reduce((sum, o) => sum + (o.totalAmount ?? 0), 0);
     const rows = filtered.map(o => {
       const itemsHtml = Object.entries(DEPT_META).map(([key, meta]) => {
         const di = o.items.filter(i => i.department === key);
@@ -342,7 +369,12 @@ tr:nth-child(even){background:#f7f7f7}
 <h2>${title} — ${filtered.length} فاتورة</h2>
 <table><thead><tr>
 <th>#</th><th>العميل</th><th>الأصناف</th><th>المبلغ</th><th>الدفع</th><th>الخصم</th><th>التاريخ</th>
-</tr></thead><tbody>${rows}</tbody></table>
+</tr></thead><tbody>${rows}</tbody>
+<tfoot><tr style="background:#0A1628;color:#fff">
+<td colspan="3" style="text-align:center;font-weight:700;padding:8px">الإجمالي</td>
+<td style="font-weight:700;font-size:13px">${grandTotal.toFixed(2)} ر.س</td>
+<td colspan="3"></td>
+</tr></tfoot></table>
 </body></html>`;
     const w = (window as any).open("", "_blank");
     if (w) { w.document.write(html); w.document.close(); w.print(); }
@@ -389,7 +421,7 @@ tr:nth-child(even){background:#f7f7f7}
         />
       ) : (
         /* ── Archive tab ── */
-        <>
+        <View style={[styles.archiveContent, Platform.OS === "web" && styles.archiveContentWide]}>
           <View style={styles.searchRow}>
             <Feather name="search" size={17} color={Colors.textMuted} />
             <TextInput
@@ -495,7 +527,7 @@ tr:nth-child(even){background:#f7f7f7}
             }
             showsVerticalScrollIndicator={false}
           />
-        </>
+        </View>
       )}
     </View>
   );
@@ -597,4 +629,20 @@ const styles = StyleSheet.create({
   archiveFooter: { flexDirection: "row", flexWrap: "wrap", gap: 14, paddingTop: 4, borderTopWidth: 1, borderTopColor: Colors.borderLight },
   footerItem: { flexDirection: "row", alignItems: "center", gap: 4 },
   footerText: { fontSize: 11, color: Colors.textMuted },
+  deliverySection: { flexDirection: "row", alignItems: "center", gap: 10, flexWrap: "wrap" },
+  deliveryBadge: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    backgroundColor: Colors.info + "15", borderRadius: 20,
+    paddingHorizontal: 10, paddingVertical: 4,
+    borderWidth: 1, borderColor: Colors.info + "30",
+  },
+  deliveryBadgeText: { fontSize: 12, fontWeight: "700", color: Colors.info },
+  notesRow: {
+    flexDirection: "row", alignItems: "flex-start", gap: 7,
+    backgroundColor: Colors.surface, borderRadius: 8,
+    padding: 9, borderWidth: 1, borderColor: Colors.borderLight,
+  },
+  notesText: { flex: 1, fontSize: 12, color: Colors.textSecondary, lineHeight: 18 },
+  archiveContent: { flex: 1 },
+  archiveContentWide: { maxWidth: 800, width: "100%", alignSelf: "center" as const },
 });
