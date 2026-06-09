@@ -22,6 +22,14 @@ import { EmployeeSelectorModal } from "@/components/EmployeeSelectorModal";
 import { Colors } from "@/constants/colors";
 import { LAVIVIANE_COMPANY_ID } from "@/constants/lavivianeProducts";
 import { PLATFORM_OWNER } from "@/constants/platform";
+import {
+  canAccessDept, canDo,
+  ROLE_CAN_ACCESS_ADMIN,
+  ROLE_CAN_VIEW_ARCHIVE, ROLE_CAN_VIEW_BRANCH_FEATURES,
+  ROLE_CAN_VIEW_CASHIER, ROLE_CAN_VIEW_CUSTOMERS,
+  ROLE_CAN_VIEW_DELIVERY, ROLE_CAN_VIEW_REPORTS,
+  ROLE_CAN_VIEW_TRAYS,
+} from "@/constants/rbac";
 import { useCompany } from "@/context/CompanyContext";
 import { useEmployee } from "@/context/EmployeeContext";
 import { useLang } from "@/context/LanguageContext";
@@ -226,15 +234,30 @@ function DesktopSidebar({ activePath, navigate, isRTL }: { activePath: string; n
   const { company } = useCompany();
   const { currentEmployee } = useEmployee();
   const [showSelector, setShowSelector] = useState(false);
-  const [showDepts, setShowDepts] = useState(() => DEPT_TABS.some(d => activePath.includes(d.name)));
-  const [showMore, setShowMore]   = useState(() => MORE_TABS.some(m => activePath.includes(m.name)));
+  const role = currentEmployee?.role;
+  const hasRole = !!role;
+  const showCashierNav = !hasRole || canDo(role, ROLE_CAN_VIEW_CASHIER);
+  const showArchiveNav = !hasRole || canDo(role, ROLE_CAN_VIEW_ARCHIVE);
+  const showReportsNav = !hasRole || canDo(role, ROLE_CAN_VIEW_REPORTS);
+  const visibleDepts = !hasRole ? DEPT_TABS : DEPT_TABS.filter(d => canAccessDept(role, d.name));
+  const visibleMore = (!hasRole ? MORE_TABS : MORE_TABS.filter(m => {
+    if (["branch-orders", "branch-inventory", "branches"].includes(m.name)) return canDo(role, ROLE_CAN_VIEW_BRANCH_FEATURES);
+    if (m.name === "customers") return canDo(role, ROLE_CAN_VIEW_CUSTOMERS);
+    if (m.name === "delivery") return canDo(role, ROLE_CAN_VIEW_DELIVERY);
+    if (m.name === "trays") return canDo(role, ROLE_CAN_VIEW_TRAYS);
+    if (m.name === "admin") return canDo(role, ROLE_CAN_ACCESS_ADMIN);
+    return true;
+  }));
+
+  const [showDepts, setShowDepts] = useState(() => visibleDepts.some(d => activePath.includes(d.name)));
+  const [showMore, setShowMore]   = useState(() => visibleMore.some(m => activePath.includes(m.name)));
 
   const isHome    = activePath.includes("home") || activePath === "/" || activePath === "/(tabs)";
   const isCashier = activePath.includes("cashier");
   const isArchive = activePath.includes("archive");
   const isReports = activePath.includes("reports");
-  const activeDept = DEPT_TABS.find(d => activePath.includes(d.name));
-  const activeMore = MORE_TABS.find(m => activePath.includes(m.name));
+  const activeDept = visibleDepts.find(d => activePath.includes(d.name));
+  const activeMore = visibleMore.find(m => activePath.includes(m.name));
   const isLaviviane = company.id === LAVIVIANE_COMPANY_ID;
 
   const tenantBrand = TENANT_BRANDS[company.id] ?? {
@@ -277,14 +300,16 @@ function DesktopSidebar({ activePath, navigate, isRTL }: { activePath: string; n
         {/* Navigation */}
         <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8 }}>
           <SideNavItem label="الطلبات الحية" icon="activity" active={isHome} accent={Colors.gold} onPress={() => navigate("home")} />
-          <SideNavItem label={t("tabCashier")} icon="file-text" active={isCashier} accent={Colors.gold} onPress={() => navigate("cashier")} />
+          {showCashierNav && <SideNavItem label={t("tabCashier")} icon="file-text" active={isCashier} accent={Colors.gold} onPress={() => navigate("cashier")} />}
 
-          <SideNavItem
-            label={t("tabDepts")} icon="grid"
-            active={!!activeDept} accent={activeDept?.accent ?? Colors.textMuted}
-            onPress={() => setShowDepts(v => !v)} expandable expanded={showDepts}
-          />
-          {showDepts && DEPT_TABS.map(tab => (
+          {visibleDepts.length > 0 && (
+            <SideNavItem
+              label={t("tabDepts")} icon="grid"
+              active={!!activeDept} accent={activeDept?.accent ?? Colors.textMuted}
+              onPress={() => setShowDepts(v => !v)} expandable expanded={showDepts}
+            />
+          )}
+          {showDepts && visibleDepts.map(tab => (
             <SideNavItem
               key={tab.name}
               label={t(tab.labelKey as TranslationKey)} icon={tab.icon}
@@ -293,15 +318,17 @@ function DesktopSidebar({ activePath, navigate, isRTL }: { activePath: string; n
             />
           ))}
 
-          <SideNavItem label={t("tabArchive")} icon="archive" active={isArchive} accent={Colors.primaryLight} onPress={() => navigate("archive")} />
-          <SideNavItem label={t("tabReports")} icon="pie-chart" active={isReports} accent="#8b5cf6" onPress={() => navigate("reports")} />
+          {showArchiveNav && <SideNavItem label={t("tabArchive")} icon="archive" active={isArchive} accent={Colors.primaryLight} onPress={() => navigate("archive")} />}
+          {showReportsNav && <SideNavItem label={t("tabReports")} icon="pie-chart" active={isReports} accent="#8b5cf6" onPress={() => navigate("reports")} />}
 
-          <SideNavItem
-            label={t("tabMore")} icon="more-horizontal"
-            active={!!activeMore} accent={activeMore?.accent ?? Colors.textMuted}
-            onPress={() => setShowMore(v => !v)} expandable expanded={showMore}
-          />
-          {showMore && MORE_TABS.map(tab => (
+          {visibleMore.length > 0 && (
+            <SideNavItem
+              label={t("tabMore")} icon="more-horizontal"
+              active={!!activeMore} accent={activeMore?.accent ?? Colors.textMuted}
+              onPress={() => setShowMore(v => !v)} expandable expanded={showMore}
+            />
+          )}
+          {showMore && visibleMore.map(tab => (
             <SideNavItem
               key={tab.name}
               label={tab.labelKey.startsWith("tab") ? t(tab.labelKey as TranslationKey) : tab.labelKey}
@@ -390,6 +417,7 @@ function CustomTabBar() {
   const router = useRouter();
   const pathname = usePathname();
   const { t } = useLang();
+  const { currentEmployee } = useEmployee();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
   const insets = useSafeAreaInsets();
@@ -397,14 +425,30 @@ function CustomTabBar() {
   const [showDepts, setShowDepts] = useState(false);
   const [showMore, setShowMore] = useState(false);
   const navigate = (name: string) => { setShowDepts(false); setShowMore(false); router.navigate(`/(tabs)/${name}` as any); };
+
+  const role = currentEmployee?.role;
+  const hasRole = !!role;
+  const showCashierTab = !hasRole || canDo(role, ROLE_CAN_VIEW_CASHIER);
+  const showArchiveTab = !hasRole || canDo(role, ROLE_CAN_VIEW_ARCHIVE);
+  const showReportsTab = !hasRole || canDo(role, ROLE_CAN_VIEW_REPORTS);
+  const visibleDeptsTab = !hasRole ? DEPT_TABS : DEPT_TABS.filter(d => canAccessDept(role, d.name));
+  const visibleMoreTab = (!hasRole ? MORE_TABS : MORE_TABS.filter(m => {
+    if (["branch-orders", "branch-inventory", "branches"].includes(m.name)) return canDo(role, ROLE_CAN_VIEW_BRANCH_FEATURES);
+    if (m.name === "customers") return canDo(role, ROLE_CAN_VIEW_CUSTOMERS);
+    if (m.name === "delivery") return canDo(role, ROLE_CAN_VIEW_DELIVERY);
+    if (m.name === "trays") return canDo(role, ROLE_CAN_VIEW_TRAYS);
+    if (m.name === "admin") return canDo(role, ROLE_CAN_ACCESS_ADMIN);
+    return true;
+  }));
+
   const isHome    = pathname.includes("home") || pathname === "/(tabs)" || pathname === "/";
   const isCashier = pathname.includes("cashier");
   const isArchive = pathname.includes("archive");
   const isReports = pathname.includes("reports");
-  const isDept = DEPT_TABS.some((d) => pathname.includes(d.name));
-  const isMore = MORE_TABS.some((m) => pathname.includes(m.name));
-  const activeDeptAccent = DEPT_TABS.find((d) => pathname.includes(d.name))?.accent ?? Colors.primary;
-  const activeMoreAccent = MORE_TABS.find((m) => pathname.includes(m.name))?.accent ?? Colors.primary;
+  const isDept = visibleDeptsTab.some((d) => pathname.includes(d.name));
+  const isMore = visibleMoreTab.some((m) => pathname.includes(m.name));
+  const activeDeptAccent = visibleDeptsTab.find((d) => pathname.includes(d.name))?.accent ?? Colors.primary;
+  const activeMoreAccent = visibleMoreTab.find((m) => pathname.includes(m.name))?.accent ?? Colors.primary;
   const bg = isDark ? "#0d1117" : "#ffffff";
   const border = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.07)";
   const tabH = 64;
@@ -412,17 +456,17 @@ function CustomTabBar() {
   const isWeb = Platform.OS === "web";
   return (
     <>
-      <PopupSheet visible={showDepts} onClose={() => setShowDepts(false)} tabs={DEPT_TABS} onSelect={navigate} activePath={pathname} />
-      <PopupSheet visible={showMore} onClose={() => setShowMore(false)} tabs={MORE_TABS} onSelect={navigate} activePath={pathname} />
+      <PopupSheet visible={showDepts} onClose={() => setShowDepts(false)} tabs={visibleDeptsTab} onSelect={navigate} activePath={pathname} />
+      <PopupSheet visible={showMore} onClose={() => setShowMore(false)} tabs={visibleMoreTab} onSelect={navigate} activePath={pathname} />
       <View style={[styles.bar, isWeb ? styles.webBar : styles.nativeBar, { height: tabH + pb, paddingBottom: pb, borderTopColor: border }]}>
         {isIOS && <BlurView intensity={90} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />}
         {!isIOS && <View style={[StyleSheet.absoluteFill, { backgroundColor: bg }]} />}
         <BarItem label="الطلبات" icon="activity" sf="list.bullet.rectangle" active={isHome} accent={Colors.gold} onPress={() => navigate("home")} />
-        <BarItem label={t("tabCashier")} icon="file-text" sf="doc.text" active={isCashier} accent={Colors.gold} onPress={() => navigate("cashier")} />
-        <BarItem label={t("tabDepts")} icon="grid" sf="square.grid.2x2" active={isDept} accent={activeDeptAccent} badge={showDepts ? "▲" : "▼"} onPress={() => setShowDepts((v) => !v)} />
-        <BarItem label={t("tabArchive")} icon="archive" sf="archivebox" active={isArchive} accent={Colors.primaryLight} onPress={() => navigate("archive")} />
-        <BarItem label={t("tabReports")} icon="pie-chart" sf="chart.pie" active={isReports} accent="#8b5cf6" onPress={() => navigate("reports")} />
-        <BarItem label={t("tabMore")} icon="more-horizontal" sf="ellipsis" active={isMore} accent={activeMoreAccent} badge={showMore ? "▲" : "▼"} onPress={() => setShowMore((v) => !v)} />
+        {showCashierTab && <BarItem label={t("tabCashier")} icon="file-text" sf="doc.text" active={isCashier} accent={Colors.gold} onPress={() => navigate("cashier")} />}
+        {visibleDeptsTab.length > 0 && <BarItem label={t("tabDepts")} icon="grid" sf="square.grid.2x2" active={isDept} accent={activeDeptAccent} badge={showDepts ? "▲" : "▼"} onPress={() => setShowDepts((v) => !v)} />}
+        {showArchiveTab && <BarItem label={t("tabArchive")} icon="archive" sf="archivebox" active={isArchive} accent={Colors.primaryLight} onPress={() => navigate("archive")} />}
+        {showReportsTab && <BarItem label={t("tabReports")} icon="pie-chart" sf="chart.pie" active={isReports} accent="#8b5cf6" onPress={() => navigate("reports")} />}
+        {visibleMoreTab.length > 0 && <BarItem label={t("tabMore")} icon="more-horizontal" sf="ellipsis" active={isMore} accent={activeMoreAccent} badge={showMore ? "▲" : "▼"} onPress={() => setShowMore((v) => !v)} />}
       </View>
     </>
   );

@@ -45,6 +45,85 @@ function fmtDate(d: Date) {
   return d.toLocaleDateString("ar-SA", { weekday: "long", day: "numeric", month: "long" });
 }
 
+// ── Dept meta for cashier tracker ──────────────────────────────────────────────
+const DEPT_META_TRACKER = {
+  halwa:     { short: "حلا",       color: Colors.halwa },
+  mawali:    { short: "موالح",     color: Colors.mawali },
+  chocolate: { short: "شوكولاتة", color: Colors.chocolate },
+  cake:      { short: "كيك",       color: Colors.cake },
+  packaging: { short: "تغليف",    color: Colors.packaging },
+} as const;
+
+const STATUS_COLORS = {
+  pending:     "#6B7280",
+  in_progress: "#60A5FA",
+  done:        "#34D399",
+  cancelled:   "#F87171",
+};
+
+function CashierOrderTracker({ orders, isDark }: { orders: Order[]; isDark?: boolean }) {
+  const todayStr = new Date().toDateString();
+  const myOrders = orders
+    .filter(o => !o.deleted && new Date(o.createdAt).toDateString() === todayStr)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 25);
+
+  const textColor = isDark ? "rgba(255,255,255,0.85)" : Colors.text;
+  const subColor  = isDark ? "rgba(255,255,255,0.45)" : Colors.textMuted;
+  const cardBg    = isDark ? "rgba(255,255,255,0.06)" : Colors.surface;
+  const cardBorder= isDark ? "rgba(255,255,255,0.1)"  : Colors.border;
+
+  if (myOrders.length === 0) {
+    return (
+      <View style={{ alignItems: "center", paddingVertical: 20 }}>
+        <Feather name="inbox" size={28} color={subColor} />
+        <Text style={[ct.emptyTxt, { color: subColor }]}>لا توجد طلبات اليوم</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={{ gap: 8 }}>
+      {myOrders.map(order => {
+        const depts = DEPARTMENTS.filter(d => order.items.some(i => i.department === d));
+        const allDone = depts.length > 0 && depts.every(d => order.departmentStatuses?.[d] === "done");
+        const anyInProg = depts.some(d => order.departmentStatuses?.[d] === "in_progress");
+
+        return (
+          <View key={order.id} style={[ct.card, { backgroundColor: cardBg, borderColor: allDone ? "#34D39940" : cardBorder }]}>
+            {allDone && <View style={ct.doneLine} />}
+            <View style={ct.cardHead}>
+              <Text style={[ct.orderNum, { color: allDone ? "#34D399" : textColor }]}>#{order.orderNumber}</Text>
+              <Text style={[ct.custName, { color: textColor }]} numberOfLines={1}>{order.customerName}</Text>
+              <View style={[ct.statusBadge, {
+                backgroundColor: allDone ? "#34D39918" : anyInProg ? "#60A5FA18" : "#6B728018",
+              }]}>
+                <View style={[ct.statusDot, { backgroundColor: allDone ? "#34D399" : anyInProg ? "#60A5FA" : "#6B7280" }]} />
+                <Text style={[ct.statusTxt, { color: allDone ? "#34D399" : anyInProg ? "#60A5FA" : "#6B7280" }]}>
+                  {allDone ? "جاهز" : anyInProg ? "يُحضَّر" : "انتظار"}
+                </Text>
+              </View>
+            </View>
+            <View style={ct.chips}>
+              {depts.map(d => {
+                const status = order.departmentStatuses?.[d] ?? "pending";
+                const col = STATUS_COLORS[status] ?? "#6B7280";
+                const dm = DEPT_META_TRACKER[d];
+                return (
+                  <View key={d} style={[ct.chip, { backgroundColor: col + "18", borderColor: col + "35" }]}>
+                    <View style={[ct.chipDot, { backgroundColor: col }]} />
+                    <Text style={[ct.chipTxt, { color: col }]}>{dm.short}</Text>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
 const ROLE_AR: Record<string, string> = {
   cashier: "كاشير", admin: "مدير", branch_supervisor: "مشرف فرع",
   dept_supervisor: "مشرف قسم", halwa: "قسم الحلا", mawali: "قسم الموالح",
@@ -182,7 +261,18 @@ export default function HomeScreen() {
   const inProgressCnt = useMemo(() => todayOrders.filter(o => overallStatus(o) === "in_progress").length, [todayOrders]);
   const doneCnt       = useMemo(() => todayOrders.filter(o => overallStatus(o) === "done").length,        [todayOrders]);
 
-  const tiles = useMemo(() => isAdmin ? [...TILES, ADMIN_TILE] : [...TILES], [isAdmin]);
+  const role = currentEmployee?.role;
+  const isCashierRole = role === "cashier";
+  const tiles = useMemo(() => {
+    if (!role || role === "admin" || role === "branch_supervisor" || role === "dept_supervisor") {
+      return isAdmin ? [...TILES, ADMIN_TILE] : [...TILES];
+    }
+    if (role === "cashier") {
+      return TILES.filter(t => ["cashier", "archive", "delivery"].includes(t.route));
+    }
+    // Dept workers: only their own dept tile
+    return TILES.filter(t => t.route === role);
+  }, [role, isAdmin]);
 
   const go = (route: string) => router.navigate(`/(tabs)/${route}` as any);
 
@@ -316,6 +406,14 @@ export default function HomeScreen() {
 
               <View style={s.thinRule} />
 
+              {/* Cashier order tracker */}
+              {isCashierRole && (
+                <View style={s.trackerSection}>
+                  <Text style={s.trackerTitle}>متابعة طلباتك اليوم</Text>
+                  <CashierOrderTracker orders={todayOrders} isDark />
+                </View>
+              )}
+
               {/* Clock */}
               <View style={s.clockSection}>
                 <Text style={s.clockTime}>{fmtClock(now)}</Text>
@@ -363,6 +461,14 @@ export default function HomeScreen() {
           </LinearGradient>
         </TouchableOpacity>
       </View>
+
+      {/* Cashier order tracker — mobile */}
+      {isCashierRole && (
+        <View style={s.narrowTracker}>
+          <Text style={s.narrowTrackerTitle}>متابعة الطلبات</Text>
+          <CashierOrderTracker orders={todayOrders} isDark={false} />
+        </View>
+      )}
 
       {/* Tile grid */}
       <ScrollView
@@ -465,6 +571,14 @@ const s = StyleSheet.create({
   narrowCtaBtn:   { borderRadius: 12, overflow: "hidden" },
   narrowCtaInner: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 13 },
   narrowCtaTxt:   { color: "#0A1628", fontSize: 15, fontWeight: "900" },
+
+  // Cashier tracker — desktop info panel
+  trackerSection:  { gap: 10 },
+  trackerTitle:    { color: "rgba(255,255,255,0.35)", fontSize: 10, fontWeight: "700", letterSpacing: 1 },
+
+  // Cashier tracker — mobile
+  narrowTracker:      { paddingHorizontal: 16, paddingBottom: 10, backgroundColor: "#fff" },
+  narrowTrackerTitle: { fontSize: 12, fontWeight: "700", color: Colors.textMuted, marginBottom: 8, letterSpacing: 0.5 },
 });
 
 const sc2 = StyleSheet.create({
@@ -472,4 +586,20 @@ const sc2 = StyleSheet.create({
   iconBox: { width: 26, height: 26, borderRadius: 8, alignItems: "center", justifyContent: "center" },
   value:   { fontSize: 22, fontWeight: "900", fontVariant: ["tabular-nums" as any] },
   label:   { color: "rgba(255,255,255,0.4)", fontSize: 10, fontWeight: "600" },
+});
+
+const ct = StyleSheet.create({
+  emptyTxt:    { fontSize: 12, marginTop: 8 },
+  card:        { borderRadius: 10, borderWidth: 1, padding: 10, gap: 7, overflow: "hidden" as const, position: "relative" as const },
+  doneLine:    { position: "absolute", top: 0, left: 0, right: 0, height: 2, backgroundColor: "#34D399" },
+  cardHead:    { flexDirection: "row", alignItems: "center", gap: 8 },
+  orderNum:    { fontSize: 13, fontWeight: "800", minWidth: 36 },
+  custName:    { flex: 1, fontSize: 12, fontWeight: "600" },
+  statusBadge: { flexDirection: "row", alignItems: "center", gap: 4, borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3 },
+  statusDot:   { width: 5, height: 5, borderRadius: 3 },
+  statusTxt:   { fontSize: 10, fontWeight: "700" },
+  chips:       { flexDirection: "row", flexWrap: "wrap", gap: 5 },
+  chip:        { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 20, borderWidth: 1 },
+  chipDot:     { width: 5, height: 5, borderRadius: 3 },
+  chipTxt:     { fontSize: 10, fontWeight: "700" },
 });
