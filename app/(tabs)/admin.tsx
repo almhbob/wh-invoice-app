@@ -22,6 +22,7 @@ import { Image } from "expo-image";
 import { Colors } from "@/constants/colors";
 import { canDo, ROLE_CAN_ACCESS_ADMIN } from "@/constants/rbac";
 import { DevSettingsModal } from "@/components/DevSettingsModal";
+import { PrinterSettingsModal } from "@/components/PrinterSettingsModal";
 import { ProductManagerModal } from "@/components/ProductManagerModal";
 import { useLang } from "@/context/LanguageContext";
 import {
@@ -104,13 +105,16 @@ function SectionHeader({ title, icon }: { title: string; icon: any }) {
 }
 
 // ─── Employee Management ──────────────────────────────────────────────────
+type EmpStatusFilter = "all" | "active" | "suspended";
+
 function EmployeesSection() {
-  const { employees, addEmployee, removeEmployee } = useEmployee();
+  const { employees, addEmployee, removeEmployee, updateEmployee } = useEmployee();
   const [showAdd, setShowAdd] = useState(false);
   const [name, setName] = useState("");
   const [empId, setEmpId] = useState("");
   const [role, setRole] = useState<EmployeeRole>("cashier");
   const [saving, setSaving] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<EmpStatusFilter>("all");
 
   const handleAdd = async () => {
     if (!name.trim()) { Alert.alert("خطأ", "أدخل اسم الموظف"); return; }
@@ -132,10 +136,74 @@ function EmployeesSection() {
     ]);
   };
 
+  const toggleStatus = (emp: Employee) => {
+    const newStatus = emp.status === "suspended" ? "active" : "suspended";
+    const msg = newStatus === "suspended"
+      ? `سيتم إيقاف حساب "${emp.name}"`
+      : `سيتم تفعيل حساب "${emp.name}"`;
+    Alert.alert("تأكيد", msg, [
+      { text: "إلغاء", style: "cancel" },
+      { text: "تأكيد", onPress: () => updateEmployee(emp.id, { status: newStatus }) },
+    ]);
+  };
+
+  const handleChangeRole = (emp: Employee) => {
+    const options = ALL_ROLES.map((r) => ({
+      text: ROLE_LABELS[r],
+      onPress: () => {
+        if (r !== emp.role) {
+          updateEmployee(emp.id, { role: r });
+          Haptics.selectionAsync();
+        }
+      },
+    }));
+    Alert.alert(
+      "تغيير الدور",
+      `اختر الدور الجديد لـ "${emp.name}"`,
+      [...options, { text: "إلغاء", style: "cancel" as const }]
+    );
+  };
+
+  const handleEmpMenu = (emp: Employee) => {
+    Haptics.selectionAsync();
+    const isSuspended = emp.status === "suspended";
+    Alert.alert(
+      emp.name,
+      `#${emp.employeeId} · ${ROLE_LABELS[emp.role]}`,
+      [
+        { text: "تغيير الدور", onPress: () => handleChangeRole(emp) },
+        {
+          text: isSuspended ? "تفعيل الحساب" : "تعليق الحساب",
+          onPress: () => toggleStatus(emp),
+          style: isSuspended ? "default" : "destructive",
+        },
+        { text: "حذف الموظف", style: "destructive", onPress: () => handleRemove(emp) },
+        { text: "إلغاء", style: "cancel" },
+      ]
+    );
+  };
+
   const grouped = ALL_ROLES.reduce<Record<EmployeeRole, Employee[]>>((acc, r) => {
     acc[r] = employees.filter((e) => e.role === r);
     return acc;
-  }, {} as any);
+  }, {} as Record<EmployeeRole, Employee[]>);
+
+  const filteredEmployees = employees.filter((e) => {
+    if (statusFilter === "all") return true;
+    if (statusFilter === "active") return (e.status ?? "active") !== "suspended";
+    return e.status === "suspended";
+  });
+
+  const filteredGrouped = ALL_ROLES.reduce<Record<EmployeeRole, Employee[]>>((acc, r) => {
+    acc[r] = filteredEmployees.filter((e) => e.role === r);
+    return acc;
+  }, {} as Record<EmployeeRole, Employee[]>);
+
+  const STATUS_FILTERS: { key: EmpStatusFilter; label: string }[] = [
+    { key: "all", label: "الكل" },
+    { key: "active", label: "نشط" },
+    { key: "suspended", label: "موقوف" },
+  ];
 
   return (
     <View style={styles.section}>
@@ -151,15 +219,34 @@ function EmployeesSection() {
         ))}
       </View>
 
+      {/* Status filter tabs */}
+      <View style={styles.empFilterRow}>
+        {STATUS_FILTERS.map((f) => {
+          const isActive = statusFilter === f.key;
+          const color = f.key === "active" ? "#16a34a" : f.key === "suspended" ? "#dc2626" : Colors.primary;
+          return (
+            <TouchableOpacity
+              key={f.key}
+              style={[styles.empFilterChip, isActive && { backgroundColor: color, borderColor: color }]}
+              onPress={() => { Haptics.selectionAsync(); setStatusFilter(f.key); }}
+            >
+              <Text style={[styles.empFilterText, isActive && { color: "#fff" }]}>{f.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
       {/* Employee list */}
-      {employees.length === 0 ? (
+      {filteredEmployees.length === 0 ? (
         <View style={styles.emptyBox}>
           <Feather name="users" size={32} color={Colors.textMuted} />
-          <Text style={styles.emptyText}>لا يوجد موظفون — أضف الآن</Text>
+          <Text style={styles.emptyText}>
+            {employees.length === 0 ? "لا يوجد موظفون — أضف الآن" : "لا يوجد موظفون في هذه الفئة"}
+          </Text>
         </View>
       ) : (
         ALL_ROLES.map((r) => {
-          const list = grouped[r];
+          const list = filteredGrouped[r];
           if (list.length === 0) return null;
           return (
             <View key={r}>
@@ -167,20 +254,33 @@ function EmployeesSection() {
                 <Feather name={ROLE_ICONS[r]} size={12} color={ROLE_COLORS[r]} />
                 <Text style={[styles.roleTagText, { color: ROLE_COLORS[r] }]}>{ROLE_LABELS[r]}</Text>
               </View>
-              {list.map((emp) => (
-                <View key={emp.id} style={styles.empRow}>
-                  <View style={[styles.empAvatar, { backgroundColor: ROLE_COLORS[r] }]}>
-                    <Text style={styles.empAvatarLetter}>{emp.name.charAt(0)}</Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.empName}>{emp.name}</Text>
-                    <Text style={styles.empIdText}>#{emp.employeeId}</Text>
-                  </View>
-                  <TouchableOpacity style={styles.delBtn} onPress={() => handleRemove(emp)} hitSlop={10}>
-                    <Feather name="trash-2" size={15} color={Colors.accent} />
+              {list.map((emp) => {
+                const isSuspended = emp.status === "suspended";
+                return (
+                  <TouchableOpacity
+                    key={emp.id}
+                    style={[styles.empRow, isSuspended && { opacity: 0.6 }]}
+                    onPress={() => handleEmpMenu(emp)}
+                    activeOpacity={0.75}
+                  >
+                    <View style={[styles.empAvatar, { backgroundColor: ROLE_COLORS[r] }]}>
+                      <Text style={styles.empAvatarLetter}>{emp.name.charAt(0)}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                        <Text style={styles.empName}>{emp.name}</Text>
+                        <Text style={isSuspended ? styles.empStatusSuspended : styles.empStatusActive}>
+                          {isSuspended ? "● موقوف" : "● نشط"}
+                        </Text>
+                      </View>
+                      <Text style={styles.empIdText}>#{emp.employeeId}</Text>
+                    </View>
+                    <TouchableOpacity style={styles.empMenuBtn} onPress={() => handleEmpMenu(emp)} hitSlop={10}>
+                      <Text style={styles.empMenuDots}>⋮</Text>
+                    </TouchableOpacity>
                   </TouchableOpacity>
-                </View>
-              ))}
+                );
+              })}
             </View>
           );
         })
@@ -1295,13 +1395,32 @@ function FeaturesSection() {
   );
 }
 
+// ─── Printer Section ───────────────────────────────────────────────────────
+function PrinterSection() {
+  const [showModal, setShowModal] = useState(false);
+  return (
+    <View style={styles.section}>
+      <SectionHeader title="إعدادات الطابعة" icon="printer" />
+      <PrinterSettingsModal visible={showModal} onClose={() => setShowModal(false)} />
+      <Text style={styles.featuresDesc}>ربط وضبط الطابعة الحرارية أو أي طابعة متصلة</Text>
+      <TouchableOpacity
+        style={[styles.backupBtn, { backgroundColor: "#374151" }]}
+        onPress={() => setShowModal(true)}
+      >
+        <Feather name="printer" size={18} color="#fff" />
+        <Text style={styles.backupBtnText}>فتح إعدادات الطابعة</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 // ─── Main Screen ──────────────────────────────────────────────────────────
 export default function AdminScreen() {
   const insets = useSafeAreaInsets();
   const { orders } = useOrders();
   const { currentEmployee } = useEmployee();
   const { t } = useLang();
-  const [activeTab, setActiveTab] = useState<"overview" | "employees" | "products" | "offers" | "priceRequests" | "features" | "backup">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "employees" | "products" | "offers" | "priceRequests" | "features" | "backup" | "printer">("overview");
   const [showDev, setShowDev] = useState(false);
   const { pendingCount: priceReqCount } = usePriceChange();
 
@@ -1337,6 +1456,7 @@ export default function AdminScreen() {
     { key: "priceRequests", label: `${t("adminTabPrices")}${priceReqCount > 0 ? ` (${priceReqCount})` : ""}`, icon: "dollar-sign" },
     { key: "features",      label: t("adminTabFeatures"),  icon: "sliders" },
     { key: "backup",        label: t("backupData"),        icon: "database" },
+    { key: "printer",       label: t("adminTabPrinter"),   icon: "printer" },
   ] as const;
 
   return (
@@ -1405,6 +1525,8 @@ export default function AdminScreen() {
           <FeaturesSection />
         ) : activeTab === "backup" ? (
           <BackupSection />
+        ) : activeTab === "printer" ? (
+          <PrinterSection />
         ) : (
           <EmployeesSection />
         )}
@@ -1512,6 +1634,20 @@ const styles = StyleSheet.create({
   empAvatarLetter: { color: "#fff", fontSize: 16, fontWeight: "800" },
   empName: { fontSize: 14, fontWeight: "700", color: Colors.text },
   empIdText: { fontSize: 12, color: Colors.textMuted },
+  empStatusActive: { fontSize: 11, fontWeight: "700", color: "#16a34a" },
+  empStatusSuspended: { fontSize: 11, fontWeight: "700", color: "#dc2626" },
+  empMenuBtn: {
+    width: 34, height: 34, borderRadius: 17,
+    backgroundColor: Colors.surfaceSecondary,
+    alignItems: "center", justifyContent: "center",
+  },
+  empMenuDots: { fontSize: 18, color: Colors.textMuted, lineHeight: 22 },
+  empFilterRow: { flexDirection: "row", gap: 8 },
+  empFilterChip: {
+    paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20,
+    borderWidth: 1.5, borderColor: Colors.border, backgroundColor: Colors.surface,
+  },
+  empFilterText: { fontSize: 12, fontWeight: "600", color: Colors.textSecondary },
   delBtn: {
     width: 34, height: 34, borderRadius: 17,
     backgroundColor: Colors.accent + "10",

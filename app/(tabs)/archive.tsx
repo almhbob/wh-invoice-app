@@ -14,32 +14,39 @@ import {
 import { EmptyState } from "@/components/EmptyState";
 import EditOrderModal from "@/components/EditOrderModal";
 import { Colors } from "@/constants/colors";
-import type { TranslationKey } from "@/constants/translations";
 import { canDo, ROLE_CAN_DELETE_ORDERS, ROLE_CAN_EDIT_ORDERS } from "@/constants/rbac";
 import { useLang } from "@/context/LanguageContext";
 import { useEmployee } from "@/context/EmployeeContext";
 import { Department, Order, OrderStatus, PAYMENT_LABELS, useOrders } from "@/context/OrdersContext";
 import { fmtDate, fmtDateTime } from "@/utils/dateUtils";
 
-const DEPT_CONFIG: Record<Department, { labelKey: TranslationKey; shortKey: TranslationKey; color: string }> = {
-  halwa:     { labelKey: "deptHalwaLabel",     shortKey: "deptHalwaShort",     color: Colors.halwa },
-  mawali:    { labelKey: "deptMawaliLabel",    shortKey: "deptMawaliShort",    color: Colors.mawali },
-  chocolate: { labelKey: "deptChocolateLabel", shortKey: "deptChocolateShort", color: Colors.chocolate },
-  cake:      { labelKey: "deptCakeLabel",      shortKey: "deptCakeShort",      color: Colors.cake },
-  packaging: { labelKey: "deptPackagingLabel", shortKey: "deptPackagingShort", color: Colors.packaging },
+const MONTH_AR = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
+const DAY_AR   = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
+function formatDateAr(iso: string): string {
+  if (!iso) return "تصفية بالتاريخ";
+  const d = new Date(iso + "T12:00:00");
+  return `${DAY_AR[d.getDay()]} ${d.getDate()} ${MONTH_AR[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+const DEPT_META: Record<string, { label: string; shortLabel: string; color: string }> = {
+  halwa:     { label: "قسم الحلا",      shortLabel: "حلا",      color: Colors.halwa },
+  mawali:    { label: "قسم الموالح",    shortLabel: "موالح",    color: Colors.mawali },
+  chocolate: { label: "قسم الشوكولاتة", shortLabel: "شوكولاتة", color: Colors.chocolate },
+  cake:      { label: "قسم الكيك",      shortLabel: "كيك",      color: Colors.cake },
+  packaging: { label: "قسم التغليف",    shortLabel: "تغليف",    color: Colors.packaging },
 };
 
-const DEPT_FILTER_KEYS: { value: Department | "all"; labelKey: TranslationKey }[] = [
-  { value: "all",       labelKey: "archiveAll" },
-  { value: "halwa",     labelKey: "deptHalwaShort" },
-  { value: "mawali",    labelKey: "deptMawaliShort" },
-  { value: "chocolate", labelKey: "deptChocolateShort" },
-  { value: "cake",      labelKey: "deptCakeShort" },
-  { value: "packaging", labelKey: "deptPackagingShort" },
+const DEPT_FILTERS: { value: Department | "all"; label: string }[] = [
+  { value: "all",       label: "الكل" },
+  { value: "halwa",     label: "حلا" },
+  { value: "mawali",    label: "موالح" },
+  { value: "chocolate", label: "شوكولاتة" },
+  { value: "cake",      label: "كيك" },
+  { value: "packaging", label: "تغليف" },
 ];
 
 function ArchiveCard({ order, canDelete, canEdit, onDelete, onEdit }: { order: Order; canDelete?: boolean; canEdit?: boolean; onDelete?: (o: Order) => void; onEdit?: (o: Order) => void }) {
-  const { lang, t } = useLang();
+  const { lang } = useLang();
   const depts = [...new Set(order.items.map((i) => i.department))] as Department[];
 
   return (
@@ -52,10 +59,10 @@ function ArchiveCard({ order, canDelete, canEdit, onDelete, onEdit }: { order: O
         </View>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
           <View style={styles.deptTags}>
-            {(Object.keys(DEPT_CONFIG) as Department[]).map((key) =>
-              depts.includes(key) ? (
-                <View key={key} style={[styles.deptTag, { backgroundColor: DEPT_CONFIG[key].color }]}>
-                  <Text style={styles.deptTagText}>{t(DEPT_CONFIG[key].shortKey)}</Text>
+            {Object.entries(DEPT_META).map(([key, meta]) =>
+              depts.includes(key as Department) ? (
+                <View key={key} style={[styles.deptTag, { backgroundColor: meta.color }]}>
+                  <Text style={styles.deptTagText}>{meta.shortLabel}</Text>
                 </View>
               ) : null
             )}
@@ -98,7 +105,7 @@ function ArchiveCard({ order, canDelete, canEdit, onDelete, onEdit }: { order: O
         <View style={styles.deliverySection}>
           <View style={styles.deliveryBadge}>
             <Feather name="truck" size={11} color={Colors.info} />
-            <Text style={styles.deliveryBadgeText}>{t("delivery")}</Text>
+            <Text style={styles.deliveryBadgeText}>توصيل</Text>
           </View>
           {order.deliveryAddress ? (
             <View style={styles.footerItem}>
@@ -110,19 +117,18 @@ function ArchiveCard({ order, canDelete, canEdit, onDelete, onEdit }: { order: O
       )}
 
       {/* Items grouped by dept */}
-      {(Object.keys(DEPT_CONFIG) as Department[]).map((key) => {
+      {Object.entries(DEPT_META).map(([key, meta]) => {
         const deptItems = order.items.filter((i) => i.department === key);
         if (deptItems.length === 0) return null;
-        const meta = DEPT_CONFIG[key];
         return (
           <View key={key} style={[styles.deptSection, { borderRightColor: meta.color }]}>
-            <Text style={[styles.deptSectionTitle, { color: meta.color }]}>{t(meta.labelKey)}</Text>
+            <Text style={[styles.deptSectionTitle, { color: meta.color }]}>{meta.label}</Text>
             {deptItems.map((item, i) => (
               <Text key={i} style={styles.archiveItem}>
                 • {item.quantity}× {item.name}{item.note ? ` (${item.note})` : ""}
               </Text>
             ))}
-            <StatusRow status={order.departmentStatuses?.[key]} />
+            <StatusRow status={order.departmentStatuses?.[key as Department]} />
           </View>
         );
       })}
@@ -141,21 +147,18 @@ function ArchiveCard({ order, canDelete, canEdit, onDelete, onEdit }: { order: O
           {order.cashierEmployee && (
             <View style={styles.trailRow}>
               <Feather name="edit-3" size={11} color={Colors.gold} />
-              <Text style={styles.trailLabel}>{t("archiveEnteredBy")}</Text>
+              <Text style={styles.trailLabel}>أدخله:</Text>
               <Text style={styles.trailName}>{order.cashierEmployee.name}</Text>
               <Text style={styles.trailId}>#{order.cashierEmployee.employeeId}</Text>
             </View>
           )}
-          {order.departmentReceivers && (Object.keys(DEPT_CONFIG) as Department[]).map((key) => {
-            const receiver = order.departmentReceivers?.[key];
+          {order.departmentReceivers && Object.entries(DEPT_META).map(([key, meta]) => {
+            const receiver = order.departmentReceivers?.[key as Department];
             if (!receiver) return null;
-            const meta = DEPT_CONFIG[key];
             return (
               <View key={key} style={styles.trailRow}>
                 <Feather name="check-square" size={11} color={meta.color} />
-                <Text style={[styles.trailLabel, { color: meta.color }]}>
-                  {t("archiveReceivedBy")} {t(meta.shortKey)}:
-                </Text>
+                <Text style={[styles.trailLabel, { color: meta.color }]}>استلم {meta.shortLabel}:</Text>
                 <Text style={[styles.trailName, { color: meta.color }]}>{receiver.name}</Text>
                 <Text style={styles.trailId}>#{receiver.employeeId}</Text>
               </View>
@@ -180,7 +183,7 @@ function ArchiveCard({ order, canDelete, canEdit, onDelete, onEdit }: { order: O
           <View style={styles.footerItem}>
             <Feather name="dollar-sign" size={11} color={Colors.success} />
             <Text style={[styles.footerText, { color: Colors.success, fontWeight: "700" }]}>
-              {order.totalAmount.toFixed(2)} {t("sar")}
+              {order.totalAmount.toFixed(2)} ر.س
             </Text>
           </View>
         )}
@@ -188,7 +191,7 @@ function ArchiveCard({ order, canDelete, canEdit, onDelete, onEdit }: { order: O
           <View style={styles.footerItem}>
             <Feather name="shield" size={11} color={Colors.gold} />
             <Text style={[styles.footerText, { color: Colors.gold, fontWeight: "700" }]}>
-              {t("insurance_short")} {order.insuranceAmount} {t("sar")}
+              تأمين {order.insuranceAmount} ر.س
             </Text>
           </View>
         )}
@@ -205,8 +208,8 @@ function ArchiveCard({ order, canDelete, canEdit, onDelete, onEdit }: { order: O
             <Feather name="tag" size={11} color={Colors.warning} />
             <Text style={[styles.footerText, { color: Colors.warning, fontWeight: "700" }]}>
               {order.discount.type === "percentage"
-                ? `${t("discount")} ${order.discount.value}%`
-                : `${t("discount")} ${order.discount.value.toFixed(2)} ${t("sar")}`}
+                ? `خصم ${order.discount.value}%`
+                : `خصم ${order.discount.value.toFixed(2)} ر.س`}
               {order.discount.reason ? ` · ${order.discount.reason}` : ""}
             </Text>
           </View>
@@ -217,25 +220,24 @@ function ArchiveCard({ order, canDelete, canEdit, onDelete, onEdit }: { order: O
 }
 
 function StatusRow({ status }: { status?: OrderStatus }) {
-  const { t } = useLang();
-  const conf: Record<OrderStatus, { labelKey: TranslationKey; color: string }> = {
-    pending:     { labelKey: "waiting",     color: Colors.statusPending },
-    in_progress: { labelKey: "preparing",   color: Colors.statusInProgress },
-    done:        { labelKey: "statusDone",  color: Colors.statusDone },
-    cancelled:   { labelKey: "statusCancelled", color: Colors.statusCancelled },
+  const conf: Record<OrderStatus, { label: string; color: string }> = {
+    pending: { label: "انتظار", color: Colors.statusPending },
+    in_progress: { label: "جاري التحضير", color: Colors.statusInProgress },
+    done: { label: "تم التسليم", color: Colors.statusDone },
+    cancelled: { label: "ملغي", color: Colors.statusCancelled },
   };
   if (!status) return null;
   const c = conf[status];
   return (
     <View style={[styles.statusRow, { backgroundColor: c.color + "18" }]}>
       <View style={[styles.statusDot, { backgroundColor: c.color }]} />
-      <Text style={[styles.statusLabel, { color: c.color }]}>{t(c.labelKey)}</Text>
+      <Text style={[styles.statusLabel, { color: c.color }]}>{c.label}</Text>
     </View>
   );
 }
 
 function DeletedCard({ order, onRestore }: { order: Order; onRestore: (id: string) => void }) {
-  const { lang, t } = useLang();
+  const { lang } = useLang();
   return (
     <View style={[styles.archiveCard, { borderRightWidth: 3, borderRightColor: Colors.accent }]}>
       <View style={styles.archiveHeader}>
@@ -244,7 +246,7 @@ function DeletedCard({ order, onRestore }: { order: Order; onRestore: (id: strin
           <Text style={styles.archiveDate}>{fmtDate(order.createdAt, lang)}</Text>
         </View>
         <View style={[styles.deptTag, { backgroundColor: Colors.accent + "18", borderRadius: 8 }]}>
-          <Text style={[styles.deptTagText, { color: Colors.accent }]}>{t("archiveDeletedLabel")}</Text>
+          <Text style={[styles.deptTagText, { color: Colors.accent }]}>محذوف</Text>
         </View>
       </View>
       <View style={styles.customerBlock}>
@@ -260,7 +262,7 @@ function DeletedCard({ order, onRestore }: { order: Order; onRestore: (id: strin
       {order.deletedAt && (
         <View style={styles.trailRow}>
           <Feather name="trash-2" size={11} color={Colors.accent} />
-          <Text style={styles.trailLabel}>{t("archiveDeletedAt")}</Text>
+          <Text style={styles.trailLabel}>حُذف:</Text>
           <Text style={[styles.trailName, { color: Colors.accent }]}>{fmtDate(order.deletedAt, lang)}</Text>
           {order.deletedBy && (
             <Text style={styles.trailId}>· {order.deletedBy.name}</Text>
@@ -273,7 +275,7 @@ function DeletedCard({ order, onRestore }: { order: Order; onRestore: (id: strin
         activeOpacity={0.8}
       >
         <Feather name="rotate-ccw" size={14} color="#fff" />
-        <Text style={styles.restoreBtnText}>{t("archiveRestoreInv")}</Text>
+        <Text style={styles.restoreBtnText}>استرجاع الفاتورة</Text>
       </TouchableOpacity>
     </View>
   );
@@ -282,7 +284,6 @@ function DeletedCard({ order, onRestore }: { order: Order; onRestore: (id: strin
 export default function ArchiveScreen() {
   const { orders, deletedOrders, deleteOrder, restoreOrder, updateOrder } = useOrders();
   const { currentEmployee } = useEmployee();
-  const { t, lang } = useLang();
   const isAdmin = canDo(currentEmployee?.role, ROLE_CAN_DELETE_ORDERS);
   const canEdit = canDo(currentEmployee?.role, ROLE_CAN_EDIT_ORDERS);
   const [activeTab, setActiveTab] = useState<"archive" | "trash">("archive");
@@ -318,48 +319,43 @@ export default function ArchiveScreen() {
       currentEmployee ? { name: currentEmployee.name, employeeId: currentEmployee.employeeId } : undefined
     );
     if (Platform.OS === "web") {
-      if ((window as any).confirm(`${t("archiveDelete")} #${order.orderNumber} — "${order.customerName}"?`)) doDelete();
+      if ((window as any).confirm(`حذف الفاتورة #${order.orderNumber} — "${order.customerName}"؟\nيمكن استرجاعها لاحقاً.`)) doDelete();
       return;
     }
     Alert.alert(
-      `${t("archiveDelete")} #${order.orderNumber}`,
-      `"${order.customerName}"?`,
-      [{ text: t("cancel"), style: "cancel" }, { text: t("delete"), style: "destructive", onPress: doDelete }]
+      `حذف الفاتورة #${order.orderNumber}`,
+      `هل تريد حذف فاتورة "${order.customerName}"؟ يمكن استرجاعها لاحقاً.`,
+      [{ text: "إلغاء", style: "cancel" }, { text: "حذف", style: "destructive", onPress: doDelete }]
     );
   };
 
   const handlePrint = () => {
     if (Platform.OS !== "web") return;
     const grandTotal = filtered.reduce((sum, o) => sum + (o.totalAmount ?? 0), 0);
-    const deptLabel = deptFilter !== "all" ? ` — ${t(DEPT_CONFIG[deptFilter as Department].labelKey)}` : "";
-    const dateLabel = dateFilter ? ` — ${fmtDate(dateFilter, lang)}` : "";
     const rows = filtered.map(o => {
-      const itemsHtml = (Object.keys(DEPT_CONFIG) as Department[]).map((key) => {
-        const meta = DEPT_CONFIG[key];
+      const itemsHtml = Object.entries(DEPT_META).map(([key, meta]) => {
         const di = o.items.filter(i => i.department === key);
         if (!di.length) return "";
         return `<div style="margin:3px 0;border-right:3px solid ${meta.color};padding-right:7px">
-          <b style="color:${meta.color}">${t(meta.labelKey)}</b><br/>
+          <b style="color:${meta.color}">${meta.label}</b><br/>
           ${di.map(i => `${i.quantity}× ${i.name}${i.note ? ` (${i.note})` : ""}`).join("<br/>")}
         </div>`;
       }).join("");
       const discount = o.discount?.value && o.discount.value > 0
-        ? (o.discount.type === "percentage"
-            ? `${t("discount")} ${o.discount.value}%`
-            : `${t("discount")} ${o.discount.value.toFixed(2)} ${t("sar")}`)
+        ? (o.discount.type === "percentage" ? `خصم ${o.discount.value}%` : `خصم ${o.discount.value.toFixed(2)} ر.س`)
         : "";
       return `<tr>
         <td>#${o.orderNumber}</td>
         <td>${o.customerName || "-"}<br/><small>${o.customerPhone || ""}</small></td>
         <td>${itemsHtml}</td>
-        <td style="font-weight:700">${o.totalAmount != null ? `${o.totalAmount.toFixed(2)} ${t("sar")}` : "-"}</td>
+        <td style="font-weight:700">${o.totalAmount != null ? o.totalAmount.toFixed(2) + " ر.س" : "-"}</td>
         <td>${o.paymentMethod ? (PAYMENT_LABELS[o.paymentMethod] || o.paymentMethod) : "-"}</td>
         <td>${discount}</td>
-        <td>${fmtDate(o.createdAt, lang)}</td>
+        <td>${fmtDate(o.createdAt, "ar")}</td>
       </tr>`;
     }).join("");
-    const title = `${t("archiveTitle")}${dateLabel}${deptLabel}`;
-    const html = `<!DOCTYPE html><html dir="rtl" lang="${lang}"><head><meta charset="UTF-8"/>
+    const title = `أرشيف الفواتير${dateFilter ? ` — ${formatDateAr(dateFilter)}` : ""}${deptFilter !== "all" ? ` — ${DEPT_META[deptFilter]?.label ?? ""}` : ""}`;
+    const html = `<!DOCTYPE html><html dir="rtl" lang="ar"><head><meta charset="UTF-8"/>
 <title>${title}</title>
 <style>
 body{font-family:Arial,sans-serif;font-size:12px;direction:rtl;margin:20px}
@@ -370,19 +366,13 @@ th{background:#0A1628;color:#fff}
 tr:nth-child(even){background:#f7f7f7}
 @media print{body{margin:0}}
 </style></head><body>
-<h2>${title} — ${filtered.length} ${t("invoiceCount")}</h2>
+<h2>${title} — ${filtered.length} فاتورة</h2>
 <table><thead><tr>
-<th>#</th>
-<th>${t("customerName")}</th>
-<th>${t("itemsDetails")}</th>
-<th>${t("totalAmount")}</th>
-<th>${t("paymentMethod")}</th>
-<th>${t("discount")}</th>
-<th>${t("today")}</th>
+<th>#</th><th>العميل</th><th>الأصناف</th><th>المبلغ</th><th>الدفع</th><th>الخصم</th><th>التاريخ</th>
 </tr></thead><tbody>${rows}</tbody>
 <tfoot><tr style="background:#0A1628;color:#fff">
-<td colspan="3" style="text-align:center;font-weight:700;padding:8px">${t("grandTotal")}</td>
-<td style="font-weight:700;font-size:13px">${grandTotal.toFixed(2)} ${t("sar")}</td>
+<td colspan="3" style="text-align:center;font-weight:700;padding:8px">الإجمالي</td>
+<td style="font-weight:700;font-size:13px">${grandTotal.toFixed(2)} ر.س</td>
 <td colspan="3"></td>
 </tr></tfoot></table>
 </body></html>`;
@@ -401,7 +391,7 @@ tr:nth-child(even){background:#f7f7f7}
           >
             <Feather name="archive" size={14} color={activeTab === "archive" ? Colors.primary : Colors.textMuted} />
             <Text style={[styles.tabLabel, activeTab === "archive" && styles.tabLabelActive]}>
-              {t("archiveTitle")}
+              الأرشيف
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -410,7 +400,7 @@ tr:nth-child(even){background:#f7f7f7}
           >
             <Feather name="trash-2" size={14} color={activeTab === "trash" ? Colors.accent : Colors.textMuted} />
             <Text style={[styles.tabLabel, activeTab === "trash" && { color: Colors.accent, fontWeight: "700" }]}>
-              {t("archiveTrashTab")} {deletedOrders.length > 0 ? `(${deletedOrders.length})` : ""}
+              المحذوفة {deletedOrders.length > 0 ? `(${deletedOrders.length})` : ""}
             </Text>
           </TouchableOpacity>
         </View>
@@ -424,7 +414,8 @@ tr:nth-child(even){background:#f7f7f7}
           contentContainerStyle={[styles.list, deletedOrders.length === 0 && { flex: 1 }]}
           renderItem={({ item }) => <DeletedCard order={item} onRestore={restoreOrder} />}
           ListEmptyComponent={
-            <EmptyState icon="trash-2" title={t("noTrashOrders")} subtitle={t("noTrashOrdersSub")} />
+            <EmptyState icon="trash-2" title="سلة المحذوفات فارغة"
+              subtitle="لا توجد فواتير محذوفة حالياً" />
           }
           showsVerticalScrollIndicator={false}
         />
@@ -437,7 +428,7 @@ tr:nth-child(even){background:#f7f7f7}
               style={styles.searchInput}
               value={search}
               onChangeText={setSearch}
-              placeholder={t("archiveSearch")}
+              placeholder="بحث بالرقم أو الاسم أو الهاتف أو الصنف..."
               placeholderTextColor={Colors.textMuted}
               textAlign="right"
             />
@@ -450,14 +441,14 @@ tr:nth-child(even){background:#f7f7f7}
 
           <View style={styles.filterBar}>
             <View style={styles.filterGroup}>
-              {DEPT_FILTER_KEYS.map((f) => (
+              {DEPT_FILTERS.map((f) => (
                 <TouchableOpacity
                   key={f.value}
                   style={[styles.chip, deptFilter === f.value && styles.chipActive]}
                   onPress={() => setDeptFilter(f.value as any)}
                 >
                   <Text style={[styles.chipText, deptFilter === f.value && styles.chipTextActive]}>
-                    {t(f.labelKey)}
+                    {f.label}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -468,7 +459,7 @@ tr:nth-child(even){background:#f7f7f7}
               {Platform.OS === "web" ? (
                 <View style={styles.webDateWrapper}>
                   <Text style={[styles.searchInput, { flex: 1, paddingVertical: 0, color: dateFilter ? Colors.text : Colors.textMuted }]}>
-                    {dateFilter ? fmtDate(dateFilter, lang) : t("dateFilterPicker")}
+                    {formatDateAr(dateFilter)}
                   </Text>
                   <input
                     type="date"
@@ -485,7 +476,7 @@ tr:nth-child(even){background:#f7f7f7}
                   style={styles.searchInput}
                   value={dateFilter}
                   onChangeText={setDateFilter}
-                  placeholder={t("dateFilterPicker")}
+                  placeholder="تصفية بالتاريخ"
                   placeholderTextColor={Colors.textMuted}
                   textAlign="right"
                   keyboardType="numeric"
@@ -501,11 +492,11 @@ tr:nth-child(even){background:#f7f7f7}
 
           <View style={styles.countRow}>
             <Feather name="file-text" size={13} color={Colors.textMuted} />
-            <Text style={[styles.countText, { flex: 1 }]}>{filtered.length} {t("invoiceCount")}</Text>
+            <Text style={[styles.countText, { flex: 1 }]}>{filtered.length} فاتورة</Text>
             {Platform.OS === "web" && filtered.length > 0 && (
               <TouchableOpacity style={styles.printBtn} onPress={handlePrint} activeOpacity={0.75}>
                 <Feather name="printer" size={13} color={Colors.primary} />
-                <Text style={styles.printBtnText}>{t("archivePrintShort")}</Text>
+                <Text style={styles.printBtnText}>طباعة</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -531,7 +522,8 @@ tr:nth-child(even){background:#f7f7f7}
               />
             )}
             ListEmptyComponent={
-              <EmptyState icon="archive" title={t("noInvoices")} subtitle={t("noInvoicesSub")} />
+              <EmptyState icon="archive" title="لا توجد فواتير"
+                subtitle="لم يتم العثور على فواتير تطابق البحث" />
             }
             showsVerticalScrollIndicator={false}
           />

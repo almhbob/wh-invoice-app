@@ -197,6 +197,14 @@ export function DeptOrderCard({ order, department, onStatusChange }: DeptOrderCa
           ))}
         </View>
 
+        {/* Notes */}
+        {!!order.notes && (
+          <View style={styles.notesRow}>
+            <Feather name="file-text" size={12} color={Colors.info} />
+            <Text style={styles.notesText} numberOfLines={3}>{order.notes}</Text>
+          </View>
+        )}
+
         {/* Delivery & insurance */}
         {(order.deliveryTime || order.insuranceAmount != null) && (
           <View style={styles.metaRow}>
@@ -251,7 +259,7 @@ export function DeptOrderCard({ order, department, onStatusChange }: DeptOrderCa
         {order.notes ? (
           <View style={styles.infoItem}>
             <Feather name="file-text" size={12} color={Colors.textMuted} />
-            <Text style={styles.notesText} numberOfLines={1}>{order.notes}</Text>
+            <Text style={styles.notesTextMuted} numberOfLines={1}>{order.notes}</Text>
           </View>
         ) : null}
 
@@ -381,6 +389,9 @@ const styles = StyleSheet.create({
   itemQty: { fontWeight: "700", color: Colors.primary },
   itemNote: { fontSize: 12, color: Colors.textMuted, fontStyle: "italic" },
   metaRow: { flexDirection: "row", gap: 16 },
+  notesRow: { flexDirection: "row", alignItems: "flex-start", gap: 6, backgroundColor: Colors.info + "10", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 },
+  notesText: { flex: 1, fontSize: 12, color: Colors.info, lineHeight: 18 },
+  notesTextMuted: { fontSize: 12, color: Colors.textMuted, flex: 1, fontStyle: "italic" },
   metaText: { fontSize: 12, color: Colors.textSecondary },
   trailBox: {
     backgroundColor: Colors.primary + "07",
@@ -392,7 +403,6 @@ const styles = StyleSheet.create({
   trailName: { fontSize: 12, fontWeight: "700", color: Colors.primary },
   trailId: { fontSize: 11, color: Colors.textMuted },
   img: { width: "100%", height: 110, borderRadius: 8 },
-  notesText: { fontSize: 12, color: Colors.textMuted, flex: 1, fontStyle: "italic" },
 
   // Transfer received banner
   transferBanner: {

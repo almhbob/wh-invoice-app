@@ -36,8 +36,8 @@ export default function PackagingScreen() {
         <View style={[styles.lockedIcon, { backgroundColor: Colors.packaging + "18" }]}>
           <Feather name="lock" size={36} color={Colors.packaging} />
         </View>
-        <Text style={styles.lockedTitle}>{t("accessDeniedTitle")}</Text>
-        <Text style={styles.lockedSub}>{t("accessDeniedPackaging")}</Text>
+        <Text style={styles.lockedTitle}>لا تملك صلاحية الوصول</Text>
+        <Text style={styles.lockedSub}>هذا القسم مخصص لموظفي قسم التغليف</Text>
       </View>
     );
   }

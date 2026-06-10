@@ -35,8 +35,8 @@ export default function CakeScreen() {
         <View style={[styles.lockedIcon, { backgroundColor: Colors.cake + "18" }]}>
           <Feather name="lock" size={36} color={Colors.cake} />
         </View>
-        <Text style={styles.lockedTitle}>{t("accessDeniedTitle")}</Text>
-        <Text style={styles.lockedSub}>{t("accessDeniedCake")}</Text>
+        <Text style={styles.lockedTitle}>لا تملك صلاحية الوصول</Text>
+        <Text style={styles.lockedSub}>هذا القسم مخصص لموظفي قسم الكيك</Text>
       </View>
     );
   }

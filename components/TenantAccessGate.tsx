@@ -40,6 +40,35 @@ const NEW_TRIAL_TENANT: CompanyTenant = {
 
 type BootstrapEmployee = Employee & { username?: string; pinCode?: string; isLocalBootstrap?: boolean };
 
+const LAVIVIANE_STATIC_USERS: BootstrapEmployee[] = [
+  {
+    id: "local-laviviane-trial-lavi001",
+    companyId: LAVIVIANE_COMPANY_ID,
+    name: "مسؤول لاففيان",
+    employeeId: "LAVI001",
+    username: "lavi001",
+    pinCode: "1234",
+    role: "admin",
+    permissions: ["*"],
+    status: "active",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    isLocalBootstrap: true,
+  },
+  {
+    id: "local-laviviane-trial-lavi002",
+    companyId: LAVIVIANE_COMPANY_ID,
+    name: "مسؤول لاففيان",
+    employeeId: "LAVI002",
+    username: "lavi002",
+    pinCode: "1234",
+    role: "admin",
+    permissions: ["*"],
+    status: "active",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    isLocalBootstrap: true,
+  },
+];
+
 const NEW_TRIAL_USER: BootstrapEmployee = {
   id: "local-new-trial-company-trial-admin",
   companyId: NEW_TRIAL_TENANT.id,
@@ -106,7 +135,13 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
     return () => clearTimeout(timer);
   }, [unlocked, isLoading, company.id]);
 
-  const allUsers = useMemo(() => [...employees, ...localUsers], [employees, localUsers]);
+  const allUsers = useMemo(() => {
+    const firestoreAndLocal = [...employees, ...localUsers];
+    if (company.id !== LAVIVIANE_COMPANY_ID) return firestoreAndLocal;
+    const existingIds = new Set(firestoreAndLocal.map((e) => e.employeeId.toLowerCase()));
+    const extras = LAVIVIANE_STATIC_USERS.filter((u) => !existingIds.has(u.employeeId.toLowerCase()));
+    return [...firestoreAndLocal, ...extras];
+  }, [employees, localUsers, company.id]);
   const employeeCountLabel = useMemo(() => allUsers.length ? `${allUsers.length} ${tx("usersCount")}` : tx("noUsers"), [allUsers.length, lang]);
   const shouldShowBootstrapForm = !isLoading || employeeLoadTimedOut || allUsers.length > 0;
 

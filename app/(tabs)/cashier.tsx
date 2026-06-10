@@ -46,6 +46,7 @@ import {
 import { Offer, normalizePhone, useOffers } from "@/context/OffersContext";
 import { DeliveryDatePicker, DeliveryTimePicker } from "@/components/DeliveryDateTimePicker";
 import { DailyClosingModal } from "@/components/DailyClosingModal";
+import { ChocolateCardSection, ChocolateCardValue, buildChocoItems, chocoCardTotal } from "@/components/ChocolateCardSection";
 import { canDo, ROLE_CAN_CLOSE_SHIFT } from "@/constants/rbac";
 import { useShift } from "@/context/ShiftContext";
 import QRCode from "qrcode";
@@ -156,8 +157,9 @@ export default function CashierScreen() {
   const [receiptQr, setReceiptQr] = useState<string>("");
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [catalogQtys, setCatalogQtys] = useState<Record<string, number>>({});
-  const [chocoCard, setChocoCard] = useState<string | null>(null);
-  const chocoPrice = chocoCard ? 25 : 0;
+
+  // Chocolate card add-on
+  const [chocoCard, setChocoCard] = useState<ChocolateCardValue | null>(null);
 
   // Daily closing modal
   const [showClosing, setShowClosing] = useState(false);
@@ -369,7 +371,8 @@ export default function CashierScreen() {
 
   // ── Totals ──────────────────────────────────────────────────────────────
   const validItems = items.filter((i) => i.name.trim() && i.quantity > 0);
-  const subtotal = validItems.reduce((s, i) => s + (i.price || 0) * i.quantity, 0);
+  const chocoPrice = chocoCardTotal(chocoCard);
+  const subtotal = validItems.reduce((s, i) => s + (i.price || 0) * i.quantity, 0) + chocoPrice;
   const insuranceVal = parseFloat(insuranceAmount) || 0;
   const discountVal = parseFloat(discountValue) || 0;
   const discountAmount = discountEnabled && discountVal > 0
@@ -667,7 +670,10 @@ export default function CashierScreen() {
   };
 
   const doSubmit = async () => {
-    const filteredItems = items.filter((i) => i.name.trim() && i.quantity > 0);
+    const filteredItems = [
+      ...items.filter((i) => i.name.trim() && i.quantity > 0),
+      ...buildChocoItems(chocoCard),
+    ];
     const insurance = insuranceAmount.trim() ? parseFloat(insuranceAmount) : undefined;
     const total = grandTotal > 0 ? grandTotal : undefined;
     const discountData: Discount | undefined =
@@ -720,10 +726,8 @@ export default function CashierScreen() {
   };
 
   const handleSubmit = () => {
-    if (!customerName.trim()) { Alert.alert("خطأ", t("errName")); return; }
-    if (!customerPhone.trim()) { Alert.alert("خطأ", t("errPhone")); return; }
     const filteredItems = items.filter((i) => i.name.trim() && i.quantity > 0);
-    if (filteredItems.length === 0) { Alert.alert("خطأ", t("errItems")); return; }
+    if (filteredItems.length === 0 && !chocoCard) { Alert.alert("خطأ", t("errItems")); return; }
     if (!currentEmployee) {
       Alert.alert("تسجيل الدخول مطلوب", "يجب تسجيل الدخول أولاً — اضغط على زر تغيير في الأعلى.", [{ text: "حسناً" }]);
       return;
@@ -752,8 +756,6 @@ export default function CashierScreen() {
       onClose={() => setShowClosing(false)}
       orders={orders}
     />
-
-    <>
     {!isWide && (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
@@ -764,7 +766,7 @@ export default function CashierScreen() {
       style={styles.container}
       contentContainerStyle={[
         styles.content,
-        { paddingBottom: insets.bottom + (Platform.OS === "web" ? 34 : 100) },
+        { paddingBottom: isWide ? 40 : insets.bottom + (Platform.OS === "web" ? 34 : 100) },
       ]}
       keyboardShouldPersistTaps="handled"
     >
@@ -1305,6 +1307,11 @@ export default function CashierScreen() {
         </View>
       )}
 
+      {/* كرت أو لوح شوكلاتة */}
+      <View style={styles.card}>
+        <ChocolateCardSection value={chocoCard} onChange={setChocoCard} />
+      </View>
+
       {/* ملاحظات */}
       <View style={styles.card}>
         <Text style={styles.cardTitle}>{t("generalNotes")}</Text>
@@ -1406,7 +1413,8 @@ export default function CashierScreen() {
         )}
       </View>
 
-      {/* طريقة الدفع */}
+      {/* طريقة الدفع — mobile only; desktop uses the checkout panel */}
+      {!isWide && (
       <View style={styles.card}>
         <Text style={styles.cardTitle}>{t("paymentMethod")}</Text>
         <View style={styles.paymentRow}>
@@ -1434,9 +1442,10 @@ export default function CashierScreen() {
           ))}
         </View>
       </View>
+      )}
 
-      {/* إجمالي الفاتورة */}
-      {hasPrices && (
+      {/* إجمالي الفاتورة — mobile only */}
+      {!isWide && hasPrices && (
         <View style={styles.totalCard}>
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>{t("subtotal")}</Text>
@@ -1519,8 +1528,8 @@ export default function CashierScreen() {
         </View>
       )}
 
-      {/* ملخص الإرسال */}
-      {(halwaCount > 0 || mawaliCount > 0 || chocolateCount > 0 || cakeCount > 0 || packagingCount > 0) && (
+      {/* ملخص الإرسال — mobile only */}
+      {!isWide && (halwaCount > 0 || mawaliCount > 0 || chocolateCount > 0 || cakeCount > 0 || packagingCount > 0) && (
         <View style={styles.summaryCard}>
           <Feather name="send" size={15} color={Colors.primary} />
           <Text style={styles.summaryText}>
@@ -1534,6 +1543,7 @@ export default function CashierScreen() {
         </View>
       )}
 
+      {!isWide && (
       <TouchableOpacity
         style={[styles.submitBtn, isSubmitting && { opacity: 0.6 }]}
         onPress={handleSubmit}
@@ -1543,6 +1553,7 @@ export default function CashierScreen() {
         <Feather name="send" size={20} color="#fff" />
         <Text style={styles.submitText}>{isSubmitting ? t("sending") : t("submitInvoice")}</Text>
       </TouchableOpacity>
+      )}
     </ScrollView>
     </KeyboardAvoidingView>
     )}
@@ -1925,7 +1936,6 @@ export default function CashierScreen() {
       </View>
     </View>
     )}
-    </>
 
     {/* ─── Invoice Search Modal ─────────────────────────────────── */}
     {showSearch && (

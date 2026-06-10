@@ -35,8 +35,8 @@ export default function MawaliScreen() {
         <View style={[styles.lockedIcon, { backgroundColor: Colors.mawali + "18" }]}>
           <Feather name="lock" size={36} color={Colors.mawali} />
         </View>
-        <Text style={styles.lockedTitle}>{t("accessDeniedTitle")}</Text>
-        <Text style={styles.lockedSub}>{t("accessDeniedMawali")}</Text>
+        <Text style={styles.lockedTitle}>لا تملك صلاحية الوصول</Text>
+        <Text style={styles.lockedSub}>هذا القسم مخصص لموظفي قسم الموالح</Text>
       </View>
     );
   }

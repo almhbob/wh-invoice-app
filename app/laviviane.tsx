@@ -13,7 +13,7 @@ const LAVIVIANE_COMPANY = {
   plan: "business",
   maxUsers: 25,
   maxInvoicesPerMonth: 3000,
-  expiresAt: "2026-06-21T23:59:59.000Z",
+  expiresAt: "2027-12-31T23:59:59.000Z",
   createdAt: "2026-05-22T00:00:00.000Z",
 };
 
@@ -39,7 +39,7 @@ export default function LavivianeEntry() {
     };
   }, []);
 
-  if (ready) return <Redirect href="/(tabs)/cashier" />;
+  if (ready) return <Redirect href="/(tabs)/home" />;
 
   return (
     <View style={styles.container}>

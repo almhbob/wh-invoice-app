@@ -23,6 +23,7 @@ import { useLang } from "@/context/LanguageContext";
 import { useOrders, Order } from "@/context/OrdersContext";
 import { Product, useProducts } from "@/context/TenantProductsContext";
 import { DeliveryDatePicker, DeliveryTimePicker } from "@/components/DeliveryDateTimePicker";
+import { ChocolateCardSection, ChocolateCardValue, buildChocoItems, chocoCardTotal } from "@/components/ChocolateCardSection";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -172,9 +173,11 @@ function CartSheet({
   const [deliveryDate, setDeliveryDate] = useState("");
   const [deliveryTime, setDeliveryTime] = useState("");
   const [notes, setNotes] = useState("");
+  const [chocoCard, setChocoCard] = useState<ChocolateCardValue | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const grandTotal = cartItems.reduce((s, ci) => s + ci.product.price * ci.qty, 0);
+  const chocoPrice = chocoCardTotal(chocoCard);
+  const grandTotal = cartItems.reduce((s, ci) => s + ci.product.price * ci.qty, 0) + chocoPrice;
   const itemCount = cartItems.reduce((s, ci) => s + ci.qty, 0);
 
   async function handleSubmit() {
@@ -183,11 +186,21 @@ function CartSheet({
     if (orderType === "delivery" && !deliveryAddress.trim()) {
       Alert.alert("خطأ", t("shopDeliveryAddr") + " مطلوب"); return;
     }
-    if (cartItems.length === 0) { Alert.alert("خطأ", t("shopCartEmpty")); return; }
+    if (cartItems.length === 0 && !chocoCard) { Alert.alert("خطأ", t("shopCartEmpty")); return; }
 
     setIsSubmitting(true);
     try {
       const deliveryDateTime = [deliveryDate, deliveryTime].filter(Boolean).join(" ") || undefined;
+      const allItems = [
+        ...cartItems.map((ci) => ({
+          id: ci.product.id + "_" + Date.now(),
+          name: ci.product.name,
+          quantity: ci.qty,
+          price: ci.product.price,
+          department: ci.product.department,
+        })),
+        ...buildChocoItems(chocoCard),
+      ];
       const order = await addOrder({
         customerName: name.trim(),
         customerPhone: phone.trim(),
@@ -195,13 +208,7 @@ function CartSheet({
         orderType,
         deliveryAddress: orderType === "delivery" ? deliveryAddress.trim() : undefined,
         deliveryTime: deliveryDateTime,
-        items: cartItems.map((ci) => ({
-          id: ci.product.id + "_" + Date.now(),
-          name: ci.product.name,
-          quantity: ci.qty,
-          price: ci.product.price,
-          department: ci.product.department,
-        })),
+        items: allItems,
         totalAmount: grandTotal,
         paymentMethod: "cash",
         amountPaid: 0,
@@ -317,6 +324,15 @@ function CartSheet({
                       <Text style={sheetStyles.summaryPrice}>{(ci.product.price * ci.qty).toFixed(0)} ر.س</Text>
                     </View>
                   ))}
+                  {chocoCard && chocoPrice > 0 && (
+                    <View style={sheetStyles.summaryRow}>
+                      <Text style={sheetStyles.summaryName}>
+                        {chocoCard.type === "choco_large" ? "لوح شوكلاتة كبير" : `لوح شوكلاتة صغير ×${chocoCard.quantity}`}
+                      </Text>
+                      <Text style={sheetStyles.summaryQty} />
+                      <Text style={sheetStyles.summaryPrice}>{chocoPrice.toFixed(0)} ر.س</Text>
+                    </View>
+                  )}
                   <View style={sheetStyles.summaryTotalRow}>
                     <Text style={sheetStyles.summaryTotalLabel}>{t("previewTotalLabel")}</Text>
                     <Text style={sheetStyles.summaryTotalValue}>{grandTotal.toFixed(2)} ر.س</Text>
@@ -414,6 +430,9 @@ function CartSheet({
                     textAlignVertical="top"
                   />
                 </View>
+
+                {/* كرت أو لوح شوكلاتة */}
+                <ChocolateCardSection value={chocoCard} onChange={setChocoCard} compact />
 
                 {/* Submit */}
                 <TouchableOpacity

@@ -17,11 +17,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors } from "@/constants/colors";
 import { LAVIVIANE_COMPANY_ID } from "@/constants/lavivianeProducts";
 import { canDo, ROLE_CAN_ACCESS_ADMIN } from "@/constants/rbac";
-import type { TranslationKey } from "@/constants/translations";
-import { roleLabel } from "@/constants/translations";
 import { useCompany } from "@/context/CompanyContext";
 import { useEmployee } from "@/context/EmployeeContext";
-import { useLang } from "@/context/LanguageContext";
 import { Department, Order, useOrders } from "@/context/OrdersContext";
 import { usePriceChange } from "@/context/PriceChangeContext";
 
@@ -49,20 +46,13 @@ function fmtDate(d: Date) {
 }
 
 // ── Dept meta for cashier tracker ──────────────────────────────────────────────
-const DEPT_SHORT_KEYS: Record<string, TranslationKey> = {
-  halwa:     "deptHalwaShort",
-  mawali:    "deptMawaliShort",
-  chocolate: "deptChocolateShort",
-  cake:      "deptCakeShort",
-  packaging: "deptPackagingShort",
-};
-const DEPT_TRACKER_COLORS: Record<string, string> = {
-  halwa:     Colors.halwa,
-  mawali:    Colors.mawali,
-  chocolate: Colors.chocolate,
-  cake:      Colors.cake,
-  packaging: Colors.packaging,
-};
+const DEPT_META_TRACKER = {
+  halwa:     { short: "حلا",       color: Colors.halwa },
+  mawali:    { short: "موالح",     color: Colors.mawali },
+  chocolate: { short: "شوكولاتة", color: Colors.chocolate },
+  cake:      { short: "كيك",       color: Colors.cake },
+  packaging: { short: "تغليف",    color: Colors.packaging },
+} as const;
 
 const STATUS_COLORS = {
   pending:     "#6B7280",
@@ -72,7 +62,6 @@ const STATUS_COLORS = {
 };
 
 function CashierOrderTracker({ orders, isDark }: { orders: Order[]; isDark?: boolean }) {
-  const { t } = useLang();
   const todayStr = new Date().toDateString();
   const myOrders = orders
     .filter(o => !o.deleted && new Date(o.createdAt).toDateString() === todayStr)
@@ -88,7 +77,7 @@ function CashierOrderTracker({ orders, isDark }: { orders: Order[]; isDark?: boo
     return (
       <View style={{ alignItems: "center", paddingVertical: 20 }}>
         <Feather name="inbox" size={28} color={subColor} />
-        <Text style={[ct.emptyTxt, { color: subColor }]}>{t("orderTrackerEmpty")}</Text>
+        <Text style={[ct.emptyTxt, { color: subColor }]}>لا توجد طلبات اليوم</Text>
       </View>
     );
   }
@@ -111,7 +100,7 @@ function CashierOrderTracker({ orders, isDark }: { orders: Order[]; isDark?: boo
               }]}>
                 <View style={[ct.statusDot, { backgroundColor: allDone ? "#34D399" : anyInProg ? "#60A5FA" : "#6B7280" }]} />
                 <Text style={[ct.statusTxt, { color: allDone ? "#34D399" : anyInProg ? "#60A5FA" : "#6B7280" }]}>
-                  {allDone ? t("statusReady") : anyInProg ? t("statusPrepping") : t("waiting")}
+                  {allDone ? "جاهز" : anyInProg ? "يُحضَّر" : "انتظار"}
                 </Text>
               </View>
             </View>
@@ -119,10 +108,11 @@ function CashierOrderTracker({ orders, isDark }: { orders: Order[]; isDark?: boo
               {depts.map(d => {
                 const status = order.departmentStatuses?.[d] ?? "pending";
                 const col = STATUS_COLORS[status] ?? "#6B7280";
+                const dm = DEPT_META_TRACKER[d];
                 return (
                   <View key={d} style={[ct.chip, { backgroundColor: col + "18", borderColor: col + "35" }]}>
                     <View style={[ct.chipDot, { backgroundColor: col }]} />
-                    <Text style={[ct.chipTxt, { color: col }]}>{t(DEPT_SHORT_KEYS[d])}</Text>
+                    <Text style={[ct.chipTxt, { color: col }]}>{dm.short}</Text>
                   </View>
                 );
               })}
@@ -134,6 +124,11 @@ function CashierOrderTracker({ orders, isDark }: { orders: Order[]; isDark?: boo
   );
 }
 
+const ROLE_AR: Record<string, string> = {
+  cashier: "كاشير", admin: "مدير", branch_supervisor: "مشرف فرع",
+  dept_supervisor: "مشرف قسم", halwa: "قسم الحلا", mawali: "قسم الموالح",
+  chocolate: "قسم الشوكولاتة", cake: "قسم الكيك", packaging: "قسم التغليف", guest: "زائر",
+};
 
 const ROLE_COLOR: Record<string, string> = {
   cashier: Colors.gold, admin: "#7C3AED", branch_supervisor: "#0D9488",
@@ -143,20 +138,19 @@ const ROLE_COLOR: Record<string, string> = {
 
 // ── Tile definitions ───────────────────────────────────────────────────────────
 
-type TileDef = { labelKey: TranslationKey; icon: string; route: string; accent: string; primary: boolean };
-const TILES: TileDef[] = [
-  { labelKey: "tabCashier",         icon: "file-text",   route: "cashier",   accent: Colors.gold,           primary: true  },
-  { labelKey: "tabArchive",         icon: "archive",     route: "archive",   accent: "#60A5FA",             primary: false },
-  { labelKey: "tabReports",         icon: "bar-chart-2", route: "reports",   accent: "#A78BFA",             primary: false },
-  { labelKey: "deptHalwaShort",     icon: "coffee",      route: "halwa",     accent: Colors.halwaLight,     primary: false },
-  { labelKey: "deptMawaliShort",    icon: "package",     route: "mawali",    accent: Colors.mawaliLight,    primary: false },
-  { labelKey: "deptChocolateShort", icon: "gift",        route: "chocolate", accent: Colors.chocolateLight, primary: false },
-  { labelKey: "deptCakeShort",      icon: "layers",      route: "cake",      accent: Colors.cakeLight,      primary: false },
-  { labelKey: "deptPackagingShort", icon: "box",         route: "packaging", accent: Colors.packagingLight, primary: false },
-  { labelKey: "tabDelivery",        icon: "truck",       route: "delivery",  accent: "#2DD4BF",             primary: false },
-];
+const TILES = [
+  { label: "كاشير",      icon: "file-text",   route: "cashier",   accent: Colors.gold,            primary: true  },
+  { label: "الأرشيف",   icon: "archive",     route: "archive",   accent: "#60A5FA",              primary: false },
+  { label: "التقارير",  icon: "bar-chart-2", route: "reports",   accent: "#A78BFA",              primary: false },
+  { label: "حلا",        icon: "coffee",      route: "halwa",     accent: Colors.halwaLight,      primary: false },
+  { label: "موالح",      icon: "package",     route: "mawali",    accent: Colors.mawaliLight,     primary: false },
+  { label: "شوكولاتة",   icon: "gift",        route: "chocolate", accent: Colors.chocolateLight,  primary: false },
+  { label: "كيك",        icon: "layers",      route: "cake",      accent: Colors.cakeLight,       primary: false },
+  { label: "تغليف",      icon: "box",         route: "packaging", accent: Colors.packagingLight,  primary: false },
+  { label: "توصيل",      icon: "truck",       route: "delivery",  accent: "#2DD4BF",              primary: false },
+] as const;
 
-const ADMIN_TILE: TileDef = { labelKey: "tabAdmin", icon: "settings", route: "admin", accent: "#94A3B8", primary: false };
+const ADMIN_TILE = { label: "الإدارة", icon: "settings", route: "admin", accent: "#94A3B8", primary: false } as const;
 
 // ── Tile component ─────────────────────────────────────────────────────────────
 
@@ -267,20 +261,18 @@ export default function HomeScreen() {
   const inProgressCnt = useMemo(() => todayOrders.filter(o => overallStatus(o) === "in_progress").length, [todayOrders]);
   const doneCnt       = useMemo(() => todayOrders.filter(o => overallStatus(o) === "done").length,        [todayOrders]);
 
-  const { t, lang } = useLang();
   const role = currentEmployee?.role;
   const isCashierRole = role === "cashier";
   const tiles = useMemo(() => {
-    let defs: TileDef[];
     if (!role || role === "admin" || role === "branch_supervisor" || role === "dept_supervisor") {
-      defs = isAdmin ? [...TILES, ADMIN_TILE] : [...TILES];
-    } else if (role === "cashier") {
-      defs = TILES.filter(d => ["cashier", "archive", "delivery"].includes(d.route));
-    } else {
-      defs = TILES.filter(d => d.route === role);
+      return isAdmin ? [...TILES, ADMIN_TILE] : [...TILES];
     }
-    return defs.map(d => ({ ...d, label: t(d.labelKey) }));
-  }, [role, isAdmin, t, lang]);
+    if (role === "cashier") {
+      return TILES.filter(t => ["cashier", "archive", "delivery"].includes(t.route));
+    }
+    // Dept workers: only their own dept tile
+    return TILES.filter(t => t.route === role);
+  }, [role, isAdmin]);
 
   const go = (route: string) => router.navigate(`/(tabs)/${route}` as any);
 
@@ -309,7 +301,7 @@ export default function HomeScreen() {
               <TouchableOpacity style={s.ctaBtn} onPress={() => go("cashier")} activeOpacity={0.85}>
                 <LinearGradient colors={[Colors.gold, "#A07830"]} style={s.ctaBtnInner} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
                   <Feather name="plus" size={18} color="#0A1628" />
-                  <Text style={s.ctaBtnTxt}>{t("newInvoice")}</Text>
+                  <Text style={s.ctaBtnTxt}>فاتورة جديدة</Text>
                 </LinearGradient>
               </TouchableOpacity>
             </View>
@@ -322,16 +314,16 @@ export default function HomeScreen() {
               showsVerticalScrollIndicator={false}
             >
               <View style={[s.tileGrid, { gap: TILE_GAP }]}>
-                {tiles.map(tile => (
+                {tiles.map(t => (
                   <Tile
-                    key={tile.route}
-                    label={tile.label}
-                    icon={tile.icon}
-                    accent={tile.accent}
-                    primary={tile.primary}
-                    badge={tile.route === "admin" ? pendingCount || undefined : undefined}
+                    key={t.route}
+                    label={t.label}
+                    icon={t.icon}
+                    accent={t.accent}
+                    primary={(t as any).primary}
+                    badge={t.route === "admin" ? pendingCount || undefined : undefined}
                     size={tileSize}
-                    onPress={() => go(tile.route)}
+                    onPress={() => go(t.route)}
                   />
                 ))}
               </View>
@@ -371,7 +363,7 @@ export default function HomeScreen() {
               <View style={s.empSection}>
                 <View style={s.liveRow}>
                   <View style={s.liveDot} />
-                  <Text style={s.liveTxt}>{t("onlineNow")}</Text>
+                  <Text style={s.liveTxt}>متصل الآن</Text>
                 </View>
 
                 {currentEmployee ? (
@@ -383,32 +375,32 @@ export default function HomeScreen() {
                       <Text style={s.empName} numberOfLines={1}>{currentEmployee.name}</Text>
                       <View style={[s.empRoleBadge, { backgroundColor: empColor + "25" }]}>
                         <Text style={[s.empRoleTxt, { color: empColor }]}>
-                          {roleLabel(currentEmployee.role, lang)}
+                          {ROLE_AR[currentEmployee.role] ?? currentEmployee.role}
                         </Text>
                       </View>
                     </View>
                   </View>
                 ) : (
-                  <Text style={s.noEmp}>{t("noEmpLogged")}</Text>
+                  <Text style={s.noEmp}>لم يسجل أحد دخوله</Text>
                 )}
               </View>
 
               {/* Stats grid */}
               <View style={s.statsSection}>
-                <Text style={s.statsTitle}>{t("todayStatsTitle")}</Text>
+                <Text style={s.statsTitle}>إحصائيات اليوم</Text>
                 <View style={s.statsGrid}>
-                  <StatCard label={t("total")}          value={todayOrders.length} color={Colors.gold}  icon="list" />
-                  <StatCard label={t("waiting")}        value={pendingCnt}          color="#F59E0B"       icon="clock" />
-                  <StatCard label={t("inProgress")}     value={inProgressCnt}       color="#60A5FA"       icon="zap" />
-                  <StatCard label={t("statusReady")}    value={doneCnt}             color="#34D399"       icon="check-circle" />
+                  <StatCard label="إجمالي"     value={todayOrders.length} color={Colors.gold}  icon="list" />
+                  <StatCard label="انتظار"      value={pendingCnt}          color="#F59E0B"       icon="clock" />
+                  <StatCard label="قيد التنفيذ" value={inProgressCnt}       color="#60A5FA"       icon="zap" />
+                  <StatCard label="جاهز"        value={doneCnt}             color="#34D399"       icon="check-circle" />
                 </View>
               </View>
 
               {/* Revenue */}
               <View style={s.revenueSection}>
-                <Text style={s.revenueLabel}>{t("repTodayRevenue")}</Text>
+                <Text style={s.revenueLabel}>إيرادات اليوم</Text>
                 <Text style={s.revenueValue}>
-                  {todayRevenue > 0 ? todayRevenue.toLocaleString("ar-SA") : "٠"} <Text style={s.revenueCur}>{t("sarCurrency")}</Text>
+                  {todayRevenue > 0 ? todayRevenue.toLocaleString("ar-SA") : "٠"} <Text style={s.revenueCur}>ريال</Text>
                 </Text>
               </View>
 
@@ -417,7 +409,7 @@ export default function HomeScreen() {
               {/* Cashier order tracker */}
               {isCashierRole && (
                 <View style={s.trackerSection}>
-                  <Text style={s.trackerTitle}>{t("orderTrackerTitle")}</Text>
+                  <Text style={s.trackerTitle}>متابعة طلباتك اليوم</Text>
                   <CashierOrderTracker orders={todayOrders} isDark />
                 </View>
               )}
@@ -443,10 +435,10 @@ export default function HomeScreen() {
       {/* Stats strip */}
       <View style={s.statsStrip}>
         {[
-          { num: todayOrders.length, lbl: t("today"),            color: Colors.gold  },
-          { num: pendingCnt,          lbl: t("waiting"),          color: "#F59E0B"    },
-          { num: inProgressCnt,       lbl: t("inProgressShort"), color: "#60A5FA"    },
-          { num: doneCnt,             lbl: `${t("statusReady")} ✓`, color: "#34D399" },
+          { num: todayOrders.length, lbl: "اليوم",  color: Colors.gold  },
+          { num: pendingCnt,          lbl: "انتظار", color: "#F59E0B"    },
+          { num: inProgressCnt,       lbl: "تنفيذ",  color: "#60A5FA"    },
+          { num: doneCnt,             lbl: "جاهز ✓", color: "#34D399"    },
         ].map((item, i, arr) => (
           <React.Fragment key={item.lbl}>
             <View style={s.stripCell}>
@@ -465,7 +457,7 @@ export default function HomeScreen() {
         <TouchableOpacity style={s.narrowCtaBtn} onPress={() => go("cashier")} activeOpacity={0.85}>
           <LinearGradient colors={[Colors.gold, "#A07830"]} style={s.narrowCtaInner} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
             <Feather name="plus" size={16} color="#0A1628" />
-            <Text style={s.narrowCtaTxt}>{t("newInvoice")}</Text>
+            <Text style={s.narrowCtaTxt}>فاتورة جديدة</Text>
           </LinearGradient>
         </TouchableOpacity>
       </View>
@@ -473,7 +465,7 @@ export default function HomeScreen() {
       {/* Cashier order tracker — mobile */}
       {isCashierRole && (
         <View style={s.narrowTracker}>
-          <Text style={s.narrowTrackerTitle}>{t("orderTrackerMobile")}</Text>
+          <Text style={s.narrowTrackerTitle}>متابعة الطلبات</Text>
           <CashierOrderTracker orders={todayOrders} isDark={false} />
         </View>
       )}
@@ -485,16 +477,16 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={[s.tileGrid, { gap: TILE_GAP }]}>
-          {tiles.map(tile => (
+          {tiles.map(t => (
             <Tile
-              key={tile.route}
-              label={tile.label}
-              icon={tile.icon}
-              accent={tile.accent}
-              primary={tile.primary}
-              badge={tile.route === "admin" ? pendingCount || undefined : undefined}
+              key={t.route}
+              label={t.label}
+              icon={t.icon}
+              accent={t.accent}
+              primary={(t as any).primary}
+              badge={t.route === "admin" ? pendingCount || undefined : undefined}
               size={tileSize}
-              onPress={() => go(tile.route)}
+              onPress={() => go(t.route)}
             />
           ))}
         </View>

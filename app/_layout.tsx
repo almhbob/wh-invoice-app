@@ -9,6 +9,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect, useState } from "react";
+import { Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -25,6 +26,7 @@ import { ProductsProvider } from "@/context/ProductsContext";
 import { TraysProvider } from "@/context/TraysInventoryContext";
 import { PriceChangeProvider } from "@/context/PriceChangeContext";
 import { FeaturesProvider } from "@/context/FeaturesContext";
+import { PrinterProvider } from "@/context/PrinterContext";
 import { ShiftProvider } from "@/context/ShiftContext";
 import { ensureTemporaryFirebaseSession } from "@/lib/authIdentity";
 
@@ -69,7 +71,9 @@ export default function RootLayout() {
     }
   }, [fontsLoaded, fontError, forceRender]);
 
-  if (!fontsLoaded && !fontError && !forceRender) return null;
+  // On web the build script injects @font-face CSS into index.html, so fonts
+  // are available immediately via CSS. Don't block render waiting for useFonts.
+  if (Platform.OS !== "web" && !fontsLoaded && !fontError && !forceRender) return null;
 
   return (
     <SafeAreaProvider>
@@ -84,6 +88,7 @@ export default function RootLayout() {
                       <TraysProvider>
                         <PriceChangeProvider>
                           <FeaturesProvider>
+                            <PrinterProvider>
                             <ShiftProvider>
                             <GestureHandlerRootView style={{ flex: 1 }}>
                               <KeyboardProvider>
@@ -91,6 +96,7 @@ export default function RootLayout() {
                               </KeyboardProvider>
                             </GestureHandlerRootView>
                             </ShiftProvider>
+                            </PrinterProvider>
                           </FeaturesProvider>
                         </PriceChangeProvider>
                       </TraysProvider>

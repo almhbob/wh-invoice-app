@@ -22,28 +22,29 @@ service firebase.storage {
     }
 
     match /contracts/{companyId}/{fileName} {
-      allow read: if canAccessCompany(companyId);
-      allow write: if canAccessCompany(companyId) && isSafeFile();
+      allow read: if signedIn();
+      allow write: if signedIn() && isSafeFile();
     }
 
     match /company-documents/{companyId}/{fileName} {
-      allow read: if canAccessCompany(companyId);
-      allow write: if canAccessCompany(companyId) && isSafeFile();
+      allow read: if signedIn();
+      allow write: if signedIn() && isSafeFile();
     }
 
+    // Product images — auth-required read/write (anonymous session covers app users)
     match /product-images/{companyId}/{fileName} {
-      allow read: if canAccessCompany(companyId);
-      allow write: if canAccessCompany(companyId) && isSafeFile();
+      allow read: if signedIn();
+      allow write: if signedIn() && isSafeFile();
     }
 
     match /damage-images/{companyId}/{fileName} {
-      allow read: if canAccessCompany(companyId);
-      allow write: if canAccessCompany(companyId) && isSafeFile();
+      allow read: if signedIn();
+      allow write: if signedIn() && isSafeFile();
     }
 
     match /logos/{companyId}/{fileName} {
-      allow read: if canAccessCompany(companyId);
-      allow write: if canAccessCompany(companyId) && isSafeFile();
+      allow read: if true;
+      allow write: if signedIn() && isSafeFile();
     }
 
     match /{allPaths=**} {
