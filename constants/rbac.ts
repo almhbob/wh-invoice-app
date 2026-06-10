@@ -25,7 +25,40 @@ export const ROLE_CAN_CLOSE_SHIFT = new Set<EmployeeRole>([
   "admin", "cashier", "branch_supervisor",
 ]);
 
+export const ROLE_CAN_VIEW_CASHIER = new Set<EmployeeRole>([
+  "admin", "cashier", "branch_supervisor", "dept_supervisor",
+]);
+
+export const ROLE_CAN_VIEW_ARCHIVE = new Set<EmployeeRole>([
+  "admin", "cashier", "branch_supervisor", "dept_supervisor",
+]);
+
+export const ROLE_CAN_VIEW_REPORTS = new Set<EmployeeRole>([
+  "admin", "branch_supervisor", "dept_supervisor",
+]);
+
+export const ROLE_CAN_VIEW_BRANCH_FEATURES = new Set<EmployeeRole>([
+  "admin", "branch_supervisor",
+]);
+
+export const ROLE_CAN_VIEW_CUSTOMERS = new Set<EmployeeRole>([
+  "admin", "cashier", "branch_supervisor",
+]);
+
+export const ROLE_CAN_VIEW_DELIVERY = new Set<EmployeeRole>([
+  "admin", "cashier", "branch_supervisor", "dept_supervisor",
+]);
+
+export const ROLE_CAN_VIEW_TRAYS = new Set<EmployeeRole>([
+  "admin", "cashier", "branch_supervisor", "dept_supervisor",
+]);
+
 export function canDo(role: EmployeeRole | undefined, permission: Set<EmployeeRole>): boolean {
   if (!role) return false;
   return permission.has(role);
+}
+
+export function canAccessDept(role: EmployeeRole, dept: string): boolean {
+  if (role === "admin" || role === "branch_supervisor" || role === "dept_supervisor") return true;
+  return role === dept;
 }

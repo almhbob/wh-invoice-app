@@ -13,6 +13,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Colors } from "@/constants/colors";
+import type { TranslationKey } from "@/constants/translations";
 import { useLang } from "@/context/LanguageContext";
 import { useOrders } from "@/context/OrdersContext";
 import { fmtCurrency } from "@/utils/dateUtils";
@@ -30,13 +31,24 @@ const PAYMENT_COLORS: Record<string, string> = {
   transfer: "#d97706",
 };
 
-const DEPT_META: Record<string, { label: string; color: string }> = {
-  halwa:     { label: "حلا زفة",    color: Colors.halwa },
-  mawali:    { label: "معجنات",     color: Colors.mawali },
-  chocolate: { label: "شوكولاتة",  color: Colors.chocolate },
-  cake:      { label: "كيك",        color: Colors.cake },
-  packaging: { label: "تغليف",     color: Colors.packaging },
+const DEPT_COLORS: Record<string, string> = {
+  halwa: Colors.halwa, mawali: Colors.mawali, chocolate: Colors.chocolate,
+  cake: Colors.cake, packaging: Colors.packaging,
 };
+
+const DEPT_LABEL_KEYS: Record<string, TranslationKey> = {
+  halwa: "deptHalwaShort", mawali: "deptMawaliShort", chocolate: "deptChocolateShort",
+  cake: "deptCakeShort", packaging: "deptPackagingShort",
+};
+
+function buildDeptMeta(t: (key: TranslationKey) => string): Record<string, { label: string; color: string }> {
+  return Object.fromEntries(
+    Object.keys(DEPT_COLORS).map((dept) => [
+      dept,
+      { label: t(DEPT_LABEL_KEYS[dept] as TranslationKey), color: DEPT_COLORS[dept] },
+    ])
+  );
+}
 
 
 // ─── Helper: date filter ──────────────────────────────────────────────────────
@@ -61,11 +73,11 @@ function isInFilter(isoDate: string, filter: Filter): boolean {
   return true;
 }
 
-function filterLabel(filter: Filter): string {
-  if (filter === "today") return "اليوم";
-  if (filter === "week")  return "هذا الأسبوع";
-  if (filter === "month") return "هذا الشهر";
-  return "كل الوقت";
+function filterLabel(filter: Filter, t: (key: TranslationKey) => string): string {
+  if (filter === "today") return t("repFilterToday");
+  if (filter === "week")  return t("repFilterWeek");
+  if (filter === "month") return t("repFilterMonth");
+  return t("repFilterAll");
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
@@ -236,6 +248,7 @@ function RevenueTab({
   filtered: ReturnType<typeof useOrders>["orders"];
 }) {
   const { t } = useLang();
+  const deptMeta = useMemo(() => buildDeptMeta(t), [t]);
   const totalRevenue = filtered.reduce((s, o) => s + (o.totalAmount ?? 0), 0);
   const orderCount   = filtered.length;
   const avgOrder     = orderCount > 0 ? totalRevenue / orderCount : 0;
@@ -327,10 +340,10 @@ function RevenueTab({
           {byDept.map(([dept, rev]) => (
             <BarRow
               key={dept}
-              label={DEPT_META[dept]?.label ?? dept}
+              label={deptMeta[dept]?.label ?? dept}
               value={rev}
               max={maxDept}
-              color={DEPT_META[dept]?.color ?? Colors.primary}
+              color={deptMeta[dept]?.color ?? Colors.primary}
               unit="currency"
             />
           ))}
@@ -386,6 +399,7 @@ function ProductsTab({
   filtered: ReturnType<typeof useOrders>["orders"];
 }) {
   const { t } = useLang();
+  const deptMeta = useMemo(() => buildDeptMeta(t), [t]);
   const topByQty = useMemo(() => {
     const map: Record<string, number> = {};
     filtered.forEach((o) =>
@@ -482,11 +496,11 @@ function ProductsTab({
               <View
                 style={[
                   styles.deptColorDot,
-                  { backgroundColor: DEPT_META[dept]?.color ?? Colors.primary },
+                  { backgroundColor: deptMeta[dept]?.color ?? Colors.primary },
                 ]}
               />
               <Text style={styles.deptVolumeName}>
-                {DEPT_META[dept]?.label ?? dept}
+                {deptMeta[dept]?.label ?? dept}
               </Text>
               <View style={styles.deptStatusBadges}>
                 <View style={[styles.statusBadge, { backgroundColor: Colors.statusPending + "22" }]}>
@@ -693,7 +707,7 @@ function DeliveryTab({
           <SectionHeader title={t("repAvgDelivTime")} />
           <View style={styles.avgTimeRow}>
             <Feather name="clock" size={28} color={Colors.info} />
-            <Text style={styles.avgTimeValue}>{avgDeliveryTime} دقيقة</Text>
+            <Text style={styles.avgTimeValue}>{avgDeliveryTime} {t("minutes")}</Text>
           </View>
         </View>
       )}
@@ -797,20 +811,20 @@ export default function ReportsScreen() {
     const topProduct = Object.entries(qtyMap).sort((a, b) => b[1] - a[1])[0];
     const cashierMap: Record<string, number> = {};
     reportOrders.forEach((o) => {
-      const name = o.cashierEmployee?.name ?? "غير معروف";
+      const name = o.cashierEmployee?.name ?? t("repUnknown");
       cashierMap[name] = (cashierMap[name] ?? 0) + 1;
     });
     const topCashier = Object.entries(cashierMap).sort((a, b) => b[1] - a[1])[0];
-    const dateStr = new Date().toLocaleDateString("ar-SA");
+    const dateStr = new Date().toLocaleDateString();
     return [
-      `📊 تقرير — ${label} ${dateStr}`,
+      `📊 ${t("repReport")} — ${label} ${dateStr}`,
       "══════════════════════════════",
-      `📦 الطلبات: ${orderCount}`,
-      `💰 الإيرادات: ${fmtCurrency(totalRevenue)}`,
-      `   نقد: ${fmtCurrency(byPayment.cash)} | شبكة: ${fmtCurrency(byPayment.card)} | تحويل: ${fmtCurrency(byPayment.transfer)}`,
-      `🚗 توصيل: ${deliveryCount} | 🛍 استلام: ${pickupCount}`,
-      topProduct ? `🏆 أعلى منتج: ${topProduct[0]} (${topProduct[1]} وحدة)` : null,
-      topCashier ? `👤 أعلى كاشير: ${topCashier[0]} (${topCashier[1]} طلب)` : null,
+      `📦 ${t("repTotalOrdersNum")}: ${orderCount}`,
+      `💰 ${t("repTotalRevenue")}: ${fmtCurrency(totalRevenue)}`,
+      `   ${t("repCash")}: ${fmtCurrency(byPayment.cash)} | ${t("repCard")}: ${fmtCurrency(byPayment.card)} | ${t("repTransfer")}: ${fmtCurrency(byPayment.transfer)}`,
+      `🚗 ${t("delivery")}: ${deliveryCount} | 🛍 ${t("pickup")}: ${pickupCount}`,
+      topProduct ? `🏆 ${t("repTopProduct")}: ${topProduct[0]} (${topProduct[1]} ${t("repUnits")})` : null,
+      topCashier ? `👤 ${t("repTopCashier")}: ${topCashier[0]} (${topCashier[1]} ${t("custOrderSingular")})` : null,
       "══════════════════════════════",
     ].filter(Boolean).join("\n");
   }
@@ -827,7 +841,7 @@ export default function ReportsScreen() {
 
   async function handleShare() {
     Haptics.selectionAsync();
-    const text = buildReportText(filtered, filterLabel(filter));
+    const text = buildReportText(filtered, filterLabel(filter, t));
     try { await Share.share({ message: text }); } catch (_) {}
   }
 

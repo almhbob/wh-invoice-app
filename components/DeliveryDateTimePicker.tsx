@@ -10,64 +10,72 @@ import {
 } from "react-native";
 
 import { Colors } from "@/constants/colors";
+import type { Lang } from "@/constants/translations";
+import { t as translate } from "@/constants/translations";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-const DAY_AR = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
-const MONTH_AR = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
+const LOCALE_MAP: Record<Lang, string> = {
+  ar: "ar-SA",
+  en: "en",
+  ur: "ur",
+  hi: "hi",
+  bn: "bn",
+};
 
-function buildDays(count = 14) {
+function buildDays(count = 14, lang: Lang = "ar") {
+  const locale = LOCALE_MAP[lang];
   const days: { label: string; sub: string; value: string; date: Date }[] = [];
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+  const dayFmt = new Intl.DateTimeFormat(locale, { weekday: "long" });
+  const dateFmt = new Intl.DateTimeFormat(locale, { day: "numeric", month: "long" });
   for (let i = 0; i < count; i++) {
     const d = new Date(today);
     d.setDate(today.getDate() + i);
-    const dayName = DAY_AR[d.getDay()];
-    const dayNum = d.getDate();
-    const month = MONTH_AR[d.getMonth()];
-    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(dayNum).padStart(2, "0")}`;
-    let label = dayName;
-    if (i === 0) label = "اليوم";
-    else if (i === 1) label = "غداً";
-    const sub = `${dayNum} ${month}`;
+    const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    let label = dayFmt.format(d);
+    if (i === 0) label = translate("today", lang);
+    else if (i === 1) label = translate("tomorrow", lang);
+    const sub = dateFmt.format(d);
     days.push({ label, sub, value: iso, date: d });
   }
   return days;
 }
 
-// Time slots: 8:00 AM to 11:00 PM in 30-min steps
-function buildTimeSlots() {
+function buildTimeSlots(lang: Lang = "ar") {
+  const locale = LOCALE_MAP[lang];
   const slots: { display: string; value: string }[] = [];
   for (let h = 8; h <= 23; h++) {
     for (const m of [0, 30]) {
       if (h === 23 && m === 30) continue;
-      const period = h < 12 ? "ص" : "م";
-      const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
-      const mm = m === 0 ? "00" : "30";
-      const display = `${h12}:${mm} ${period}`;
-      const value = `${String(h).padStart(2, "0")}:${mm}`;
+      const d = new Date(2000, 0, 1, h, m);
+      const display = new Intl.DateTimeFormat(locale, {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      }).format(d);
+      const value = `${String(h).padStart(2, "0")}:${m === 0 ? "00" : "30"}`;
       slots.push({ display, value });
     }
   }
   return slots;
 }
 
-const DAYS = buildDays(14);
-const TIME_SLOTS = buildTimeSlots();
-
 // ── Date Picker ─────────────────────────────────────────────────────────────────
 
 interface DatePickerProps {
-  value: string; // ISO date string "YYYY-MM-DD" or empty
+  value: string;
   onChange: (iso: string, label: string) => void;
   accentColor?: string;
+  lang?: Lang;
 }
 
-export function DeliveryDatePicker({ value, onChange, accentColor = Colors.primary }: DatePickerProps) {
+export function DeliveryDatePicker({ value, onChange, accentColor = Colors.primary, lang = "ar" }: DatePickerProps) {
   const listRef = useRef<FlatList>(null);
+  const days = useMemo(() => buildDays(14, lang), [lang]);
 
-  const handleSelect = useCallback((day: typeof DAYS[0]) => {
+  const handleSelect = useCallback((day: ReturnType<typeof buildDays>[0]) => {
     Haptics.selectionAsync();
     onChange(day.value, `${day.label} (${day.sub})`);
   }, [onChange]);
@@ -75,7 +83,7 @@ export function DeliveryDatePicker({ value, onChange, accentColor = Colors.prima
   return (
     <FlatList
       ref={listRef}
-      data={DAYS}
+      data={days}
       horizontal
       showsHorizontalScrollIndicator={false}
       keyExtractor={(d) => d.value}
@@ -101,25 +109,27 @@ export function DeliveryDatePicker({ value, onChange, accentColor = Colors.prima
 // ── Time Picker ─────────────────────────────────────────────────────────────────
 
 interface TimePickerProps {
-  value: string; // "HH:MM" or empty
+  value: string;
   onChange: (v: string) => void;
   accentColor?: string;
+  lang?: Lang;
 }
 
-export function DeliveryTimePicker({ value, onChange, accentColor = Colors.primary }: TimePickerProps) {
-  const handleSelect = useCallback((slot: typeof TIME_SLOTS[0]) => {
+export function DeliveryTimePicker({ value, onChange, accentColor = Colors.primary, lang = "ar" }: TimePickerProps) {
+  const slots = useMemo(() => buildTimeSlots(lang), [lang]);
+
+  const handleSelect = useCallback((slot: ReturnType<typeof buildTimeSlots>[0]) => {
     Haptics.selectionAsync();
     onChange(slot.value);
   }, [onChange]);
 
-  // Split into rows of 4
   const rows = useMemo(() => {
-    const result: (typeof TIME_SLOTS)[] = [];
-    for (let i = 0; i < TIME_SLOTS.length; i += 4) {
-      result.push(TIME_SLOTS.slice(i, i + 4));
+    const result: (typeof slots)[] = [];
+    for (let i = 0; i < slots.length; i += 4) {
+      result.push(slots.slice(i, i + 4));
     }
     return result;
-  }, []);
+  }, [slots]);
 
   return (
     <ScrollView
@@ -155,7 +165,6 @@ export function DeliveryTimePicker({ value, onChange, accentColor = Colors.prima
 // ── Styles ──────────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  // Date chips
   dateRow: {
     paddingHorizontal: 4,
     gap: 8,
@@ -185,7 +194,6 @@ const styles = StyleSheet.create({
   },
   daySubActive: { color: "rgba(255,255,255,0.85)" },
 
-  // Time grid
   timeScrollContent: {
     paddingHorizontal: 4,
   },

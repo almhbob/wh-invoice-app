@@ -25,6 +25,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Colors } from "@/constants/colors";
 import { LAVIVIANE_COMPANY_ID } from "@/constants/lavivianeProducts";
+import { t as t_ } from "@/constants/translations";
 import { ProductGalleryModal } from "@/components/ProductGalleryModal";
 import { useCompany } from "@/context/CompanyContext";
 import { useEmployee } from "@/context/EmployeeContext";
@@ -55,31 +56,35 @@ const DEPT_CYCLE: Partial<Record<Department, Department>> = {
 };
 const DEPT_DISPLAY_ORDER: Department[] = ["cake", "halwa", "chocolate", "mawali", "packaging"];
 
-// ── Checkout date/time chip data (desktop POS panel) ───────────────────────────
-const _DAY_AR = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
-const _MON_AR = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
-function buildCheckoutDays() {
+// ── Checkout date/time chip builders (desktop POS panel) ──────────────────────
+
+const LOCALE_MAP: Record<string, string> = { ar: "ar-SA", en: "en", ur: "ur", hi: "hi", bn: "bn" };
+
+function buildCheckoutDays(lang: string) {
+  const locale = LOCALE_MAP[lang] ?? "ar-SA";
   const today = new Date(); today.setHours(0,0,0,0);
+  const dayFmt = new Intl.DateTimeFormat(locale, { weekday: "long" });
+  const dateFmt = new Intl.DateTimeFormat(locale, { day: "numeric", month: "long" });
   return Array.from({ length: 10 }, (_, i) => {
     const d = new Date(today); d.setDate(today.getDate() + i);
     const iso = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-    const label = i === 0 ? "اليوم" : i === 1 ? "غداً" : _DAY_AR[d.getDay()];
-    return { label, sub: `${d.getDate()} ${_MON_AR[d.getMonth()]}`, value: iso };
+    const label = i === 0 ? t_("today", lang as any) : i === 1 ? t_("tomorrow", lang as any) : dayFmt.format(d);
+    return { label, sub: dateFmt.format(d), value: iso };
   });
 }
-function buildCheckoutTimes() {
+function buildCheckoutTimes(lang: string) {
+  const locale = LOCALE_MAP[lang] ?? "ar-SA";
   const out: { display: string; value: string }[] = [];
+  const timeFmt = new Intl.DateTimeFormat(locale, { hour: "numeric", minute: "2-digit", hour12: true });
   for (let h = 8; h <= 23; h++) {
     for (const m of [0, 30]) {
       if (h === 23 && m === 30) continue;
-      const p = h < 12 ? "ص" : "م"; const h12 = h > 12 ? h - 12 : h === 0 ? 12 : h;
-      out.push({ display: `${h12}:${m === 0 ? "00" : "30"} ${p}`, value: `${String(h).padStart(2,"0")}:${m === 0 ? "00" : "30"}` });
+      const d = new Date(2000, 0, 1, h, m);
+      out.push({ display: timeFmt.format(d), value: `${String(h).padStart(2,"0")}:${m === 0 ? "00" : "30"}` });
     }
   }
   return out;
 }
-const CHECKOUT_DAYS = buildCheckoutDays();
-const CHECKOUT_TIMES = buildCheckoutTimes();
 
 function formatNow() {
   const d = new Date();
@@ -112,7 +117,7 @@ export default function CashierScreen() {
   const { addOrder, orders } = useOrders();
   const { currentEmployee, setCurrentEmployee } = useEmployee();
   const { getOfferByPhone, incrementUsage } = useOffers();
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const DEPT_OPTIONS = useMemo(() => [
     { value: "halwa" as Department,     label: t("deptHalwaShort"),     color: Colors.halwa },
     { value: "mawali" as Department,    label: t("deptMawaliShort"),    color: Colors.mawali },
@@ -124,6 +129,8 @@ export default function CashierScreen() {
   const isLaviviane = company.id === LAVIVIANE_COMPANY_ID;
   const { width: winW } = useWindowDimensions();
   const isWide = Platform.OS === "web" && winW >= 768;
+  const checkoutDays = useMemo(() => buildCheckoutDays(lang), [lang]);
+  const checkoutTimes = useMemo(() => buildCheckoutTimes(lang), [lang]);
 
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -294,7 +301,7 @@ export default function CashierScreen() {
 
   const takePhoto = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== "granted") { Alert.alert(t("permRequired"), "يحتاج التطبيق للوصول إلى الكاميرا"); return; }
+    if (status !== "granted") { Alert.alert(t("permRequired"), t("permCameraMsg")); return; }
     const res = await ImagePicker.launchCameraAsync({ allowsEditing: true, quality: 0.8 });
     if (!res.canceled) setImageUri(res.assets[0].uri);
   };
@@ -304,7 +311,7 @@ export default function CashierScreen() {
     Alert.alert(t("addPhotoLabel"), t("chooseSource"), [
       { text: t("camera"), onPress: takePhoto },
       { text: t("photoGallery"), onPress: pickImage },
-      { text: "إلغاء", style: "cancel" },
+      { text: t("cancel"), style: "cancel" },
     ]);
   };
 
@@ -765,14 +772,14 @@ export default function CashierScreen() {
       <View style={styles.todayStrip}>
         <View style={styles.todayStripLeft}>
           <Text style={styles.todayStripCount}>{todayOrders.length}</Text>
-          <Text style={styles.todayStripLabel}>طلب اليوم</Text>
+          <Text style={styles.todayStripLabel}>{t("cashierTodayCount")}</Text>
         </View>
         <View style={styles.todayStripDivider} />
         <View style={styles.todayStripLeft}>
           <Text style={[styles.todayStripCount, { color: Colors.success }]}>
             {todayTotal.toLocaleString("ar-SA", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
           </Text>
-          <Text style={styles.todayStripLabel}>ر.س اليوم</Text>
+          <Text style={styles.todayStripLabel}>{t("cashierTodaySAR")}</Text>
         </View>
         {lastClosed && (
           <>
@@ -811,7 +818,7 @@ export default function CashierScreen() {
 
         <Text style={styles.label}>{t("customerName")} *</Text>
         <TextInput style={styles.input} value={customerName} onChangeText={setCustomerName}
-          placeholder="أدخل اسم العميل" placeholderTextColor={Colors.textMuted} textAlign="right" />
+          placeholder={t("errName")} placeholderTextColor={Colors.textMuted} textAlign="right" />
 
         <Text style={styles.label}>{t("customerPhone")} *</Text>
         <View style={styles.row}>
@@ -837,7 +844,7 @@ export default function CashierScreen() {
           >
             <Feather name="user-check" size={13} color={Colors.primary} />
             <Text style={styles.autoFillText}>
-              استخدم: <Text style={{ fontWeight: "800" }}>{suggestedCustomer.name}</Text>
+              {t("cashierAutofillUse")} <Text style={{ fontWeight: "800" }}>{suggestedCustomer.name}</Text>
             </Text>
             <Feather name="chevron-left" size={13} color={Colors.primary} />
           </TouchableOpacity>
@@ -863,8 +870,8 @@ export default function CashierScreen() {
               <Text style={styles.offerBannerTitle}>{t("autoActivatedOffer")}</Text>
               <Text style={styles.offerBannerSub}>
                 {detectedOffer.discountType === "percentage"
-                  ? `خصم ${detectedOffer.discountValue}%`
-                  : `خصم ${detectedOffer.discountValue.toFixed(2)} ر.س`}
+                  ? `${t("discount")} ${detectedOffer.discountValue}%`
+                  : `${t("discount")} ${detectedOffer.discountValue.toFixed(2)} ${t("sar")}`}
                 {detectedOffer.reason ? `  ·  ${detectedOffer.reason}` : ""}
                 {detectedOffer.customerName ? `\n${detectedOffer.customerName}` : ""}
               </Text>
@@ -881,7 +888,7 @@ export default function CashierScreen() {
             <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
               <Feather name="user-check" size={14} color={Colors.success} />
               <Text style={styles.empDisplayText}>
-                الكاشير: <Text style={{ fontWeight: "700" }}>{currentEmployee.name}</Text>
+                {t("cashierLabel")} <Text style={{ fontWeight: "700" }}>{currentEmployee.name}</Text>
                 {"  "}
                 <Text style={{ color: Colors.textMuted }}>#{currentEmployee.employeeId}</Text>
               </Text>
@@ -897,7 +904,7 @@ export default function CashierScreen() {
           <View style={[styles.empDisplay, { borderColor: Colors.accent + "40", backgroundColor: Colors.accent + "08" }]}>
             <Feather name="alert-circle" size={14} color={Colors.accent} />
             <Text style={[styles.empDisplayText, { color: Colors.accent }]}>
-              يجب تسجيل الدخول أولاً — اضغط على زر الموظف في الأعلى
+              {t("cashierLoginMsg")}
             </Text>
           </View>
         )}
@@ -968,6 +975,7 @@ export default function CashierScreen() {
           value={deliveryDate}
           onChange={(iso, label) => setDeliveryDate(iso)}
           accentColor={Colors.primary}
+          lang={lang}
         />
         {deliveryDate ? (
           <View style={styles.selectedValueRow}>
@@ -985,6 +993,7 @@ export default function CashierScreen() {
           value={deliveryTime}
           onChange={setDeliveryTime}
           accentColor={Colors.primary}
+          lang={lang}
         />
         {deliveryTime ? (
           <View style={styles.selectedValueRow}>
@@ -1115,7 +1124,7 @@ export default function CashierScreen() {
                   style={[styles.input, styles.itemName]}
                   value={item.name}
                   onChangeText={(v) => updateItem(item.id, "name", v)}
-                  placeholder={`صنف ${idx + 1}`}
+                  placeholder={`${t("cashierItemPh")} ${idx + 1}`}
                   placeholderTextColor={Colors.textMuted}
                   textAlign="right"
                 />
@@ -1213,7 +1222,7 @@ export default function CashierScreen() {
             onPress={() => { Haptics.selectionAsync(); addItemRow("cake"); }}
           >
             <Feather name="plus" size={14} color={Colors.primary} />
-            <Text style={styles.addBtnSingleText}>إضافة صنف يدوياً</Text>
+            <Text style={styles.addBtnSingleText}>{t("cashierAddManual")}</Text>
           </TouchableOpacity>
         ) : (
           <View style={styles.addRow}>
@@ -1322,7 +1331,7 @@ export default function CashierScreen() {
               <Text style={styles.cardTitle}>{t("discountsOffers")}</Text>
               <Text style={styles.discountSubtitle}>
                 {discountEnabled
-                  ? (discountAmount > 0 ? `${t("discount")} ${discountAmount.toFixed(2)} ر.س` : t("setDiscountVal"))
+                  ? (discountAmount > 0 ? `${t("discount")} ${discountAmount.toFixed(2)} ${t("sar")}` : t("setDiscountVal"))
                   : t("tapToDiscount")}
               </Text>
             </View>
@@ -1341,7 +1350,7 @@ export default function CashierScreen() {
                 onPress={() => { Haptics.selectionAsync(); setDiscountType("percentage"); }}
               >
                 <Text style={[styles.discountTypeBtnText, discountType === "percentage" && styles.discountTypeBtnTextActive]}>
-                  نسبة %
+                  {t("discountPercent")}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -1349,7 +1358,7 @@ export default function CashierScreen() {
                 onPress={() => { Haptics.selectionAsync(); setDiscountType("fixed"); }}
               >
                 <Text style={[styles.discountTypeBtnText, discountType === "fixed" && styles.discountTypeBtnTextActive]}>
-                  مبلغ ثابت ر.س
+                  {t("discountFixed")} {t("sar")}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -1360,7 +1369,7 @@ export default function CashierScreen() {
                 style={[styles.input, styles.discountValueInput]}
                 value={discountValue}
                 onChangeText={setDiscountValue}
-                placeholder={discountType === "percentage" ? "مثال: 10" : "مثال: 20.00"}
+                placeholder={discountType === "percentage" ? "10" : "20.00"}
                 placeholderTextColor={Colors.textMuted}
                 keyboardType="numeric"
                 textAlign="right"
@@ -1431,18 +1440,18 @@ export default function CashierScreen() {
         <View style={styles.totalCard}>
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>{t("subtotal")}</Text>
-            <Text style={styles.totalValue}>{subtotal.toFixed(2)} ر.س</Text>
+            <Text style={styles.totalValue}>{subtotal.toFixed(2)} {t("sar")}</Text>
           </View>
           {discountAmount > 0 && (
             <View style={styles.totalRow}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
                 <Feather name="tag" size={12} color={Colors.warning} />
                 <Text style={[styles.totalLabel, { color: Colors.warning }]}>
-                  خصم{discountReason ? ` (${discountReason})` : ""}
+                  {t("discount")}{discountReason ? ` (${discountReason})` : ""}
                 </Text>
               </View>
               <Text style={[styles.totalValue, { color: Colors.warning }]}>
-                -{discountAmount.toFixed(2)} ر.س
+                -{discountAmount.toFixed(2)} {t("sar")}
               </Text>
             </View>
           )}
@@ -1455,13 +1464,13 @@ export default function CashierScreen() {
                 </Text>
               </View>
               <Text style={[styles.totalValue, { color: Colors.gold }]}>
-                +{insuranceVal.toFixed(2)} ر.س
+                +{insuranceVal.toFixed(2)} {t("sar")}
               </Text>
             </View>
           )}
           <View style={[styles.totalRow, styles.grandTotalRow]}>
             <Text style={styles.grandTotalLabel}>{t("grandTotalAll")}</Text>
-            <Text style={styles.grandTotalValue}>{grandTotal.toFixed(2)} ر.س</Text>
+            <Text style={styles.grandTotalValue}>{grandTotal.toFixed(2)} {t("sar")}</Text>
           </View>
 
           {/* Divider */}
@@ -1502,7 +1511,7 @@ export default function CashierScreen() {
               </View>
               {remainingAmount > 0 && (
                 <Text style={[styles.grandTotalValue, { color: Colors.accent }]}>
-                  {remainingAmount.toFixed(2)} ر.س
+                  {remainingAmount.toFixed(2)} {t("sar")}
                 </Text>
               )}
             </View>
@@ -1598,7 +1607,7 @@ export default function CashierScreen() {
             >
               <Feather name="user-check" size={12} color={Colors.gold} />
               <Text style={styles.checkoutAutofillText}>
-                استخدم: <Text style={{ fontWeight: "800" }}>{suggestedCustomer.name}</Text>
+                {t("cashierAutofillUse")} <Text style={{ fontWeight: "800" }}>{suggestedCustomer.name}</Text>
               </Text>
             </TouchableOpacity>
           )}
@@ -1629,7 +1638,7 @@ export default function CashierScreen() {
           <>
             {/* Day chips */}
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.checkoutDayScroll} contentContainerStyle={styles.checkoutDayScrollContent}>
-              {CHECKOUT_DAYS.map(day => {
+              {checkoutDays.map(day => {
                 const active = deliveryDate === day.value;
                 return (
                   <TouchableOpacity
@@ -1647,7 +1656,7 @@ export default function CashierScreen() {
 
             {/* Time chips */}
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.checkoutTimeScroll} contentContainerStyle={styles.checkoutTimeScrollContent}>
-              {CHECKOUT_TIMES.map(slot => {
+              {checkoutTimes.map(slot => {
                 const active = deliveryTime === slot.value;
                 return (
                   <TouchableOpacity
@@ -1668,7 +1677,7 @@ export default function CashierScreen() {
                 style={[styles.checkoutInputField, { flex: 1 }]}
                 value={deliveryAddress}
                 onChangeText={setDeliveryAddress}
-                placeholder="عنوان التوصيل"
+                placeholder={t("cashierDelivAddrPlh")}
                 placeholderTextColor="rgba(255,255,255,0.3)"
                 textAlign="right"
               />
@@ -1680,12 +1689,12 @@ export default function CashierScreen() {
         <View style={styles.checkoutHeader}>
           <View style={{ flex: 1, flexDirection: "row" as const, alignItems: "center" as const, gap: 8 }}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.checkoutTitle}>الطلب الحالي</Text>
-              <Text style={styles.checkoutSubtitle}>{todayOrders.length} طلب اليوم · {todayTotal.toFixed(0)} ر.س</Text>
+              <Text style={styles.checkoutTitle}>{t("cashierCurrentOrder")}</Text>
+              <Text style={styles.checkoutSubtitle}>{todayOrders.length} {t("cashierTodayCount")} · {todayTotal.toFixed(0)} {t("sar")}</Text>
             </View>
             {(validItems.length > 0 || !!chocoCard) && (
               <View style={styles.cartBadge}>
-                <Text style={styles.cartBadgeText}>{validItems.length + (chocoCard ? 1 : 0)} صنف</Text>
+                <Text style={styles.cartBadgeText}>{validItems.length + (chocoCard ? 1 : 0)} {t("cashierItemCount")}</Text>
               </View>
             )}
           </View>
@@ -1717,7 +1726,7 @@ export default function CashierScreen() {
         ) : (
           <View style={[styles.checkoutEmpRow, { borderColor: "rgba(248,113,113,0.3)", backgroundColor: "rgba(248,113,113,0.08)" }]}>
             <Feather name="alert-circle" size={13} color="#f87171" />
-            <Text style={[styles.checkoutEmpText, { color: "#f87171" }]}>يجب تسجيل الدخول أولاً</Text>
+            <Text style={[styles.checkoutEmpText, { color: "#f87171" }]}>{t("cashierLoginMsg")}</Text>
           </View>
         )}
 
@@ -1726,8 +1735,8 @@ export default function CashierScreen() {
           {validItems.length === 0 && !chocoCard ? (
             <View style={styles.checkoutEmpty}>
               <Feather name="shopping-bag" size={42} color="rgba(255,255,255,0.12)" />
-              <Text style={styles.checkoutEmptyText}>لا توجد أصناف بعد</Text>
-              <Text style={styles.checkoutEmptyHint}>ابدأ بالإضافة من معرض المنتجات أو يدوياً</Text>
+              <Text style={styles.checkoutEmptyText}>{t("cashierNoItems")}</Text>
+              <Text style={styles.checkoutEmptyHint}>{t("cashierAddHint")}</Text>
             </View>
           ) : (
             <>
@@ -1748,7 +1757,7 @@ export default function CashierScreen() {
               {chocoCard && chocoPrice > 0 && (
                 <View style={styles.checkoutItem}>
                   <View style={[styles.checkoutItemAccent, { backgroundColor: Colors.chocolate }]} />
-                  <Text style={styles.checkoutItemName}>كرت شوكولاتة</Text>
+                  <Text style={styles.checkoutItemName}>{t("cashierChocoCard")}</Text>
                   <Text style={styles.checkoutItemQty}>×1</Text>
                   <Text style={styles.checkoutItemAmt}>{chocoPrice.toFixed(0)} ر.س</Text>
                 </View>
@@ -1763,7 +1772,7 @@ export default function CashierScreen() {
               style={styles.checkoutNotesInput}
               value={notes}
               onChangeText={setNotes}
-              placeholder="ملاحظات الطلب..."
+              placeholder={t("cashierNotesPlh")}
               placeholderTextColor="rgba(255,255,255,0.2)"
               textAlign="right"
               multiline
@@ -1809,14 +1818,14 @@ export default function CashierScreen() {
             activeOpacity={0.8}
           >
             <Feather name="tag" size={13} color={discountEnabled ? Colors.warning : "rgba(255,255,255,0.35)"} />
-            <Text style={[styles.checkoutDiscountLabel, discountEnabled && { color: Colors.warning }]}>خصم</Text>
+            <Text style={[styles.checkoutDiscountLabel, discountEnabled && { color: Colors.warning }]}>{t("discount")}</Text>
             {discountEnabled && (
               <>
                 <TouchableOpacity
                   onPress={() => setDiscountType(t => t === "percentage" ? "fixed" : "percentage")}
                   style={styles.checkoutDiscountTypeBtn}
                 >
-                  <Text style={styles.checkoutDiscountTypeText}>{discountType === "percentage" ? "%" : "ر.س"}</Text>
+                  <Text style={styles.checkoutDiscountTypeText}>{discountType === "percentage" ? "%" : t("sar")}</Text>
                 </TouchableOpacity>
                 <TextInput
                   style={styles.checkoutDiscountInput}
@@ -1842,34 +1851,34 @@ export default function CashierScreen() {
               <>
                 <View style={styles.checkoutTotalRow}>
                   <Text style={styles.checkoutTotalLabel}>{t("subtotal")}</Text>
-                  <Text style={styles.checkoutTotalValue}>{subtotal.toFixed(2)} ر.س</Text>
+                  <Text style={styles.checkoutTotalValue}>{subtotal.toFixed(2)} {t("sar")}</Text>
                 </View>
                 {discountAmount > 0 && (
                   <View style={styles.checkoutTotalRow}>
-                    <Text style={[styles.checkoutTotalLabel, { color: Colors.warning }]}>خصم</Text>
-                    <Text style={[styles.checkoutTotalValue, { color: Colors.warning }]}>-{discountAmount.toFixed(2)} ر.س</Text>
+                    <Text style={[styles.checkoutTotalLabel, { color: Colors.warning }]}>{t("discount")}</Text>
+                    <Text style={[styles.checkoutTotalValue, { color: Colors.warning }]}>-{discountAmount.toFixed(2)} {t("sar")}</Text>
                   </View>
                 )}
                 {insuranceVal > 0 && (
                   <View style={styles.checkoutTotalRow}>
                     <Text style={[styles.checkoutTotalLabel, { color: Colors.goldLight }]}>{t("trayInsurance")}</Text>
-                    <Text style={[styles.checkoutTotalValue, { color: Colors.goldLight }]}>+{insuranceVal.toFixed(2)} ر.س</Text>
+                    <Text style={[styles.checkoutTotalValue, { color: Colors.goldLight }]}>+{insuranceVal.toFixed(2)} {t("sar")}</Text>
                   </View>
                 )}
                 <View style={styles.checkoutGrandRow}>
                   <Text style={styles.checkoutGrandLabel}>{t("grandTotalAll")}</Text>
-                  <Text style={styles.checkoutGrandValue}>{grandTotal.toFixed(2)} ر.س</Text>
+                  <Text style={styles.checkoutGrandValue}>{grandTotal.toFixed(2)} {t("sar")}</Text>
                 </View>
               </>
             ) : (
-              <Text style={[styles.checkoutTotalLabel, { textAlign: "center", paddingVertical: 4 }]}>لا توجد أسعار محددة</Text>
+              <Text style={[styles.checkoutTotalLabel, { textAlign: "center", paddingVertical: 4 }]}>{t("cashierNoPrices")}</Text>
             )}
 
             {/* Amount paid */}
             <View style={styles.checkoutPaidBox}>
               <Text style={[styles.checkoutTotalLabel, { marginBottom: 4 }]}>{t("paidAmount")}</Text>
               <View style={styles.checkoutPaidInputRow}>
-                <Text style={styles.checkoutCurrency}>ر.س</Text>
+                <Text style={styles.checkoutCurrency}>{t("sar")}</Text>
                 <TextInput
                   style={styles.checkoutPaidField}
                   value={amountPaid}
@@ -1893,7 +1902,7 @@ export default function CashierScreen() {
                 </Text>
                 {remainingAmount > 0 && (
                   <Text style={[styles.checkoutTotalValue, { color: "#f87171", fontWeight: "800" }]}>
-                    {remainingAmount.toFixed(2)} ر.س
+                    {remainingAmount.toFixed(2)} {t("sar")}
                   </Text>
                 )}
               </View>
@@ -2079,27 +2088,27 @@ export default function CashierScreen() {
                   {subtotal > 0 && (discountAmount > 0 || insuranceVal > 0) ? (
                     <View style={styles.previewRow}>
                       <Text style={styles.previewLabel}>{t("previewSubtotal")}</Text>
-                      <Text style={styles.previewValue}>{subtotal.toFixed(2)} ر.س</Text>
+                      <Text style={styles.previewValue}>{subtotal.toFixed(2)} {t("sar")}</Text>
                     </View>
                   ) : null}
                   {discountAmount > 0 && (
                     <View style={styles.previewRow}>
                       <Text style={[styles.previewLabel, { color: Colors.success }]}>
-                        خصم{discountReason.trim() ? ` (${discountReason.trim()})` : ""}
+                        {t("discount")}{discountReason.trim() ? ` (${discountReason.trim()})` : ""}
                       </Text>
-                      <Text style={[styles.previewValue, { color: Colors.success }]}>- {discountAmount.toFixed(2)} ر.س</Text>
+                      <Text style={[styles.previewValue, { color: Colors.success }]}>- {discountAmount.toFixed(2)} {t("sar")}</Text>
                     </View>
                   )}
                   {insuranceVal > 0 && (
                     <View style={styles.previewRow}>
                       <Text style={styles.previewLabel}>{t("trayInsurance")}</Text>
-                      <Text style={styles.previewValue}>{insuranceVal.toFixed(2)} ر.س</Text>
+                      <Text style={styles.previewValue}>{insuranceVal.toFixed(2)} {t("sar")}</Text>
                     </View>
                   )}
                   {grandTotal > 0 && (
                     <View style={[styles.previewRow, styles.previewTotalRow]}>
                       <Text style={styles.previewTotalLabel}>{t("grandTotalAll")}</Text>
-                      <Text style={styles.previewTotalValue}>{grandTotal.toFixed(2)} ر.س</Text>
+                      <Text style={styles.previewTotalValue}>{grandTotal.toFixed(2)} {t("sar")}</Text>
                     </View>
                   )}
                   <View style={styles.previewRow}>
@@ -2109,13 +2118,13 @@ export default function CashierScreen() {
                   {amountPaidVal > 0 && (
                     <View style={styles.previewRow}>
                       <Text style={styles.previewLabel}>{t("paidShort")}</Text>
-                      <Text style={styles.previewValue}>{amountPaidVal.toFixed(2)} ر.س</Text>
+                      <Text style={styles.previewValue}>{amountPaidVal.toFixed(2)} {t("sar")}</Text>
                     </View>
                   )}
                   {remainingAmount > 0 && (
                     <View style={styles.previewRow}>
                       <Text style={[styles.previewLabel, { color: Colors.accent }]}>{t("remaining")}</Text>
-                      <Text style={[styles.previewValue, { color: Colors.accent, fontWeight: "800" }]}>{remainingAmount.toFixed(2)} ر.س</Text>
+                      <Text style={[styles.previewValue, { color: Colors.accent, fontWeight: "800" }]}>{remainingAmount.toFixed(2)} {t("sar")}</Text>
                     </View>
                   )}
                 </View>
@@ -2325,9 +2334,9 @@ export default function CashierScreen() {
                       {item.price ? (
                         <View style={{ alignItems: "flex-end" }}>
                           <Text style={styles.receiptItemPrice}>
-                            {(item.price * item.quantity).toFixed(2)} ر.س
+                            {(item.price * item.quantity).toFixed(2)} {t("sar")}
                           </Text>
-                          <Text style={styles.receiptItemUnit}>{item.price} ر.س/وحدة</Text>
+                          <Text style={styles.receiptItemUnit}>{item.price} {t("sar")}</Text>
                         </View>
                       ) : null}
                     </View>
@@ -2338,13 +2347,13 @@ export default function CashierScreen() {
                     <View style={{ flexDirection: "row", alignItems: "center", gap: 4, flex: 1 }}>
                       <Feather name="tag" size={12} color={Colors.warning} />
                       <Text style={[styles.receiptItemName, { color: Colors.warning }]}>
-                        خصم{receiptOrder.discount.reason ? ` (${receiptOrder.discount.reason})` : ""}
+                        {t("discount")}{receiptOrder.discount.reason ? ` (${receiptOrder.discount.reason})` : ""}
                       </Text>
                     </View>
                     <Text style={[styles.receiptItemPrice, { color: Colors.warning }]}>
                       {receiptOrder.discount.type === "percentage"
                         ? `${receiptOrder.discount.value}%`
-                        : `-${receiptOrder.discount.value.toFixed(2)} ر.س`}
+                        : `-${receiptOrder.discount.value.toFixed(2)} ${t("sar")}`}
                     </Text>
                   </View>
                 )}
@@ -2352,7 +2361,7 @@ export default function CashierScreen() {
                   <View style={[styles.receiptItemRow, styles.receiptTotalRow]}>
                     <Text style={styles.receiptTotalLabel}>{t("grandTotalAll")}</Text>
                     <Text style={styles.receiptTotalAmount}>
-                      {receiptOrder.totalAmount.toFixed(2)} ر.س
+                      {receiptOrder.totalAmount.toFixed(2)} {t("sar")}
                     </Text>
                   </View>
                 ) : null}
@@ -2384,7 +2393,7 @@ export default function CashierScreen() {
                     <Feather name="dollar-sign" size={14} color={Colors.success} />
                     <Text style={styles.receiptRowLabel}>{t("paidAmount")}</Text>
                     <Text style={[styles.receiptRowValue, { color: Colors.success }]}>
-                      {receiptOrder.amountPaid.toFixed(2)} ر.س
+                      {receiptOrder.amountPaid.toFixed(2)} {t("sar")}
                     </Text>
                   </View>
                   {receiptOrder.totalAmount != null && (

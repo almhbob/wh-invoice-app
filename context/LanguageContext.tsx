@@ -21,6 +21,7 @@ const LANG_LABELS: Record<Lang, string> = {
 
 interface LanguageContextType {
   lang: Lang;
+  setLang: (lang: Lang) => void;
   toggleLang: () => void;
   t: (key: TranslationKey) => string;
   rl: (role: string) => string;
@@ -60,6 +61,11 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     applyWebDirection(lang, isRTL);
   }, [lang, isRTL]);
 
+  const changeLang = useCallback((next: Lang) => {
+    setLang(next);
+    AsyncStorage.setItem(STORAGE_KEY, next).catch(() => undefined);
+  }, []);
+
   const toggleLang = useCallback(() => {
     setLang((prev) => {
       const idx = LANGS.indexOf(prev);
@@ -73,7 +79,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const rl = useCallback((role: string) => roleLabel(role, lang), [lang]);
 
   return (
-    <LanguageContext.Provider value={{ lang, toggleLang, t, rl, isRTL, langLabel: LANG_LABELS[lang] }}>
+    <LanguageContext.Provider value={{ lang, setLang: changeLang, toggleLang, t, rl, isRTL, langLabel: LANG_LABELS[lang] }}>
       {children}
     </LanguageContext.Provider>
   );

@@ -1,3 +1,4 @@
+import { Feather } from "@expo/vector-icons";
 import React, { useCallback, useState } from "react";
 import { FlatList, RefreshControl, StyleSheet, Text, View } from "react-native";
 
@@ -6,10 +7,13 @@ import { EmptyState } from "@/components/EmptyState";
 import { NewOrderBanner } from "@/components/NewOrderBanner";
 import { useNewOrderAlert } from "@/hooks/useNewOrderAlert";
 import { Colors } from "@/constants/colors";
+import { canAccessDept } from "@/constants/rbac";
+import { useEmployee } from "@/context/EmployeeContext";
 import { useLang } from "@/context/LanguageContext";
 import { EmployeeRef, Order, OrderStatus, useOrders } from "@/context/OrdersContext";
 
 export default function ChocolateScreen() {
+  const { currentEmployee } = useEmployee();
   const { getOrdersForDepartment, updateDepartmentStatus, isLoading, refreshOrders } = useOrders();
   const { t } = useLang();
   const orders = getOrdersForDepartment("chocolate");
@@ -24,6 +28,18 @@ export default function ChocolateScreen() {
       updateDepartmentStatus(order.id, "chocolate", status, receiver),
     [updateDepartmentStatus]
   );
+
+  if (currentEmployee && !canAccessDept(currentEmployee.role, "chocolate")) {
+    return (
+      <View style={styles.locked}>
+        <View style={[styles.lockedIcon, { backgroundColor: Colors.chocolate + "18" }]}>
+          <Feather name="lock" size={36} color={Colors.chocolate} />
+        </View>
+        <Text style={styles.lockedTitle}>{t("accessDeniedTitle")}</Text>
+        <Text style={styles.lockedSub}>{t("accessDeniedChocolate")}</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -84,4 +100,8 @@ const styles = StyleSheet.create({
   statLabel: { fontSize: 12, color: "rgba(255,255,255,0.85)" },
   allClearText: { fontSize: 13, color: "rgba(255,255,255,0.85)" },
   list: { padding: 16 },
+  locked: { flex: 1, alignItems: "center", justifyContent: "center", gap: 14, padding: 32, backgroundColor: Colors.background },
+  lockedIcon: { width: 80, height: 80, borderRadius: 40, alignItems: "center", justifyContent: "center" },
+  lockedTitle: { fontSize: 18, fontWeight: "800", color: Colors.text },
+  lockedSub: { fontSize: 14, color: Colors.textMuted, textAlign: "center" },
 });

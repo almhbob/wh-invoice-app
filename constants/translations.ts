@@ -72,6 +72,13 @@ const translations = {
   search:           { ar: "بحث...",           en: "Search...",        ur: "تلاش...",            hi: "खोजें...",          bn: "খুঁজুন..." },
   noResults:        { ar: "لا توجد نتائج",    en: "No results",       ur: "کوئی نتیجہ نہیں",   hi: "कोई परिणाम नहीं",  bn: "কোনো ফলাফল নেই" },
 
+  // ── Alert titles ──────────────────────────────────────────────
+  errTitle:         { ar: "خطأ",                 en: "Error",            ur: "غلطی",             hi: "त्रुटि",          bn: "ত্রুটি" },
+  successTitle:     { ar: "تم",                   en: "Done",             ur: "مکمل",             hi: "हो गया",          bn: "সম্পন্ন" },
+  requiredTitle:    { ar: "مطلوب",              en: "Required",         ur: "ضروری",            hi: "आवश्यक",       bn: "প্রয়োজনীয়" },
+  permissionTitle:  { ar: "صلاحية مطلوبة",   en: "Permission Needed", ur: "اجازت درکار", hi: "अनुमति आवश्यक", bn: "অনুমতি প্রয়োজন" },
+  warningTitle:     { ar: "تنبيه",               en: "Warning",          ur: "انتباہ",           hi: "चेतावनी",       bn: "সতর্কতা" },
+
   // ── Cashier form ───────────────────────────────────────────────
   customerName:     { ar: "اسم العميل",       en: "Customer Name",    ur: "گاہک کا نام",        hi: "ग्राहक का नाम",    bn: "গ্রাহকের নাম" },
   customerPhone:    { ar: "رقم الهاتف",       en: "Phone Number",     ur: "فون نمبر",           hi: "फोन नंबर",         bn: "ফোন নম্বর" },
@@ -116,6 +123,10 @@ const translations = {
   errPhone:         { ar: "أدخل رقم الهاتف",  en: "Enter phone number", ur: "فون نمبر درج کریں",  hi: "फोन नंबर दर्ज करें",   bn: "ফোন নম্বর লিখুন" },
   errItems:         { ar: "أضف صنفاً واحداً على الأقل", en: "Add at least one item", ur: "کم از کم ایک آئٹم شامل کریں", hi: "कम से कम एक वस्तु जोड़ें", bn: "কমপক্ষে একটি আইটেম যোগ করুন" },
   errSend:          { ar: "فشل الإرسال، حاول مجدداً", en: "Send failed, retry", ur: "بھیجنا ناکام، دوبارہ کوشش کریں", hi: "भेजने में विफल, पुनः प्रयास करें", bn: "পাঠাতে ব্যর্থ, আবার চেষ্টা করুন" },
+  errDelivAddress:  { ar: "أدخل عنوان التوصيل", en: "Enter delivery address", ur: "ڈیلیوری پتہ درج کریں", hi: "डिलीवरी पता दर्ज करें", bn: "ডেলিভারি ঠিকানা লিখুন" },
+  errDiscountNeg:   { ar: "قيمة الخصم لا يمكن أن تكون سالبة", en: "Discount cannot be negative", ur: "رعایت منفی نہیں ہو سکتی", hi: "छूट नकारात्मक नहीं हो सकती", bn: "ছাড় ঋণাত্মক হতে পারে না" },
+  errDiscountMax:   { ar: "نسبة الخصم لا تتجاوز 100%", en: "Discount percentage cannot exceed 100%", ur: "رعایت 100% سے زیادہ نہیں", hi: "छूट 100% से अधिक नहीं हो सकती", bn: "ছাড় ১০০% এর বেশি হতে পারে না" },
+  errInsuranceNeg:  { ar: "مبلغ التأمين لا يمكن أن يكون سالباً", en: "Insurance amount cannot be negative", ur: "ضمانت رقم منفی نہیں ہو سکتی", hi: "बीमा राशि नकारात्मक नहीं हो सकती", bn: "বীমার পরিমাণ ঋণাত্মক হতে পারে না" },
 
   // ── Order statuses ─────────────────────────────────────────────
   statusPending:    { ar: "معلق",             en: "Pending",          ur: "زیر التواء",         hi: "प्रतीक्षा",         bn: "অপেক্ষা" },
@@ -149,6 +160,7 @@ const translations = {
                       bn: "নম্বর, নাম, ফোন বা আইটেম দিয়ে খুঁজুন..." },
   archivePrint:     { ar: "طباعة الفاتورة",   en: "Print Invoice",    ur: "انوائس پرنٹ کریں",  hi: "चालान प्रिंट करें", bn: "ইনভয়েস প্রিন্ট করুন" },
   archiveDelete:    { ar: "نقل إلى المحذوفات", en: "Move to Trash",   ur: "ردی میں بھیجیں",    hi: "ट्रैश में ले जाएं",  bn: "ট্র্যাশে নিন" },
+  archiveRepeat:    { ar: "كرر الطلبية",       en: "Repeat Order",     ur: "آرڈر دہرائیں",       hi: "ऑर्डर दोहराएं",     bn: "অর্ডার পুনরাবৃত্তি" },
   archiveRestore:   { ar: "استعادة الطلب",    en: "Restore Order",    ur: "آرڈر بحال کریں",    hi: "ऑर्डर वापस करें",   bn: "অর্ডার ফেরান" },
   archiveAll:       { ar: "الكل",             en: "All",              ur: "سب",                 hi: "सभी",              bn: "সব" },
   archiveToday:     { ar: "اليوم",            en: "Today",            ur: "آج",                 hi: "आज",               bn: "আজ" },
@@ -167,10 +179,18 @@ const translations = {
                       ur: "آپ کی تلاش سے کوئی فاتورہ نہیں ملا",
                       hi: "आपकी खोज से कोई इनवॉइस नहीं मिला",
                       bn: "আপনার খোঁজের সাথে কোনো ইনভয়েস মেলে না" },
+  archiveDeletedLabel: { ar: "محذوف",                    en: "Deleted",           ur: "حذف شدہ",          hi: "هटाया गया",       bn: "মুছে ফেলা" },
+  archiveDeletedAt:    { ar: "حُذف:",                    en: "Deleted:",          ur: "حذف ہوا:",         hi: "हटाया:",          bn: "মুছেছে:" },
+  archiveRestoreInv:   { ar: "استرجاع الفاتورة",        en: "Restore Invoice",   ur: "فاتورہ بحال کریں", hi: "चालान वापस लाएं", bn: "ইনভয়েস ফেরান" },
+  archiveEnteredBy:    { ar: "أدخله:",                   en: "Entered by:",       ur: "درج کیا:",         hi: "दर्ज किया:",      bn: "প্রবেশ করেছে:" },
+  archiveReceivedBy:   { ar: "استلم",                    en: "Received",          ur: "موصول",            hi: "प्राप्त",          bn: "গ্রহণ" },
+  noTrashOrders:       { ar: "سلة المحذوفات فارغة",     en: "Trash is Empty",    ur: "ردی خالی ہے",      hi: "ट्रैश खाली है",   bn: "ট্র্যাশ খালি" },
+  noTrashOrdersSub:    { ar: "لا توجد فواتير محذوفة حالياً", en: "No deleted invoices", ur: "ابھی کوئی حذف شدہ فاتورہ نہیں", hi: "अभी कोई हटाया गया चालान नहीं", bn: "এখন কোনো মুছে ফেলা ইনভয়েস নেই" },
   deptHalwaLabel:   { ar: "قسم الحلويات",       en: "Sweets Dept.",    ur: "حلوائی قسم",        hi: "मिठाई विभाग",        bn: "মিষ্টি বিভাগ" },
   deptMawaliLabel:  { ar: "قسم الموالح",         en: "Savory Dept.",    ur: "نمکین قسم",         hi: "नमकीन विभाग",       bn: "বেকারি বিভাগ" },
   deptChocolateLabel:{ ar: "قسم شوكولاتة",        en: "Chocolate Dept.",  ur: "چاکلیٹ",           hi: "चॉकलेट विभाग",     bn: "চকলেট বিভাগ" },
   deptCakeLabel:    { ar: "قسم الكيك",            en: "Cake Dept.",        ur: "کیک",              hi: "केक विभाग",        bn: "কেক বিভাগ" },
+  deptPackagingLabel:{ ar: "قسم التغليف",   en: "Packaging Dept.",  ur: "پیکنگ قسم",        hi: "पैकेजिंग विभाग",  bn: "প্যাকেজিং বিভাগ" },
 
   // ── Dept screen banners (used by halwa/mawali/chocolate/cake/packaging screens) ──
 
@@ -228,11 +248,55 @@ const translations = {
   adminTabOffers:    { ar: "العروض",           en: "Offers",           ur: "پیشکشیں",            hi: "ऑफ़र",             bn: "অফার" },
   adminTabPrices:    { ar: "الأسعار",          en: "Prices",           ur: "قیمتیں",             hi: "कीमतें",           bn: "মূল্য" },
   adminTabFeatures:  { ar: "الأقسام",          en: "Sections",         ur: "حصے",                hi: "विभाग",            bn: "বিভাগ" },
+  adminTabPrinter:   { ar: "الطابعة",          en: "Printer",          ur: "پرنٹر",               hi: "प्रिंटर",           bn: "প্রিন্টার" },
   deleteEmployee:   { ar: "حذف الموظف",       en: "Delete Employee",  ur: "ملازم حذف کریں",    hi: "कर्मचारी हटाएं",   bn: "কর্মচারী মুছুন" },
-  deleteEmpConfirm: { ar: "هل تريد حذف",      en: "Are you sure you want to delete", ur: "کیا آپ حذف کرنا چاہتے ہیں", hi: "क्या आप हटाना चाहते हैं", bn: "আপনি কি মুছতে চান" },
+  deleteEmpConfirm: { ar: "هل تريد حذف",      en: "Are you sure you want to delete", ur: "کیا آپ حذف کرنا چاہتے ہیں", hi: "क्या आप हटाना चاहते हैं", bn: "আপনি কি মুছতে চান" },
+  deleteProduct:    { ar: "حذف المنتج",       en: "Delete Product",   ur: "مصنوع حذف کریں",    hi: "उत्पाद हटाएं",      bn: "পণ্য মুছুন" },
+  deleteOffer:      { ar: "حذف العرض",        en: "Delete Offer",     ur: "پیشکش حذف کریں",    hi: "ऑफर हटाएं",         bn: "অফার মুছুন" },
   unspecified:      { ar: "غير محدد",         en: "Unspecified",      ur: "غیر متعین",          hi: "अनिर्दिष्ट",        bn: "অনির্দিষ্ট" },
   sar:              { ar: "ر.س",              en: "SAR",              ur: "ر.س",                hi: "SAR",              bn: "SAR" },
   insurance_short:  { ar: "تأمين",            en: "Insurance",        ur: "ضمانت",              hi: "बीमा",             bn: "জামানত" },
+
+  adminProductsMgmt:  { ar: "إدارة المنتجات",           en: "Products Management",  ur: "مصنوعات انتظام",     hi: "उत्पाद प्रबंधन",      bn: "পণ্য ব্যবস্থাপনা" },
+  adminOffersTitle:   { ar: "عروض الزبائن",              en: "Customer Offers",      ur: "گاہک پیشکشیں",        hi: "ग्राहक ऑफर",           bn: "গ্রাহক অফার" },
+  adminPriceReqTitle: { ar: "طلبات تعديل الأسعار",       en: "Price Requests",       ur: "قیمت درخواستیں",      hi: "मूल्य अनुरोध",         bn: "মূল্য অনুরোধ" },
+  adminAddProduct:    { ar: "إضافة منتج",                en: "Add Product",          ur: "مصنوع شامل کریں",    hi: "उत्पाद जोड़ें",         bn: "পণ্য যোগ করুন" },
+  adminEmpNameLabel:  { ar: "اسم الموظف",                en: "Employee Name",        ur: "ملازم کا نام",        hi: "कर्मचारी नाम",          bn: "কর্মচারীর নাম" },
+  adminEmpIdLabel:    { ar: "الرقم الوظيفي",             en: "Employee ID",          ur: "ملازم نمبر",          hi: "कर्मचारी आईडी",         bn: "কর্মচারী আইডি" },
+  adminEmpRoleLabel:  { ar: "الدور الوظيفي",             en: "Job Role",             ur: "کردار",               hi: "नौकरी की भूमिका",       bn: "কাজের ভূমিকা" },
+  adminEmpNamePh:     { ar: "الاسم الكامل",              en: "Full Name",            ur: "پورا نام",            hi: "पूरा नाम",              bn: "পুরো নাম" },
+  adminEmpIdPh:       { ar: "مثال: EMP001",              en: "e.g. EMP001",          ur: "مثلاً: EMP001",       hi: "उदा: EMP001",           bn: "যেমন: EMP001" },
+  adminAddEmpBtn:     { ar: "إضافة موظف جديد",           en: "Add New Employee",     ur: "نیا ملازم شامل",      hi: "नया कर्मचारी जोड़ें",    bn: "নতুন কর্মচারী যোগ করুন" },
+  adminNoEmpMsg:      { ar: "لا يوجد موظفون — أضف الآن", en: "No employees — add now", ur: "ملازم نہیں — ابھی شامل کریں", hi: "कोई कर्मचारी नहीं — अभी जोड़ें", bn: "কোনো কর্মচারী নেই — এখনই যোগ করুন" },
+  adminProdSearch:    { ar: "بحث عن منتج...",            en: "Search products...",   ur: "مصنوع تلاش کریں...", hi: "उत्पाद खोजें...",       bn: "পণ্য খুঁজুন..." },
+  adminSeedBtn:       { ar: "زرع الكتالوج",              en: "Seed Catalog",         ur: "کیٹلاگ بھریں",       hi: "कैटलॉग भरें",           bn: "ক্যাটালগ ভরুন" },
+  adminSeedLoading:   { ar: "جارٍ الزرع…",              en: "Seeding...",            ur: "بھرا جا رہا ہے...",  hi: "भर रहे हैं...",          bn: "ভরছে..." },
+  adminProdUnavailable:{ ar: "غير متوفر",               en: "Unavailable",          ur: "دستیاب نہیں",         hi: "अनुपलब्ध",              bn: "অনুপলব্ধ" },
+  adminTotalDiscounts:{ ar: "إجمالي الخصومات",          en: "Total Discounts",      ur: "کل رعایتیں",         hi: "कुल छूट",               bn: "মোট ছাড়" },
+  adminPricedInv:     { ar: "فاتورة مسعَّرة",            en: "priced invoice(s)",    ur: "قیمت لگے فاتورے",    hi: "मूल्य वाले चालान",      bn: "মূল্য নির্ধারিত ইনভয়েস" },
+  adminDiscountedInv: { ar: "فاتورة بخصم",              en: "discounted invoice(s)", ur: "رعایتی فاتورے",      hi: "छूट वाले चालान",        bn: "ছাড়ের ইনভয়েস" },
+  adminOfferActive:   { ar: "نشطة",                     en: "Active",               ur: "فعال",                hi: "सक्रिय",                 bn: "সক্রিয়" },
+  adminOfferUsed:     { ar: "مرة استُخدم",              en: "times used",           ur: "بار استعمال",         hi: "बार उपयोग",              bn: "বার ব্যবহার" },
+  adminNoPendingReqs: { ar: "لا توجد طلبات معلقة",      en: "No pending requests",  ur: "کوئی زیر التواء درخواست نہیں", hi: "कोई लंबित अनुरोध नहीं", bn: "কোনো মুলতবি অনুরোধ নেই" },
+  adminPendingBadge:  { ar: "معلق",                     en: "Pending",              ur: "زیر التواء",          hi: "लंबित",                  bn: "মুলতবি" },
+  adminCurrentPrice:  { ar: "السعر الحالي:",             en: "Current price:",       ur: "موجودہ قیمت:",        hi: "वर्तमान मूल्य:",         bn: "বর্তমান মূল্য:" },
+  adminRequestBy:     { ar: "بواسطة:",                  en: "By:",                  ur: "بذریعہ:",             hi: "द्वारा:",                bn: "দ্বারা:" },
+  adminApprove:       { ar: "موافقة",                   en: "Approve",              ur: "منظور",               hi: "स्वीकृत",                bn: "অনুমোদন" },
+  adminReject:        { ar: "رفض",                      en: "Reject",               ur: "رد کریں",             hi: "अस्वीकार",               bn: "প্রত্যাখ্যান" },
+  adminResolvedRecent:{ ar: "المنجزة مؤخراً",           en: "Recently Resolved",    ur: "حال ہی میں حل شدہ",  hi: "हाल ही में हल किए गए",   bn: "সম্প্রতি সমাধান করা" },
+  adminApprovedStatus:{ ar: "تمت الموافقة",             en: "Approved",             ur: "منظور شدہ",           hi: "स्वीकृत",                bn: "অনুমোদিত" },
+  adminRejectedStatus:{ ar: "مرفوض",                   en: "Rejected",             ur: "مسترد",               hi: "अस्वीकृत",               bn: "প্রত্যাখ্যাত" },
+  adminAddOffer:      { ar: "إضافة عرض جديد",          en: "Add New Offer",        ur: "نئی پیشکش شامل کریں", hi: "नया ऑफर जोड़ें",          bn: "নতুন অফার যোগ করুন" },
+  adminNoOffersYet:   { ar: "لا توجد عروض بعد",        en: "No offers yet",        ur: "ابھی کوئی پیشکش نہیں", hi: "अभी कोई ऑफर नहीं",       bn: "এখনো কোনো অফার নেই" },
+  adminOfferHint:     { ar: "أضف عروضاً مخصصة لزبائنك بحسب رقم الهاتف", en: "Add custom offers for customers by phone number", ur: "فون نمبر سے گاہکوں کیلئے پیشکشیں", hi: "फ़ोन नंबर से ग्राहकों के लिए ऑफर", bn: "ফোন নম্বরে গ্রাহকদের জন্য অফার" },
+  offerStatusActive:  { ar: "نشط",                     en: "Active",               ur: "فعال",                hi: "सक्रिय",                  bn: "সক্রিয়" },
+  offerStatusPaused:  { ar: "موقوف",                   en: "Paused",               ur: "روکا ہوا",             hi: "रुका हुआ",                bn: "বিরতি" },
+  adminEmpSection:    { ar: "إدارة الموظفين",           en: "Manage Employees",     ur: "ملازمین کا انتظام",   hi: "कर्मचारी प्रबंधन",        bn: "কর্মচারী ব্যবস্থাপনা" },
+  adminEditOffer:     { ar: "تعديل العرض",              en: "Edit Offer",            ur: "پیشکش ترمیم کریں",   hi: "ऑफर संपादित करें",         bn: "অফার সম্পাদনা" },
+  adminSaveEdits:     { ar: "حفظ التعديلات",            en: "Save Changes",          ur: "تبدیلیاں محفوظ کریں", hi: "बदलाव सहेजें",            bn: "পরিবর্তন সংরক্ষণ" },
+  adminAddOfferSave:  { ar: "إضافة العرض",              en: "Add Offer",             ur: "پیشکش شامل کریں",    hi: "ऑफर जोड़ें",               bn: "অফার যোগ করুন" },
+  adminNoProdMsg:     { ar: "لا يوجد منتجات — أضف الآن", en: "No products — add now", ur: "کوئی مصنوع نہیں — ابھی شامل کریں", hi: "कोई उत्पाद नहीं — अभी जोड़ें", bn: "কোনো পণ্য নেই — এখন যোগ করুন" },
+  adminNoResults:     { ar: "لا توجد نتائج",            en: "No results found",      ur: "کوئی نتیجہ نہیں",     hi: "कोई परिणाम नहीं",          bn: "কোনো ফলাফল নেই" },
 
   // ── Employee selector modal ───────────────────────────────────
   noEmpYet:        { ar: "لا يوجد موظفون",   en: "No employees yet", ur: "ابھی کوئی ملازم نہیں", hi: "अभी कोई कर्मचारी नहीं", bn: "এখনো কোনো কর্মচারী নেই" },
@@ -258,7 +322,10 @@ const translations = {
   repFilterToday:   { ar: "اليوم",             en: "Today",            ur: "آج",                 hi: "आज",               bn: "আজ" },
   repFilterWeek:    { ar: "هذا الأسبوع",       en: "This Week",        ur: "اس ہفتے",            hi: "इस सप्ताह",         bn: "এই সপ্তাহ" },
   repFilterMonth:   { ar: "هذا الشهر",         en: "This Month",       ur: "اس مہینے",           hi: "इस महीने",          bn: "এই মাস" },
-  repCash:          { ar: "نقداً",             en: "Cash",             ur: "نقد",                hi: "नकद",              bn: "নগদ" },
+  repFilterCustom:  { ar: "مخصص",              en: "Custom",           ur: "کسٹم",               hi: "कस्टम",             bn: "কাস্টম" },
+  repFrom:          { ar: "من:",               en: "From:",            ur: "سے:",                 hi: "से:",               bn: "থেকে:" },
+  repTo:            { ar: "إلى:",              en: "To:",              ur: "تک:",                 hi: "तक:",               bn: "পর্যন্ত:" },
+  repCash:          { ar: "نقداً",             en: "Cash",             ur: "نقد",                hi: "नकد",              bn: "নগদ" },
   repCard:          { ar: "بطاقة",             en: "Card",             ur: "کارڈ",               hi: "कार्ड",            bn: "কার্ড" },
   repTransfer:      { ar: "تحويل",             en: "Transfer",         ur: "ٹرانسفر",            hi: "ट्रांसफर",          bn: "ট্রান্সফার" },
   repUnits:         { ar: "وحدة",              en: "units",            ur: "یونٹ",               hi: "यूनिट",            bn: "একক" },
@@ -299,6 +366,19 @@ const translations = {
   delSortTime:      { ar: "ترتيب حسب الوقت",   en: "Sort by Time",     ur: "وقت کے مطابق ترتیب", hi: "समय के अनुसार",      bn: "সময় অনুযায়ী" },
   delSortDate:      { ar: "ترتيب حسب التاريخ", en: "Sort by Date",     ur: "تاریخ کے مطابق ترتیب", hi: "तारीख के अनुसार",   bn: "তারিখ অনুযায়ী" },
 
+  cashierTodayCount:   { ar: "طلب اليوم",              en: "Today's Orders",    ur: "آج کے آرڈرز",     hi: "आज के ऑर्डर",    bn: "আজকের অর্ডার" },
+  cashierTodaySAR:     { ar: "ر.س اليوم",              en: "Today's Revenue",   ur: "آج کی آمدنی",     hi: "आज का राजस्व",   bn: "আজকের আয়" },
+  cashierAddManual:    { ar: "إضافة صنف يدوياً",       en: "Add Item Manually", ur: "دستی آئٹم",       hi: "मैन्युअल आइटम",  bn: "ম্যানুয়াল আইটেম" },
+  cashierLoginMsg:     { ar: "يجب تسجيل الدخول أولاً — اضغط على زر تغيير في الأعلى.", en: "You must log in first — tap Change at the top.", ur: "پہلے لاگ ان کریں۔", hi: "पहले लॉग इन करें।", bn: "প্রথمে لگ ان کریں۔" },
+  delMapBtn:           { ar: "خريطة",                  en: "Map",               ur: "نقشہ",            hi: "मानचित्र",        bn: "মানচিত্র" },
+  deleteLink:          { ar: "حذف الرابط",             en: "Delete Link",       ur: "لنک حذف کریں",    hi: "लिंक हटाएं",     bn: "লিঙ্ক মুছুন" },
+
+  delSoon:            { ar: "قريباً",                       en: "Soon",              ur: "جلد",              hi: "जल्द",             bn: "শীঘ্রই" },
+  delOrderReady:      { ar: "✓ جاهز",                      en: "✓ Ready",           ur: "✓ تیار",           hi: "✓ तैयार",          bn: "✓ প্রস্তুত" },
+  delWaReadyBtn:      { ar: "WhatsApp — طلبك جاهز",        en: "WhatsApp — Ready",  ur: "واٹس ایپ — تیار",  hi: "WhatsApp — तैयार", bn: "WhatsApp — প্রস্তুত" },
+  permPhotosMsg:      { ar: "يحتاج التطبيق للوصول إلى الصور",   en: "App needs access to your photos",   ur: "ایپ کو تصاویر تک رسائی درکار",  hi: "ऐप को फ़ोटो एक्सेस चाहिए",  bn: "অ্যাপের ফটো অ্যাক্সেস দরকার" },
+  permCameraMsg:      { ar: "يحتاج التطبيق للوصول إلى الكاميرا", en: "App needs access to your camera",   ur: "ایپ کو کیمرہ تک رسائی درکار",  hi: "ऐप को कैमरा एक्सेस चाहिए",  bn: "অ্যাপের ক্যামেরা অ্যাক্সেস দরকার" },
+
   // ── Trays ─────────────────────────────────────────────────────
   traysTitle:       { ar: "صواني التأمين",     en: "Insurance Trays",  ur: "ضمانتی ٹرے",         hi: "बीमा ट्रे",        bn: "জামানত ট্রে" },
   traysTotal:       { ar: "إجمالي الصواني",    en: "Total Trays",      ur: "کل ٹرے",             hi: "कुल ट्रे",          bn: "মোট ট্রে" },
@@ -309,6 +389,8 @@ const translations = {
   traysMarkRet:     { ar: "تم استرداد الصينية", en: "Mark Returned",   ur: "واپس نشان لگائیں",   hi: "वापस चिह्नित करें", bn: "ফেরত চিহ্নিত করুন" },
   traysInsAmt:      { ar: "مبلغ التأمين:",     en: "Insurance:",       ur: "ضمانت:",             hi: "बीमा:",            bn: "জামানত:" },
   traysNoData:      { ar: "لا توجد صواني",     en: "No trays tracked", ur: "کوئی ٹرے نہیں",      hi: "कोई ट्रे नहीं",    bn: "কোনো ট্রে নেই" },
+  trayOverdue:      { ar: "متأخر",             en: "Overdue",          ur: "مدت گزری",            hi: "अतिदेय",            bn: "মেয়াদোত্তীর্ণ" },
+  trayOverdueDays:  { ar: "يوم",               en: "day(s)",           ur: "دن",                  hi: "दिन",              bn: "দিন" },
 
   // ── Feature flags (Admin) ─────────────────────────────────────
   featuresTitle:    { ar: "إعدادات الأقسام",  en: "Dept. Settings",   ur: "شعبہ ترتیبات",       hi: "विभाग सेटिंग्स",   bn: "বিভাগ সেটিংস" },
@@ -542,6 +624,22 @@ const translations = {
   custDelivered:      { ar: "مسلَّم",             en: "Delivered",            ur: "تحویل شدہ",              hi: "वितरित",                bn: "ডেলিভারড" },
   custFrom:           { ar: "من",                 en: "of",                   ur: "میں سے",                 hi: "में से",                bn: "এর মধ্যে" },
   custOrderSingular:  { ar: "طلب",                en: "order",                ur: "آرڈر",                   hi: "ऑर्डर",                 bn: "অর্ডার" },
+  custTotalItems:     { ar: "إجمالي القطع",       en: "Total Items",          ur: "کل اشیاء",               hi: "कुल मद",                bn: "মোট আইটেম" },
+  custFavDept:        { ar: "القسم المفضل",       en: "Favorite Dept",        ur: "پسندیدہ قسم",            hi: "पसंदीदा विभाग",         bn: "পছন্দের বিভাগ" },
+  custCall:           { ar: "اتصال",              en: "Call",                 ur: "کال کریں",               hi: "कॉल करें",              bn: "কল করুন" },
+  custWhatsappBtn:    { ar: "واتساب",             en: "WhatsApp",             ur: "واٹس ایپ",               hi: "व्हाट्सएप",             bn: "হোয়াটসঅ্যাপ" },
+  custExportPDF:      { ar: "تصدير PDF",          en: "Export PDF",           ur: "PDF برآمد کریں",         hi: "PDF निर्यात करें",      bn: "PDF রপ্তানি" },
+  custExportCSV:      { ar: "تصدير Excel",        en: "Export Excel",         ur: "Excel برآمد کریں",       hi: "Excel निर्यात करें",    bn: "Excel রপ্তানি" },
+
+  delAssignDriverHint:{ ar: "اضغط لإسناد سائق",  en: "Tap to assign driver", ur: "ڈرائیور تفویض کریں",    hi: "चालक नियुक्त करने के लिए टैप करें", bn: "চালক নিযুক্ত করতে ট্যাপ করুন" },
+  delDriverLabel:     { ar: "السائق:",            en: "Driver:",              ur: "ڈرائیور:",               hi: "चालक:",                 bn: "চালক:" },
+  delCurrentDriver:   { ar: "السائق الحالي:",     en: "Current driver:",      ur: "موجودہ ڈرائیور:",        hi: "वर्तमान चालक:",         bn: "বর্তমান চালক:" },
+  delRemoveDriver:    { ar: "إلغاء الإسناد",      en: "Remove Driver",        ur: "ڈرائیور ہٹائیں",         hi: "चालक हटाएं",            bn: "চালক সরান" },
+  delChooseDriver:    { ar: "اختر السائق",        en: "Choose Driver",        ur: "ڈرائیور منتخب کریں",    hi: "चालक चुनें",            bn: "চালক বেছে নিন" },
+  delSearchDriver:    { ar: "ابحث باسم السائق...", en: "Search driver...",    ur: "ڈرائیور تلاش کریں...", hi: "चालक खोजें...",          bn: "চালক খুঁজুন..." },
+  delAllTotal:        { ar: "الإجمالي",           en: "Total",                ur: "کل",                     hi: "कुल",                   bn: "মোট" },
+  delSortByTime:      { ar: "حسب الوقت",          en: "By time",              ur: "وقت کے مطابق",           hi: "समय के अनुसार",          bn: "সময় অনুযায়ী" },
+  delSortByDate:      { ar: "حسب التاريخ",        en: "By date",              ur: "تاریخ کے مطابق",         hi: "तारीख के अनुसार",        bn: "তারিখ অনুযায়ী" },
 
   // ── Invoice Search (cashier) ─────────────────────────────────
   searchInvoices:     { ar: "بحث في الفواتير",  en: "Search Invoices",   ur: "انوائس تلاش",  hi: "इन्वॉयस खोजें",  bn: "ইনভয়েস অনুসন্ধান" },
@@ -578,6 +676,98 @@ const translations = {
   shopItemsCount:     { ar: "منتجات",                  en: "items",                ur: "آئٹمز",              hi: "आइटम",             bn: "আইটেম" },
   shopSummary:        { ar: "ملخص الطلب",              en: "Order Summary",        ur: "آرڈر خلاصہ",         hi: "ऑर्डर सारांश",      bn: "অর্ডার সারসংক্ষেপ" },
   shopConfirmMsg:     { ar: "سيتواصل معك فريقنا لتأكيد الطلب.", en: "Our team will contact you to confirm.", ur: "ہماری ٹیم آپ سے رابطہ کرے گی۔", hi: "हमारी टीम आपसे संपर्क करेगी।", bn: "আমাদের টিম আপনার সাথে যোগাযোগ করবে।" },
+
+  // ── Chocolate Card Add-on ─────────────────────────────────────
+  chocoCardTitle:      { ar: "إضافة كرت أو لوح شوكلاتة",    en: "Add Card or Chocolate",        ur: "کارڈ یا چاکلیٹ شامل کریں",  hi: "कार्ड या चॉकलेट जोड़ें",  bn: "কার্ড বা চকলেট যোগ করুন" },
+  chocoCardHint:       { ar: "اختياري — يُضاف للطلب بسعر محدد", en: "Optional — added to order at set price", ur: "اختیاری — طے شدہ قیمت پر", hi: "वैकल्पिक — ऑर्डर में जोड़ा जाएगा", bn: "ঐচ্ছিক — অর্ডারে যোগ হবে" },
+  chocoCardTypeCard:   { ar: "كرت هدية",                     en: "Gift Card",                    ur: "گفٹ کارڈ",                  hi: "गिफ्ट कार्ड",             bn: "গিফট কার্ড" },
+  chocoCardTypeChoco:  { ar: "لوح شوكلاتة",                  en: "Chocolate Bar",                ur: "چاکلیٹ بار",                hi: "चॉकलेट बार",              bn: "চকলেট বার" },
+  chocoCardLarge:      { ar: "كبير — 15 ر.س",               en: "Large — 15 SAR",               ur: "بڑا — 15 ریال",             hi: "बड़ा — 15 SAR",            bn: "বড় — 15 SAR" },
+  chocoCardSmall:      { ar: "صغير — 5 ر.س",                en: "Small — 5 SAR",                ur: "چھوٹا — 5 ریال",            hi: "छोटा — 5 SAR",            bn: "ছোট — 5 SAR" },
+  chocoCardSmallMax:   { ar: "بحد أقصى 4 قطع",              en: "Max 4 pieces",                 ur: "زیادہ سے زیادہ 4 ٹکڑے",    hi: "अधिकतम 4 टुकड़े",         bn: "সর্বোচ্চ 4 টুকরো" },
+  chocoCardMessage:    { ar: "الرسالة المطلوب كتابتها",      en: "Message to write",             ur: "لکھنے کا پیغام",            hi: "लिखने का संदेश",           bn: "লেখার বার্তা" },
+  chocoCardMsgHint:    { ar: "اكتب الرسالة المطلوب كتابتها على الكرت أو الشوكلاتة...", en: "Write the message for the card or chocolate...", ur: "کارڈ یا چاکلیٹ پر لکھنے والا پیغام...", hi: "कार्ड या चॉकलेट के लिए संदेश...", bn: "কার্ড বা চকলেটের জন্য বার্তা..." },
+  chocoCardFree:       { ar: "مجاناً",                       en: "Free",                         ur: "مفت",                       hi: "मुफ़्त",                   bn: "বিনামূল্যে" },
+  chocoCardPcs:        { ar: "قطعة",                         en: "pcs",                          ur: "پیس",                       hi: "पीस",                      bn: "পিস" },
+
+  // ── Access control ────────────────────────────────────
+  accessDeniedTitle:    { ar: "لا تملك صلاحية الوصول",        en: "Access Denied",                ur: "رسائی کی اجازت نہیں",      hi: "पहुँच अस्वीकृत",           bn: "প্রবেশাধিকার নেই" },
+  accessDeniedHalwa:    { ar: "هذا القسم مخصص لموظفي قسم الحلويات",    en: "This section is for Sweets dept. staff only",    ur: "یہ حصہ حلوائی قسم کے ملازمین کے لیے ہے",  hi: "यह भाग मिठाई विभाग के स्टाफ के लिए है",    bn: "এই বিভাগ মিষ্টি স্টাফের জন্য" },
+  accessDeniedMawali:   { ar: "هذا القسم مخصص لموظفي قسم الموالح",     en: "This section is for Savory dept. staff only",    ur: "یہ حصہ نمکین قسم کے ملازمین کے لیے ہے",  hi: "यह भाग नमकीन विभाग के स्टाफ के लिए है",   bn: "এই বিভাগ বেকারি স্টাফের জন্য" },
+  accessDeniedChocolate:{ ar: "هذا القسم مخصص لموظفي قسم الشوكولاتة",  en: "This section is for Chocolate dept. staff only", ur: "یہ حصہ چاکلیٹ قسم کے ملازمین کے لیے ہے", hi: "यह भाग चॉकलेट विभाग के स्टाफ के लिए है", bn: "এই বিভাগ চকলেট স্টাফের জন্য" },
+  accessDeniedCake:     { ar: "هذا القسم مخصص لموظفي قسم الكيك",       en: "This section is for Cake dept. staff only",      ur: "یہ حصہ کیک قسم کے ملازمین کے لیے ہے",    hi: "यह भाग केक विभाग के स्टाफ के लिए है",     bn: "এই বিভাগ কেক স্টাফের জন্য" },
+  accessDeniedPackaging:{ ar: "هذا القسم مخصص لموظفي قسم التغليف",     en: "This section is for Packaging dept. staff only", ur: "یہ حصہ پیکنگ قسم کے ملازمین کے لیے ہے",  hi: "यह भाग पैकेजिंग विभाग के स्टाफ के लिए है", bn: "এই বিভাগ প্যাকেজিং স্টাফের জন্য" },
+
+  // ── Navigation ────────────────────────────────────────
+  tabLiveOrders:        { ar: "الطلبات الحية",   en: "Live Orders",    ur: "لائیو آرڈرز",    hi: "लाइव ऑर्डर",       bn: "লাইভ অর্ডার" },
+  tabSettings:          { ar: "الإعدادات",       en: "Settings",       ur: "ترتیبات",        hi: "सेटिंग्स",          bn: "সেটিংস" },
+  titleLiveOrders:      { ar: "لوحة الطلبات",   en: "Orders Panel",   ur: "آرڈر پینل",       hi: "ऑर्डर पैनल",       bn: "অর্ডার প্যানেল" },
+
+  // ── Home screen ───────────────────────────────────────
+  newInvoice:           { ar: "فاتورة جديدة",   en: "New Invoice",    ur: "نئی انوائس",      hi: "नई इनवॉइस",        bn: "নতুন ইনভয়েস" },
+  onlineNow:            { ar: "متصل الآن",      en: "Online Now",     ur: "آن لائن",         hi: "अभी ऑनलाइन",       bn: "এখন অনলাইন" },
+  noEmpLogged:          { ar: "لم يسجل أحد دخوله", en: "No one signed in", ur: "کوئی لاگ ان نہیں", hi: "कोई साइन इन नहीं", bn: "কেউ সাইন ইন নেই" },
+  todayStatsTitle:      { ar: "إحصائيات اليوم", en: "Today's Stats",  ur: "آج کے اعداد",    hi: "आज के आँकड़े",      bn: "আজকের পরিসংখ্যান" },
+  sarCurrency:          { ar: "ريال",           en: "SAR",            ur: "ریال",            hi: "रियाल",            bn: "রিয়াল" },
+  statusReady:          { ar: "جاهز",           en: "Ready",          ur: "تیار",            hi: "तैयार",            bn: "প্রস্তুত" },
+  statusPrepping:       { ar: "يُحضَّر",          en: "Preparing",      ur: "تیاری میں",      hi: "तैयार हो रहा है",  bn: "প্রস্তুত হচ্ছে" },
+  orderTrackerTitle:    { ar: "متابعة طلباتك اليوم", en: "Today's Orders", ur: "آج کے آرڈر",  hi: "आज के ऑर्डर",      bn: "আজকের অর্ডার" },
+  orderTrackerMobile:   { ar: "متابعة الطلبات", en: "Order Tracking", ur: "آرڈر ٹریکنگ",    hi: "ऑर्डर ट्रैकिंग",   bn: "অর্ডার ট্র্যাকিং" },
+  orderTrackerEmpty:    { ar: "لا توجد طلبات اليوم", en: "No orders today", ur: "آج کوئی آرڈر نہیں", hi: "आज कोई ऑर्डर नहीं", bn: "আজ কোনো অর্ডার নেই" },
+  inProgressShort:      { ar: "تنفيذ",          en: "Active",         ur: "جاری",            hi: "सक्रिय",           bn: "সক্রিয়" },
+
+  // ── Archive ───────────────────────────────────────────
+  archiveTrashTab:      { ar: "المحذوفة",       en: "Trash",          ur: "ردی",             hi: "ट्रैश",            bn: "ট্র্যাশ" },
+  archivePrintShort:    { ar: "طباعة",          en: "Print",          ur: "پرنٹ",            hi: "प्रिंट",           bn: "প্রিন্ট" },
+  dateFilterPicker:     { ar: "اختر التاريخ",   en: "Pick a date",    ur: "تاریخ منتخب کریں", hi: "तारीख चुनें",     bn: "তারিখ বেছে নিন" },
+
+  // ── Reports extra ─────────────────────────────────────
+  repReport:             { ar: "تقرير",            en: "Report",           ur: "رپورٹ",             hi: "रिपोर्ट",           bn: "রিপোর্ট" },
+  repTopProduct:         { ar: "أعلى منتج",        en: "Top Product",      ur: "بہترین مصنوع",      hi: "शीर्ष उत्पाद",     bn: "শীর্ষ পণ্য" },
+  repTopCashier:         { ar: "أعلى كاشير",       en: "Top Cashier",      ur: "بہترین کاشیر",      hi: "शीर्ष कैशियर",     bn: "শীর্ষ ক্যাশিয়ার" },
+
+  // ── Time / units ──────────────────────────────────────
+  minutes:               { ar: "دقيقة",            en: "min",              ur: "منٹ",               hi: "मिनट",              bn: "মিনিট" },
+
+  // ── Time periods ──────────────────────────────────────
+  timePeriodAM:          { ar: "ص",                en: "AM",               ur: "صبح",              hi: "पूर्वाह्न",         bn: "AM" },
+  timePeriodPM:          { ar: "م",                en: "PM",               ur: "شام",              hi: "अपराह्न",           bn: "PM" },
+
+  // ── Cashier UI ────────────────────────────────────────
+  cashierCurrentOrder:   { ar: "الطلب الحالي",     en: "Current Order",    ur: "موجودہ آرڈر",      hi: "वर्तमान ऑर्डर",    bn: "বর্তমান অর্ডার" },
+  cashierNoItems:        { ar: "لا توجد أصناف بعد", en: "No items yet",    ur: "ابھی کوئی آئٹم نہیں", hi: "अभी कोई आइटम नहीं", bn: "এখনো কোনো আইটেম নেই" },
+  cashierAddHint:        { ar: "ابدأ بالإضافة من معرض المنتجات أو يدوياً", en: "Add from product gallery or manually", ur: "گیلری یا دستی شامل کریں", hi: "गैलरी से या मैन्युअल जोड़ें", bn: "গ্যালারি থেকে বা ম্যানুয়ালি যোগ করুন" },
+  cashierItemCount:      { ar: "صنف",              en: "item(s)",          ur: "آئٹم",              hi: "आइटम",              bn: "আইটেম" },
+  cashierLabel:          { ar: "الكاشير:",         en: "Cashier:",         ur: "کاشیر:",            hi: "कैशियर:",           bn: "ক্যাশিয়ার:" },
+  cashierAutofillUse:    { ar: "استخدم:",          en: "Use:",             ur: "استعمال:",          hi: "उपयोग करें:",       bn: "ব্যবহার করুন:" },
+  cashierNoPrices:       { ar: "لا توجد أسعار محددة", en: "No prices set", ur: "کوئی قیمت نہیں",   hi: "कोई मूल्य निर्धारित नहीं", bn: "কোনো মূল্য নির্ধারিত নেই" },
+  cashierNotesPlh:       { ar: "ملاحظات الطلب...", en: "Order notes...",  ur: "آرڈر نوٹس...",      hi: "ऑर्डर नोट्स...",   bn: "অর্ডার নোট..." },
+  cashierDelivAddrPlh:   { ar: "عنوان التوصيل",   en: "Delivery address", ur: "ڈیلیوری پتہ",      hi: "डिलीवरी पता",       bn: "ডেলিভারি ঠিকানা" },
+  cashierChocoCard:      { ar: "كرت شوكولاتة",    en: "Chocolate Card",   ur: "چاکلیٹ کارڈ",      hi: "चॉकलेट कार्ड",     bn: "চকলেট কার্ড" },
+  cashierItemPh:         { ar: "صنف",              en: "Item",             ur: "آئٹم",              hi: "आइटम",              bn: "আইটেম" },
+  cashierTodayStats:     { ar: "طلب · ر.س",       en: "orders · SAR",     ur: "آرڈر · ریال",       hi: "ऑर्डर · SAR",       bn: "অর্ডার · SAR" },
+
+  // ── Settings screen ───────────────────────────────────
+  settingsLangSection:   { ar: "اللغة والمنطقة",       en: "Language & Region",    ur: "زبان اور علاقہ",       hi: "भाषा और क्षेत्र",       bn: "ভাষা ও অঞ্চল" },
+  settingsLangLabel:     { ar: "اللغة",                en: "Language",             ur: "زبان",                  hi: "भाषा",                  bn: "ভাষা" },
+  settingsPickLang:      { ar: "اختر اللغة",           en: "Choose Language",      ur: "زبان منتخب کریں",      hi: "भाषा चुनें",            bn: "ভাষা বেছে নিন" },
+  settingsPrintSection:  { ar: "الطباعة",              en: "Printing",             ur: "پرنٹنگ",                hi: "प्रिंटिंग",             bn: "মুদ্রণ" },
+  settingsConnectionType:{ ar: "نوع الاتصال",          en: "Connection Type",      ur: "کنکشن کی قسم",          hi: "कनेक्शन प्रकार",        bn: "সংযোগের ধরন" },
+  settingsStatusLabel:   { ar: "الحالة",               en: "Status",               ur: "حالت",                  hi: "स्थिति",                bn: "অবস্থা" },
+  settingsConnected:     { ar: "متصل ✓",               en: "Connected ✓",          ur: "متصل ✓",                hi: "कनेक्टेड ✓",            bn: "সংযুক্ত ✓" },
+  settingsConnecting:    { ar: "جاري الاتصال...",      en: "Connecting...",        ur: "منسلک ہو رہا ہے...",   hi: "जोड़ रहा है...",        bn: "সংযুক্ত হচ্ছে..." },
+  settingsConnError:     { ar: "خطأ في الاتصال",       en: "Connection Error",     ur: "کنکشن خطا",             hi: "कनेक्शन त्रुटि",       bn: "সংযোগ ত্রুটি" },
+  settingsDisconnected:  { ar: "غير متصل",             en: "Disconnected",         ur: "منقطع",                 hi: "डिस्कनेक्टेड",         bn: "সংযোগ বিচ্ছিন্ন" },
+  settingsTestPrint:     { ar: "طباعة تجريبية",        en: "Test Print",           ur: "ٹیسٹ پرنٹ",             hi: "टेस्ट प्रिंट",         bn: "পরীক্ষামূলক মুদ্রণ" },
+  settingsPrintError:    { ar: "خطأ في الطباعة",       en: "Print Error",          ur: "پرنٹ خطا",              hi: "प्रिंट त्रुटि",        bn: "মুদ্রণ ত্রুটি" },
+  settingsTestPrintFail: { ar: "تعذّر إجراء طباعة تجريبية", en: "Test print failed",   ur: "ٹیسٹ پرنٹ ناکام",    hi: "टेस्ट प्रिंट विफल",    bn: "পরীক্ষামূলক মুদ্রণ ব্যর্থ" },
+  settingsAboutSection:  { ar: "حول التطبيق",          en: "About",                ur: "تطبیق کے بارے میں",    hi: "ऐप के बारे में",       bn: "অ্যাপ সম্পর্কে" },
+  settingsAppName:       { ar: "اسم التطبيق",          en: "App Name",             ur: "ایپ کا نام",            hi: "ऐप का नाम",            bn: "অ্যাপের নাম" },
+  settingsVersion:       { ar: "الإصدار",              en: "Version",              ur: "ورژن",                  hi: "संस्करण",              bn: "সংস্করণ" },
+  settingsCompanyId:     { ar: "رقم الشركة",           en: "Company ID",           ur: "کمپنی آئی ڈی",          hi: "कंपनी आईडी",           bn: "কোম্পানি আইডি" },
+  settingsSupport:       { ar: "تواصل مع الدعم",       en: "Contact Support",      ur: "سپورٹ سے رابطہ",       hi: "सहायता से संपर्क करें", bn: "সহায়তায় যোগাযোগ করুন" },
+  settingsSessionSection:{ ar: "الجلسة",               en: "Session",              ur: "سیشن",                  hi: "सत्र",                 bn: "সেশন" },
+  settingsLogoutConfirm: { ar: "هل تريد تسجيل خروج",  en: "Sign out",             ur: "لاگ آؤٹ کریں",          hi: "साइन आउट करें",        bn: "সাইন আউট করুন" },
 } as const;
 
 export type TranslationKey = keyof typeof translations;

@@ -14,39 +14,32 @@ import {
 import { EmptyState } from "@/components/EmptyState";
 import EditOrderModal from "@/components/EditOrderModal";
 import { Colors } from "@/constants/colors";
+import type { TranslationKey } from "@/constants/translations";
 import { canDo, ROLE_CAN_DELETE_ORDERS, ROLE_CAN_EDIT_ORDERS } from "@/constants/rbac";
 import { useLang } from "@/context/LanguageContext";
 import { useEmployee } from "@/context/EmployeeContext";
 import { Department, Order, OrderStatus, PAYMENT_LABELS, useOrders } from "@/context/OrdersContext";
-import { fmtDate } from "@/utils/dateUtils";
+import { fmtDate, fmtDateTime } from "@/utils/dateUtils";
 
-const MONTH_AR = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
-const DAY_AR   = ["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
-function formatDateAr(iso: string): string {
-  if (!iso) return "تصفية بالتاريخ";
-  const d = new Date(iso + "T12:00:00");
-  return `${DAY_AR[d.getDay()]} ${d.getDate()} ${MONTH_AR[d.getMonth()]} ${d.getFullYear()}`;
-}
-
-const DEPT_META: Record<string, { label: string; shortLabel: string; color: string }> = {
-  halwa:     { label: "قسم الحلا",      shortLabel: "حلا",      color: Colors.halwa },
-  mawali:    { label: "قسم الموالح",    shortLabel: "موالح",    color: Colors.mawali },
-  chocolate: { label: "قسم الشوكولاتة", shortLabel: "شوكولاتة", color: Colors.chocolate },
-  cake:      { label: "قسم الكيك",      shortLabel: "كيك",      color: Colors.cake },
-  packaging: { label: "قسم التغليف",    shortLabel: "تغليف",    color: Colors.packaging },
+const DEPT_CONFIG: Record<Department, { labelKey: TranslationKey; shortKey: TranslationKey; color: string }> = {
+  halwa:     { labelKey: "deptHalwaLabel",     shortKey: "deptHalwaShort",     color: Colors.halwa },
+  mawali:    { labelKey: "deptMawaliLabel",    shortKey: "deptMawaliShort",    color: Colors.mawali },
+  chocolate: { labelKey: "deptChocolateLabel", shortKey: "deptChocolateShort", color: Colors.chocolate },
+  cake:      { labelKey: "deptCakeLabel",      shortKey: "deptCakeShort",      color: Colors.cake },
+  packaging: { labelKey: "deptPackagingLabel", shortKey: "deptPackagingShort", color: Colors.packaging },
 };
 
-const DEPT_FILTERS: { value: Department | "all"; label: string }[] = [
-  { value: "all",       label: "الكل" },
-  { value: "halwa",     label: "حلا" },
-  { value: "mawali",    label: "موالح" },
-  { value: "chocolate", label: "شوكولاتة" },
-  { value: "cake",      label: "كيك" },
-  { value: "packaging", label: "تغليف" },
+const DEPT_FILTER_KEYS: { value: Department | "all"; labelKey: TranslationKey }[] = [
+  { value: "all",       labelKey: "archiveAll" },
+  { value: "halwa",     labelKey: "deptHalwaShort" },
+  { value: "mawali",    labelKey: "deptMawaliShort" },
+  { value: "chocolate", labelKey: "deptChocolateShort" },
+  { value: "cake",      labelKey: "deptCakeShort" },
+  { value: "packaging", labelKey: "deptPackagingShort" },
 ];
 
 function ArchiveCard({ order, canDelete, canEdit, onDelete, onEdit }: { order: Order; canDelete?: boolean; canEdit?: boolean; onDelete?: (o: Order) => void; onEdit?: (o: Order) => void }) {
-  const { lang } = useLang();
+  const { lang, t } = useLang();
   const depts = [...new Set(order.items.map((i) => i.department))] as Department[];
 
   return (
@@ -59,10 +52,10 @@ function ArchiveCard({ order, canDelete, canEdit, onDelete, onEdit }: { order: O
         </View>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
           <View style={styles.deptTags}>
-            {Object.entries(DEPT_META).map(([key, meta]) =>
-              depts.includes(key as Department) ? (
-                <View key={key} style={[styles.deptTag, { backgroundColor: meta.color }]}>
-                  <Text style={styles.deptTagText}>{meta.shortLabel}</Text>
+            {(Object.keys(DEPT_CONFIG) as Department[]).map((key) =>
+              depts.includes(key) ? (
+                <View key={key} style={[styles.deptTag, { backgroundColor: DEPT_CONFIG[key].color }]}>
+                  <Text style={styles.deptTagText}>{t(DEPT_CONFIG[key].shortKey)}</Text>
                 </View>
               ) : null
             )}
@@ -100,52 +93,82 @@ function ArchiveCard({ order, canDelete, canEdit, onDelete, onEdit }: { order: O
         </View>
       </View>
 
+      {/* Delivery badge */}
+      {order.orderType === "delivery" && (
+        <View style={styles.deliverySection}>
+          <View style={styles.deliveryBadge}>
+            <Feather name="truck" size={11} color={Colors.info} />
+            <Text style={styles.deliveryBadgeText}>{t("delivery")}</Text>
+          </View>
+          {order.deliveryAddress ? (
+            <View style={styles.footerItem}>
+              <Feather name="map-pin" size={11} color={Colors.textMuted} />
+              <Text style={styles.footerText}>{order.deliveryAddress}</Text>
+            </View>
+          ) : null}
+        </View>
+      )}
+
       {/* Items grouped by dept */}
-      {Object.entries(DEPT_META).map(([key, meta]) => {
+      {(Object.keys(DEPT_CONFIG) as Department[]).map((key) => {
         const deptItems = order.items.filter((i) => i.department === key);
         if (deptItems.length === 0) return null;
+        const meta = DEPT_CONFIG[key];
         return (
           <View key={key} style={[styles.deptSection, { borderRightColor: meta.color }]}>
-            <Text style={[styles.deptSectionTitle, { color: meta.color }]}>{meta.label}</Text>
+            <Text style={[styles.deptSectionTitle, { color: meta.color }]}>{t(meta.labelKey)}</Text>
             {deptItems.map((item, i) => (
               <Text key={i} style={styles.archiveItem}>
                 • {item.quantity}× {item.name}{item.note ? ` (${item.note})` : ""}
               </Text>
             ))}
-            <StatusRow status={order.departmentStatuses?.[key as Department]} />
+            <StatusRow status={order.departmentStatuses?.[key]} />
           </View>
         );
       })}
 
-      {/* Employee accountability trail */}
-      <View style={styles.trailBox}>
-        {order.cashierEmployee && (
-          <View style={styles.trailRow}>
-            <Feather name="edit-3" size={11} color={Colors.gold} />
-            <Text style={styles.trailLabel}>أدخله:</Text>
-            <Text style={styles.trailName}>{order.cashierEmployee.name}</Text>
-            <Text style={styles.trailId}>#{order.cashierEmployee.employeeId}</Text>
-          </View>
-        )}
-        {order.departmentReceivers && Object.entries(DEPT_META).map(([key, meta]) => {
-          const receiver = order.departmentReceivers?.[key as Department];
-          if (!receiver) return null;
-          return (
-            <View key={key} style={styles.trailRow}>
-              <Feather name="check-square" size={11} color={meta.color} />
-              <Text style={[styles.trailLabel, { color: meta.color }]}>استلم {meta.shortLabel}:</Text>
-              <Text style={[styles.trailName, { color: meta.color }]}>{receiver.name}</Text>
-              <Text style={styles.trailId}>#{receiver.employeeId}</Text>
-            </View>
-          );
-        })}
-      </View>
+      {/* Notes */}
+      {order.notes ? (
+        <View style={styles.notesRow}>
+          <Feather name="file-text" size={12} color={Colors.textMuted} />
+          <Text style={styles.notesText}>{order.notes}</Text>
+        </View>
+      ) : null}
 
-      {/* Footer: timing & insurance */}
+      {/* Employee accountability trail */}
+      {(order.cashierEmployee || Object.values(order.departmentReceivers ?? {}).some(Boolean)) && (
+        <View style={styles.trailBox}>
+          {order.cashierEmployee && (
+            <View style={styles.trailRow}>
+              <Feather name="edit-3" size={11} color={Colors.gold} />
+              <Text style={styles.trailLabel}>{t("archiveEnteredBy")}</Text>
+              <Text style={styles.trailName}>{order.cashierEmployee.name}</Text>
+              <Text style={styles.trailId}>#{order.cashierEmployee.employeeId}</Text>
+            </View>
+          )}
+          {order.departmentReceivers && (Object.keys(DEPT_CONFIG) as Department[]).map((key) => {
+            const receiver = order.departmentReceivers?.[key];
+            if (!receiver) return null;
+            const meta = DEPT_CONFIG[key];
+            return (
+              <View key={key} style={styles.trailRow}>
+                <Feather name="check-square" size={11} color={meta.color} />
+                <Text style={[styles.trailLabel, { color: meta.color }]}>
+                  {t("archiveReceivedBy")} {t(meta.shortKey)}:
+                </Text>
+                <Text style={[styles.trailName, { color: meta.color }]}>{receiver.name}</Text>
+                <Text style={styles.trailId}>#{receiver.employeeId}</Text>
+              </View>
+            );
+          })}
+        </View>
+      )}
+
+      {/* Footer: timing & amounts */}
       <View style={styles.archiveFooter}>
         <View style={styles.footerItem}>
           <Feather name="download" size={11} color={Colors.textMuted} />
-          <Text style={styles.footerText}>{order.receivedAt}</Text>
+          <Text style={styles.footerText}>{fmtDateTime(order.receivedAt, lang)}</Text>
         </View>
         {order.deliveryTime && (
           <View style={styles.footerItem}>
@@ -157,15 +180,15 @@ function ArchiveCard({ order, canDelete, canEdit, onDelete, onEdit }: { order: O
           <View style={styles.footerItem}>
             <Feather name="dollar-sign" size={11} color={Colors.success} />
             <Text style={[styles.footerText, { color: Colors.success, fontWeight: "700" }]}>
-              {order.totalAmount.toFixed(2)} ر.س
+              {order.totalAmount.toFixed(2)} {t("sar")}
             </Text>
           </View>
         )}
-        {order.insuranceAmount != null && !order.totalAmount && (
+        {order.insuranceAmount != null && order.insuranceAmount > 0 && (
           <View style={styles.footerItem}>
             <Feather name="shield" size={11} color={Colors.gold} />
             <Text style={[styles.footerText, { color: Colors.gold, fontWeight: "700" }]}>
-              تأمين {order.insuranceAmount} ر.س
+              {t("insurance_short")} {order.insuranceAmount} {t("sar")}
             </Text>
           </View>
         )}
@@ -182,8 +205,8 @@ function ArchiveCard({ order, canDelete, canEdit, onDelete, onEdit }: { order: O
             <Feather name="tag" size={11} color={Colors.warning} />
             <Text style={[styles.footerText, { color: Colors.warning, fontWeight: "700" }]}>
               {order.discount.type === "percentage"
-                ? `خصم ${order.discount.value}%`
-                : `خصم ${order.discount.value.toFixed(2)} ر.س`}
+                ? `${t("discount")} ${order.discount.value}%`
+                : `${t("discount")} ${order.discount.value.toFixed(2)} ${t("sar")}`}
               {order.discount.reason ? ` · ${order.discount.reason}` : ""}
             </Text>
           </View>
@@ -194,24 +217,25 @@ function ArchiveCard({ order, canDelete, canEdit, onDelete, onEdit }: { order: O
 }
 
 function StatusRow({ status }: { status?: OrderStatus }) {
-  const conf: Record<OrderStatus, { label: string; color: string }> = {
-    pending: { label: "انتظار", color: Colors.statusPending },
-    in_progress: { label: "جاري التحضير", color: Colors.statusInProgress },
-    done: { label: "تم التسليم", color: Colors.statusDone },
-    cancelled: { label: "ملغي", color: Colors.statusCancelled },
+  const { t } = useLang();
+  const conf: Record<OrderStatus, { labelKey: TranslationKey; color: string }> = {
+    pending:     { labelKey: "waiting",     color: Colors.statusPending },
+    in_progress: { labelKey: "preparing",   color: Colors.statusInProgress },
+    done:        { labelKey: "statusDone",  color: Colors.statusDone },
+    cancelled:   { labelKey: "statusCancelled", color: Colors.statusCancelled },
   };
   if (!status) return null;
   const c = conf[status];
   return (
     <View style={[styles.statusRow, { backgroundColor: c.color + "18" }]}>
       <View style={[styles.statusDot, { backgroundColor: c.color }]} />
-      <Text style={[styles.statusLabel, { color: c.color }]}>{c.label}</Text>
+      <Text style={[styles.statusLabel, { color: c.color }]}>{t(c.labelKey)}</Text>
     </View>
   );
 }
 
 function DeletedCard({ order, onRestore }: { order: Order; onRestore: (id: string) => void }) {
-  const { lang } = useLang();
+  const { lang, t } = useLang();
   return (
     <View style={[styles.archiveCard, { borderRightWidth: 3, borderRightColor: Colors.accent }]}>
       <View style={styles.archiveHeader}>
@@ -220,7 +244,7 @@ function DeletedCard({ order, onRestore }: { order: Order; onRestore: (id: strin
           <Text style={styles.archiveDate}>{fmtDate(order.createdAt, lang)}</Text>
         </View>
         <View style={[styles.deptTag, { backgroundColor: Colors.accent + "18", borderRadius: 8 }]}>
-          <Text style={[styles.deptTagText, { color: Colors.accent }]}>محذوف</Text>
+          <Text style={[styles.deptTagText, { color: Colors.accent }]}>{t("archiveDeletedLabel")}</Text>
         </View>
       </View>
       <View style={styles.customerBlock}>
@@ -236,7 +260,7 @@ function DeletedCard({ order, onRestore }: { order: Order; onRestore: (id: strin
       {order.deletedAt && (
         <View style={styles.trailRow}>
           <Feather name="trash-2" size={11} color={Colors.accent} />
-          <Text style={styles.trailLabel}>حُذف:</Text>
+          <Text style={styles.trailLabel}>{t("archiveDeletedAt")}</Text>
           <Text style={[styles.trailName, { color: Colors.accent }]}>{fmtDate(order.deletedAt, lang)}</Text>
           {order.deletedBy && (
             <Text style={styles.trailId}>· {order.deletedBy.name}</Text>
@@ -249,7 +273,7 @@ function DeletedCard({ order, onRestore }: { order: Order; onRestore: (id: strin
         activeOpacity={0.8}
       >
         <Feather name="rotate-ccw" size={14} color="#fff" />
-        <Text style={styles.restoreBtnText}>استرجاع الفاتورة</Text>
+        <Text style={styles.restoreBtnText}>{t("archiveRestoreInv")}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -258,6 +282,7 @@ function DeletedCard({ order, onRestore }: { order: Order; onRestore: (id: strin
 export default function ArchiveScreen() {
   const { orders, deletedOrders, deleteOrder, restoreOrder, updateOrder } = useOrders();
   const { currentEmployee } = useEmployee();
+  const { t, lang } = useLang();
   const isAdmin = canDo(currentEmployee?.role, ROLE_CAN_DELETE_ORDERS);
   const canEdit = canDo(currentEmployee?.role, ROLE_CAN_EDIT_ORDERS);
   const [activeTab, setActiveTab] = useState<"archive" | "trash">("archive");
@@ -288,21 +313,81 @@ export default function ArchiveScreen() {
   }, [orders, deptFilter, dateFilter, search]);
 
   const handleDelete = (order: Order) => {
-    Alert.alert(
-      `حذف الفاتورة #${order.orderNumber}`,
-      `هل تريد حذف فاتورة "${order.customerName}"؟ يمكن استرجاعها لاحقاً.`,
-      [
-        { text: "إلغاء", style: "cancel" },
-        {
-          text: "حذف",
-          style: "destructive",
-          onPress: () => deleteOrder(order.id, currentEmployee
-            ? { name: currentEmployee.name, employeeId: currentEmployee.employeeId }
-            : undefined
-          ),
-        },
-      ]
+    const doDelete = () => deleteOrder(
+      order.id,
+      currentEmployee ? { name: currentEmployee.name, employeeId: currentEmployee.employeeId } : undefined
     );
+    if (Platform.OS === "web") {
+      if ((window as any).confirm(`${t("archiveDelete")} #${order.orderNumber} — "${order.customerName}"?`)) doDelete();
+      return;
+    }
+    Alert.alert(
+      `${t("archiveDelete")} #${order.orderNumber}`,
+      `"${order.customerName}"?`,
+      [{ text: t("cancel"), style: "cancel" }, { text: t("delete"), style: "destructive", onPress: doDelete }]
+    );
+  };
+
+  const handlePrint = () => {
+    if (Platform.OS !== "web") return;
+    const grandTotal = filtered.reduce((sum, o) => sum + (o.totalAmount ?? 0), 0);
+    const deptLabel = deptFilter !== "all" ? ` — ${t(DEPT_CONFIG[deptFilter as Department].labelKey)}` : "";
+    const dateLabel = dateFilter ? ` — ${fmtDate(dateFilter, lang)}` : "";
+    const rows = filtered.map(o => {
+      const itemsHtml = (Object.keys(DEPT_CONFIG) as Department[]).map((key) => {
+        const meta = DEPT_CONFIG[key];
+        const di = o.items.filter(i => i.department === key);
+        if (!di.length) return "";
+        return `<div style="margin:3px 0;border-right:3px solid ${meta.color};padding-right:7px">
+          <b style="color:${meta.color}">${t(meta.labelKey)}</b><br/>
+          ${di.map(i => `${i.quantity}× ${i.name}${i.note ? ` (${i.note})` : ""}`).join("<br/>")}
+        </div>`;
+      }).join("");
+      const discount = o.discount?.value && o.discount.value > 0
+        ? (o.discount.type === "percentage"
+            ? `${t("discount")} ${o.discount.value}%`
+            : `${t("discount")} ${o.discount.value.toFixed(2)} ${t("sar")}`)
+        : "";
+      return `<tr>
+        <td>#${o.orderNumber}</td>
+        <td>${o.customerName || "-"}<br/><small>${o.customerPhone || ""}</small></td>
+        <td>${itemsHtml}</td>
+        <td style="font-weight:700">${o.totalAmount != null ? `${o.totalAmount.toFixed(2)} ${t("sar")}` : "-"}</td>
+        <td>${o.paymentMethod ? (PAYMENT_LABELS[o.paymentMethod] || o.paymentMethod) : "-"}</td>
+        <td>${discount}</td>
+        <td>${fmtDate(o.createdAt, lang)}</td>
+      </tr>`;
+    }).join("");
+    const title = `${t("archiveTitle")}${dateLabel}${deptLabel}`;
+    const html = `<!DOCTYPE html><html dir="rtl" lang="${lang}"><head><meta charset="UTF-8"/>
+<title>${title}</title>
+<style>
+body{font-family:Arial,sans-serif;font-size:12px;direction:rtl;margin:20px}
+h2{text-align:center;margin-bottom:12px}
+table{width:100%;border-collapse:collapse}
+th,td{border:1px solid #ccc;padding:6px 8px;text-align:right;vertical-align:top}
+th{background:#0A1628;color:#fff}
+tr:nth-child(even){background:#f7f7f7}
+@media print{body{margin:0}}
+</style></head><body>
+<h2>${title} — ${filtered.length} ${t("invoiceCount")}</h2>
+<table><thead><tr>
+<th>#</th>
+<th>${t("customerName")}</th>
+<th>${t("itemsDetails")}</th>
+<th>${t("totalAmount")}</th>
+<th>${t("paymentMethod")}</th>
+<th>${t("discount")}</th>
+<th>${t("today")}</th>
+</tr></thead><tbody>${rows}</tbody>
+<tfoot><tr style="background:#0A1628;color:#fff">
+<td colspan="3" style="text-align:center;font-weight:700;padding:8px">${t("grandTotal")}</td>
+<td style="font-weight:700;font-size:13px">${grandTotal.toFixed(2)} ${t("sar")}</td>
+<td colspan="3"></td>
+</tr></tfoot></table>
+</body></html>`;
+    const w = (window as any).open("", "_blank");
+    if (w) { w.document.write(html); w.document.close(); w.print(); }
   };
 
   return (
@@ -316,7 +401,7 @@ export default function ArchiveScreen() {
           >
             <Feather name="archive" size={14} color={activeTab === "archive" ? Colors.primary : Colors.textMuted} />
             <Text style={[styles.tabLabel, activeTab === "archive" && styles.tabLabelActive]}>
-              الأرشيف
+              {t("archiveTitle")}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -325,7 +410,7 @@ export default function ArchiveScreen() {
           >
             <Feather name="trash-2" size={14} color={activeTab === "trash" ? Colors.accent : Colors.textMuted} />
             <Text style={[styles.tabLabel, activeTab === "trash" && { color: Colors.accent, fontWeight: "700" }]}>
-              المحذوفة {deletedOrders.length > 0 ? `(${deletedOrders.length})` : ""}
+              {t("archiveTrashTab")} {deletedOrders.length > 0 ? `(${deletedOrders.length})` : ""}
             </Text>
           </TouchableOpacity>
         </View>
@@ -339,21 +424,20 @@ export default function ArchiveScreen() {
           contentContainerStyle={[styles.list, deletedOrders.length === 0 && { flex: 1 }]}
           renderItem={({ item }) => <DeletedCard order={item} onRestore={restoreOrder} />}
           ListEmptyComponent={
-            <EmptyState icon="trash-2" title="سلة المحذوفات فارغة"
-              subtitle="لا توجد فواتير محذوفة حالياً" />
+            <EmptyState icon="trash-2" title={t("noTrashOrders")} subtitle={t("noTrashOrdersSub")} />
           }
           showsVerticalScrollIndicator={false}
         />
       ) : (
         /* ── Archive tab ── */
-        <>
+        <View style={[styles.archiveContent, Platform.OS === "web" && styles.archiveContentWide]}>
           <View style={styles.searchRow}>
             <Feather name="search" size={17} color={Colors.textMuted} />
             <TextInput
               style={styles.searchInput}
               value={search}
               onChangeText={setSearch}
-              placeholder="بحث بالرقم أو الاسم أو الهاتف أو الصنف..."
+              placeholder={t("archiveSearch")}
               placeholderTextColor={Colors.textMuted}
               textAlign="right"
             />
@@ -366,14 +450,14 @@ export default function ArchiveScreen() {
 
           <View style={styles.filterBar}>
             <View style={styles.filterGroup}>
-              {DEPT_FILTERS.map((f) => (
+              {DEPT_FILTER_KEYS.map((f) => (
                 <TouchableOpacity
                   key={f.value}
                   style={[styles.chip, deptFilter === f.value && styles.chipActive]}
                   onPress={() => setDeptFilter(f.value as any)}
                 >
                   <Text style={[styles.chipText, deptFilter === f.value && styles.chipTextActive]}>
-                    {f.label}
+                    {t(f.labelKey)}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -384,7 +468,7 @@ export default function ArchiveScreen() {
               {Platform.OS === "web" ? (
                 <View style={styles.webDateWrapper}>
                   <Text style={[styles.searchInput, { flex: 1, paddingVertical: 0, color: dateFilter ? Colors.text : Colors.textMuted }]}>
-                    {formatDateAr(dateFilter)}
+                    {dateFilter ? fmtDate(dateFilter, lang) : t("dateFilterPicker")}
                   </Text>
                   <input
                     type="date"
@@ -401,7 +485,7 @@ export default function ArchiveScreen() {
                   style={styles.searchInput}
                   value={dateFilter}
                   onChangeText={setDateFilter}
-                  placeholder="تصفية بالتاريخ"
+                  placeholder={t("dateFilterPicker")}
                   placeholderTextColor={Colors.textMuted}
                   textAlign="right"
                   keyboardType="numeric"
@@ -417,7 +501,13 @@ export default function ArchiveScreen() {
 
           <View style={styles.countRow}>
             <Feather name="file-text" size={13} color={Colors.textMuted} />
-            <Text style={styles.countText}>{filtered.length} فاتورة</Text>
+            <Text style={[styles.countText, { flex: 1 }]}>{filtered.length} {t("invoiceCount")}</Text>
+            {Platform.OS === "web" && filtered.length > 0 && (
+              <TouchableOpacity style={styles.printBtn} onPress={handlePrint} activeOpacity={0.75}>
+                <Feather name="printer" size={13} color={Colors.primary} />
+                <Text style={styles.printBtnText}>{t("archivePrintShort")}</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
           <EditOrderModal
@@ -441,12 +531,11 @@ export default function ArchiveScreen() {
               />
             )}
             ListEmptyComponent={
-              <EmptyState icon="archive" title="لا توجد فواتير"
-                subtitle="لم يتم العثور على فواتير تطابق البحث" />
+              <EmptyState icon="archive" title={t("noInvoices")} subtitle={t("noInvoicesSub")} />
             }
             showsVerticalScrollIndicator={false}
           />
-        </>
+        </View>
       )}
     </View>
   );
@@ -503,6 +592,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 8,
   },
   countText: { fontSize: 13, color: Colors.textMuted },
+  printBtn: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    backgroundColor: Colors.primary + "12", borderRadius: 8,
+    paddingHorizontal: 12, paddingVertical: 6,
+    borderWidth: 1, borderColor: Colors.primary + "25",
+  },
+  printBtnText: { fontSize: 12, color: Colors.primary, fontWeight: "700" },
   list: { padding: 16, paddingTop: 4 },
   archiveCard: {
     backgroundColor: Colors.surface, borderRadius: 16, marginBottom: 14, padding: 14,
@@ -541,4 +637,20 @@ const styles = StyleSheet.create({
   archiveFooter: { flexDirection: "row", flexWrap: "wrap", gap: 14, paddingTop: 4, borderTopWidth: 1, borderTopColor: Colors.borderLight },
   footerItem: { flexDirection: "row", alignItems: "center", gap: 4 },
   footerText: { fontSize: 11, color: Colors.textMuted },
+  deliverySection: { flexDirection: "row", alignItems: "center", gap: 10, flexWrap: "wrap" },
+  deliveryBadge: {
+    flexDirection: "row", alignItems: "center", gap: 5,
+    backgroundColor: Colors.info + "15", borderRadius: 20,
+    paddingHorizontal: 10, paddingVertical: 4,
+    borderWidth: 1, borderColor: Colors.info + "30",
+  },
+  deliveryBadgeText: { fontSize: 12, fontWeight: "700", color: Colors.info },
+  notesRow: {
+    flexDirection: "row", alignItems: "flex-start", gap: 7,
+    backgroundColor: Colors.surface, borderRadius: 8,
+    padding: 9, borderWidth: 1, borderColor: Colors.borderLight,
+  },
+  notesText: { flex: 1, fontSize: 12, color: Colors.textSecondary, lineHeight: 18 },
+  archiveContent: { flex: 1 },
+  archiveContentWide: { maxWidth: 800, width: "100%", alignSelf: "center" as const },
 });

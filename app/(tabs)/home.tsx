@@ -1,10 +1,10 @@
 import { Feather } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Animated,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,9 +15,13 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Colors } from "@/constants/colors";
+import { LAVIVIANE_COMPANY_ID } from "@/constants/lavivianeProducts";
 import { canDo, ROLE_CAN_ACCESS_ADMIN } from "@/constants/rbac";
+import type { TranslationKey } from "@/constants/translations";
+import { roleLabel } from "@/constants/translations";
 import { useCompany } from "@/context/CompanyContext";
 import { useEmployee } from "@/context/EmployeeContext";
+import { useLang } from "@/context/LanguageContext";
 import { Department, Order, useOrders } from "@/context/OrdersContext";
 import { usePriceChange } from "@/context/PriceChangeContext";
 
@@ -34,77 +38,185 @@ function overallStatus(order: Order): "pending" | "in_progress" | "done" | "canc
   return "pending";
 }
 
-function formatTime(d: Date) {
-  return d.toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: true });
+function fmtClock(d: Date) {
+  return d.toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit", hour12: true });
+}
+function fmtSecs(d: Date) {
+  return d.toLocaleTimeString("ar-SA", { second: "2-digit", hour12: false });
+}
+function fmtDate(d: Date) {
+  return d.toLocaleDateString("ar-SA", { weekday: "long", day: "numeric", month: "long" });
 }
 
-function formatDate(d: Date) {
-  return d.toLocaleDateString("ar-SA", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
-}
-
-function fmtAgo(iso: string): string {
-  const ms = Date.now() - new Date(iso).getTime();
-  const m = Math.floor(ms / 60000);
-  if (m < 1)  return "الآن";
-  if (m < 60) return `منذ ${m} د`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `منذ ${h} س`;
-  return `منذ ${Math.floor(h / 24)} ي`;
-}
-
-// ── Status config ──────────────────────────────────────────────────────────────
-
-const STATUS_CFG = {
-  pending:     { label: "انتظار",  bg: "#FEF3C7", text: "#92400E", dot: "#F59E0B" },
-  in_progress: { label: "جاري",   bg: "#DBEAFE", text: "#1E40AF", dot: "#3B82F6" },
-  done:        { label: "مكتمل",  bg: "#D1FAE5", text: "#065F46", dot: "#10B981" },
-  cancelled:   { label: "ملغي",   bg: "#FEE2E2", text: "#991B1B", dot: "#EF4444" },
+// ── Dept meta for cashier tracker ──────────────────────────────────────────────
+const DEPT_SHORT_KEYS: Record<string, TranslationKey> = {
+  halwa:     "deptHalwaShort",
+  mawali:    "deptMawaliShort",
+  chocolate: "deptChocolateShort",
+  cake:      "deptCakeShort",
+  packaging: "deptPackagingShort",
+};
+const DEPT_TRACKER_COLORS: Record<string, string> = {
+  halwa:     Colors.halwa,
+  mawali:    Colors.mawali,
+  chocolate: Colors.chocolate,
+  cake:      Colors.cake,
+  packaging: Colors.packaging,
 };
 
-// ── Action definitions ─────────────────────────────────────────────────────────
+const STATUS_COLORS = {
+  pending:     "#6B7280",
+  in_progress: "#60A5FA",
+  done:        "#34D399",
+  cancelled:   "#F87171",
+};
 
-const ACTIONS_BASE = [
-  { label: "كاشير",    icon: "file-text",   route: "cashier",   grad: ["#C9A84C", "#8B6508"] as [string, string] },
-  { label: "الأرشيف",  icon: "archive",     route: "archive",   grad: ["#2563EB", "#1D4ED8"] as [string, string] },
-  { label: "التقارير", icon: "bar-chart-2", route: "reports",   grad: ["#7C3AED", "#6D28D9"] as [string, string] },
-  { label: "توصيل",    icon: "truck",       route: "delivery",  grad: ["#0D9488", "#0F766E"] as [string, string] },
-  { label: "العملاء",  icon: "users",       route: "customers", grad: ["#0369A1", "#075985"] as [string, string] },
-  { label: "حلا",      icon: "coffee",      route: "halwa",     grad: ["#B45309", "#92400E"] as [string, string] },
-  { label: "مولي",     icon: "package",     route: "mawali",    grad: ["#0E7490", "#155E75"] as [string, string] },
-  { label: "شوكولاتة", icon: "gift",        route: "chocolate", grad: ["#78350F", "#451A03"] as [string, string] },
-  { label: "كيك",      icon: "layers",      route: "cake",      grad: ["#9D174D", "#831843"] as [string, string] },
-  { label: "تغليف",    icon: "box",         route: "packaging", grad: ["#166534", "#14532D"] as [string, string] },
+function CashierOrderTracker({ orders, isDark }: { orders: Order[]; isDark?: boolean }) {
+  const { t } = useLang();
+  const todayStr = new Date().toDateString();
+  const myOrders = orders
+    .filter(o => !o.deleted && new Date(o.createdAt).toDateString() === todayStr)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 25);
+
+  const textColor = isDark ? "rgba(255,255,255,0.85)" : Colors.text;
+  const subColor  = isDark ? "rgba(255,255,255,0.45)" : Colors.textMuted;
+  const cardBg    = isDark ? "rgba(255,255,255,0.06)" : Colors.surface;
+  const cardBorder= isDark ? "rgba(255,255,255,0.1)"  : Colors.border;
+
+  if (myOrders.length === 0) {
+    return (
+      <View style={{ alignItems: "center", paddingVertical: 20 }}>
+        <Feather name="inbox" size={28} color={subColor} />
+        <Text style={[ct.emptyTxt, { color: subColor }]}>{t("orderTrackerEmpty")}</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={{ gap: 8 }}>
+      {myOrders.map(order => {
+        const depts = DEPARTMENTS.filter(d => order.items.some(i => i.department === d));
+        const allDone = depts.length > 0 && depts.every(d => order.departmentStatuses?.[d] === "done");
+        const anyInProg = depts.some(d => order.departmentStatuses?.[d] === "in_progress");
+
+        return (
+          <View key={order.id} style={[ct.card, { backgroundColor: cardBg, borderColor: allDone ? "#34D39940" : cardBorder }]}>
+            {allDone && <View style={ct.doneLine} />}
+            <View style={ct.cardHead}>
+              <Text style={[ct.orderNum, { color: allDone ? "#34D399" : textColor }]}>#{order.orderNumber}</Text>
+              <Text style={[ct.custName, { color: textColor }]} numberOfLines={1}>{order.customerName}</Text>
+              <View style={[ct.statusBadge, {
+                backgroundColor: allDone ? "#34D39918" : anyInProg ? "#60A5FA18" : "#6B728018",
+              }]}>
+                <View style={[ct.statusDot, { backgroundColor: allDone ? "#34D399" : anyInProg ? "#60A5FA" : "#6B7280" }]} />
+                <Text style={[ct.statusTxt, { color: allDone ? "#34D399" : anyInProg ? "#60A5FA" : "#6B7280" }]}>
+                  {allDone ? t("statusReady") : anyInProg ? t("statusPrepping") : t("waiting")}
+                </Text>
+              </View>
+            </View>
+            <View style={ct.chips}>
+              {depts.map(d => {
+                const status = order.departmentStatuses?.[d] ?? "pending";
+                const col = STATUS_COLORS[status] ?? "#6B7280";
+                return (
+                  <View key={d} style={[ct.chip, { backgroundColor: col + "18", borderColor: col + "35" }]}>
+                    <View style={[ct.chipDot, { backgroundColor: col }]} />
+                    <Text style={[ct.chipTxt, { color: col }]}>{t(DEPT_SHORT_KEYS[d])}</Text>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
+
+
+const ROLE_COLOR: Record<string, string> = {
+  cashier: Colors.gold, admin: "#7C3AED", branch_supervisor: "#0D9488",
+  dept_supervisor: "#0891B2", halwa: Colors.halwa, mawali: Colors.mawali,
+  chocolate: Colors.chocolate, cake: Colors.cake, packaging: Colors.packaging,
+};
+
+// ── Tile definitions ───────────────────────────────────────────────────────────
+
+type TileDef = { labelKey: TranslationKey; icon: string; route: string; accent: string; primary: boolean };
+const TILES: TileDef[] = [
+  { labelKey: "tabCashier",         icon: "file-text",   route: "cashier",   accent: Colors.gold,           primary: true  },
+  { labelKey: "tabArchive",         icon: "archive",     route: "archive",   accent: "#60A5FA",             primary: false },
+  { labelKey: "tabReports",         icon: "bar-chart-2", route: "reports",   accent: "#A78BFA",             primary: false },
+  { labelKey: "deptHalwaShort",     icon: "coffee",      route: "halwa",     accent: Colors.halwaLight,     primary: false },
+  { labelKey: "deptMawaliShort",    icon: "package",     route: "mawali",    accent: Colors.mawaliLight,    primary: false },
+  { labelKey: "deptChocolateShort", icon: "gift",        route: "chocolate", accent: Colors.chocolateLight, primary: false },
+  { labelKey: "deptCakeShort",      icon: "layers",      route: "cake",      accent: Colors.cakeLight,      primary: false },
+  { labelKey: "deptPackagingShort", icon: "box",         route: "packaging", accent: Colors.packagingLight, primary: false },
+  { labelKey: "tabDelivery",        icon: "truck",       route: "delivery",  accent: "#2DD4BF",             primary: false },
 ];
 
-// ── Sub-components ─────────────────────────────────────────────────────────────
+const ADMIN_TILE: TileDef = { labelKey: "tabAdmin", icon: "settings", route: "admin", accent: "#94A3B8", primary: false };
 
-function ActionTile({
-  label, icon, grad, badge, size, onPress,
-}: {
-  label: string; icon: string; grad: [string, string];
+// ── Tile component ─────────────────────────────────────────────────────────────
+
+function Tile({ label, icon, accent, primary, badge, size, onPress }: {
+  label: string; icon: string; accent: string; primary?: boolean;
   badge?: number; size: number; onPress: () => void;
 }) {
-  const scale = useRef(new Animated.Value(1)).current;
+  const sc = useRef(new Animated.Value(1)).current;
   const press = () => {
     Animated.sequence([
-      Animated.spring(scale, { toValue: 0.92, useNativeDriver: true, speed: 60 }),
-      Animated.spring(scale, { toValue: 1,    useNativeDriver: true, speed: 60 }),
+      Animated.spring(sc, { toValue: 0.93, useNativeDriver: true, speed: 120 }),
+      Animated.spring(sc, { toValue: 1.00, useNativeDriver: true, speed: 90 }),
     ]).start();
     onPress();
   };
-  const isWide = size >= 120;
+
+  const r      = Math.round(size * 0.14);
+  const iconSz = size >= 120 ? 32 : size >= 90 ? 26 : 22;
+  const fz     = size >= 120 ? 13 : size >= 90 ? 11 : 10;
+
+  const bg1 = primary ? "#2A1A00" : "#162038";
+  const bg2 = primary ? "#1A0F00" : "#0C1525";
+
   return (
-    <Animated.View style={{ width: size, transform: [{ scale }] }}>
-      <TouchableOpacity onPress={press} activeOpacity={0.85} style={{ borderRadius: 16, overflow: "hidden" }}>
-        <LinearGradient colors={grad} style={{ height: isWide ? 108 : 88, alignItems: "center", justifyContent: "center", gap: 8, paddingHorizontal: 8 }} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-          <View style={{ width: isWide ? 50 : 42, height: isWide ? 50 : 42, borderRadius: isWide ? 25 : 21, backgroundColor: "rgba(255,255,255,0.18)", alignItems: "center", justifyContent: "center" }}>
-            <Feather name={icon as any} size={isWide ? 24 : 20} color="rgba(255,255,255,0.95)" />
+    <Animated.View style={[{ width: size, height: size }, { transform: [{ scale: sc }] }]}>
+      <TouchableOpacity style={{ flex: 1, borderRadius: r, overflow: "hidden" }} onPress={press} activeOpacity={0.8}>
+        <LinearGradient
+          colors={[bg1, bg2]}
+          style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: size >= 90 ? 10 : 7 }}
+          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+        >
+          {/* Accent strip */}
+          <View style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, backgroundColor: accent }} />
+
+          {/* Icon container */}
+          <View style={{
+            width: iconSz + 20, height: iconSz + 20, borderRadius: (iconSz + 20) / 2,
+            backgroundColor: accent + "22", alignItems: "center", justifyContent: "center",
+          }}>
+            <Feather name={icon as any} size={iconSz} color={primary ? Colors.gold : "rgba(255,255,255,0.92)"} />
           </View>
-          <Text style={{ color: "#fff", fontSize: isWide ? 12 : 11, fontWeight: "800", textAlign: "center" }} numberOfLines={1}>{label}</Text>
+
+          <Text
+            style={{ color: primary ? Colors.gold : "rgba(255,255,255,0.88)", fontSize: fz, fontWeight: "800", textAlign: "center" }}
+            numberOfLines={1}
+          >
+            {label}
+          </Text>
         </LinearGradient>
+
         {!!badge && (
-          <View style={{ position: "absolute", top: 7, right: 7, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: "#EF4444", alignItems: "center", justifyContent: "center", paddingHorizontal: 4, borderWidth: 2, borderColor: "#fff" }}>
-            <Text style={{ color: "#fff", fontSize: 9, fontWeight: "900" }}>{badge > 99 ? "99+" : badge}</Text>
+          <View style={{
+            position: "absolute", top: 8, right: 8,
+            minWidth: 18, height: 18, borderRadius: 9,
+            backgroundColor: Colors.accent, alignItems: "center", justifyContent: "center",
+            paddingHorizontal: 4, borderWidth: 2, borderColor: bg2,
+          }}>
+            <Text style={{ color: "#fff", fontSize: 9, fontWeight: "900" }}>
+              {badge > 99 ? "99+" : badge}
+            </Text>
           </View>
         )}
       </TouchableOpacity>
@@ -112,70 +224,16 @@ function ActionTile({
   );
 }
 
-function KpiCard({
-  icon, label, value, sub, grad, cardWidth, grow,
-}: {
-  icon: string; label: string; value: string | number;
-  sub?: string; grad: [string, string]; cardWidth?: number; grow?: boolean;
-}) {
-  return (
-    <View style={[kpi.card, grow ? { flex: 1 } : { width: cardWidth }]}>
-      <LinearGradient colors={grad} style={kpi.icon} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-        <Feather name={icon as any} size={20} color="#fff" />
-      </LinearGradient>
-      <View style={kpi.body}>
-        <Text style={kpi.value} numberOfLines={1}>{value}</Text>
-        <Text style={kpi.label} numberOfLines={1}>{label}</Text>
-        {!!sub && <Text style={kpi.sub} numberOfLines={1}>{sub}</Text>}
-      </View>
-    </View>
-  );
-}
+// ── Stat card ──────────────────────────────────────────────────────────────────
 
-function AlertRow({ text, color, icon, onPress }: { text: string; color: string; icon: string; onPress?: () => void }) {
+function StatCard({ label, value, color, icon }: { label: string; value: number | string; color: string; icon: string }) {
   return (
-    <TouchableOpacity style={[al.wrap, { borderColor: color }]} onPress={onPress} activeOpacity={0.8}>
-      <View style={[al.dot, { backgroundColor: color }]} />
-      <Feather name={icon as any} size={13} color={color} />
-      <Text style={[al.txt, { color }]} numberOfLines={1}>{text}</Text>
-      {onPress && <Feather name="chevron-left" size={12} color={color} />}
-    </TouchableOpacity>
-  );
-}
-
-function OrderRow({ order, onPress }: { order: Order; onPress: () => void }) {
-  const cfg = STATUS_CFG[overallStatus(order)];
-  return (
-    <TouchableOpacity style={or.row} onPress={onPress} activeOpacity={0.7}>
-      <Text style={or.num}>#{order.orderNumber}</Text>
-      <View style={or.mid}>
-        <Text style={or.name} numberOfLines={1}>{order.customerName || "—"}</Text>
-        <Text style={or.ago}>{fmtAgo(order.createdAt)}</Text>
+    <View style={[sc2.card, { borderColor: color + "30" }]}>
+      <View style={[sc2.iconBox, { backgroundColor: color + "20" }]}>
+        <Feather name={icon as any} size={14} color={color} />
       </View>
-      <View style={[or.pill, { backgroundColor: cfg.bg }]}>
-        <View style={[or.dot, { backgroundColor: cfg.dot }]} />
-        <Text style={[or.pillTxt, { color: cfg.text }]}>{cfg.label}</Text>
-      </View>
-      <Text style={or.amount}>{(order.totalAmount ?? 0).toFixed(0)} ﷼</Text>
-    </TouchableOpacity>
-  );
-}
-
-function SectionHead({ icon, title, cta, onCta }: { icon: string; title: string; cta?: string; onCta?: () => void }) {
-  return (
-    <View style={sec.row}>
-      <View style={sec.left}>
-        <View style={sec.iconBox}>
-          <Feather name={icon as any} size={13} color={Colors.gold} />
-        </View>
-        <Text style={sec.title}>{title}</Text>
-      </View>
-      {!!cta && (
-        <TouchableOpacity onPress={onCta} style={sec.cta}>
-          <Text style={sec.ctaTxt}>{cta}</Text>
-          <Feather name="chevron-left" size={11} color={Colors.gold} />
-        </TouchableOpacity>
-      )}
+      <Text style={[sc2.value, { color }]}>{value}</Text>
+      <Text style={sc2.label}>{label}</Text>
     </View>
   );
 }
@@ -186,18 +244,7 @@ export default function HomeScreen() {
   const router  = useRouter();
   const insets  = useSafeAreaInsets();
   const { width: winW } = useWindowDimensions();
-
-  // Responsive breakpoint — wide enough to show sidebar + side-by-side layout
-  const isWide = winW >= 700;
-  const PADDING = isWide ? 24 : 16;
-  const TILE_GAP = isWide ? 12 : 10;
-  const TILE_COLS = isWide ? 4 : 2;
-  const TILE_W = isWide
-    ? 120
-    : Math.floor((winW - PADDING * 2 - TILE_GAP) / 2);
-  const KPI_W = isWide
-    ? undefined            // flex:1 handled below
-    : Math.floor((winW - PADDING * 2 - 10) / 2);
+  const isWide  = winW >= 700;
 
   const { company }         = useCompany();
   const { currentEmployee } = useEmployee();
@@ -211,282 +258,356 @@ export default function HomeScreen() {
   }, []);
 
   const isAdmin  = canDo(currentEmployee?.role, ROLE_CAN_ACCESS_ADMIN);
-  const todayStr = new Date().toDateString();
+  const isLavi   = company.id === LAVIVIANE_COMPANY_ID;
+  const todayStr = useMemo(() => new Date().toDateString(), []);
 
-  const todayOrders = useMemo(
-    () => orders.filter(o => new Date(o.createdAt).toDateString() === todayStr),
-    [orders, todayStr],
-  );
-  const todayRevenue = useMemo(
-    () => todayOrders.reduce((s, o) => s + (o.totalAmount ?? 0), 0),
-    [todayOrders],
-  );
-  const avgTicket  = todayOrders.length ? todayRevenue / todayOrders.length : 0;
-  const pendingCnt = useMemo(() => orders.filter(o => overallStatus(o) === "pending").length,     [orders]);
-  const inProgCnt  = useMemo(() => orders.filter(o => overallStatus(o) === "in_progress").length, [orders]);
-  const recentOrders = useMemo(
-    () => [...orders]
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-      .slice(0, 12),
-    [orders],
-  );
-  const uniqueCustomers = useMemo(
-    () => new Set(todayOrders.map(o => o.customerName).filter(Boolean)).size || todayOrders.length,
-    [todayOrders],
-  );
+  const todayOrders   = useMemo(() => orders.filter(o => new Date(o.createdAt).toDateString() === todayStr), [orders, todayStr]);
+  const todayRevenue  = useMemo(() => todayOrders.reduce((s, o) => s + (o.totalAmount ?? 0), 0), [todayOrders]);
+  const pendingCnt    = useMemo(() => todayOrders.filter(o => overallStatus(o) === "pending").length,     [todayOrders]);
+  const inProgressCnt = useMemo(() => todayOrders.filter(o => overallStatus(o) === "in_progress").length, [todayOrders]);
+  const doneCnt       = useMemo(() => todayOrders.filter(o => overallStatus(o) === "done").length,        [todayOrders]);
+
+  const { t, lang } = useLang();
+  const role = currentEmployee?.role;
+  const isCashierRole = role === "cashier";
+  const tiles = useMemo(() => {
+    let defs: TileDef[];
+    if (!role || role === "admin" || role === "branch_supervisor" || role === "dept_supervisor") {
+      defs = isAdmin ? [...TILES, ADMIN_TILE] : [...TILES];
+    } else if (role === "cashier") {
+      defs = TILES.filter(d => ["cashier", "archive", "delivery"].includes(d.route));
+    } else {
+      defs = TILES.filter(d => d.route === role);
+    }
+    return defs.map(d => ({ ...d, label: t(d.labelKey) }));
+  }, [role, isAdmin, t, lang]);
 
   const go = (route: string) => router.navigate(`/(tabs)/${route}` as any);
 
-  const actions = [
-    ...ACTIONS_BASE,
-    ...(isAdmin
-      ? [{ label: "الإدارة", icon: "settings", route: "admin", grad: ["#374151", "#1F2937"] as [string, string], badge: pendingCount || undefined }]
-      : []),
-  ];
+  // Always force 3 columns — compute exact tile size
+  const SIDEBAR_W = winW >= 768 ? 220 : 0;
+  const INFO_W    = isWide ? 280 : 0;
+  const TILE_GAP  = isWide ? 14 : 10;
+  const TILE_PAD  = isWide ? 28 : 16;
+  const gridAvail = winW - SIDEBAR_W - INFO_W - TILE_PAD * 2 - TILE_GAP * 2;
+  const tileSize  = isWide
+    ? Math.min(180, Math.max(86, Math.floor(gridAvail / 3)))
+    : Math.floor((winW - 32 - TILE_GAP * 2) / 3);
 
-  return (
-    <View style={s.screen}>
+  const empColor = ROLE_COLOR[currentEmployee?.role ?? ""] ?? Colors.gold;
 
-      {/* ── Wide header (desktop / tablet) ──────────────────────────────────── */}
-      {isWide && (
-        <LinearGradient
-          colors={["#0A1628", "#122044"]}
-          style={[s.wideHeader, { paddingTop: insets.top + 14 }]}
-          start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-        >
-          <View style={s.hBrand}>
-            <LinearGradient colors={[Colors.gold, "#8B6508"]} style={s.hLogo} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-              <Feather name="shopping-bag" size={20} color="#fff" />
-            </LinearGradient>
-            <View>
-              <Text style={s.hCompany} numberOfLines={1}>{company?.name || "فاتورة"}</Text>
-              {currentEmployee && <Text style={s.hEmp} numberOfLines={1}>{currentEmployee.name}</Text>}
+  // ── Wide layout ──────────────────────────────────────────────────────────────
+  if (isWide) {
+    return (
+      <View style={s.screen}>
+        <View style={s.wideLayout}>
+
+          {/* ── Tile grid (left / larger) ──────────────────────────────────── */}
+          <View style={s.gridPanel}>
+            {/* Top CTA row */}
+            <View style={[s.ctaRow, { paddingHorizontal: TILE_PAD, paddingTop: TILE_PAD }]}>
+              <TouchableOpacity style={s.ctaBtn} onPress={() => go("cashier")} activeOpacity={0.85}>
+                <LinearGradient colors={[Colors.gold, "#A07830"]} style={s.ctaBtnInner} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+                  <Feather name="plus" size={18} color="#0A1628" />
+                  <Text style={s.ctaBtnTxt}>{t("newInvoice")}</Text>
+                </LinearGradient>
+              </TouchableOpacity>
             </View>
-          </View>
-          <View style={s.hClock}>
-            <Text style={s.hTime}>{formatTime(now)}</Text>
-            <Text style={s.hDate}>{formatDate(now)}</Text>
-          </View>
-          <View style={s.hRight}>
-            <View style={s.liveChip}>
-              <View style={s.liveDot} />
-              <Text style={s.liveTxt}>مباشر</Text>
-            </View>
-            <TouchableOpacity style={s.newBtn} onPress={() => go("cashier")}>
-              <Feather name="plus" size={14} color="#0A1628" />
-              <Text style={s.newBtnTxt}>فاتورة جديدة</Text>
-            </TouchableOpacity>
-          </View>
-        </LinearGradient>
-      )}
 
-      {/* ── Narrow top bar (mobile — below _layout header) ────────────────── */}
-      {!isWide && (
-        <View style={s.narrowBar}>
-          <View style={s.nClockRow}>
-            <Feather name="clock" size={12} color={Colors.gold} />
-            <Text style={s.nTime}>{formatTime(now)}</Text>
-          </View>
-          <TouchableOpacity style={s.nNewBtn} onPress={() => go("cashier")}>
-            <Feather name="plus" size={13} color="#fff" />
-            <Text style={s.nNewTxt}>فاتورة جديدة</Text>
-          </TouchableOpacity>
-        </View>
-      )}
+            {/* Divider */}
+            <View style={[s.sectionDivider, { marginHorizontal: TILE_PAD }]} />
 
-      {/* ── Scrollable body ─────────────────────────────────────────────────── */}
-      <ScrollView
-        style={s.body}
-        contentContainerStyle={[s.content, {
-          paddingHorizontal: PADDING,
-          paddingBottom: insets.bottom + 90,
-        }]}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Alerts */}
-        {(pendingCount > 0 || pendingCnt > 0) && (
-          <View style={s.alerts}>
-            {pendingCount > 0 && (
-              <AlertRow text={`${pendingCount} طلب تغيير سعر ينتظر الموافقة`} color="#F59E0B" icon="alert-triangle" onPress={() => go("admin")} />
-            )}
-            {pendingCnt > 0 && (
-              <AlertRow text={`${pendingCnt} فاتورة لم تبدأ بعد`} color="#3B82F6" icon="clock" onPress={() => go("archive")} />
-            )}
-          </View>
-        )}
-
-        {/* KPI cards — 2×2 on narrow, 4-in-row on wide */}
-        <View style={[s.kpiRow, { gap: isWide ? 16 : 10 }]}>
-          {[
-            { icon: "trending-up", label: "إيرادات اليوم",   value: `${todayRevenue.toLocaleString("ar-SA")} ﷼`, sub: `${todayOrders.length} فاتورة`, grad: ["#059669", "#064E3B"] as [string,string] },
-            { icon: "clock",       label: "انتظار / تنفيذ",  value: `${pendingCnt} / ${inProgCnt}`,               sub: `${orders.length} إجمالي`,       grad: ["#D97706", "#78350F"] as [string,string] },
-            { icon: "award",       label: "متوسط الفاتورة",  value: `${avgTicket.toFixed(0)} ﷼`,                  sub: "اليوم",                          grad: ["#7C3AED", "#4C1D95"] as [string,string] },
-            { icon: "users",       label: "عملاء اليوم",     value: uniqueCustomers,                               sub: "زبون",                           grad: ["#0369A1", "#0C4A6E"] as [string,string] },
-          ].map(k => (
-            <KpiCard key={k.label} {...k} cardWidth={KPI_W ?? undefined} grow={isWide} />
-          ))}
-        </View>
-
-        {/* Main content — side by side on wide, stacked on narrow */}
-        <View style={isWide ? s.mainWide : s.mainNarrow}>
-
-          {/* Quick actions */}
-          <View style={isWide ? s.actWide : {}}>
-            <SectionHead icon="grid" title="الوصول السريع" />
-            <View style={[s.tileGrid, { gap: TILE_GAP }]}>
-              {actions.map(a => (
-                <ActionTile
-                  key={a.route}
-                  label={a.label} icon={a.icon} grad={a.grad}
-                  badge={(a as any).badge}
-                  size={TILE_W}
-                  onPress={() => go(a.route)}
-                />
-              ))}
-            </View>
-          </View>
-
-          {/* Recent orders */}
-          <View style={isWide ? s.ordWide : {}}>
-            <SectionHead icon="list" title="آخر الفواتير" cta="عرض الكل" onCta={() => go("archive")} />
-            <View style={s.ordCard}>
-              <View style={or.header}>
-                <Text style={[or.hCell, { width: 54 }]}>رقم</Text>
-                <Text style={[or.hCell, { flex: 1 }]}>العميل</Text>
-                <Text style={[or.hCell, { width: 76 }]}>الحالة</Text>
-                <Text style={[or.hCell, { width: 64, textAlign: "left" }]}>المبلغ</Text>
+            <ScrollView
+              contentContainerStyle={[s.gridContent, { padding: TILE_PAD, paddingTop: 16, gap: TILE_GAP }]}
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={[s.tileGrid, { gap: TILE_GAP }]}>
+                {tiles.map(tile => (
+                  <Tile
+                    key={tile.route}
+                    label={tile.label}
+                    icon={tile.icon}
+                    accent={tile.accent}
+                    primary={tile.primary}
+                    badge={tile.route === "admin" ? pendingCount || undefined : undefined}
+                    size={tileSize}
+                    onPress={() => go(tile.route)}
+                  />
+                ))}
               </View>
-              {recentOrders.length === 0 ? (
-                <View style={s.empty}>
-                  <View style={s.emptyIconBox}>
-                    <Feather name="inbox" size={28} color={Colors.textMuted} />
-                  </View>
-                  <Text style={s.emptyTxt}>لا توجد فواتير بعد</Text>
-                  <Text style={s.emptySubTxt}>ابدأ باستقبال الطلبات من شاشة الكاشير</Text>
-                  <TouchableOpacity style={s.emptyCta} onPress={() => go("cashier")}>
-                    <Feather name="plus" size={14} color="#fff" />
-                    <Text style={s.emptyCtaTxt}>فاتورة جديدة</Text>
-                  </TouchableOpacity>
+            </ScrollView>
+          </View>
+
+          {/* ── Info panel (right) ────────────────────────────────────────── */}
+          <LinearGradient
+            colors={["#080F1E", "#0E1A30", "#152240"]}
+            style={[s.infoPanel, { width: INFO_W }]}
+            start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
+          >
+            <ScrollView contentContainerStyle={s.infoPanelContent} showsVerticalScrollIndicator={false}>
+
+              {/* Brand */}
+              {isLavi ? (
+                <View style={s.laviWrap}>
+                  <Image source={{ uri: "/laviviane-logo.png" }} style={s.laviLogo} contentFit="contain" />
                 </View>
               ) : (
-                recentOrders.map(o => (
-                  <OrderRow key={o.id} order={o} onPress={() => go("archive")} />
-                ))
+                <View style={s.brandWrap}>
+                  <View style={[s.brandBadge, { backgroundColor: Colors.gold }]}>
+                    <Text style={s.brandBadgeTxt}>{(company.name || "ف").charAt(0)}</Text>
+                  </View>
+                  <Text style={s.brandName} numberOfLines={2}>{company.name}</Text>
+                </View>
               )}
-            </View>
-          </View>
 
+              {/* Gold rule */}
+              <LinearGradient
+                colors={["transparent", Colors.gold + "80", "transparent"]}
+                style={s.goldRule}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+              />
+
+              {/* Employee */}
+              <View style={s.empSection}>
+                <View style={s.liveRow}>
+                  <View style={s.liveDot} />
+                  <Text style={s.liveTxt}>{t("onlineNow")}</Text>
+                </View>
+
+                {currentEmployee ? (
+                  <View style={s.empCard}>
+                    <View style={[s.empAvatar, { backgroundColor: empColor + "25", borderColor: empColor }]}>
+                      <Text style={[s.empAvatarTxt, { color: empColor }]}>{currentEmployee.name.charAt(0)}</Text>
+                    </View>
+                    <View style={s.empInfo}>
+                      <Text style={s.empName} numberOfLines={1}>{currentEmployee.name}</Text>
+                      <View style={[s.empRoleBadge, { backgroundColor: empColor + "25" }]}>
+                        <Text style={[s.empRoleTxt, { color: empColor }]}>
+                          {roleLabel(currentEmployee.role, lang)}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                ) : (
+                  <Text style={s.noEmp}>{t("noEmpLogged")}</Text>
+                )}
+              </View>
+
+              {/* Stats grid */}
+              <View style={s.statsSection}>
+                <Text style={s.statsTitle}>{t("todayStatsTitle")}</Text>
+                <View style={s.statsGrid}>
+                  <StatCard label={t("total")}          value={todayOrders.length} color={Colors.gold}  icon="list" />
+                  <StatCard label={t("waiting")}        value={pendingCnt}          color="#F59E0B"       icon="clock" />
+                  <StatCard label={t("inProgress")}     value={inProgressCnt}       color="#60A5FA"       icon="zap" />
+                  <StatCard label={t("statusReady")}    value={doneCnt}             color="#34D399"       icon="check-circle" />
+                </View>
+              </View>
+
+              {/* Revenue */}
+              <View style={s.revenueSection}>
+                <Text style={s.revenueLabel}>{t("repTodayRevenue")}</Text>
+                <Text style={s.revenueValue}>
+                  {todayRevenue > 0 ? todayRevenue.toLocaleString("ar-SA") : "٠"} <Text style={s.revenueCur}>{t("sarCurrency")}</Text>
+                </Text>
+              </View>
+
+              <View style={s.thinRule} />
+
+              {/* Cashier order tracker */}
+              {isCashierRole && (
+                <View style={s.trackerSection}>
+                  <Text style={s.trackerTitle}>{t("orderTrackerTitle")}</Text>
+                  <CashierOrderTracker orders={todayOrders} isDark />
+                </View>
+              )}
+
+              {/* Clock */}
+              <View style={s.clockSection}>
+                <Text style={s.clockTime}>{fmtClock(now)}</Text>
+                <Text style={s.clockSecs}>{fmtSecs(now)}</Text>
+                <Text style={s.clockDate}>{fmtDate(now)}</Text>
+              </View>
+
+            </ScrollView>
+          </LinearGradient>
+
+        </View>
+      </View>
+    );
+  }
+
+  // ── Narrow layout ─────────────────────────────────────────────────────────
+  return (
+    <View style={s.screen}>
+      {/* Stats strip */}
+      <View style={s.statsStrip}>
+        {[
+          { num: todayOrders.length, lbl: t("today"),            color: Colors.gold  },
+          { num: pendingCnt,          lbl: t("waiting"),          color: "#F59E0B"    },
+          { num: inProgressCnt,       lbl: t("inProgressShort"), color: "#60A5FA"    },
+          { num: doneCnt,             lbl: `${t("statusReady")} ✓`, color: "#34D399" },
+        ].map((item, i, arr) => (
+          <React.Fragment key={item.lbl}>
+            <View style={s.stripCell}>
+              <Text style={[s.stripNum, { color: item.color }]}>{item.num}</Text>
+              <Text style={s.stripLbl}>{item.lbl}</Text>
+            </View>
+            {i < arr.length - 1 && <View style={s.stripSep} />}
+          </React.Fragment>
+        ))}
+        <View style={{ flex: 1 }} />
+        <Text style={s.stripClock}>{fmtClock(now)}</Text>
+      </View>
+
+      {/* New invoice CTA */}
+      <View style={s.narrowCta}>
+        <TouchableOpacity style={s.narrowCtaBtn} onPress={() => go("cashier")} activeOpacity={0.85}>
+          <LinearGradient colors={[Colors.gold, "#A07830"]} style={s.narrowCtaInner} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+            <Feather name="plus" size={16} color="#0A1628" />
+            <Text style={s.narrowCtaTxt}>{t("newInvoice")}</Text>
+          </LinearGradient>
+        </TouchableOpacity>
+      </View>
+
+      {/* Cashier order tracker — mobile */}
+      {isCashierRole && (
+        <View style={s.narrowTracker}>
+          <Text style={s.narrowTrackerTitle}>{t("orderTrackerMobile")}</Text>
+          <CashierOrderTracker orders={todayOrders} isDark={false} />
+        </View>
+      )}
+
+      {/* Tile grid */}
+      <ScrollView
+        style={{ flex: 1, backgroundColor: "#fff" }}
+        contentContainerStyle={[s.gridContent, { padding: 16, gap: TILE_GAP, paddingBottom: insets.bottom + 90 }]}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={[s.tileGrid, { gap: TILE_GAP }]}>
+          {tiles.map(tile => (
+            <Tile
+              key={tile.route}
+              label={tile.label}
+              icon={tile.icon}
+              accent={tile.accent}
+              primary={tile.primary}
+              badge={tile.route === "admin" ? pendingCount || undefined : undefined}
+              size={tileSize}
+              onPress={() => go(tile.route)}
+            />
+          ))}
         </View>
       </ScrollView>
     </View>
   );
 }
 
-// ── Static styles ──────────────────────────────────────────────────────────────
+// ── Styles ─────────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#EFF3FA" },
+  screen:      { flex: 1, backgroundColor: "#fff" },
+  wideLayout:  { flex: 1, flexDirection: "row" },
 
-  // Wide header
-  wideHeader: { flexDirection: "row", alignItems: "center", paddingHorizontal: 28, paddingBottom: 18, gap: 16 },
-  hBrand:     { flexDirection: "row", alignItems: "center", gap: 12, flex: 1 },
-  hLogo:      { width: 44, height: 44, borderRadius: 13, alignItems: "center", justifyContent: "center" },
-  hCompany:   { color: "#fff", fontSize: 15, fontWeight: "800" },
-  hEmp:       { color: "rgba(255,255,255,0.5)", fontSize: 11, marginTop: 2 },
-  hClock:     { alignItems: "center", flex: 2 },
-  hTime:      { color: "#fff", fontSize: 28, fontWeight: "900", letterSpacing: 1.5, fontVariant: ["tabular-nums" as any] },
-  hDate:      { color: "rgba(255,255,255,0.45)", fontSize: 10, marginTop: 3 },
-  hRight:     { flexDirection: "row", alignItems: "center", gap: 12, flex: 1, justifyContent: "flex-end" },
-  liveChip:   { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "rgba(16,185,129,0.15)", borderWidth: 1, borderColor: "rgba(16,185,129,0.4)", borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 },
-  liveDot:    { width: 7, height: 7, borderRadius: 4, backgroundColor: "#10B981" },
-  liveTxt:    { color: "#10B981", fontSize: 11, fontWeight: "700" },
-  newBtn:     { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: Colors.gold, borderRadius: 22, paddingHorizontal: 18, paddingVertical: 10 },
-  newBtnTxt:  { color: "#0A1628", fontSize: 13, fontWeight: "900" },
+  // Grid panel
+  gridPanel:   { flex: 1, backgroundColor: "#fff", overflow: "hidden" as any },
+  ctaRow:      { },
+  ctaBtn:      { borderRadius: 14, overflow: "hidden" },
+  ctaBtnInner: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, paddingVertical: 16 },
+  ctaBtnTxt:   { color: "#0A1628", fontSize: 16, fontWeight: "900" },
+  sectionDivider: { height: StyleSheet.hairlineWidth, backgroundColor: "#E8EDF5", marginVertical: 16 },
+  gridContent: { gap: 12 },
+  tileGrid:    { flexDirection: "row", flexWrap: "wrap" },
 
-  // Narrow bar
-  narrowBar:  { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingVertical: 10, backgroundColor: "#fff", borderBottomWidth: 1, borderBottomColor: Colors.border },
-  nClockRow:  { flexDirection: "row", alignItems: "center", gap: 6 },
-  nTime:      { color: Colors.text, fontSize: 15, fontWeight: "800", fontVariant: ["tabular-nums" as any] },
-  nNewBtn:    { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: Colors.gold, borderRadius: 18, paddingHorizontal: 14, paddingVertical: 7 },
-  nNewTxt:    { color: "#fff", fontSize: 12, fontWeight: "900" },
+  // Info panel
+  infoPanel:        { flexShrink: 0, borderLeftWidth: 1, borderLeftColor: "rgba(255,255,255,0.06)" },
+  infoPanelContent: { padding: 22, gap: 18 },
 
-  // Body
-  body:       { flex: 1 },
-  content:    { paddingTop: 16, gap: 16 },
+  // Brand
+  laviWrap:     { alignItems: "center", paddingTop: 8, paddingBottom: 4 },
+  laviLogo:     { width: 190, height: 72 },
+  brandWrap:    { alignItems: "center", gap: 10, paddingTop: 8 },
+  brandBadge:   { width: 52, height: 52, borderRadius: 16, alignItems: "center", justifyContent: "center" },
+  brandBadgeTxt:{ fontSize: 26, fontWeight: "900", color: "#0A1628" },
+  brandName:    { color: "#fff", fontSize: 15, fontWeight: "800", textAlign: "center" },
 
-  // Alerts
-  alerts:     { gap: 8 },
+  goldRule: { height: 1, borderRadius: 1 },
 
-  // KPI row
-  kpiRow:     { flexDirection: "row", flexWrap: "wrap" },
+  // Employee
+  empSection: { gap: 10 },
+  liveRow:    { flexDirection: "row", alignItems: "center", gap: 7 },
+  liveDot:    { width: 8, height: 8, borderRadius: 4, backgroundColor: "#34D399" },
+  liveTxt:    { color: "#34D399", fontSize: 11, fontWeight: "700" },
+  empCard:    { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: "rgba(255,255,255,0.05)", borderRadius: 12, padding: 12, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" },
+  empAvatar:  { width: 42, height: 42, borderRadius: 21, borderWidth: 2, alignItems: "center", justifyContent: "center" },
+  empAvatarTxt:{ fontSize: 18, fontWeight: "900" },
+  empInfo:    { flex: 1, gap: 4 },
+  empName:    { color: "#fff", fontSize: 14, fontWeight: "700" },
+  empRoleBadge:{ alignSelf: "flex-start", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
+  empRoleTxt: { fontSize: 10, fontWeight: "700" },
+  noEmp:      { color: "rgba(255,255,255,0.3)", fontSize: 12, fontStyle: "italic" },
 
-  // Main layout
-  mainWide:   { flexDirection: "row", gap: 24, alignItems: "flex-start" },
-  mainNarrow: { gap: 20 },
-  actWide:    { flex: 1 },
-  ordWide:    { width: 420 },
+  // Stats
+  statsSection: { gap: 8 },
+  statsTitle:   { color: "rgba(255,255,255,0.35)", fontSize: 10, fontWeight: "700", letterSpacing: 1 },
+  statsGrid:    { flexDirection: "row", flexWrap: "wrap", gap: 8 },
 
-  // Tile grid
-  tileGrid:   { flexDirection: "row", flexWrap: "wrap" },
+  // Revenue
+  revenueSection: { backgroundColor: "rgba(201,168,76,0.08)", borderRadius: 12, padding: 14, borderWidth: 1, borderColor: "rgba(201,168,76,0.2)", gap: 4 },
+  revenueLabel:   { color: "rgba(255,255,255,0.4)", fontSize: 10, fontWeight: "600" },
+  revenueValue:   { color: Colors.gold, fontSize: 22, fontWeight: "900", fontVariant: ["tabular-nums" as any] },
+  revenueCur:     { fontSize: 13, fontWeight: "600" },
 
-  // Orders card
-  ordCard:    { backgroundColor: "#fff", borderRadius: 18, overflow: "hidden", shadowColor: "#0A1628", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.07, shadowRadius: 12, elevation: 4 },
+  thinRule: { height: StyleSheet.hairlineWidth, backgroundColor: "rgba(255,255,255,0.1)" },
 
-  // Empty state
-  empty:      { alignItems: "center", paddingVertical: 36, gap: 10 },
-  emptyIconBox: { width: 64, height: 64, borderRadius: 32, backgroundColor: Colors.background, borderWidth: 1, borderColor: Colors.border, alignItems: "center", justifyContent: "center", marginBottom: 4 },
-  emptyTxt:   { color: Colors.text, fontSize: 15, fontWeight: "700" },
-  emptySubTxt: { color: Colors.textMuted, fontSize: 12, textAlign: "center" },
-  emptyCta:   { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: Colors.primary, borderRadius: 20, paddingHorizontal: 18, paddingVertical: 9, marginTop: 4 },
-  emptyCtaTxt: { color: "#fff", fontSize: 13, fontWeight: "800" },
+  // Clock
+  clockSection: { alignItems: "center", gap: 4 },
+  clockTime:    { color: "#fff", fontSize: 36, fontWeight: "900", fontVariant: ["tabular-nums" as any], letterSpacing: 1 },
+  clockSecs:    { color: "rgba(255,255,255,0.35)", fontSize: 13, fontVariant: ["tabular-nums" as any] },
+  clockDate:    { color: "rgba(255,255,255,0.35)", fontSize: 11, marginTop: 2 },
+
+  // Narrow stats strip
+  statsStrip: { flexDirection: "row", alignItems: "center", backgroundColor: "#fff", paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "#F0F4FB", gap: 10 },
+  stripCell:  { alignItems: "center", gap: 1 },
+  stripNum:   { fontSize: 20, fontWeight: "900", fontVariant: ["tabular-nums" as any] },
+  stripLbl:   { fontSize: 9, color: Colors.textMuted, fontWeight: "600" },
+  stripSep:   { width: StyleSheet.hairlineWidth, height: 28, backgroundColor: "#E8EDF5" },
+  stripClock: { color: Colors.textMuted, fontSize: 12, fontWeight: "700", fontVariant: ["tabular-nums" as any] },
+
+  // Narrow CTA
+  narrowCta:      { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8, backgroundColor: "#fff" },
+  narrowCtaBtn:   { borderRadius: 12, overflow: "hidden" },
+  narrowCtaInner: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 13 },
+  narrowCtaTxt:   { color: "#0A1628", fontSize: 15, fontWeight: "900" },
+
+  // Cashier tracker — desktop info panel
+  trackerSection:  { gap: 10 },
+  trackerTitle:    { color: "rgba(255,255,255,0.35)", fontSize: 10, fontWeight: "700", letterSpacing: 1 },
+
+  // Cashier tracker — mobile
+  narrowTracker:      { paddingHorizontal: 16, paddingBottom: 10, backgroundColor: "#fff" },
+  narrowTrackerTitle: { fontSize: 12, fontWeight: "700", color: Colors.textMuted, marginBottom: 8, letterSpacing: 0.5 },
 });
 
-const kpi = StyleSheet.create({
-  card:  {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 14,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    shadowColor: "#0A1628",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  icon:  { width: 46, height: 46, borderRadius: 13, alignItems: "center", justifyContent: "center", flexShrink: 0 },
-  body:  { flex: 1 },
-  value: { fontSize: 18, fontWeight: "900", color: Colors.text },
-  label: { fontSize: 10, color: Colors.textMuted, marginTop: 2 },
-  sub:   { fontSize: 10, color: Colors.textSecondary, marginTop: 2 },
+const sc2 = StyleSheet.create({
+  card:    { width: "47%", backgroundColor: "rgba(255,255,255,0.05)", borderRadius: 10, padding: 10, gap: 4, borderWidth: 1, alignItems: "flex-start" },
+  iconBox: { width: 26, height: 26, borderRadius: 8, alignItems: "center", justifyContent: "center" },
+  value:   { fontSize: 22, fontWeight: "900", fontVariant: ["tabular-nums" as any] },
+  label:   { color: "rgba(255,255,255,0.4)", fontSize: 10, fontWeight: "600" },
 });
 
-const or = StyleSheet.create({
-  row:    { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: "#F1F5F9" },
-  header: { flexDirection: "row", alignItems: "center", paddingHorizontal: 14, paddingVertical: 9, backgroundColor: "#F8FAFC", borderBottomWidth: 1, borderBottomColor: "#EEF2F7" },
-  hCell:  { fontSize: 10, fontWeight: "700", color: Colors.textMuted },
-  num:    { width: 54, fontSize: 13, fontWeight: "800", color: Colors.primary },
-  mid:    { flex: 1, paddingHorizontal: 4 },
-  name:   { fontSize: 12, fontWeight: "700", color: Colors.text },
-  ago:    { fontSize: 10, color: Colors.textMuted, marginTop: 1 },
-  pill:   { width: 76, flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 20 },
-  dot:    { width: 5, height: 5, borderRadius: 3 },
-  pillTxt:{ fontSize: 10, fontWeight: "700" },
-  amount: { width: 64, fontSize: 12, fontWeight: "800", color: Colors.text, textAlign: "left" },
-});
-
-const al = StyleSheet.create({
-  wrap: { flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1.5, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, backgroundColor: "#fff" },
-  dot:  { width: 7, height: 7, borderRadius: 4 },
-  txt:  { flex: 1, fontSize: 12, fontWeight: "700" },
-});
-
-const sec = StyleSheet.create({
-  row:    { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 },
-  left:   { flexDirection: "row", alignItems: "center", gap: 8 },
-  iconBox:{ width: 26, height: 26, borderRadius: 7, backgroundColor: "rgba(201,168,76,0.12)", alignItems: "center", justifyContent: "center" },
-  title:  { fontSize: 14, fontWeight: "800", color: Colors.text },
-  cta:    { flexDirection: "row", alignItems: "center", gap: 3 },
-  ctaTxt: { fontSize: 12, color: Colors.gold, fontWeight: "700" },
+const ct = StyleSheet.create({
+  emptyTxt:    { fontSize: 12, marginTop: 8 },
+  card:        { borderRadius: 10, borderWidth: 1, padding: 10, gap: 7, overflow: "hidden" as const, position: "relative" as const },
+  doneLine:    { position: "absolute", top: 0, left: 0, right: 0, height: 2, backgroundColor: "#34D399" },
+  cardHead:    { flexDirection: "row", alignItems: "center", gap: 8 },
+  orderNum:    { fontSize: 13, fontWeight: "800", minWidth: 36 },
+  custName:    { flex: 1, fontSize: 12, fontWeight: "600" },
+  statusBadge: { flexDirection: "row", alignItems: "center", gap: 4, borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3 },
+  statusDot:   { width: 5, height: 5, borderRadius: 3 },
+  statusTxt:   { fontSize: 10, fontWeight: "700" },
+  chips:       { flexDirection: "row", flexWrap: "wrap", gap: 5 },
+  chip:        { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 7, paddingVertical: 3, borderRadius: 20, borderWidth: 1 },
+  chipDot:     { width: 5, height: 5, borderRadius: 3 },
+  chipTxt:     { fontSize: 10, fontWeight: "700" },
 });
