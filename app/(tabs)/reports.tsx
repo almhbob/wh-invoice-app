@@ -1406,7 +1406,7 @@ export default function ReportsScreen() {
           <DeliveryTab filtered={filtered} />
         )}
         {activeTab === "export" && (
-          <ExportTab filtered={filtered} filterLbl={filterLabel(filter)} />
+          <ExportTab filtered={filtered} filterLbl={filterLabel(filter, t)} />
         )}
         {activeTab === "shifts" && (
           <ShiftsTab />
