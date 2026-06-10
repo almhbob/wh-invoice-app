@@ -104,18 +104,20 @@ function LangPickerModal({
   current,
   onSelect,
   onClose,
+  title,
 }: {
   visible: boolean;
   current: Lang;
   onSelect: (lang: Lang) => void;
   onClose: () => void;
+  title: string;
 }) {
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable style={styles.modalBackdrop} onPress={onClose} />
       <View style={styles.modalSheet}>
         <View style={styles.modalHandle} />
-        <Text style={styles.modalTitle}>اختر اللغة</Text>
+        <Text style={styles.modalTitle}>{title}</Text>
         {LANG_OPTIONS.map((opt, idx) => {
           const isActive = opt.code === current;
           return (
@@ -150,7 +152,7 @@ function LangPickerModal({
 
 export default function SettingsScreen() {
   const insets = useSafeAreaInsets();
-  const { lang, setLang } = useLang();
+  const { lang, setLang, t, rl } = useLang();
   const { currentEmployee, setCurrentEmployee } = useEmployee();
   const { company, companyId } = useCompany();
   const { settings: printerSettings, testPrint, status: printerStatus } = usePrinter();
@@ -164,7 +166,7 @@ export default function SettingsScreen() {
 
   const empFirstLetter = currentEmployee?.name?.trim().charAt(0).toUpperCase() ?? "؟";
   const empName        = currentEmployee?.name   ?? "—";
-  const empRole        = currentEmployee?.role   ?? "—";
+  const empRole        = currentEmployee ? rl(currentEmployee.role) : "—";
   const empId          = currentEmployee?.employeeId ?? "—";
   const companyName    = company.name ?? "—";
 
@@ -186,12 +188,12 @@ export default function SettingsScreen() {
 
   function handleLogout() {
     Alert.alert(
-      "تسجيل الخروج",
-      `هل تريد تسجيل خروج "${empName}"؟`,
+      t("logout"),
+      `${t("settingsLogoutConfirm")} "${empName}"؟`,
       [
-        { text: "إلغاء", style: "cancel" },
+        { text: t("cancel"), style: "cancel" },
         {
-          text: "تسجيل الخروج",
+          text: t("logout"),
           style: "destructive",
           onPress: () => setCurrentEmployee(null),
         },
@@ -201,7 +203,7 @@ export default function SettingsScreen() {
 
   function handleTestPrint() {
     testPrint().catch((err: Error) => {
-      Alert.alert("خطأ في الطباعة", err?.message ?? "تعذّر إجراء طباعة تجريبية");
+      Alert.alert(t("settingsPrintError"), err?.message ?? t("settingsTestPrintFail"));
     });
   }
 
@@ -219,7 +221,7 @@ export default function SettingsScreen() {
     <View style={[styles.screen, { paddingTop: topPad }]}>
       {/* Screen title bar */}
       <View style={styles.titleBar}>
-        <Text style={styles.titleBarText}>الإعدادات</Text>
+        <Text style={styles.titleBarText}>{t("tabSettings")}</Text>
       </View>
 
       <ScrollView
@@ -241,12 +243,12 @@ export default function SettingsScreen() {
         </View>
 
         {/* ── Language & Region ────────────────────────────────────── */}
-        <SectionHeader title="اللغة والمنطقة" />
+        <SectionHeader title={t("settingsLangSection")} />
         <SettingsCard>
           <SettingsRow
             icon="globe"
             iconBg="#2563eb"
-            label="اللغة"
+            label={t("settingsLangLabel")}
             value={currentLangLabel}
             onPress={() => setShowLangPicker(true)}
             isLast
@@ -254,76 +256,76 @@ export default function SettingsScreen() {
         </SettingsCard>
 
         {/* ── Printing ─────────────────────────────────────────────── */}
-        <SectionHeader title="الطباعة" />
+        <SectionHeader title={t("settingsPrintSection")} />
         <SettingsCard>
           <SettingsRow
             icon="printer"
             iconBg={Colors.primaryLight}
-            label="نوع الاتصال"
+            label={t("settingsConnectionType")}
             value={printerModeLabel}
             showChevron={false}
           />
           <SettingsRow
             icon="wifi"
             iconBg={printerStatusColor}
-            label="الحالة"
+            label={t("settingsStatusLabel")}
             value={
-              printerStatus === "connected"  ? "متصل ✓" :
-              printerStatus === "connecting" ? "جاري الاتصال..." :
-              printerStatus === "error"      ? "خطأ في الاتصال" :
-              "غير متصل"
+              printerStatus === "connected"  ? t("settingsConnected") :
+              printerStatus === "connecting" ? t("settingsConnecting") :
+              printerStatus === "error"      ? t("settingsConnError") :
+              t("settingsDisconnected")
             }
             showChevron={false}
           />
           <SettingsRow
             icon="zap"
             iconBg={Colors.gold}
-            label="طباعة تجريبية"
+            label={t("settingsTestPrint")}
             onPress={handleTestPrint}
             isLast
           />
         </SettingsCard>
 
         {/* ── About ────────────────────────────────────────────────── */}
-        <SectionHeader title="حول التطبيق" />
+        <SectionHeader title={t("settingsAboutSection")} />
         <SettingsCard>
           <SettingsRow
             icon="info"
             iconBg={Colors.primary}
-            label="اسم التطبيق"
+            label={t("settingsAppName")}
             value="فاتورة"
             showChevron={false}
           />
           <SettingsRow
             icon="tag"
             iconBg="#6d28d9"
-            label="الإصدار"
+            label={t("settingsVersion")}
             value={appVersion}
             showChevron={false}
           />
           <SettingsRow
             icon="briefcase"
             iconBg={Colors.textMuted}
-            label="رقم الشركة"
+            label={t("settingsCompanyId")}
             value={companyId}
             showChevron={false}
           />
           <SettingsRow
             icon="message-circle"
             iconBg="#25D366"
-            label="تواصل مع الدعم"
+            label={t("settingsSupport")}
             onPress={handleSupport}
             isLast
           />
         </SettingsCard>
 
         {/* ── Session / danger zone ────────────────────────────────── */}
-        <SectionHeader title="الجلسة" />
+        <SectionHeader title={t("settingsSessionSection")} />
         <SettingsCard>
           <SettingsRow
             icon="log-out"
             iconBg={Colors.accent}
-            label="تسجيل الخروج"
+            label={t("logout")}
             onPress={currentEmployee ? handleLogout : undefined}
             destructive
             isLast
@@ -337,6 +339,7 @@ export default function SettingsScreen() {
         current={lang}
         onSelect={setLang}
         onClose={() => setShowLangPicker(false)}
+        title={t("settingsPickLang")}
       />
     </View>
   );
