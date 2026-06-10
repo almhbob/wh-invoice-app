@@ -19,6 +19,7 @@ import { LAVIVIANE_COMPANY_ID } from "@/constants/lavivianeProducts";
 import { canDo, ROLE_CAN_ACCESS_ADMIN } from "@/constants/rbac";
 import { useCompany } from "@/context/CompanyContext";
 import { useEmployee } from "@/context/EmployeeContext";
+import { useLang } from "@/context/LanguageContext";
 import { Department, Order, useOrders } from "@/context/OrdersContext";
 import { usePriceChange } from "@/context/PriceChangeContext";
 
@@ -45,13 +46,10 @@ function fmtDate(d: Date) {
   return d.toLocaleDateString("ar-SA", { weekday: "long", day: "numeric", month: "long" });
 }
 
-// ── Dept meta for cashier tracker ──────────────────────────────────────────────
-const DEPT_META_TRACKER = {
-  halwa:     { short: "حلا",       color: Colors.halwa },
-  mawali:    { short: "موالح",     color: Colors.mawali },
-  chocolate: { short: "شوكولاتة", color: Colors.chocolate },
-  cake:      { short: "كيك",       color: Colors.cake },
-  packaging: { short: "تغليف",    color: Colors.packaging },
+// ── Dept meta for cashier tracker (built at runtime with t()) ──────────────────
+const DEPT_COLORS = {
+  halwa: Colors.halwa, mawali: Colors.mawali, chocolate: Colors.chocolate,
+  cake: Colors.cake, packaging: Colors.packaging,
 } as const;
 
 const STATUS_COLORS = {
@@ -62,6 +60,15 @@ const STATUS_COLORS = {
 };
 
 function CashierOrderTracker({ orders, isDark }: { orders: Order[]; isDark?: boolean }) {
+  const { t } = useLang();
+  const deptMeta = useMemo(() => ({
+    halwa:     { short: t("deptHalwaShort"),     color: Colors.halwa },
+    mawali:    { short: t("deptMawaliShort"),    color: Colors.mawali },
+    chocolate: { short: t("deptChocolateShort"), color: Colors.chocolate },
+    cake:      { short: t("deptCakeShort"),      color: Colors.cake },
+    packaging: { short: t("deptPackagingShort"), color: Colors.packaging },
+  }), [t]);
+
   const todayStr = new Date().toDateString();
   const myOrders = orders
     .filter(o => !o.deleted && new Date(o.createdAt).toDateString() === todayStr)
@@ -77,7 +84,7 @@ function CashierOrderTracker({ orders, isDark }: { orders: Order[]; isDark?: boo
     return (
       <View style={{ alignItems: "center", paddingVertical: 20 }}>
         <Feather name="inbox" size={28} color={subColor} />
-        <Text style={[ct.emptyTxt, { color: subColor }]}>لا توجد طلبات اليوم</Text>
+        <Text style={[ct.emptyTxt, { color: subColor }]}>{t("orderTrackerEmpty")}</Text>
       </View>
     );
   }
@@ -100,7 +107,7 @@ function CashierOrderTracker({ orders, isDark }: { orders: Order[]; isDark?: boo
               }]}>
                 <View style={[ct.statusDot, { backgroundColor: allDone ? "#34D399" : anyInProg ? "#60A5FA" : "#6B7280" }]} />
                 <Text style={[ct.statusTxt, { color: allDone ? "#34D399" : anyInProg ? "#60A5FA" : "#6B7280" }]}>
-                  {allDone ? "جاهز" : anyInProg ? "يُحضَّر" : "انتظار"}
+                  {allDone ? t("statusReady") : anyInProg ? t("statusPrepping") : t("statusWaiting")}
                 </Text>
               </View>
             </View>
@@ -108,7 +115,7 @@ function CashierOrderTracker({ orders, isDark }: { orders: Order[]; isDark?: boo
               {depts.map(d => {
                 const status = order.departmentStatuses?.[d] ?? "pending";
                 const col = STATUS_COLORS[status] ?? "#6B7280";
-                const dm = DEPT_META_TRACKER[d];
+                const dm = deptMeta[d];
                 return (
                   <View key={d} style={[ct.chip, { backgroundColor: col + "18", borderColor: col + "35" }]}>
                     <View style={[ct.chipDot, { backgroundColor: col }]} />
@@ -124,33 +131,24 @@ function CashierOrderTracker({ orders, isDark }: { orders: Order[]; isDark?: boo
   );
 }
 
-const ROLE_AR: Record<string, string> = {
-  cashier: "كاشير", admin: "مدير", branch_supervisor: "مشرف فرع",
-  dept_supervisor: "مشرف قسم", halwa: "قسم الحلا", mawali: "قسم الموالح",
-  chocolate: "قسم الشوكولاتة", cake: "قسم الكيك", packaging: "قسم التغليف", guest: "زائر",
-};
-
 const ROLE_COLOR: Record<string, string> = {
   cashier: Colors.gold, admin: "#7C3AED", branch_supervisor: "#0D9488",
   dept_supervisor: "#0891B2", halwa: Colors.halwa, mawali: Colors.mawali,
   chocolate: Colors.chocolate, cake: Colors.cake, packaging: Colors.packaging,
 };
 
-// ── Tile definitions ───────────────────────────────────────────────────────────
-
-const TILES = [
-  { label: "كاشير",      icon: "file-text",   route: "cashier",   accent: Colors.gold,            primary: true  },
-  { label: "الأرشيف",   icon: "archive",     route: "archive",   accent: "#60A5FA",              primary: false },
-  { label: "التقارير",  icon: "bar-chart-2", route: "reports",   accent: "#A78BFA",              primary: false },
-  { label: "حلا",        icon: "coffee",      route: "halwa",     accent: Colors.halwaLight,      primary: false },
-  { label: "موالح",      icon: "package",     route: "mawali",    accent: Colors.mawaliLight,     primary: false },
-  { label: "شوكولاتة",   icon: "gift",        route: "chocolate", accent: Colors.chocolateLight,  primary: false },
-  { label: "كيك",        icon: "layers",      route: "cake",      accent: Colors.cakeLight,       primary: false },
-  { label: "تغليف",      icon: "box",         route: "packaging", accent: Colors.packagingLight,  primary: false },
-  { label: "توصيل",      icon: "truck",       route: "delivery",  accent: "#2DD4BF",              primary: false },
-] as const;
-
-const ADMIN_TILE = { label: "الإدارة", icon: "settings", route: "admin", accent: "#94A3B8", primary: false } as const;
+// ── Tile route/icon/accent constants (labels computed at runtime) ──────────────
+const TILE_DEFS = [
+  { key: "cashierLabel" as const, icon: "file-text",   route: "cashier",   accent: Colors.gold,            primary: true  },
+  { key: "tabArchive"   as const, icon: "archive",     route: "archive",   accent: "#60A5FA",              primary: false },
+  { key: "tabReports"   as const, icon: "bar-chart-2", route: "reports",   accent: "#A78BFA",              primary: false },
+  { key: "deptHalwaShort"   as const, icon: "coffee",  route: "halwa",     accent: Colors.halwaLight,      primary: false },
+  { key: "deptMawaliShort"  as const, icon: "package", route: "mawali",    accent: Colors.mawaliLight,     primary: false },
+  { key: "deptChocolateShort" as const, icon: "gift",  route: "chocolate", accent: Colors.chocolateLight,  primary: false },
+  { key: "deptCakeShort"    as const, icon: "layers",  route: "cake",      accent: Colors.cakeLight,       primary: false },
+  { key: "deptPackagingShort" as const, icon: "box",   route: "packaging", accent: Colors.packagingLight,  primary: false },
+  { key: "tabDelivery"  as const, icon: "truck",       route: "delivery",  accent: "#2DD4BF",              primary: false },
+];
 
 // ── Tile component ─────────────────────────────────────────────────────────────
 
@@ -240,10 +238,21 @@ export default function HomeScreen() {
   const { width: winW } = useWindowDimensions();
   const isWide  = winW >= 700;
 
+  const { t, rl } = useLang();
   const { company }         = useCompany();
   const { currentEmployee } = useEmployee();
   const { orders }          = useOrders();
   const { pendingCount }    = usePriceChange();
+
+  const TILES = useMemo(() => TILE_DEFS.map(d => ({ ...d, label: t(d.key) })), [t]);
+  const ADMIN_TILE = useMemo(() => ({ label: t("tabAdmin"), icon: "settings", route: "admin", accent: "#94A3B8", primary: false as const }), [t]);
+  const DEPT_META_TRACKER = useMemo(() => ({
+    halwa:     { short: t("deptHalwaShort"),     color: Colors.halwa },
+    mawali:    { short: t("deptMawaliShort"),    color: Colors.mawali },
+    chocolate: { short: t("deptChocolateShort"), color: Colors.chocolate },
+    cake:      { short: t("deptCakeShort"),      color: Colors.cake },
+    packaging: { short: t("deptPackagingShort"), color: Colors.packaging },
+  }), [t]);
 
   const [now, setNow] = useState(new Date());
   useEffect(() => {
@@ -301,7 +310,7 @@ export default function HomeScreen() {
               <TouchableOpacity style={s.ctaBtn} onPress={() => go("cashier")} activeOpacity={0.85}>
                 <LinearGradient colors={[Colors.gold, "#A07830"]} style={s.ctaBtnInner} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
                   <Feather name="plus" size={18} color="#0A1628" />
-                  <Text style={s.ctaBtnTxt}>فاتورة جديدة</Text>
+                  <Text style={s.ctaBtnTxt}>{t("newInvoice")}</Text>
                 </LinearGradient>
               </TouchableOpacity>
             </View>
@@ -363,7 +372,7 @@ export default function HomeScreen() {
               <View style={s.empSection}>
                 <View style={s.liveRow}>
                   <View style={s.liveDot} />
-                  <Text style={s.liveTxt}>متصل الآن</Text>
+                  <Text style={s.liveTxt}>{t("onlineNow")}</Text>
                 </View>
 
                 {currentEmployee ? (
@@ -375,32 +384,32 @@ export default function HomeScreen() {
                       <Text style={s.empName} numberOfLines={1}>{currentEmployee.name}</Text>
                       <View style={[s.empRoleBadge, { backgroundColor: empColor + "25" }]}>
                         <Text style={[s.empRoleTxt, { color: empColor }]}>
-                          {ROLE_AR[currentEmployee.role] ?? currentEmployee.role}
+                          {rl(currentEmployee.role)}
                         </Text>
                       </View>
                     </View>
                   </View>
                 ) : (
-                  <Text style={s.noEmp}>لم يسجل أحد دخوله</Text>
+                  <Text style={s.noEmp}>{t("noEmpLogged")}</Text>
                 )}
               </View>
 
               {/* Stats grid */}
               <View style={s.statsSection}>
-                <Text style={s.statsTitle}>إحصائيات اليوم</Text>
+                <Text style={s.statsTitle}>{t("todayStatsTitle")}</Text>
                 <View style={s.statsGrid}>
-                  <StatCard label="إجمالي"     value={todayOrders.length} color={Colors.gold}  icon="list" />
-                  <StatCard label="انتظار"      value={pendingCnt}          color="#F59E0B"       icon="clock" />
-                  <StatCard label="قيد التنفيذ" value={inProgressCnt}       color="#60A5FA"       icon="zap" />
-                  <StatCard label="جاهز"        value={doneCnt}             color="#34D399"       icon="check-circle" />
+                  <StatCard label={t("total")}        value={todayOrders.length} color={Colors.gold}  icon="list" />
+                  <StatCard label={t("statusWaiting")} value={pendingCnt}         color="#F59E0B"       icon="clock" />
+                  <StatCard label={t("inProgress")}    value={inProgressCnt}      color="#60A5FA"       icon="zap" />
+                  <StatCard label={t("statusReady")}   value={doneCnt}            color="#34D399"       icon="check-circle" />
                 </View>
               </View>
 
               {/* Revenue */}
               <View style={s.revenueSection}>
-                <Text style={s.revenueLabel}>إيرادات اليوم</Text>
+                <Text style={s.revenueLabel}>{t("revenueToday")}</Text>
                 <Text style={s.revenueValue}>
-                  {todayRevenue > 0 ? todayRevenue.toLocaleString("ar-SA") : "٠"} <Text style={s.revenueCur}>ريال</Text>
+                  {todayRevenue > 0 ? todayRevenue.toLocaleString("ar-SA") : "٠"} <Text style={s.revenueCur}>{t("sarCurrency")}</Text>
                 </Text>
               </View>
 
@@ -409,7 +418,7 @@ export default function HomeScreen() {
               {/* Cashier order tracker */}
               {isCashierRole && (
                 <View style={s.trackerSection}>
-                  <Text style={s.trackerTitle}>متابعة طلباتك اليوم</Text>
+                  <Text style={s.trackerTitle}>{t("orderTrackerTitle")}</Text>
                   <CashierOrderTracker orders={todayOrders} isDark />
                 </View>
               )}
@@ -435,10 +444,10 @@ export default function HomeScreen() {
       {/* Stats strip */}
       <View style={s.statsStrip}>
         {[
-          { num: todayOrders.length, lbl: "اليوم",  color: Colors.gold  },
-          { num: pendingCnt,          lbl: "انتظار", color: "#F59E0B"    },
-          { num: inProgressCnt,       lbl: "تنفيذ",  color: "#60A5FA"    },
-          { num: doneCnt,             lbl: "جاهز ✓", color: "#34D399"    },
+          { num: todayOrders.length, lbl: t("todayShort"),     color: Colors.gold  },
+          { num: pendingCnt,          lbl: t("statusWaiting"),  color: "#F59E0B"    },
+          { num: inProgressCnt,       lbl: t("inProgressShort"), color: "#60A5FA"   },
+          { num: doneCnt,             lbl: `${t("statusReady")} ✓`, color: "#34D399" },
         ].map((item, i, arr) => (
           <React.Fragment key={item.lbl}>
             <View style={s.stripCell}>
@@ -457,7 +466,7 @@ export default function HomeScreen() {
         <TouchableOpacity style={s.narrowCtaBtn} onPress={() => go("cashier")} activeOpacity={0.85}>
           <LinearGradient colors={[Colors.gold, "#A07830"]} style={s.narrowCtaInner} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
             <Feather name="plus" size={16} color="#0A1628" />
-            <Text style={s.narrowCtaTxt}>فاتورة جديدة</Text>
+            <Text style={s.narrowCtaTxt}>{t("newInvoice")}</Text>
           </LinearGradient>
         </TouchableOpacity>
       </View>
@@ -465,7 +474,7 @@ export default function HomeScreen() {
       {/* Cashier order tracker — mobile */}
       {isCashierRole && (
         <View style={s.narrowTracker}>
-          <Text style={s.narrowTrackerTitle}>متابعة الطلبات</Text>
+          <Text style={s.narrowTrackerTitle}>{t("orderTrackerMobile")}</Text>
           <CashierOrderTracker orders={todayOrders} isDark={false} />
         </View>
       )}

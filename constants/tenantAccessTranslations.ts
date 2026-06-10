@@ -34,7 +34,15 @@ export type TenantAccessTranslationKey =
   | "ownerNameRequired"
   | "ownerCredentialsRequired"
   | "temporaryLoginTitle"
-  | "temporaryLoginMessage";
+  | "temporaryLoginMessage"
+  | "deviceConflictTitle"
+  | "deviceConflictMessage"
+  | "deviceConflictCancel"
+  | "deviceConflictForce"
+  | "laviQrScanLabel"
+  | "laviQrScanAnotherLabel"
+  | "laviEnterBtn"
+  | "laviOrCodeDivider";
 
 const tenantAccessTranslations: Record<TenantAccessTranslationKey, Record<Lang, string>> = {
   checking: { ar: "جاري التحقق...", en: "Checking...", ur: "تصدیق جاری ہے...", hi: "जांच हो रही है...", bn: "যাচাই চলছে..." },
@@ -71,6 +79,14 @@ const tenantAccessTranslations: Record<TenantAccessTranslationKey, Record<Lang, 
   ownerCredentialsRequired: { ar: "أدخل اليوزر/الرقم الوظيفي ورمز الدخول.", en: "Enter username/employee ID and PIN.", ur: "یوزر/ملازم نمبر اور PIN درج کریں۔", hi: "यूज़रनेम/कर्मचारी ID और PIN दर्ज करें।", bn: "ইউজারনেম/কর্মচারী ID এবং PIN দিন।" },
   temporaryLoginTitle: { ar: "تم الدخول مؤقتًا", en: "Temporary login enabled", ur: "عارضی لاگ اِن ہو گیا", hi: "अस्थायी लॉगिन हो गया", bn: "অস্থায়ী লগইন হয়েছে" },
   temporaryLoginMessage: { ar: "تم إنشاء مسؤول محلي مؤقت لأن Firebase غير مكتملة. اربط Firebase لاحقًا لحفظ المستخدم في قاعدة البيانات بشكل دائم.", en: "A temporary local admin was created because Firebase is incomplete. Connect Firebase later to save users permanently.", ur: "Firebase مکمل نہیں، اس لیے عارضی مقامی ایڈمن بنایا گیا۔ مستقل محفوظ کرنے کے لیے Firebase جوڑیں۔", hi: "Firebase अधूरा है, इसलिए अस्थायी लोकल एडमिन बनाया गया। स्थायी सेव के लिए Firebase जोड़ें।", bn: "Firebase অসম্পূর্ণ, তাই অস্থায়ী লোকাল অ্যাডমিন তৈরি হয়েছে। স্থায়ীভাবে সংরক্ষণের জন্য Firebase যুক্ত করুন।" },
+  deviceConflictTitle:   { ar: "مسجل دخول من جهاز آخر",                               en: "Signed in on another device",                           ur: "دوسرے آلے پر لاگ اِن ہے",              hi: "दूसरे डिवाइस पर साइन इन",             bn: "অন্য ডিভাইসে সাইন ইন আছেন" },
+  deviceConflictMessage: { ar: "مسجل الدخول حالياً على جهاز آخر. هل تريد تسجيل الدخول وإزالة الجهاز الآخر؟", en: "Currently signed in on another device. Sign in here and remove the other device?", ur: "ابھی دوسرے آلے پر لاگ اِن ہے۔ یہاں لاگ اِن کریں اور دوسرا آلہ ہٹائیں؟", hi: "अभी दूसरे डिवाइस पर साइन इन है। यहाँ साइन इन करें और दूसरा डिवाइस हटाएँ?", bn: "এখন অন্য ডিভাইসে সাইন ইন আছেন। এখানে সাইন ইন করে অন্য ডিভাইস সরাবেন?" },
+  deviceConflictCancel:  { ar: "إلغاء",                                                en: "Cancel",                                                ur: "منسوخ",                                hi: "रद्द करें",                           bn: "বাতিল" },
+  deviceConflictForce:   { ar: "تسجيل الدخول وإزالة الجهاز الآخر",                   en: "Sign in and remove other device",                       ur: "لاگ اِن کریں اور دوسرا آلہ ہٹائیں",    hi: "साइन इन करें और दूसरा डिवाइस हटाएँ",  bn: "সাইন ইন করুন ও অন্য ডিভাইস সরান" },
+  laviQrScanLabel:       { ar: "امسح للدخول على أي جهاز",                             en: "Scan to sign in on any device",                         ur: "کسی بھی آلے پر سائن ان کے لیے اسکین کریں", hi: "किसी भी डिवाइस पर साइन इन के लिए स्कैन करें", bn: "যেকোনো ডিভাইসে সাইন ইনের জন্য স্ক্যান করুন" },
+  laviQrScanAnotherLabel:{ ar: "امسح للدخول على أي جهاز آخر",                         en: "Scan to sign in on another device",                     ur: "دوسرے آلے پر سائن ان کے لیے اسکین کریں",  hi: "दूसरे डिवाइस पर साइन इन के लिए स्कैन करें", bn: "অন্য ডিভাইসে সাইন ইনের জন্য স্ক্যান করুন" },
+  laviEnterBtn:          { ar: "دخول لاففيان",                                         en: "Enter Laviviane",                                       ur: "لاففیان میں داخل ہوں",                 hi: "Laviviane में प्रवेश करें",             bn: "Laviviane-এ প্রবেশ করুন" },
+  laviOrCodeDivider:     { ar: "أو أدخل كود الشركة",                                  en: "Or enter company code",                                 ur: "یا کمپنی کوڈ درج کریں",               hi: "या कंपनी कोड दर्ज करें",              bn: "অথবা কোম্পানি কোড দিন" },
 };
 
 export function tenantAccessText(key: TenantAccessTranslationKey, lang: Lang) {

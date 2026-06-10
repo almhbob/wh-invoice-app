@@ -64,6 +64,7 @@ const translations = {
   save:             { ar: "حفظ",              en: "Save",             ur: "محفوظ کریں",         hi: "सहेजें",           bn: "সংরক্ষণ" },
   cancel:           { ar: "إلغاء",            en: "Cancel",           ur: "منسوخ",              hi: "रद्द करें",         bn: "বাতিল" },
   delete:           { ar: "حذف",              en: "Delete",           ur: "حذف کریں",           hi: "हटाएं",            bn: "মুছুন" },
+  deleteConfirm:    { ar: "هل تريد حذف الفاتورة؟", en: "Delete this invoice?", ur: "کیا انوائس حذف کریں؟", hi: "इनवॉइस हटाएं?", bn: "ইনভয়েস মুছবেন?" },
   edit:             { ar: "تعديل",            en: "Edit",             ur: "ترمیم",              hi: "संपादित करें",      bn: "সম্পাদনা" },
   close:            { ar: "إغلاق",            en: "Close",            ur: "بند کریں",           hi: "बंद करें",          bn: "বন্ধ" },
   confirm:          { ar: "تأكيد",            en: "Confirm",          ur: "تصدیق",              hi: "पुष्टि करें",       bn: "নিশ্চিত করুন" },
@@ -715,6 +716,12 @@ const translations = {
   orderTrackerMobile:   { ar: "متابعة الطلبات", en: "Order Tracking", ur: "آرڈر ٹریکنگ",    hi: "ऑर्डर ट्रैकिंग",   bn: "অর্ডার ট্র্যাকিং" },
   orderTrackerEmpty:    { ar: "لا توجد طلبات اليوم", en: "No orders today", ur: "آج کوئی آرڈر نہیں", hi: "आज कोई ऑर्डर नहीं", bn: "আজ কোনো অর্ডার নেই" },
   inProgressShort:      { ar: "تنفيذ",          en: "Active",         ur: "جاری",            hi: "सक्रिय",           bn: "সক্রিয়" },
+  filterAll:            { ar: "الكل",           en: "All",            ur: "سب",              hi: "सभी",             bn: "সব" },
+  todayShort:           { ar: "اليوم",          en: "Today",          ur: "آج",              hi: "आज",              bn: "আজ" },
+  revenueToday:         { ar: "إيرادات اليوم",  en: "Today's Revenue",ur: "آج کی آمدن",      hi: "आज की आय",        bn: "আজকের আয়" },
+  deletedLabel:         { ar: "محذوف",          en: "Deleted",        ur: "حذف شدہ",         hi: "हटाया गया",       bn: "মুছে ফেলা" },
+  deletedAtLabel:       { ar: "حُذف",           en: "Deleted on",     ur: "حذف تاریخ",       hi: "हटाया",           bn: "মোছার তারিখ" },
+  restoreInvoice:       { ar: "استرجاع الفاتورة", en: "Restore Invoice", ur: "انوائس بحال کریں", hi: "इनवॉइस पुनर्स्थापित करें", bn: "ইনভয়েস পুনরুদ্ধার করুন" },
 
   // ── Archive ───────────────────────────────────────────
   archiveTrashTab:      { ar: "المحذوفة",       en: "Trash",          ur: "ردی",             hi: "ट्रैश",            bn: "ট্র্যাশ" },

@@ -34,7 +34,7 @@ const NEW_TRIAL_TENANT: CompanyTenant = {
   plan: "business",
   maxUsers: 25,
   maxInvoicesPerMonth: 1000,
-  expiresAt: "2026-06-30T23:59:59.999Z",
+  expiresAt: "2028-12-31T23:59:59.999Z",
   createdAt: new Date().toISOString(),
 };
 
@@ -218,12 +218,12 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
     const result = await checkAndLogin(found);
     if (result === "conflict") {
       Alert.alert(
-        "مسجل دخول من جهاز آخر",
-        `"${found.name}" مسجل الدخول حالياً على جهاز آخر. هل تريد تسجيل الدخول وإزالة الجهاز الآخر؟`,
+        tx("deviceConflictTitle"),
+        `"${found.name}" ${tx("deviceConflictMessage")}`,
         [
-          { text: "إلغاء", style: "cancel" },
+          { text: tx("deviceConflictCancel"), style: "cancel" },
           {
-            text: "تسجيل الدخول وإزالة الجهاز الآخر",
+            text: tx("deviceConflictForce"),
             style: "destructive",
             onPress: () => void checkAndLogin(found, true),
           },
@@ -298,19 +298,19 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
             {/* QR Code */}
             <View style={styles.laviQrBox}>
               <Image source={{ uri: "/laviviane-qr.png" }} style={styles.laviQrImg} contentFit="contain" />
-              <Text style={styles.laviQrLabel}>امسح للدخول على أي جهاز</Text>
+              <Text style={styles.laviQrLabel}>{tx("laviQrScanLabel")}</Text>
             </View>
 
             {/* Direct Entry */}
             <TouchableOpacity style={styles.laviEnterBtn} onPress={unlockLavivianeDirect}>
               <Feather name="log-in" size={18} color="#d6b56d" />
-              <Text style={styles.laviEnterText}>دخول لاففيان</Text>
+              <Text style={styles.laviEnterText}>{tx("laviEnterBtn")}</Text>
             </TouchableOpacity>
 
             {/* Divider */}
             <View style={styles.laviDividerRow}>
               <View style={styles.laviDividerLine} />
-              <Text style={styles.laviDividerText}>أو أدخل كود الشركة</Text>
+              <Text style={styles.laviDividerText}>{tx("laviOrCodeDivider")}</Text>
               <View style={styles.laviDividerLine} />
             </View>
 
@@ -358,7 +358,7 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
               </View>
               <View style={styles.laviQrBoxSmall}>
                 <Image source={{ uri: "/laviviane-qr.png" }} style={styles.laviQrImgSmall} contentFit="contain" />
-                <Text style={styles.laviQrLabel}>امسح للدخول على أي جهاز آخر</Text>
+                <Text style={styles.laviQrLabel}>{tx("laviQrScanAnotherLabel")}</Text>
               </View>
             </>
           )}
