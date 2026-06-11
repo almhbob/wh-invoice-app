@@ -49,6 +49,16 @@ const KNOWN_TRIAL_COMPANIES: Record<string, CompanyTenant> = {
     expiresAt: "2027-12-31T23:59:59.000Z",
     createdAt: "2026-05-22T00:00:00.000Z",
   },
+  "nukhba-food": {
+    id: "nukhba-food",
+    name: "النخبة للمأكولات الراقية",
+    slug: "nukhba",
+    status: "active",
+    plan: "starter",
+    maxUsers: 5,
+    maxInvoicesPerMonth: 800,
+    createdAt: "2026-01-01T00:00:00.000Z",
+  },
   "new-trial-company": {
     id: "new-trial-company",
     name: "الشركة التجريبية",

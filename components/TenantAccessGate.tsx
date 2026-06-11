@@ -69,6 +69,74 @@ const LAVIVIANE_STATIC_USERS: BootstrapEmployee[] = [
   },
 ];
 
+const NUKHBA_COMPANY_ID = "nukhba-food";
+
+const NUKHBA_TENANT: CompanyTenant = {
+  id: NUKHBA_COMPANY_ID,
+  name: "النخبة للمأكولات الراقية",
+  slug: "nukhba",
+  status: "active",
+  plan: "starter",
+  maxUsers: 5,
+  maxInvoicesPerMonth: 800,
+  createdAt: "2026-01-01T00:00:00.000Z",
+};
+
+const NUKHBA_STATIC_USERS: BootstrapEmployee[] = [
+  {
+    id: "local-nukhba-food-admin001",
+    companyId: NUKHBA_COMPANY_ID,
+    name: "مدير النخبة",
+    employeeId: "NK001",
+    username: "nk001",
+    pinCode: "5678",
+    role: "admin",
+    permissions: ["*"],
+    status: "active",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    isLocalBootstrap: true,
+  },
+  {
+    id: "local-nukhba-food-cashier001",
+    companyId: NUKHBA_COMPANY_ID,
+    name: "كاشير النخبة",
+    employeeId: "NK002",
+    username: "nk002",
+    pinCode: "5678",
+    role: "cashier",
+    permissions: [],
+    status: "active",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    isLocalBootstrap: true,
+  },
+  {
+    id: "local-nukhba-food-halwa001",
+    companyId: NUKHBA_COMPANY_ID,
+    name: "موظف الحلويات",
+    employeeId: "NK003",
+    username: "nk003",
+    pinCode: "5678",
+    role: "halwa",
+    permissions: [],
+    status: "active",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    isLocalBootstrap: true,
+  },
+  {
+    id: "local-nukhba-food-packaging001",
+    companyId: NUKHBA_COMPANY_ID,
+    name: "موظف التغليف",
+    employeeId: "NK004",
+    username: "nk004",
+    pinCode: "5678",
+    role: "packaging",
+    permissions: [],
+    status: "active",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    isLocalBootstrap: true,
+  },
+];
+
 const NEW_TRIAL_USER: BootstrapEmployee = {
   id: "local-new-trial-company-trial-admin",
   companyId: NEW_TRIAL_TENANT.id,
@@ -137,10 +205,16 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
 
   const allUsers = useMemo(() => {
     const firestoreAndLocal = [...employees, ...localUsers];
-    if (company.id !== LAVIVIANE_COMPANY_ID) return firestoreAndLocal;
     const existingIds = new Set(firestoreAndLocal.map((e) => e.employeeId.toLowerCase()));
-    const extras = LAVIVIANE_STATIC_USERS.filter((u) => !existingIds.has(u.employeeId.toLowerCase()));
-    return [...firestoreAndLocal, ...extras];
+    if (company.id === LAVIVIANE_COMPANY_ID) {
+      const extras = LAVIVIANE_STATIC_USERS.filter((u) => !existingIds.has(u.employeeId.toLowerCase()));
+      return [...firestoreAndLocal, ...extras];
+    }
+    if (company.id === NUKHBA_COMPANY_ID) {
+      const extras = NUKHBA_STATIC_USERS.filter((u) => !existingIds.has(u.employeeId.toLowerCase()));
+      return [...firestoreAndLocal, ...extras];
+    }
+    return firestoreAndLocal;
   }, [employees, localUsers, company.id]);
   const employeeCountLabel = useMemo(() => allUsers.length ? `${allUsers.length} ${tx("usersCount")}` : tx("noUsers"), [allUsers.length, lang]);
   const shouldShowBootstrapForm = !isLoading || employeeLoadTimedOut || allUsers.length > 0;
@@ -174,6 +248,10 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
   const unlockNewTrial = async () => {
     await unlockTenant(NEW_TRIAL_TENANT, NEW_TRIAL_USER);
     Alert.alert(tx("trialReadyTitle"), tx("trialReadyMessage"));
+  };
+
+  const unlockNukhba = async () => {
+    await unlockTenant(NUKHBA_TENANT);
   };
 
   const unlockByCode = async () => {
@@ -341,6 +419,24 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
           <TouchableOpacity style={[styles.primaryBtn, { flexDirection: rowDirection }]} onPress={unlockByCode}><Feather name="log-in" size={16} color="#fff" /><Text style={styles.primaryText}>{tx("loginByCode")}</Text></TouchableOpacity>
           <TouchableOpacity style={[styles.secondaryBtn, { flexDirection: rowDirection }]} onPress={unlockNewTrial}><Feather name="star" size={16} color={Colors.gold} /><Text style={styles.secondaryText}>{tx("createTrialCompany")}</Text></TouchableOpacity>
           <TouchableOpacity style={[styles.secondaryBtn, { flexDirection: rowDirection }]} onPress={unlockDemo}><Feather name="briefcase" size={16} color={Colors.gold} /><Text style={styles.secondaryText}>{tx("openDemoCompany")}</Text></TouchableOpacity>
+
+          {/* Demo divider */}
+          <View style={styles.demoSectionRow}>
+            <View style={styles.laviDividerLine} />
+            <Text style={styles.demoSectionLabel}>نماذج حية</Text>
+            <View style={styles.laviDividerLine} />
+          </View>
+
+          {/* Nukhba demo company */}
+          <TouchableOpacity style={[styles.nukhbaBtn, { flexDirection: rowDirection }]} onPress={unlockNukhba}>
+            <View style={styles.nukhbaIconBox}>
+              <Text style={styles.nukhbaIcon}>🍽️</Text>
+            </View>
+            <View style={{ flex: 1, gap: 1 }}>
+              <Text style={styles.nukhbaBtnTitle}>النخبة للمأكولات الراقية</Text>
+              <Text style={styles.nukhbaBtnSub}>Nukhba Fine Foods · Starter Plan · كود: nukhba-food</Text>
+            </View>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     );
@@ -361,6 +457,18 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
                 <Text style={styles.laviQrLabel}>{tx("laviQrScanAnotherLabel")}</Text>
               </View>
             </>
+          )}
+          {company.id === NUKHBA_COMPANY_ID && (
+            <View style={styles.nukhbaBanner}>
+              <Text style={styles.nukhbaBannerTitle}>🍽️ النخبة للمأكولات الراقية</Text>
+              <Text style={styles.nukhbaBannerSub}>Nukhba Fine Foods · Starter Plan</Text>
+              <View style={styles.nukhbaPillRow}>
+                <View style={[styles.nukhbaPill, { backgroundColor: "#0891B218" }]}><Text style={[styles.nukhbaPillTxt, { color: "#0891B2" }]}>5 مستخدمين</Text></View>
+                <View style={[styles.nukhbaPill, { backgroundColor: "#7C3AED18" }]}><Text style={[styles.nukhbaPillTxt, { color: "#7C3AED" }]}>800 فاتورة/شهر</Text></View>
+                <View style={[styles.nukhbaPill, { backgroundColor: "#05966918" }]}><Text style={[styles.nukhbaPillTxt, { color: "#059669" }]}>نشط</Text></View>
+              </View>
+              <Text style={styles.nukhbaCredLabel}>المستخدمون: NK001–NK004 · رمز: 5678</Text>
+            </View>
           )}
           <TouchableOpacity style={styles.switchBtn} onPress={resetCompany}><Text style={styles.switchText}>{tx("changeCompany")}</Text></TouchableOpacity>
           <Text style={styles.title}>{tx("employeeLoginTitle")}</Text>
@@ -493,4 +601,43 @@ const styles = StyleSheet.create({
   switchText: { color: Colors.accent, fontSize: 12, fontWeight: "900" },
   list: { gap: 10 },
   loadingBox: { gap: 10, alignItems: "center", justifyContent: "center", paddingVertical: 20 },
+
+  // Demo section divider
+  demoSectionRow: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 },
+  demoSectionLabel: { color: Colors.textMuted, fontSize: 11, fontWeight: "700", letterSpacing: 0.5 },
+
+  // Nukhba demo company button
+  nukhbaBtn: {
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: "#0891B230",
+    backgroundColor: "#0891B208",
+  },
+  nukhbaIconBox: {
+    width: 36, height: 36, borderRadius: 10,
+    backgroundColor: "#0891B218", alignItems: "center", justifyContent: "center",
+  },
+  nukhbaIcon: { fontSize: 18 },
+  nukhbaBtnTitle: { fontSize: 13, fontWeight: "800", color: Colors.text },
+  nukhbaBtnSub: { fontSize: 10, color: Colors.textMuted, fontWeight: "600" },
+
+  // Nukhba banner (shown on employee login screen)
+  nukhbaBanner: {
+    backgroundColor: "#0891B208",
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: "#0891B230",
+    padding: 14,
+    gap: 6,
+  },
+  nukhbaBannerTitle: { fontSize: 15, fontWeight: "900", color: "#0891B2", textAlign: "center" },
+  nukhbaBannerSub: { fontSize: 11, color: "#0891B280", textAlign: "center", fontWeight: "600" },
+  nukhbaPillRow: { flexDirection: "row", gap: 6, justifyContent: "center", flexWrap: "wrap" },
+  nukhbaPill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
+  nukhbaPillTxt: { fontSize: 10, fontWeight: "700" },
+  nukhbaCredLabel: { fontSize: 10, color: Colors.textMuted, textAlign: "center", fontWeight: "600" },
 });
