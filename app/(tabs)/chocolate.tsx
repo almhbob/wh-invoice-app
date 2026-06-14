@@ -35,8 +35,8 @@ export default function ChocolateScreen() {
         <View style={[styles.lockedIcon, { backgroundColor: Colors.chocolate + "18" }]}>
           <Feather name="lock" size={36} color={Colors.chocolate} />
         </View>
-        <Text style={styles.lockedTitle}>لا تملك صلاحية الوصول</Text>
-        <Text style={styles.lockedSub}>هذا القسم مخصص لموظفي قسم الشوكولاتة</Text>
+        <Text style={styles.lockedTitle}>{t("accessDeniedTitle")}</Text>
+        <Text style={styles.lockedSub}>{t("accessDeniedChocolate")}</Text>
       </View>
     );
   }

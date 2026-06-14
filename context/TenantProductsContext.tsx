@@ -143,21 +143,36 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
     async (data: Omit<Product, "id" | "companyId" | "createdAt" | "updatedAt">): Promise<Product> => {
       const now = new Date().toISOString();
       const payload = { ...data, companyId, createdAt: now, updatedAt: now };
-      const ref = await addDoc(productsCollection(), clean(payload));
-      return { id: ref.id, ...payload };
+      try {
+        const ref = await addDoc(productsCollection(), clean(payload));
+        return { id: ref.id, ...payload };
+      } catch (err) {
+        console.error("Firestore addProduct failed:", err);
+        throw err;
+      }
     },
     [companyId, productsCollection]
   );
 
   const updateProduct = useCallback(
     async (id: string, data: Partial<Omit<Product, "id" | "createdAt">>) => {
-      await updateDoc(productDoc(id), clean({ ...data, companyId, updatedAt: new Date().toISOString() }));
+      try {
+        await updateDoc(productDoc(id), clean({ ...data, companyId, updatedAt: new Date().toISOString() }));
+      } catch (err) {
+        console.error("Firestore updateProduct failed:", err);
+        throw err;
+      }
     },
     [companyId, productDoc]
   );
 
   const deleteProduct = useCallback(async (id: string) => {
-    await deleteDoc(productDoc(id));
+    try {
+      await deleteDoc(productDoc(id));
+    } catch (err) {
+      console.error("Firestore deleteProduct failed:", err);
+      throw err;
+    }
   }, [productDoc]);
 
   return (
