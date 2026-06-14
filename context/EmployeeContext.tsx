@@ -28,6 +28,7 @@ import {
 } from "@/constants/branchSupervisorPermissions";
 import { useCompany } from "@/context/CompanyContext";
 import { db } from "@/lib/firebase";
+import { t as t_ } from "@/constants/translations";
 
 // Persistent unique ID for this browser/device — used to detect duplicate sessions
 function getOrCreateDeviceId(): string {
@@ -135,7 +136,7 @@ function mergeSessionIntoEmployees(employees: Employee[], sessionEmployee: Emplo
 }
 
 export function EmployeeProvider({ children }: { children: React.ReactNode }) {
-  const { companyId } = useCompany();
+  const { companyId, company } = useCompany();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [currentEmployee, setCurrentEmployeeState] = useState<Employee | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -317,6 +318,14 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
     async (data: Omit<Employee, "id" | "createdAt" | "companyId">): Promise<Employee> => {
       if (currentEmployee?.role === "branch_supervisor" && !canBranchSupervisorAssignRole(data.role)) {
         throw new Error("BRANCH_SUPERVISOR_CANNOT_ASSIGN_PROTECTED_ROLE");
+      }
+
+      const lang = "ar" as const;
+      const activeCount = employees.filter((e) => !e.isLocalFallback && !(e as Record<string, unknown>).isLocalBootstrap && e.status !== "suspended").length;
+      if (company.maxUsers && activeCount >= company.maxUsers) {
+        const msg = t_("limitMaxUsersMsg", lang).replace("{n}", String(company.maxUsers));
+        Alert.alert(t_("limitMaxUsersTitle", lang), msg);
+        throw new Error("MAX_USERS_EXCEEDED");
       }
 
       const now = new Date().toISOString();

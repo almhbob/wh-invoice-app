@@ -775,6 +775,76 @@ const translations = {
   settingsSupport:       { ar: "تواصل مع الدعم",       en: "Contact Support",      ur: "سپورٹ سے رابطہ",       hi: "सहायता से संपर्क करें", bn: "সহায়তায় যোগাযোগ করুন" },
   settingsSessionSection:{ ar: "الجلسة",               en: "Session",              ur: "سیشن",                  hi: "सत्र",                 bn: "সেশন" },
   settingsLogoutConfirm: { ar: "هل تريد تسجيل خروج",  en: "Sign out",             ur: "لاگ آؤٹ کریں",          hi: "साइन आउट करें",        bn: "সাইন আউট করুন" },
+
+  // ── Admin – Employee management ───────────────────────────────────
+  adminEmpDupId:      { ar: "الرقم الوظيفي مستخدم مسبقاً",              en: "Employee ID already in use",                ur: "ملازم نمبر پہلے سے استعمال میں",           hi: "कर्मचारी आईडी पहले से उपयोग में",          bn: "কর্মচারী আইডি ইতিমধ্যে ব্যবহৃত" },
+  adminEmpSuspendMsg: { ar: "سيتم إيقاف حساب",                          en: "Will suspend account for",                  ur: "اکاؤنٹ معطل کیا جائے گا",                 hi: "खाता निलंबित किया जाएगा",                   bn: "অ্যাকাউন্ট স্থগিত করা হবে" },
+  adminEmpActivateMsg:{ ar: "سيتم تفعيل حساب",                          en: "Will activate account for",                 ur: "اکاؤنٹ فعال کیا جائے گا",                  hi: "खाता सक्रिय किया जाएगा",                    bn: "অ্যাকাউন্ট সক্রিয় করা হবে" },
+  adminChangeRole:    { ar: "تغيير الدور",                               en: "Change Role",                               ur: "کردار تبدیل کریں",                         hi: "भूमिका बदलें",                              bn: "ভূমিকা পরিবর্তন করুন" },
+  adminChooseRoleFor: { ar: "اختر الدور الجديد لـ",                     en: "Choose new role for",                       ur: "نئے کردار کا انتخاب کریں",                 hi: "नई भूमिका चुनें",                           bn: "নতুন ভূমিকা বেছে নিন" },
+  adminEmpActiveLabel:{ ar: "● نشط",                                     en: "● Active",                                  ur: "● فعال",                                   hi: "● सक्रिय",                                  bn: "● সক্রিয়" },
+  adminEmpSuspLabel:  { ar: "● موقوف",                                   en: "● Suspended",                               ur: "● معطل",                                   hi: "● निलंबित",                                 bn: "● স্থগিত" },
+  adminEmpFilterActive:{ ar: "نشط",                                      en: "Active",                                    ur: "فعال",                                     hi: "सक्रिय",                                    bn: "সক্রিয়" },
+  adminEmpFilterSusp: { ar: "موقوف",                                     en: "Suspended",                                 ur: "معطل",                                     hi: "निलंबित",                                   bn: "স্থগিত" },
+  adminSuspendAcc:    { ar: "تعليق الحساب",                              en: "Suspend Account",                           ur: "اکاؤنٹ معطل کریں",                         hi: "खाता निलंबित करें",                         bn: "অ্যাকাউন্ট স্থগিত করুন" },
+  adminActivateAcc:   { ar: "تفعيل الحساب",                             en: "Activate Account",                          ur: "اکاؤنٹ فعال کریں",                         hi: "खाता सक्रिय करें",                          bn: "অ্যাকাউন্ট সক্রিয় করুন" },
+  adminEmpNoCategory: { ar: "لا يوجد موظفون في هذه الفئة",              en: "No employees in this category",             ur: "اس زمرے میں کوئی ملازم نہیں",              hi: "इस श्रेणी में कोई कर्मचारी नहीं",           bn: "এই বিভাগে কোনো কর্মচারী নেই" },
+
+  // ── Admin – Financial stats ────────────────────────────────────────
+  adminStatRevenue:   { ar: "إيرادات",                                  en: "Revenue",                                   ur: "آمدنی",                                    hi: "राजस्व",                                    bn: "আয়" },
+  adminPmTitle:       { ar: "طرق الدفع",                                en: "Payment Methods",                           ur: "ادائیگی کے طریقے",                         hi: "भुगतान के तरीके",                           bn: "পেমেন্ট পদ্ধতি" },
+
+  // ── Admin – Operations short labels ───────────────────────────────
+  adminStatTotal:     { ar: "إجمالي",                                   en: "Total",                                     ur: "مجموعی",                                   hi: "कुल",                                       bn: "মোট" },
+  adminStatWaiting:   { ar: "انتظار",                                   en: "Wait",                                      ur: "انتظار",                                   hi: "प्रतीक्षा",                                 bn: "অপেক্ষা" },
+  adminStatPreparing: { ar: "تحضير",                                    en: "Prep",                                      ur: "تیاری",                                    hi: "तैयारी",                                    bn: "প্রস্তুতি" },
+  adminStatDone:      { ar: "تم",                                       en: "Done",                                      ur: "مکمل",                                     hi: "हो गया",                                    bn: "সম্পন্ন" },
+
+  // ── Admin – Offers modal labels ────────────────────────────────────
+  adminOfferPhoneLbl: { ar: "رقم هاتف الزبون *",                        en: "Customer Phone *",                          ur: "گاہک کا فون *",                            hi: "ग्राहक फोन *",                              bn: "গ্রাহক ফোন *" },
+  adminOfferNameOpt:  { ar: "اسم الزبون (اختياري)",                     en: "Customer name (optional)",                  ur: "گاہک کا نام (اختیاری)",                    hi: "ग्राहक नाम (वैकल्पिक)",                     bn: "গ্রাহক নাম (ঐচ্ছিক)" },
+  adminOfferTypeLbl:  { ar: "نوع الخصم",                                en: "Discount Type",                             ur: "رعایت کی قسم",                             hi: "छूट का प्रकार",                             bn: "ছাড়ের ধরন" },
+  adminOfferPct:      { ar: "نسبة %",                                   en: "Percent %",                                 ur: "فیصد %",                                   hi: "प्रतिशत %",                                 bn: "শতাংশ %" },
+  adminOfferFixed:    { ar: "مبلغ ثابت ر.س",                           en: "Fixed Amount SAR",                          ur: "مقررہ رقم ر.س",                            hi: "निश्चित राशि SAR",                          bn: "নির্দিষ্ট পরিমাণ SAR" },
+  adminOfferValLbl:   { ar: "قيمة الخصم *",                            en: "Discount Value *",                          ur: "رعایت کی قیمت *",                          hi: "छूट का मूल्य *",                            bn: "ছাড়ের পরিমাণ *" },
+  adminOfferReasonLbl:{ ar: "سبب العرض",                               en: "Offer Reason",                              ur: "پیشکش کی وجہ",                             hi: "ऑफर का कारण",                               bn: "অফারের কারণ" },
+  adminOfferUsageLim: { ar: "تحديد عدد الاستخدامات",                   en: "Limit usage count",                         ur: "استعمال کی حد مقرر کریں",                  hi: "उपयोग सीमा निर्धारित करें",                 bn: "ব্যবহারের সীমা নির্ধারণ করুন" },
+  adminOfferExpiryLbl:{ ar: "تحديد تاريخ انتهاء العرض",               en: "Set offer expiry date",                     ur: "میعاد ختم کی تاریخ",                       hi: "समाप्ति तिथि निर्धारित करें",               bn: "মেয়াদ শেষের তারিখ নির্ধারণ করুন" },
+  adminOfferNotesLbl: { ar: "ملاحظات (اختياري)",                       en: "Notes (optional)",                          ur: "نوٹس (اختیاری)",                           hi: "नोट्स (वैकल्पिक)",                          bn: "নোট (ঐচ্ছিক)" },
+  adminOfferExpiresAt:{ ar: "ينتهي",                                   en: "Expires",                                   ur: "ختم ہوگا",                                 hi: "समाप्त",                                    bn: "মেয়াদ শেষ" },
+  adminOfferUsageCount:{ ar: "استخدام",                                en: "uses",                                      ur: "استعمال",                                  hi: "उपयोग",                                     bn: "ব্যবহার" },
+  adminSaveFail:      { ar: "فشل الحفظ، حاول مرة أخرى",               en: "Save failed, try again",                    ur: "محفوظ ناکام، دوبارہ کوشش کریں",            hi: "सहेजने में विफल, पुनः प्रयास करें",         bn: "সংরক্ষণ ব্যর্থ, আবার চেষ্টা করুন" },
+
+  // ── Admin – Price request ──────────────────────────────────────────
+  adminModifLabel:    { ar: "التعديل:",                                 en: "Change:",                                   ur: "تبدیلی:",                                  hi: "बदलाव:",                                    bn: "পরিবর্তন:" },
+
+  // ── Admin – Features section ───────────────────────────────────────
+  adminFeaturesDesc:  { ar: "تفعيل أو تعطيل الأقسام والميزات",         en: "Enable or disable sections & features",     ur: "حصے اور خصوصیات فعال یا غیر فعال کریں",   hi: "विभाग और सुविधाएं सक्षम/अक्षम करें",       bn: "বিভাগ ও সুবিধাগুলো সক্রিয়/নিষ্ক্রিয় করুন" },
+
+  // ── Admin – Printer section ────────────────────────────────────────
+  adminPrinterTitle:  { ar: "إعدادات الطابعة",                         en: "Printer Settings",                          ur: "پرنٹر ترتیبات",                            hi: "प्रिंटर सेटिंग्स",                          bn: "প্রিন্টার সেটিংস" },
+  adminPrinterDesc:   { ar: "ربط وضبط الطابعة الحرارية أو أي طابعة متصلة", en: "Connect & configure thermal or any printer", ur: "حرارتی یا کسی بھی پرنٹر کو جوڑیں",       hi: "थर्मल या किसी प्रिंटर को कनेक्ट करें",     bn: "থার্মাল বা যেকোনো প্রিন্টার সংযুক্ত করুন" },
+  adminPrinterOpen:   { ar: "فتح إعدادات الطابعة",                    en: "Open Printer Settings",                     ur: "پرنٹر ترتیبات کھولیں",                     hi: "प्रिंटर सेटिंग्स खोलें",                    bn: "প্রিন্টার সেটিংস খুলুন" },
+
+  // ── Admin – Misc ───────────────────────────────────────────────────
+  adminNotSignedIn:   { ar: "غير مسجّل",                               en: "Not signed in",                             ur: "لاگ ان نہیں",                              hi: "साइन इन नहीं",                              bn: "সাইন ইন করা হয়নি" },
+
+  // ── Subscription / plan limits ────────────────────────────────────
+  limitMaxUsersTitle: { ar: "تم بلوغ الحد الأقصى للموظفين",            en: "Employee Limit Reached",                    ur: "ملازمین کی حد پہنچ گئی",                   hi: "कर्मचारी सीमा पहुँच गई",                    bn: "কর্মচারীর সীমা পৌঁছে গেছে" },
+  limitMaxUsersMsg:   { ar: "الخطة الحالية تسمح بـ {n} موظف كحد أقصى", en: "Current plan allows {n} employees max",    ur: "موجودہ پلان {n} ملازمین تک محدود ہے",      hi: "वर्तमान योजना अधिकतम {n} कर्मचारियों की अनुमति देती है", bn: "বর্তমান পরিকল্পনায় সর্বোচ্চ {n} জন কর্মচারী" },
+  limitMaxInvTitle:   { ar: "تم بلوغ الحد الشهري للفواتير",            en: "Monthly Invoice Limit Reached",             ur: "ماہانہ انوائس کی حد پہنچ گئی",             hi: "मासिक चालान सीमा पहुँच गई",                 bn: "মাসিক ইনভয়েস সীমা পৌঁছে গেছে" },
+  limitMaxInvMsg:     { ar: "تم الوصول إلى الحد الشهري ({n} فاتورة)",  en: "Monthly limit reached ({n} invoices)",      ur: "ماہانہ حد ({n} انوائس) پہنچ گئی",          hi: "मासिक सीमा ({n} चालान) पहुँची",             bn: "মাসিক সীমা ({n} ইনভয়েস) পৌঁছে গেছে" },
+
+  // ── Offline indicator ──────────────────────────────────────────────
+  offlineBanner:      { ar: "لا يوجد اتصال بالإنترنت",                 en: "No internet connection",                    ur: "انٹرنیٹ کنکشن نہیں",                       hi: "इंटरनेट कनेक्शन नहीं",                      bn: "ইন্টারনেট সংযোগ নেই" },
+  offlineBannerSub:   { ar: "البيانات المخزنة محلياً تُعرض",            en: "Showing locally cached data",               ur: "مقامی ڈیٹا دکھایا جا رہا ہے",              hi: "स्थानीय कैश डेटा दिखाया जा रहा है",         bn: "স্থানীয় ক্যাশ ডেটা দেখানো হচ্ছে" },
+  // ── Offer modal placeholders ───────────────────────────────────────
+  adminOfferPctPh:    { ar: "مثال: 15",                                en: "e.g. 15",                                   ur: "مثلاً: 15",                                 hi: "उदा: 15",                                   bn: "যেমন: 15" },
+  adminOfferFixedPh:  { ar: "مثال: 25.00",                            en: "e.g. 25.00",                                ur: "مثلاً: 25.00",                              hi: "उदा: 25.00",                                bn: "যেমন: 25.00" },
+  adminOfferReasonPh: { ar: "أو اكتب سبباً مخصصاً...",               en: "Or write a custom reason...",               ur: "یا اپنی وجہ لکھیں...",                     hi: "या कस्टम कारण लिखें...",                    bn: "বা কাস্টম কারণ লিখুন..." },
+  adminOfferUsagePh:  { ar: "عدد مرات الاستخدام (مثال: 3)",           en: "Usage count (e.g. 3)",                      ur: "استعمال کی تعداد (مثلاً: 3)",              hi: "उपयोग गिनती (उदा: 3)",                      bn: "ব্যবহার সংখ্যা (যেমন: 3)" },
+  adminOfferDatePh:   { ar: "YYYY-MM-DD (مثال: 2026-06-01)",          en: "YYYY-MM-DD (e.g. 2026-06-01)",              ur: "YYYY-MM-DD (مثلاً: 2026-06-01)",           hi: "YYYY-MM-DD (उदा: 2026-06-01)",              bn: "YYYY-MM-DD (যেমন: 2026-06-01)" },
+  adminOfferNotesPh:  { ar: "أي ملاحظات...",                          en: "Any notes...",                              ur: "کوئی نوٹ...",                               hi: "कोई नोट्स...",                               bn: "কোনো নোট..." },
 } as const;
 
 export type TranslationKey = keyof typeof translations;

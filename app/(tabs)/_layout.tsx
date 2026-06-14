@@ -19,6 +19,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { EmployeeSelectorModal } from "@/components/EmployeeSelectorModal";
+import { OfflineBanner } from "@/components/OfflineBanner";
 import { Colors } from "@/constants/colors";
 import { LAVIVIANE_COMPANY_ID } from "@/constants/lavivianeProducts";
 import { PLATFORM_OWNER } from "@/constants/platform";
@@ -560,6 +561,7 @@ export default function TabLayout() {
       <View style={[ds.root, isRTL ? ds.rootRTL : ds.rootLTR]}>
         <DesktopSidebar activePath={pathname} navigate={navigate} isRTL={isRTL} />
         <View style={ds.content}>
+          <OfflineBanner />
           <View style={[ds.contentHeader, isRTL ? ds.rowRTL : ds.rowLTR]}>
             <View style={[ds.contentBadge, { backgroundColor: screenAccent }]}>
               <Text style={ds.contentBadgeText}>{screenTitle}</Text>
@@ -576,6 +578,7 @@ export default function TabLayout() {
   return (
     <View style={{ flex: 1 }}>
       <LogoHeader titleKey={screenTitle} accentColor={screenAccent} isDesktop={false} />
+      <OfflineBanner />
       <Tabs tabBar={() => <CustomTabBar />} screenOptions={{ headerShown: false }}>
         {screens}
       </Tabs>
