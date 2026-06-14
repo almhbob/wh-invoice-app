@@ -321,6 +321,7 @@ function downloadCsv(csv: string, filename: string) {
 // ─── Tab: Export ──────────────────────────────────────────────────────────────
 
 function ExportTab({ filtered, filterLbl }: { filtered: ReturnType<typeof useOrders>["orders"]; filterLbl: string }) {
+  const { t } = useLang();
   const [exporting, setExporting] = React.useState<string | null>(null);
 
   async function handleExport(type: "orders" | "products") {
@@ -347,35 +348,33 @@ function ExportTab({ filtered, filterLbl }: { filtered: ReturnType<typeof useOrd
     <View style={{ gap: 0 }}>
       {/* Summary */}
       <View style={styles.card}>
-        <SectionHeader title="ملخص البيانات القابلة للتصدير" icon="database" color={Colors.primary} />
+        <SectionHeader title={t("repExportSummaryTitle")} icon="database" color={Colors.primary} />
         <View style={exportStyles.summaryRow}>
           <View style={exportStyles.summaryItem}>
             <Feather name="file-text" size={22} color={Colors.primary} />
             <Text style={exportStyles.summaryNum}>{filtered.length}</Text>
-            <Text style={exportStyles.summaryLabel}>طلب</Text>
+            <Text style={exportStyles.summaryLabel}>{t("custOrderSingular")}</Text>
           </View>
           <View style={exportStyles.summaryDivider} />
           <View style={exportStyles.summaryItem}>
             <Feather name="package" size={22} color={Colors.gold} />
             <Text style={exportStyles.summaryNum}>{productCount}</Text>
-            <Text style={exportStyles.summaryLabel}>منتج مختلف</Text>
+            <Text style={exportStyles.summaryLabel}>{t("repDiffProducts")}</Text>
           </View>
           <View style={exportStyles.summaryDivider} />
           <View style={exportStyles.summaryItem}>
             <Feather name="dollar-sign" size={22} color={Colors.success} />
             <Text style={exportStyles.summaryNum}>{fmtCurrency(totalRevenue)}</Text>
-            <Text style={exportStyles.summaryLabel}>إجمالي الإيراد</Text>
+            <Text style={exportStyles.summaryLabel}>{t("repTotalRevenue")}</Text>
           </View>
         </View>
       </View>
 
       {/* Export buttons */}
       <View style={styles.card}>
-        <SectionHeader title="تصدير البيانات" icon="download" color={Colors.gold} />
+        <SectionHeader title={t("repExportDataTitle")} icon="download" color={Colors.gold} />
         <Text style={exportStyles.hint}>
-          {Platform.OS === "web"
-            ? "سيتم تحميل ملف CSV مباشرة إلى جهازك."
-            : "سيتم مشاركة ملف CSV عبر التطبيقات المتاحة."}
+          {Platform.OS === "web" ? t("repExportCsvWeb") : t("repExportCsvMobile")}
         </Text>
 
         <TouchableOpacity
@@ -387,9 +386,9 @@ function ExportTab({ filtered, filterLbl }: { filtered: ReturnType<typeof useOrd
           <Feather name={exporting === "orders" ? "loader" : "download"} size={18} color="#fff" />
           <View style={{ flex: 1 }}>
             <Text style={exportStyles.exportBtnTitle}>
-              {exporting === "orders" ? "جاري التصدير..." : "تصدير قائمة الطلبات"}
+              {exporting === "orders" ? t("repExporting") : t("repExportOrdersBtn")}
             </Text>
-            <Text style={exportStyles.exportBtnSub}>{filtered.length} طلب · CSV</Text>
+            <Text style={exportStyles.exportBtnSub}>{filtered.length} {t("custOrderSingular")} · CSV</Text>
           </View>
           <View style={exportStyles.csvTag}><Text style={exportStyles.csvTagText}>CSV</Text></View>
         </TouchableOpacity>
@@ -403,16 +402,16 @@ function ExportTab({ filtered, filterLbl }: { filtered: ReturnType<typeof useOrd
           <Feather name={exporting === "products" ? "loader" : "download"} size={18} color="#fff" />
           <View style={{ flex: 1 }}>
             <Text style={exportStyles.exportBtnTitle}>
-              {exporting === "products" ? "جاري التصدير..." : "تصدير ملخص المنتجات"}
+              {exporting === "products" ? t("repExporting") : t("repExportProductsBtn")}
             </Text>
-            <Text style={exportStyles.exportBtnSub}>{productCount} منتج · CSV</Text>
+            <Text style={exportStyles.exportBtnSub}>{productCount} {t("repDiffProducts")} · CSV</Text>
           </View>
           <View style={exportStyles.csvTag}><Text style={exportStyles.csvTagText}>CSV</Text></View>
         </TouchableOpacity>
 
         {filtered.length === 0 && (
           <Text style={[exportStyles.hint, { color: Colors.accent, marginTop: 8 }]}>
-            لا توجد بيانات في الفترة المحددة
+            {t("repNoDataInPeriod")}
           </Text>
         )}
       </View>
@@ -421,7 +420,7 @@ function ExportTab({ filtered, filterLbl }: { filtered: ReturnType<typeof useOrd
       <View style={[styles.card, { flexDirection: "row", alignItems: "flex-start", gap: 10 }]}>
         <Feather name="info" size={15} color={Colors.info} style={{ marginTop: 1 }} />
         <Text style={[exportStyles.hint, { flex: 1, marginTop: 0 }]}>
-          الملفات بصيغة CSV مدعومة في Excel، Google Sheets، وجميع برامج الجداول. تأكد من فتح الملف بترميز UTF-8 لعرض العربية صحيحاً.
+          {t("repCsvNote")}
         </Text>
       </View>
     </View>
@@ -1031,8 +1030,8 @@ function ShiftCard({ shift }: { shift: ClosedShift }) {
       `🔄 ${t("shiftTransfer")}: ${fmtCurrency(s.transferAmount)}`,
       ``,
       `🚗 ${t("delivery")}: ${s.deliveryCount} | 🛍 ${t("pickup")}: ${s.pickupCount}`,
-      s.insuranceTotal > 0 ? `🛡 تأمين: ${fmtCurrency(s.insuranceTotal)}` : null,
-      s.discountTotal  > 0 ? `🏷 خصومات: ${fmtCurrency(s.discountTotal)}` : null,
+      s.insuranceTotal > 0 ? `🛡 ${t("insurance_short")}: ${fmtCurrency(s.insuranceTotal)}` : null,
+      s.discountTotal  > 0 ? `🏷 ${t("discount")}: ${fmtCurrency(s.discountTotal)}` : null,
       shift.notes       ? `📝 ${t("shiftNotes")}: ${shift.notes}` : null,
       "══════════════════════════════",
     ].filter(Boolean).join("\n");
@@ -1110,14 +1109,14 @@ function ShiftCard({ shift }: { shift: ClosedShift }) {
             {s.insuranceTotal > 0 && (
               <View style={shiftStyles.extraItem}>
                 <Feather name="shield" size={12} color={Colors.info} />
-                <Text style={[shiftStyles.extraLabel, { color: Colors.info }]}>تأمين</Text>
+                <Text style={[shiftStyles.extraLabel, { color: Colors.info }]}>{t("insurance_short")}</Text>
                 <Text style={[shiftStyles.extraValue, { color: Colors.info }]}>{fmtCurrency(s.insuranceTotal)}</Text>
               </View>
             )}
             {s.discountTotal > 0 && (
               <View style={shiftStyles.extraItem}>
                 <Feather name="tag" size={12} color={Colors.accent} />
-                <Text style={[shiftStyles.extraLabel, { color: Colors.accent }]}>خصومات</Text>
+                <Text style={[shiftStyles.extraLabel, { color: Colors.accent }]}>{t("discount")}</Text>
                 <Text style={[shiftStyles.extraValue, { color: Colors.accent }]}>{fmtCurrency(s.discountTotal)}</Text>
               </View>
             )}
@@ -1138,12 +1137,13 @@ function ShiftCard({ shift }: { shift: ClosedShift }) {
 
 function ShiftsTab() {
   const { closedShifts, isLoading } = useShift();
+  const { t } = useLang();
 
   if (isLoading) {
     return (
       <View style={shiftStyles.emptyState}>
         <Feather name="clock" size={40} color={Colors.textMuted} />
-        <Text style={shiftStyles.emptyText}>جاري التحميل...</Text>
+        <Text style={shiftStyles.emptyText}>{t("loading")}</Text>
       </View>
     );
   }
@@ -1154,10 +1154,8 @@ function ShiftsTab() {
         <View style={shiftStyles.emptyIconWrap}>
           <Feather name="clock" size={36} color={Colors.textMuted} />
         </View>
-        <Text style={shiftStyles.emptyTitle}>لا توجد ورديات مغلقة بعد</Text>
-        <Text style={shiftStyles.emptyHint}>
-          استخدم زر "إغلاق الوردية" لتسجيل نهاية كل وردية
-        </Text>
+        <Text style={shiftStyles.emptyTitle}>{t("shiftNoShifts")}</Text>
+        <Text style={shiftStyles.emptyHint}>{t("shiftCloseHint")}</Text>
       </View>
     );
   }
@@ -1167,7 +1165,7 @@ function ShiftsTab() {
       <View style={shiftStyles.listHeader}>
         <Feather name="clock" size={14} color={Colors.textSecondary} />
         <Text style={shiftStyles.listHeaderText}>
-          {closedShifts.length} وردية مغلقة
+          {closedShifts.length} {t("shiftCountLabel")}
         </Text>
       </View>
       {closedShifts.map((shift) => (
@@ -1193,8 +1191,8 @@ export default function ReportsScreen() {
     { key: "products", label: t("repTabProducts"), icon: "package" },
     { key: "cashier",  label: t("repTabCashier"),  icon: "user-check" },
     { key: "delivery", label: t("repTabDelivery"), icon: "truck" },
-    { key: "export",   label: "تصدير",             icon: "download" },
-    { key: "shifts",   label: "ورديات",            icon: "clock" },
+    { key: "export",   label: t("repTabExport"),   icon: "download" },
+    { key: "shifts",   label: t("repTabShifts"),   icon: "clock" },
   ];
 
   const filtered = useMemo(
@@ -1282,7 +1280,7 @@ export default function ReportsScreen() {
             activeOpacity={0.75}
           >
             <Feather name="lock" size={14} color="#16a34a" />
-            <Text style={{ fontSize: 11, fontWeight: "700", color: "#16a34a" }}>إغلاق الوردية</Text>
+            <Text style={{ fontSize: 11, fontWeight: "700", color: "#16a34a" }}>{t("shiftClose")}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.shareBtn, { backgroundColor: Colors.primary + "12" }]}
@@ -1374,12 +1372,12 @@ export default function ReportsScreen() {
             <Text style={styles.emptyStateTitle}>{t("repNoData")}</Text>
             <Text style={styles.emptyStateHint}>
               {filter === "today"
-                ? "لا توجد فواتير اليوم بعد. ابدأ بإنشاء فاتورة من شاشة الكاشير."
+                ? t("repEmptyToday")
                 : filter === "week"
-                ? "لا توجد فواتير هذا الأسبوع. حاول توسيع نطاق البحث."
+                ? t("repEmptyWeek")
                 : filter === "month"
-                ? "لا توجد فواتير هذا الشهر."
-                : "لا توجد فواتير في النظام بعد."}
+                ? t("repEmptyMonth")
+                : t("repEmptyAll")}
             </Text>
             {filter !== "all" && (
               <TouchableOpacity
@@ -1387,7 +1385,7 @@ export default function ReportsScreen() {
                 onPress={() => { Haptics.selectionAsync(); setFilter("all"); }}
               >
                 <Feather name="calendar" size={13} color={Colors.primary} />
-                <Text style={styles.emptyStateBtnText}>عرض كل الفواتير</Text>
+                <Text style={styles.emptyStateBtnText}>{t("repShowAllBtn")}</Text>
               </TouchableOpacity>
             )}
           </View>

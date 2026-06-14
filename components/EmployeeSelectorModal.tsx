@@ -96,17 +96,17 @@ export function EmployeeSelectorModal({ visible, onClose }: Props) {
   };
 
   const handleAddEmployee = async () => {
-    if (!newName.trim()) { Alert.alert(t("errTitle"), "أدخل اسم الموظف"); return; }
-    if (!newEmpId.trim()) { Alert.alert(t("errTitle"), "أدخل الرقم الوظيفي"); return; }
+    if (!newName.trim()) { Alert.alert(t("errTitle"), t("empNameRequired")); return; }
+    if (!newEmpId.trim()) { Alert.alert(t("errTitle"), t("empIdRequired")); return; }
     const normalizedEmpId = newEmpId.trim().toUpperCase();
     const normalizedUsername = (newUsername.trim() || normalizedEmpId).toLowerCase();
     const exists = employees.find((e) => {
       const empUsername = String(e.username || e.employeeId).toLowerCase();
       return e.employeeId.toLowerCase() === normalizedEmpId.toLowerCase() || empUsername === normalizedUsername;
     });
-    if (exists) { Alert.alert(t("errTitle"), "الرقم الوظيفي أو اليوزر مستخدم مسبقاً"); return; }
+    if (exists) { Alert.alert(t("errTitle"), t("empDupIdMsg")); return; }
     if (!addRoles.includes(newRole)) {
-      Alert.alert(t("permissionTitle"), "الدور المحدد غير مسموح لهذا المستخدم.");
+      Alert.alert(t("permissionTitle"), t("empRoleRestrict"));
       return;
     }
     setSaving(true);
@@ -122,7 +122,7 @@ export function EmployeeSelectorModal({ visible, onClose }: Props) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setNewName(""); setNewEmpId(""); setNewUsername(""); setNewPin("1234"); setNewRole("cashier");
       setTab("select");
-      Alert.alert(t("successTitle"), "تمت إضافة الموظف مع يوزر ورمز دخول.");
+      Alert.alert(t("successTitle"), t("empAddedMsg"));
     } catch (error) {
       console.error("Add employee failed", error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
@@ -134,12 +134,12 @@ export function EmployeeSelectorModal({ visible, onClose }: Props) {
 
   const handleRemove = (emp: Employee) => {
     Alert.alert(
-      "حذف الموظف",
-      `هل تريد حذف "${emp.name}"؟`,
+      t("deleteEmployee"),
+      `${t("deleteEmpConfirm")} "${emp.name}"؟`,
       [
-        { text: "إلغاء", style: "cancel" },
+        { text: t("cancel"), style: "cancel" },
         {
-          text: "حذف",
+          text: t("delete"),
           style: "destructive",
           onPress: async () => {
             try { await removeEmployee(emp.id); }
@@ -157,16 +157,16 @@ export function EmployeeSelectorModal({ visible, onClose }: Props) {
           <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
             <Feather name="x" size={20} color={Colors.text} />
           </TouchableOpacity>
-          <Text style={styles.title}>الموظفون</Text>
+          <Text style={styles.title}>{t("employeesTitle")}</Text>
           <View style={{ width: 36 }} />
         </View>
 
         <View style={styles.tabs}>
           <TouchableOpacity style={[styles.tab, tab === "select" && styles.tabActive]} onPress={() => setTab("select")}>
-            <Text style={[styles.tabText, tab === "select" && styles.tabTextActive]}>اختيار الموظف</Text>
+            <Text style={[styles.tabText, tab === "select" && styles.tabTextActive]}>{t("selectEmpTab")}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={[styles.tab, tab === "add" && styles.tabActive]} onPress={() => setTab("add")}>
-            <Text style={[styles.tabText, tab === "add" && styles.tabTextActive]}>إضافة موظف</Text>
+            <Text style={[styles.tabText, tab === "add" && styles.tabTextActive]}>{t("addEmpTab")}</Text>
           </TouchableOpacity>
         </View>
 
@@ -175,15 +175,15 @@ export function EmployeeSelectorModal({ visible, onClose }: Props) {
             {currentEmployee && (
               <TouchableOpacity style={styles.logoutRow} onPress={handleLogout}>
                 <Feather name="log-out" size={15} color={Colors.accent} />
-                <Text style={styles.logoutText}>تسجيل خروج "{currentEmployee.name}"</Text>
+                <Text style={styles.logoutText}>{t("logoutEmpPrefix")} "{currentEmployee.name}"</Text>
               </TouchableOpacity>
             )}
 
             {employees.length === 0 ? (
               <View style={styles.emptyBox}>
                 <Feather name="users" size={40} color={Colors.textMuted} />
-                <Text style={styles.emptyText}>لا يوجد موظفون</Text>
-                <Text style={styles.emptySubText}>اضغط "إضافة موظف" لإضافة أول موظف</Text>
+                <Text style={styles.emptyText}>{t("noEmpYet")}</Text>
+                <Text style={styles.emptySubText}>{t("addFirstEmp")}</Text>
               </View>
             ) : (
               visibleRoles.map((role) => {
@@ -220,20 +220,20 @@ export function EmployeeSelectorModal({ visible, onClose }: Props) {
           </ScrollView>
         ) : (
           <ScrollView contentContainerStyle={styles.addContent} showsVerticalScrollIndicator={false}>
-            <Text style={styles.fieldLabel}>اسم الموظف *</Text>
-            <TextInput style={styles.input} value={newName} onChangeText={setNewName} placeholder="أدخل الاسم الكامل" placeholderTextColor={Colors.textMuted} textAlign="right" />
+            <Text style={styles.fieldLabel}>{`${t("adminEmpNameLabel")} *`}</Text>
+            <TextInput style={styles.input} value={newName} onChangeText={setNewName} placeholder={t("empFullNamePh")} placeholderTextColor={Colors.textMuted} textAlign="right" />
 
-            <Text style={styles.fieldLabel}>الرقم الوظيفي *</Text>
-            <TextInput style={styles.input} value={newEmpId} onChangeText={setNewEmpId} placeholder="مثال: EMP001" placeholderTextColor={Colors.textMuted} textAlign="right" autoCapitalize="characters" />
+            <Text style={styles.fieldLabel}>{`${t("adminEmpIdLabel")} *`}</Text>
+            <TextInput style={styles.input} value={newEmpId} onChangeText={setNewEmpId} placeholder={t("adminEmpIdPh")} placeholderTextColor={Colors.textMuted} textAlign="right" autoCapitalize="characters" />
 
-            <Text style={styles.fieldLabel}>يوزر الدخول</Text>
-            <TextInput style={styles.input} value={newUsername} onChangeText={setNewUsername} placeholder="اختياري، الافتراضي الرقم الوظيفي" placeholderTextColor={Colors.textMuted} textAlign="right" autoCapitalize="none" />
+            <Text style={styles.fieldLabel}>{t("empUsernameLbl")}</Text>
+            <TextInput style={styles.input} value={newUsername} onChangeText={setNewUsername} placeholder={t("usernameOptPh")} placeholderTextColor={Colors.textMuted} textAlign="right" autoCapitalize="none" />
 
-            <Text style={styles.fieldLabel}>رمز الدخول</Text>
-            <TextInput style={styles.input} value={newPin} onChangeText={setNewPin} placeholder="مثال: 1234" placeholderTextColor={Colors.textMuted} textAlign="right" secureTextEntry keyboardType="number-pad" />
+            <Text style={styles.fieldLabel}>{t("empPinLabel")}</Text>
+            <TextInput style={styles.input} value={newPin} onChangeText={setNewPin} placeholder={t("pinPh")} placeholderTextColor={Colors.textMuted} textAlign="right" secureTextEntry keyboardType="number-pad" />
 
-            <Text style={styles.fieldLabel}>الدور الوظيفي</Text>
-            {currentEmployee?.role === "branch_supervisor" ? <Text style={styles.permissionNote}>مشرف الفرع يستطيع إضافة الأدوار التشغيلية ومشرف القسم فقط.</Text> : null}
+            <Text style={styles.fieldLabel}>{t("adminEmpRoleLabel")}</Text>
+            {currentEmployee?.role === "branch_supervisor" ? <Text style={styles.permissionNote}>{t("branchSupAddNote")}</Text> : null}
             <View style={styles.roleGrid}>
               {addRoles.map((r) => (
                 <TouchableOpacity
@@ -249,7 +249,7 @@ export function EmployeeSelectorModal({ visible, onClose }: Props) {
 
             <TouchableOpacity style={[styles.saveBtn, saving && { opacity: 0.6 }]} onPress={handleAddEmployee} disabled={saving} activeOpacity={0.85}>
               <Feather name="user-plus" size={18} color="#fff" />
-              <Text style={styles.saveBtnText}>{saving ? "جاري الحفظ..." : "إضافة الموظف"}</Text>
+              <Text style={styles.saveBtnText}>{saving ? t("saving") : t("addEmpBtn")}</Text>
             </TouchableOpacity>
           </ScrollView>
         )}

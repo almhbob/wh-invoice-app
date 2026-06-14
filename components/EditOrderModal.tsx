@@ -17,6 +17,7 @@ import {
 
 import { DeliveryDatePicker, DeliveryTimePicker } from "@/components/DeliveryDateTimePicker";
 import { Colors } from "@/constants/colors";
+import { useLang } from "@/context/LanguageContext";
 import {
   Order,
   OrderItem,
@@ -89,6 +90,7 @@ export default function EditOrderModal({
   onClose,
   onSave,
 }: Props) {
+  const { t } = useLang();
   // ---- local state ----------------------------------------------------------
   const [items, setItems] = useState<EditableItem[]>([]);
   const [notes, setNotes] = useState("");
@@ -163,9 +165,9 @@ export default function EditOrderModal({
 
   const PAYMENT_OPTIONS: PaymentMethod[] = ["cash", "card", "transfer"];
   const PAYMENT_DISPLAY: Record<PaymentMethod, string> = {
-    cash: "نقد",
-    card: "شبكة",
-    transfer: "تحويل",
+    cash: t("cash"),
+    card: t("paidCard"),
+    transfer: t("transfer"),
   };
 
   // ---- render ---------------------------------------------------------------
@@ -204,7 +206,7 @@ export default function EditOrderModal({
             </TouchableOpacity>
 
             <Text style={styles.headerTitle}>
-              تعديل الفاتورة #{order.orderNumber}
+              {t("editOrderHeader")}{order.orderNumber}
             </Text>
 
             {/* spacer to balance the X button */}
@@ -221,17 +223,17 @@ export default function EditOrderModal({
             showsVerticalScrollIndicator={false}
           >
             {/* ---- Section: Items ---------------------------------------- */}
-            <SectionCard title="الأصناف">
+            <SectionCard title={t("itemsSection")}>
               {/* Column headers */}
               <View style={styles.itemHeaderRow}>
                 <Text style={[styles.itemHeaderCell, { flex: 3 }]}>
-                  الصنف
+                  {t("itemNameCol")}
                 </Text>
                 <Text style={[styles.itemHeaderCell, { flex: 1.2 }]}>
-                  الكمية
+                  {t("qtyCol")}
                 </Text>
                 <Text style={[styles.itemHeaderCell, { flex: 1.5 }]}>
-                  السعر
+                  {t("priceCol")}
                 </Text>
                 <View style={{ width: 32 }} />
               </View>
@@ -252,17 +254,17 @@ export default function EditOrderModal({
                 activeOpacity={0.75}
               >
                 <Feather name="plus" size={15} color={Colors.primary} />
-                <Text style={styles.addItemBtnText}>إضافة صنف</Text>
+                <Text style={styles.addItemBtnText}>{t("editAddItem")}</Text>
               </TouchableOpacity>
             </SectionCard>
 
             {/* ---- Section: Notes ---------------------------------------- */}
-            <SectionCard title="ملاحظات">
+            <SectionCard title={t("notesSection")}>
               <TextInput
                 style={[styles.textInput, styles.multilineInput]}
                 value={notes}
                 onChangeText={setNotes}
-                placeholder="أدخل الملاحظات هنا..."
+                placeholder={t("editNotesPh")}
                 placeholderTextColor={Colors.textMuted}
                 multiline
                 numberOfLines={3}
@@ -273,7 +275,7 @@ export default function EditOrderModal({
             </SectionCard>
 
             {/* ---- Section: Delivery Time --------------------------------- */}
-            <SectionCard title="موعد التسليم">
+            <SectionCard title={t("editDeliveryTime")}>
               <DeliveryDatePicker
                 value={deliveryDate}
                 onChange={(iso) => setDeliveryDate(iso)}
@@ -294,13 +296,13 @@ export default function EditOrderModal({
                   style={styles.clearDTBtn}
                 >
                   <Feather name="x-circle" size={13} color={Colors.textMuted} />
-                  <Text style={styles.clearDTText}>مسح الموعد</Text>
+                  <Text style={styles.clearDTText}>{t("editClearSchedule")}</Text>
                 </TouchableOpacity>
               )}
             </SectionCard>
 
             {/* ---- Section: Payment Method -------------------------------- */}
-            <SectionCard title="طريقة الدفع">
+            <SectionCard title={t("paymentMethod")}>
               <View style={styles.paymentRow}>
                 {PAYMENT_OPTIONS.map((method) => {
                   const active = paymentMethod === method;
@@ -332,7 +334,7 @@ export default function EditOrderModal({
             </SectionCard>
 
             {/* ---- Section: Amount Paid ----------------------------------- */}
-            <SectionCard title="المبلغ المدفوع">
+            <SectionCard title={t("amountPaid")}>
               <TextInput
                 style={styles.textInput}
                 value={amountPaidStr}
@@ -365,7 +367,7 @@ export default function EditOrderModal({
                 color={Colors.textLight}
                 style={{ marginLeft: 6 }}
               />
-              <Text style={styles.saveBtnText}>حفظ التعديلات</Text>
+              <Text style={styles.saveBtnText}>{t("editSave")}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -402,6 +404,7 @@ interface ItemRowProps {
 }
 
 function ItemRow({ item, isLast, onChange, onRemove }: ItemRowProps) {
+  const { t } = useLang();
   return (
     <View style={[styles.itemRow, !isLast && styles.itemRowBorder]}>
       {/* Name */}
@@ -409,7 +412,7 @@ function ItemRow({ item, isLast, onChange, onRemove }: ItemRowProps) {
         style={[styles.itemInput, { flex: 3 }]}
         value={item.name}
         onChangeText={(v) => onChange({ name: v })}
-        placeholder="اسم الصنف"
+        placeholder={t("editItemNamePh")}
         placeholderTextColor={Colors.textMuted}
         textAlign="right"
         returnKeyType="next"

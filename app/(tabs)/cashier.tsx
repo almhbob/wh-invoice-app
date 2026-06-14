@@ -284,7 +284,7 @@ export default function CashierScreen() {
 
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") { Alert.alert(t("permRequired"), "يحتاج التطبيق للوصول إلى الصور"); return; }
+    if (status !== "granted") { Alert.alert(t("permRequired"), t("permPhotosMsg")); return; }
     const res = await ImagePicker.launchImageLibraryAsync({ allowsEditing: true, quality: 0.8 });
     if (!res.canceled) setImageUri(res.assets[0].uri);
   };
@@ -292,7 +292,7 @@ export default function CashierScreen() {
   const addReferenceImage = async () => {
     if (referenceImages.length >= 3) return;
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") { Alert.alert(t("permRequired"), "يحتاج التطبيق للوصول إلى الصور"); return; }
+    if (status !== "granted") { Alert.alert(t("permRequired"), t("permPhotosMsg")); return; }
     const res = await ImagePicker.launchImageLibraryAsync({ allowsEditing: false, quality: 0.75 });
     if (!res.canceled) setReferenceImages((prev) => [...prev, res.assets[0].uri].slice(0, 3));
   };
@@ -462,12 +462,12 @@ export default function CashierScreen() {
       });
       const data = await response.json();
       if (data.result) {
-        Alert.alert("💡 تحليل الذكاء الاصطناعي", data.result);
+        Alert.alert(t("aiAnalysisTitle"), data.result);
       } else {
-        Alert.alert("⚠️ تنبيه", "لم نتمكن من الحصول على تحليل، تأكد من تشغيل الخادم.");
+        Alert.alert(t("warningTitle"), t("aiWarnMsg"));
       }
     } catch {
-      Alert.alert("⚠️ فشل الاتصال", "تعذّر الاتصال بخادم Termux. تأكد أنه يعمل في الخلفية.");
+      Alert.alert(t("aiConnFail"), t("aiConnFailMsg"));
     } finally {
       setIsAiLoading(false);
     }
@@ -719,7 +719,7 @@ export default function CashierScreen() {
       setExpandedItems(new Set());
       setReceiptOrder(created);
     } catch {
-      Alert.alert("خطأ", t("errSend"));
+      Alert.alert(t("errTitle"), t("errSend"));
     } finally {
       setIsSubmitting(false);
     }
@@ -727,9 +727,9 @@ export default function CashierScreen() {
 
   const handleSubmit = () => {
     const filteredItems = items.filter((i) => i.name.trim() && i.quantity > 0);
-    if (filteredItems.length === 0 && !chocoCard) { Alert.alert("خطأ", t("errItems")); return; }
+    if (filteredItems.length === 0 && !chocoCard) { Alert.alert(t("errTitle"), t("errItems")); return; }
     if (!currentEmployee) {
-      Alert.alert("تسجيل الدخول مطلوب", "يجب تسجيل الدخول أولاً — اضغط على زر تغيير في الأعلى.", [{ text: "حسناً" }]);
+      Alert.alert(t("loginRequired"), t("cashierLoginMsg"), [{ text: t("ok") }]);
       return;
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -1318,7 +1318,7 @@ export default function CashierScreen() {
         <TextInput
           style={[styles.input, { height: 75, textAlignVertical: "top" }]}
           value={notes} onChangeText={setNotes}
-          placeholder="أي ملاحظات إضافية..." placeholderTextColor={Colors.textMuted}
+          placeholder={t("notesExtraPh")} placeholderTextColor={Colors.textMuted}
           multiline textAlign="right" textAlignVertical="top"
         />
       </View>
@@ -1576,7 +1576,7 @@ export default function CashierScreen() {
             style={styles.checkoutInputField}
             value={customerName}
             onChangeText={setCustomerName}
-            placeholder="اسم العميل *"
+            placeholder={`${t("customerName")} *`}
             placeholderTextColor="rgba(255,255,255,0.3)"
             textAlign="right"
           />
@@ -1587,7 +1587,7 @@ export default function CashierScreen() {
                 style={[styles.checkoutInputField, { flex: 1 }]}
                 value={customerPhone}
                 onChangeText={setCustomerPhone}
-                placeholder="الهاتف *"
+                placeholder={`${t("customerPhone")} *`}
                 placeholderTextColor="rgba(255,255,255,0.3)"
                 keyboardType="phone-pad"
                 textAlign="right"
@@ -1599,7 +1599,7 @@ export default function CashierScreen() {
                 style={[styles.checkoutInputField, { flex: 1 }]}
                 value={customerPhone2}
                 onChangeText={setCustomerPhone2}
-                placeholder="هاتف 2"
+                placeholder={t("customerPhone2")}
                 placeholderTextColor="rgba(255,255,255,0.18)"
                 keyboardType="phone-pad"
                 textAlign="right"
@@ -2462,7 +2462,7 @@ export default function CashierScreen() {
                 disabled={isAiLoading}
               >
                 <Text style={styles.aiBtnText}>
-                  {isAiLoading ? "⏳ جارٍ التحليل..." : "🤖 تحليل بالذكاء الاصطناعي"}
+                  {isAiLoading ? t("aiLoading") : t("aiBtn")}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
@@ -2470,7 +2470,7 @@ export default function CashierScreen() {
                 onPress={() => setReceiptOrder(null)}
                 activeOpacity={0.85}
               >
-                <Text style={styles.closeReceiptText}>إغلاق</Text>
+                <Text style={styles.closeReceiptText}>{t("close")}</Text>
               </TouchableOpacity>
             </View>
           </View>
