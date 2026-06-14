@@ -15,6 +15,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Colors } from "@/constants/colors";
+import type { TranslationKey } from "@/constants/translations";
 import { useLang } from "@/context/LanguageContext";
 import { Order, useOrders } from "@/context/OrdersContext";
 import { fmtDate } from "@/utils/dateUtils";
@@ -55,24 +56,24 @@ function openWhatsApp(phone: string, message?: string) {
   Linking.openURL(url).catch(() => Linking.openURL(`https://wa.me/${intl}`));
 }
 
-function getFavoriteDepartment(orders: Order[]): string {
+function getFavoriteDepartment(orders: Order[], t: (key: TranslationKey) => string): string {
   const tally: Record<string, number> = {};
   orders.forEach((o) => {
     o.items.forEach((item) => {
-      const dept = item.department ?? "غير محدد";
+      const dept = item.department ?? "unspecified";
       tally[dept] = (tally[dept] ?? 0) + (item.quantity ?? 1);
     });
   });
   if (Object.keys(tally).length === 0) return "—";
   const topKey = Object.entries(tally).sort((a, b) => b[1] - a[1])[0][0];
-  const labels: Record<string, string> = {
-    halwa: "حلوى",
-    mawali: "موالح",
-    chocolate: "شوكولاتة",
-    cake: "كيك",
-    packaging: "تغليف",
+  const deptKeys: Record<string, TranslationKey> = {
+    halwa: "deptHalwaShort",
+    mawali: "deptMawaliShort",
+    chocolate: "deptChocolateShort",
+    cake: "deptCakeShort",
+    packaging: "deptPackagingShort",
   };
-  return labels[topKey] ?? topKey;
+  return deptKeys[topKey] ? t(deptKeys[topKey]) : t("unspecified");
 }
 
 function getTotalItems(orders: Order[]): number {
@@ -117,7 +118,7 @@ function CustomerHistoryModal({
   const insets = useSafeAreaInsets();
   const vip = isVIP(customer);
   const totalItems = getTotalItems(customer.orders);
-  const favDept = getFavoriteDepartment(customer.orders);
+  const favDept = getFavoriteDepartment(customer.orders, t);
   const whatsappMsg = `مرحباً ${customer.name}، شكراً لتعاملك معنا 🎂`;
 
   return (
@@ -176,14 +177,14 @@ function CustomerHistoryModal({
             <Text style={[styles.modalStatValue, { color: Colors.gold }]}>
               {fmtCurrency(customer.totalSpent)}
             </Text>
-            <Text style={styles.modalStatLabel}>إجمالي الإنفاق</Text>
+            <Text style={styles.modalStatLabel}>{t("custSpentLabel")}</Text>
           </View>
           <View style={styles.modalStatDivider} />
           <View style={styles.modalStatItem}>
             <Text style={[styles.modalStatValue, { color: Colors.success }]}>
               {totalItems}
             </Text>
-            <Text style={styles.modalStatLabel}>إجمالي القطع</Text>
+            <Text style={styles.modalStatLabel}>{t("custTotalItems")}</Text>
           </View>
         </View>
 
@@ -191,7 +192,7 @@ function CustomerHistoryModal({
         <View style={styles.favDeptRow}>
           <Feather name="star" size={13} color={Colors.gold} />
           <Text style={styles.favDeptText}>
-            القسم المفضل:{" "}
+            {t("custFavDept")}:{" "}
             <Text style={{ fontWeight: "700", color: Colors.text }}>
               {favDept}
             </Text>
@@ -209,7 +210,7 @@ function CustomerHistoryModal({
             activeOpacity={0.8}
           >
             <Feather name="phone" size={16} color="#fff" />
-            <Text style={styles.contactBtnText}>اتصال</Text>
+            <Text style={styles.contactBtnText}>{t("custCall")}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -221,7 +222,7 @@ function CustomerHistoryModal({
             activeOpacity={0.8}
           >
             <Feather name="message-circle" size={16} color="#fff" />
-            <Text style={styles.contactBtnText}>واتساب</Text>
+            <Text style={styles.contactBtnText}>{t("custWhatsappBtn")}</Text>
           </TouchableOpacity>
         </View>
 
@@ -531,7 +532,7 @@ export default function CustomersScreen() {
                         { color: Colors.success },
                       ]}
                     >
-                      اتصال
+                      {t("custCall")}
                     </Text>
                   </TouchableOpacity>
 
@@ -557,7 +558,7 @@ export default function CustomersScreen() {
                     <Text
                       style={[styles.quickBtnText, { color: "#25D366" }]}
                     >
-                      واتساب
+                      {t("custWhatsappBtn")}
                     </Text>
                   </TouchableOpacity>
                 </View>

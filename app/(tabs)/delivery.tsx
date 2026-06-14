@@ -34,12 +34,13 @@ const URGENCY_COLOR: Record<Urgency, string> = {
   ok: "#16a34a",
   none: Colors.textMuted,
 };
-const URGENCY_LABEL: Record<Urgency, string> = {
-  overdue: "متأخر",
-  urgent: "عاجل",
-  soon: "قريباً",
-  ok: "",
-  none: "",
+// URGENCY_LABEL is built inside components using t() — see useUrgencyLabel()
+const URGENCY_LABEL_KEYS: Record<Urgency, string | null> = {
+  overdue: "delOverdue",
+  urgent: "delUrgent",
+  soon: "delSoon",
+  ok: null,
+  none: null,
 };
 const URGENCY_RANK: Record<Urgency, number> = {
   overdue: 0, urgent: 1, soon: 2, ok: 3, none: 4,
@@ -134,6 +135,7 @@ function DeptDots({ order }: { order: Order }) {
 // ── Stats Header ──────────────────────────────────────────────────────────────
 
 function StatsHeader({ orders }: { orders: Order[] }) {
+  const { t } = useLang();
   const pendingCount = orders.filter((o) => !isDelivered(o)).length;
   const deliveredCount = orders.filter((o) => isDelivered(o)).length;
   const unassignedCount = orders.filter(isUnassigned).length;
@@ -150,13 +152,13 @@ function StatsHeader({ orders }: { orders: Order[] }) {
           <Feather name="truck" size={18} color="#fff" />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={styles.screenTitle}>إدارة التوصيل</Text>
-          <Text style={styles.screenSub}>{orders.length} طلب توصيل</Text>
+          <Text style={styles.screenTitle}>{t("delManageTitle")}</Text>
+          <Text style={styles.screenSub}>{orders.length} {t("delOrdersCount")}</Text>
         </View>
         {overdueCount > 0 && (
           <View style={styles.alertBadge}>
             <Feather name="alert-circle" size={11} color="#fff" />
-            <Text style={styles.alertBadgeText}>{overdueCount} متأخر</Text>
+            <Text style={styles.alertBadgeText}>{overdueCount} {t("delOverdue")}</Text>
           </View>
         )}
       </View>
@@ -165,11 +167,11 @@ function StatsHeader({ orders }: { orders: Order[] }) {
       <View style={styles.statsRow}>
         <View style={[styles.statCard, { borderColor: Colors.gold + "80" }]}>
           <Text style={[styles.statNum, { color: Colors.gold }]}>{pendingCount}</Text>
-          <Text style={styles.statLabel}>قيد التوصيل</Text>
+          <Text style={styles.statLabel}>{t("delInProgress")}</Text>
         </View>
         <View style={[styles.statCard, { borderColor: "#16a34a60" }]}>
           <Text style={[styles.statNum, { color: "#16a34a" }]}>{deliveredCount}</Text>
-          <Text style={styles.statLabel}>تم التسليم</Text>
+          <Text style={styles.statLabel}>{t("delDelivered")}</Text>
         </View>
         <View style={[styles.statCard, {
           borderColor: unassignedCount > 0 ? "#ea580c60" : Colors.border,
@@ -177,7 +179,7 @@ function StatsHeader({ orders }: { orders: Order[] }) {
           <Text style={[styles.statNum, { color: unassignedCount > 0 ? "#ea580c" : Colors.textMuted }]}>
             {unassignedCount}
           </Text>
-          <Text style={styles.statLabel}>بلا سائق</Text>
+          <Text style={styles.statLabel}>{t("delNoDriverTab")}</Text>
         </View>
         <View style={[styles.statCard, {
           borderColor: readyCount > 0 ? "#7c3aed60" : Colors.border,
@@ -185,7 +187,7 @@ function StatsHeader({ orders }: { orders: Order[] }) {
           <Text style={[styles.statNum, { color: readyCount > 0 ? "#7c3aed" : Colors.textMuted }]}>
             {readyCount}
           </Text>
-          <Text style={styles.statLabel}>جاهز</Text>
+          <Text style={styles.statLabel}>{t("delReadyLabel")}</Text>
         </View>
       </View>
 
@@ -193,12 +195,12 @@ function StatsHeader({ orders }: { orders: Order[] }) {
       <View style={styles.statsRow2}>
         <View style={styles.revenueCard}>
           <Feather name="dollar-sign" size={14} color={Colors.success} />
-          <Text style={styles.revenueLabel}>الإجمالي</Text>
+          <Text style={styles.revenueLabel}>{t("delAllTotal")}</Text>
           <Text style={styles.revenueValue}>{fmtCurrency(revenue)}</Text>
         </View>
         <View style={styles.completionCard}>
           <View style={styles.completionTop}>
-            <Text style={styles.completionLabel}>نسبة التسليم</Text>
+            <Text style={styles.completionLabel}>{t("delCompletionRate")}</Text>
             <Text style={styles.completionPct}>{pct}%</Text>
           </View>
           <View style={styles.progressBg}>
@@ -228,6 +230,7 @@ function DriverChips({
   selectedDriver: string | null;
   onSelect: (id: string | null) => void;
 }) {
+  const { t } = useLang();
   const drivers: DriverInfo[] = useMemo(() => {
     const map = new Map<string, DriverInfo>();
     orders.forEach((o) => {
@@ -247,7 +250,7 @@ function DriverChips({
 
   return (
     <View style={styles.chipsWrap}>
-      <Text style={styles.chipsLabel}>السائقون النشطون</Text>
+      <Text style={styles.chipsLabel}>{t("delActiveDrivers")}</Text>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -260,7 +263,7 @@ function DriverChips({
         >
           <Feather name="users" size={13} color={!selectedDriver ? "#fff" : Colors.textSecondary} />
           <Text style={[styles.driverChipText, !selectedDriver && styles.driverChipTextActive]}>
-            الكل
+            {t("delAllFilter")}
           </Text>
         </TouchableOpacity>
 
@@ -317,6 +320,7 @@ function DriverModal({
   onAssign: (id: string, driver: { name: string; employeeId: string }) => void;
 }) {
   const { employees } = useEmployee();
+  const { t } = useLang();
   const [search, setSearch] = useState("");
 
   const workload: Record<string, number> = useMemo(() => {
@@ -351,9 +355,9 @@ function DriverModal({
               <Feather name="truck" size={16} color="#fff" />
             </View>
             <View>
-              <Text style={styles.modalTitle}>إسناد الطلب لسائق</Text>
+              <Text style={styles.modalTitle}>{t("delAssignTitle")}</Text>
               {orderNumber ? (
-                <Text style={styles.modalSub}>طلب #{orderNumber}</Text>
+                <Text style={styles.modalSub}>#{orderNumber}</Text>
               ) : null}
             </View>
           </View>
@@ -365,7 +369,7 @@ function DriverModal({
                 <Text style={styles.currentDriverAvatarText}>{currentDriver.name.charAt(0)}</Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.currentDriverLabel}>السائق الحالي</Text>
+                <Text style={styles.currentDriverLabel}>{t("delCurrentDriver")}</Text>
                 <Text style={styles.currentDriverName}>{currentDriver.name}</Text>
               </View>
               <TouchableOpacity
@@ -373,7 +377,7 @@ function DriverModal({
                 onPress={() => { onAssign(orderId, { name: "", employeeId: "" }); onClose(); }}
               >
                 <Feather name="user-x" size={13} color={Colors.accent} />
-                <Text style={styles.removeBtnText}>إلغاء الإسناد</Text>
+                <Text style={styles.removeBtnText}>{t("delRemoveDriver")}</Text>
               </TouchableOpacity>
             </View>
           ) : null}
@@ -385,7 +389,7 @@ function DriverModal({
               style={styles.searchInput}
               value={search}
               onChangeText={setSearch}
-              placeholder="ابحث باسم الموظف أو رقمه..."
+              placeholder={t("delSearchDriver")}
               placeholderTextColor={Colors.textMuted}
               textAlign="right"
             />
@@ -433,7 +437,7 @@ function DriverModal({
                         color={load >= 3 ? "#ea580c" : Colors.textSecondary}
                       />
                       <Text style={[styles.loadBadgeText, load >= 3 && { color: "#ea580c" }]}>
-                        {load} طلب
+                        {load}
                       </Text>
                     </View>
                   )}
@@ -490,13 +494,13 @@ function DeliveryCard({
             {ready && !delivered && (
               <View style={[styles.badge, { backgroundColor: "#7c3aed12" }]}>
                 <Feather name="check-circle" size={10} color="#7c3aed" />
-                <Text style={[styles.badgeText, { color: "#7c3aed" }]}>جاهز للتوصيل</Text>
+                <Text style={[styles.badgeText, { color: "#7c3aed" }]}>{t("delReadyForDel")}</Text>
               </View>
             )}
             {!delivered && !ready && urgency !== "none" && (
               <View style={[styles.badge, { backgroundColor: urgencyColor + "18" }]}>
                 <Text style={[styles.badgeText, { color: urgencyColor }]}>
-                  {URGENCY_LABEL[urgency]}
+                  {URGENCY_LABEL_KEYS[urgency] ? t(URGENCY_LABEL_KEYS[urgency] as any) : ""}
                 </Text>
               </View>
             )}
@@ -505,14 +509,14 @@ function DeliveryCard({
             <Text style={styles.orderDate}>{fmtDate(order.createdAt, lang as any)}</Text>
             <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
               <Feather name="package" size={10} color={Colors.textMuted} />
-              <Text style={styles.smallMeta}>{itemCount} قطعة</Text>
+              <Text style={styles.smallMeta}>{itemCount} {t("chocoCardPcs")}</Text>
             </View>
             <DeptDots order={order} />
           </View>
         </View>
         <View style={[styles.statusPill, { backgroundColor: accentColor + "18" }]}>
           <Text style={[styles.statusPillText, { color: accentColor }]}>
-            {delivered ? "✓ تم التسليم" : t("delPending")}
+            {delivered ? t("delDeliveredMark") : t("delPending")}
           </Text>
         </View>
       </View>
@@ -558,7 +562,7 @@ function DeliveryCard({
           <Text style={styles.addressText} numberOfLines={2}>{order.deliveryAddress}</Text>
           <View style={styles.mapBtn}>
             <Feather name="navigation" size={11} color="#fff" />
-            <Text style={styles.mapBtnText}>خريطة</Text>
+            <Text style={styles.mapBtnText}>{t("delMapBtn")}</Text>
           </View>
         </TouchableOpacity>
       ) : null}
@@ -583,7 +587,7 @@ function DeliveryCard({
           <View style={[styles.infoChip, { backgroundColor: Colors.warning + "12" }]}>
             <Feather name="credit-card" size={12} color={Colors.warning} />
             <Text style={[styles.infoChipText, { color: Colors.warning }]}>
-              دفع {fmtCurrency(order.amountPaid)}
+              {t("delPaidPartial")} {fmtCurrency(order.amountPaid)}
             </Text>
           </View>
         )}
@@ -614,7 +618,7 @@ function DeliveryCard({
               </Text>
             </View>
             <Text style={styles.driverRowText}>
-              <Text style={{ color: Colors.textMuted, fontWeight: "400" }}>السائق: </Text>
+              <Text style={{ color: Colors.textMuted, fontWeight: "400" }}>{t("delDriverLabel")} </Text>
               <Text style={{ fontWeight: "800", color: Colors.primary }}>
                 {order.deliveryDriver!.name}
               </Text>
@@ -625,7 +629,7 @@ function DeliveryCard({
             <View style={[styles.driverMiniAvatar, styles.driverMiniAvatarEmpty]}>
               <Feather name="user-plus" size={13} color={Colors.textMuted} />
             </View>
-            <Text style={styles.driverUnassignedText}>اضغط لإسناد سائق</Text>
+            <Text style={styles.driverUnassignedText}>{t("delAssignDriverHint")}</Text>
           </>
         )}
         <Feather name="chevron-left" size={14} color={Colors.textMuted} />
@@ -645,7 +649,7 @@ function DeliveryCard({
           activeOpacity={0.8}
         >
           <Feather name="message-circle" size={15} color="#fff" />
-          <Text style={styles.waReadyBtnText}>تبليغ العميل عبر واتساب 🎉</Text>
+          <Text style={styles.waReadyBtnText}>{t("delWaReadyBtn")} 🎉</Text>
         </TouchableOpacity>
       )}
 
@@ -718,10 +722,10 @@ export default function DeliveryScreen() {
   }, [deliveryOrders, tab, sort, selectedDriver]);
 
   const TABS: { key: TabKey; label: string; alert?: boolean }[] = [
-    { key: "all", label: "الكل" },
-    { key: "pending", label: "قيد التوصيل" },
-    { key: "unassigned", label: "بلا سائق", alert: true },
-    { key: "done", label: "تم التسليم" },
+    { key: "all",        label: t("delAllFilter") },
+    { key: "pending",    label: t("delInProgress") },
+    { key: "unassigned", label: t("delNoDriverTab"), alert: true },
+    { key: "done",       label: t("delDelivered") },
   ];
 
   return (
@@ -815,10 +819,10 @@ export default function DeliveryScreen() {
               <Feather name="truck" size={32} color={Colors.textMuted} />
             </View>
             <Text style={styles.emptyTitle}>
-              {tab === "unassigned" ? "جميع الطلبات مسندة ✓" : t("delNoOrders")}
+              {tab === "unassigned" ? t("delAllAssigned") : t("delNoOrders")}
             </Text>
             <Text style={styles.emptyHint}>
-              {tab === "unassigned" ? "لا توجد طلبات بدون سائق حالياً" : "لا توجد طلبات توصيل"}
+              {tab === "unassigned" ? t("delNoUnassigned") : t("delNoOrders")}
             </Text>
           </View>
         }

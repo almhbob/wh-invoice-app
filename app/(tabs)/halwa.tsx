@@ -35,8 +35,8 @@ export default function HalwaScreen() {
         <View style={[styles.lockedIcon, { backgroundColor: Colors.halwa + "18" }]}>
           <Feather name="lock" size={36} color={Colors.halwa} />
         </View>
-        <Text style={styles.lockedTitle}>لا تملك صلاحية الوصول</Text>
-        <Text style={styles.lockedSub}>هذا القسم مخصص لموظفي قسم الحلا</Text>
+        <Text style={styles.lockedTitle}>{t("accessDeniedTitle")}</Text>
+        <Text style={styles.lockedSub}>{t("accessDeniedHalwa")}</Text>
       </View>
     );
   }

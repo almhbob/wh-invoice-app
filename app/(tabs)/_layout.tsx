@@ -19,6 +19,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { EmployeeSelectorModal } from "@/components/EmployeeSelectorModal";
+import { OfflineBanner } from "@/components/OfflineBanner";
 import { Colors } from "@/constants/colors";
 import { LAVIVIANE_COMPANY_ID } from "@/constants/lavivianeProducts";
 import { PLATFORM_OWNER } from "@/constants/platform";
@@ -202,7 +203,7 @@ const MORE_TABS: TabDef[] = [
   { name: "delivery",         labelKey: "tabDelivery",        titleKey: "titleDelivery",        icon: "truck",        sf: "shippingbox.and.arrow.backward",   accent: "#0d9488" },
   { name: "trays",            labelKey: "tabTrays",           titleKey: "titleTrays",           icon: "layers",       sf: "tray.2",                           accent: Colors.gold },
   { name: "admin",            labelKey: "tabAdmin",           titleKey: "titleAdmin",           icon: "settings",     sf: "gearshape",                        accent: Colors.primaryLight },
-  { name: "settings",         labelKey: "الإعدادات",          titleKey: "الإعدادات",            icon: "sliders",      sf: "gearshape.2",                      accent: Colors.primary },
+  { name: "settings",         labelKey: "tabSettings",        titleKey: "tabSettings",          icon: "sliders",      sf: "gearshape.2",                      accent: Colors.primary },
 ];
 
 // ── Desktop sidebar ────────────────────────────────────────────────────────────
@@ -299,7 +300,7 @@ function DesktopSidebar({ activePath, navigate, isRTL }: { activePath: string; n
 
         {/* Navigation */}
         <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8 }}>
-          <SideNavItem label="الطلبات الحية" icon="activity" active={isHome} accent={Colors.gold} onPress={() => navigate("home")} />
+          <SideNavItem label={t("tabLiveOrders")} icon="activity" active={isHome} accent={Colors.gold} onPress={() => navigate("home")} />
           {showCashierNav && <SideNavItem label={t("tabCashier")} icon="file-text" active={isCashier} accent={Colors.gold} onPress={() => navigate("cashier")} />}
 
           {visibleDepts.length > 0 && (
@@ -338,7 +339,7 @@ function DesktopSidebar({ activePath, navigate, isRTL }: { activePath: string; n
           ))}
 
           <SideNavItem
-            label="الإعدادات" icon="settings"
+            label={t("tabSettings")} icon="settings"
             active={activePath.includes("settings")} accent={Colors.primary}
             onPress={() => navigate("settings")}
           />
@@ -461,7 +462,7 @@ function CustomTabBar() {
       <View style={[styles.bar, isWeb ? styles.webBar : styles.nativeBar, { height: tabH + pb, paddingBottom: pb, borderTopColor: border }]}>
         {isIOS && <BlurView intensity={90} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />}
         {!isIOS && <View style={[StyleSheet.absoluteFill, { backgroundColor: bg }]} />}
-        <BarItem label="الطلبات" icon="activity" sf="list.bullet.rectangle" active={isHome} accent={Colors.gold} onPress={() => navigate("home")} />
+        <BarItem label={t("tabLiveOrders")} icon="activity" sf="list.bullet.rectangle" active={isHome} accent={Colors.gold} onPress={() => navigate("home")} />
         {showCashierTab && <BarItem label={t("tabCashier")} icon="file-text" sf="doc.text" active={isCashier} accent={Colors.gold} onPress={() => navigate("cashier")} />}
         {visibleDeptsTab.length > 0 && <BarItem label={t("tabDepts")} icon="grid" sf="square.grid.2x2" active={isDept} accent={activeDeptAccent} badge={showDepts ? "▲" : "▼"} onPress={() => setShowDepts((v) => !v)} />}
         {showArchiveTab && <BarItem label={t("tabArchive")} icon="archive" sf="archivebox" active={isArchive} accent={Colors.primaryLight} onPress={() => navigate("archive")} />}
@@ -492,7 +493,7 @@ function BarItem({ label, icon, sf, active, accent, badge, onPress }: {
 // ── Root layout ────────────────────────────────────────────────────────────────
 
 const SCREEN_META: Record<string, { titleKey: string; accent: string }> = {
-  home:             { titleKey: "لوحة الطلبات",   accent: Colors.primary },
+  home:             { titleKey: "titleLiveOrders", accent: Colors.primary },
   cashier:          { titleKey: "titleCashier",   accent: Colors.gold },
   halwa:            { titleKey: "titleHalwa",      accent: Colors.halwa },
   mawali:           { titleKey: "titleMawali",     accent: Colors.mawali },
@@ -509,7 +510,7 @@ const SCREEN_META: Record<string, { titleKey: string; accent: string }> = {
   delivery:         { titleKey: "titleDelivery",   accent: "#0d9488" },
   trays:            { titleKey: "titleTrays",      accent: Colors.gold },
   admin:            { titleKey: "titleAdmin",      accent: Colors.primaryLight },
-  settings:         { titleKey: "الإعدادات",       accent: Colors.primary },
+  settings:         { titleKey: "tabSettings",      accent: Colors.primary },
 };
 
 function useScreenMeta(pathname: string, t: (k: TranslationKey) => string) {
@@ -533,7 +534,7 @@ export default function TabLayout() {
 
   const screens = (
     <>
-      <Tabs.Screen name="home"             options={{ title: "لوحة الطلبات",      headerShown: false }} />
+      <Tabs.Screen name="home"             options={{ title: t("titleLiveOrders"), headerShown: false }} />
       <Tabs.Screen name="cashier"          options={{ title: t("titleCashier"),   headerShown: false }} />
       <Tabs.Screen name="halwa"            options={{ title: t("titleHalwa"),     headerShown: false }} />
       <Tabs.Screen name="mawali"           options={{ title: t("titleMawali"),    headerShown: false }} />
@@ -550,7 +551,7 @@ export default function TabLayout() {
       <Tabs.Screen name="delivery"         options={{ title: t("titleDelivery"),  headerShown: false }} />
       <Tabs.Screen name="trays"            options={{ title: t("titleTrays"),     headerShown: false }} />
       <Tabs.Screen name="admin"            options={{ title: t("titleAdmin"),     headerShown: false }} />
-      <Tabs.Screen name="settings"         options={{ title: "الإعدادات",         headerShown: false }} />
+      <Tabs.Screen name="settings"         options={{ title: t("tabSettings"),    headerShown: false }} />
       <Tabs.Screen name="index"            options={{ href: null }} />
     </>
   );
@@ -560,6 +561,7 @@ export default function TabLayout() {
       <View style={[ds.root, isRTL ? ds.rootRTL : ds.rootLTR]}>
         <DesktopSidebar activePath={pathname} navigate={navigate} isRTL={isRTL} />
         <View style={ds.content}>
+          <OfflineBanner />
           <View style={[ds.contentHeader, isRTL ? ds.rowRTL : ds.rowLTR]}>
             <View style={[ds.contentBadge, { backgroundColor: screenAccent }]}>
               <Text style={ds.contentBadgeText}>{screenTitle}</Text>
@@ -576,6 +578,7 @@ export default function TabLayout() {
   return (
     <View style={{ flex: 1 }}>
       <LogoHeader titleKey={screenTitle} accentColor={screenAccent} isDesktop={false} />
+      <OfflineBanner />
       <Tabs tabBar={() => <CustomTabBar />} screenOptions={{ headerShown: false }}>
         {screens}
       </Tabs>

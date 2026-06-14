@@ -377,6 +377,18 @@ const translations = {
   delSoon:            { ar: "قريباً",                       en: "Soon",              ur: "جلد",              hi: "जल्द",             bn: "শীঘ্রই" },
   delOrderReady:      { ar: "✓ جاهز",                      en: "✓ Ready",           ur: "✓ تیار",           hi: "✓ तैयार",          bn: "✓ প্রস্তুত" },
   delWaReadyBtn:      { ar: "WhatsApp — طلبك جاهز",        en: "WhatsApp — Ready",  ur: "واٹس ایپ — تیار",  hi: "WhatsApp — तैयार", bn: "WhatsApp — প্রস্তুত" },
+  delManageTitle:     { ar: "إدارة التوصيل",               en: "Delivery Management", ur: "ڈیلیوری انتظام",  hi: "डिलीवरी प्रबंधन",  bn: "ডেলিভারি ব্যবস্থাপনা" },
+  delInProgress:      { ar: "قيد التوصيل",                 en: "In Transit",        ur: "ترسیل میں",         hi: "ट्रांजिट में",      bn: "চলমান" },
+  delNoDriverTab:     { ar: "بلا سائق",                    en: "No Driver",         ur: "بغیر ڈرائیور",      hi: "ड्राइवर नहीं",      bn: "ড্রাইভার নেই" },
+  delReadyLabel:      { ar: "جاهز",                        en: "Ready",             ur: "تیار",              hi: "तैयार",             bn: "প্রস্তুত" },
+  delReadyForDel:     { ar: "جاهز للتوصيل",               en: "Ready for delivery", ur: "ڈیلیوری کے لیے تیار", hi: "डिलीवरी के लिए तैयार", bn: "ডেলিভারির জন্য প্রস্তুত" },
+  delActiveDrivers:   { ar: "السائقون النشطون",            en: "Active Drivers",    ur: "فعال ڈرائیور",       hi: "सक्रिय ड्राइवर",   bn: "সক্রিয় ড্রাইভার" },
+  delAllFilter:       { ar: "الكل",                        en: "All",               ur: "سب",                hi: "सभी",               bn: "সব" },
+  delAssignTitle:     { ar: "إسناد الطلب لسائق",           en: "Assign Order to Driver", ur: "آرڈر ڈرائیور کو دیں", hi: "ऑर्डर ड्राइवर को दें", bn: "ড্রাইভারকে অর্ডার দিন" },
+  delDeliveredMark:   { ar: "✓ تم التسليم",                en: "✓ Delivered",       ur: "✓ ڈیلیور ہوگیا",    hi: "✓ डिलीवर हो गया",  bn: "✓ ডেলিভারি হয়েছে" },
+  delAllAssigned:     { ar: "جميع الطلبات مسندة ✓",        en: "All orders assigned ✓", ur: "تمام آرڈر تفویض ✓", hi: "सभी ऑर्डर नियुक्त ✓", bn: "সব অর্ডার নিযুক্ত ✓" },
+  delNoUnassigned:    { ar: "لا توجد طلبات بدون سائق حالياً", en: "No unassigned orders", ur: "فی الحال بغیر ڈرائیور کوئی آرڈر نہیں", hi: "अभी कोई बिना ड्राइवर ऑर्डर नहीं", bn: "এখন কোনো ড্রাইভারহীন অর্ডার নেই" },
+  delPaidPartial:     { ar: "دفع",                         en: "Paid",              ur: "ادا کیا",            hi: "भुगतान किया",       bn: "পরিশোধিত" },
   permPhotosMsg:      { ar: "يحتاج التطبيق للوصول إلى الصور",   en: "App needs access to your photos",   ur: "ایپ کو تصاویر تک رسائی درکار",  hi: "ऐप को फ़ोटो एक्सेस चाहिए",  bn: "অ্যাপের ফটো অ্যাক্সেস দরকার" },
   permCameraMsg:      { ar: "يحتاج التطبيق للوصول إلى الكاميرا", en: "App needs access to your camera",   ur: "ایپ کو کیمرہ تک رسائی درکار",  hi: "ऐप को कैमरा एक्सेस चाहिए",  bn: "অ্যাপের ক্যামেরা অ্যাক্সেস দরকার" },
 
@@ -775,6 +787,133 @@ const translations = {
   settingsSupport:       { ar: "تواصل مع الدعم",       en: "Contact Support",      ur: "سپورٹ سے رابطہ",       hi: "सहायता से संपर्क करें", bn: "সহায়তায় যোগাযোগ করুন" },
   settingsSessionSection:{ ar: "الجلسة",               en: "Session",              ur: "سیشن",                  hi: "सत्र",                 bn: "সেশন" },
   settingsLogoutConfirm: { ar: "هل تريد تسجيل خروج",  en: "Sign out",             ur: "لاگ آؤٹ کریں",          hi: "साइन आउट करें",        bn: "সাইন আউট করুন" },
+
+  // ── Admin – Employee management ───────────────────────────────────
+  adminEmpDupId:      { ar: "الرقم الوظيفي مستخدم مسبقاً",              en: "Employee ID already in use",                ur: "ملازم نمبر پہلے سے استعمال میں",           hi: "कर्मचारी आईडी पहले से उपयोग में",          bn: "কর্মচারী আইডি ইতিমধ্যে ব্যবহৃত" },
+  adminEmpSuspendMsg: { ar: "سيتم إيقاف حساب",                          en: "Will suspend account for",                  ur: "اکاؤنٹ معطل کیا جائے گا",                 hi: "खाता निलंबित किया जाएगा",                   bn: "অ্যাকাউন্ট স্থগিত করা হবে" },
+  adminEmpActivateMsg:{ ar: "سيتم تفعيل حساب",                          en: "Will activate account for",                 ur: "اکاؤنٹ فعال کیا جائے گا",                  hi: "खाता सक्रिय किया जाएगा",                    bn: "অ্যাকাউন্ট সক্রিয় করা হবে" },
+  adminChangeRole:    { ar: "تغيير الدور",                               en: "Change Role",                               ur: "کردار تبدیل کریں",                         hi: "भूमिका बदलें",                              bn: "ভূমিকা পরিবর্তন করুন" },
+  adminChooseRoleFor: { ar: "اختر الدور الجديد لـ",                     en: "Choose new role for",                       ur: "نئے کردار کا انتخاب کریں",                 hi: "नई भूमिका चुनें",                           bn: "নতুন ভূমিকা বেছে নিন" },
+  adminEmpActiveLabel:{ ar: "● نشط",                                     en: "● Active",                                  ur: "● فعال",                                   hi: "● सक्रिय",                                  bn: "● সক্রিয়" },
+  adminEmpSuspLabel:  { ar: "● موقوف",                                   en: "● Suspended",                               ur: "● معطل",                                   hi: "● निलंबित",                                 bn: "● স্থগিত" },
+  adminEmpFilterActive:{ ar: "نشط",                                      en: "Active",                                    ur: "فعال",                                     hi: "सक्रिय",                                    bn: "সক্রিয়" },
+  adminEmpFilterSusp: { ar: "موقوف",                                     en: "Suspended",                                 ur: "معطل",                                     hi: "निलंबित",                                   bn: "স্থগিত" },
+  adminSuspendAcc:    { ar: "تعليق الحساب",                              en: "Suspend Account",                           ur: "اکاؤنٹ معطل کریں",                         hi: "खाता निलंबित करें",                         bn: "অ্যাকাউন্ট স্থগিত করুন" },
+  adminActivateAcc:   { ar: "تفعيل الحساب",                             en: "Activate Account",                          ur: "اکاؤنٹ فعال کریں",                         hi: "खाता सक्रिय करें",                          bn: "অ্যাকাউন্ট সক্রিয় করুন" },
+  adminEmpNoCategory: { ar: "لا يوجد موظفون في هذه الفئة",              en: "No employees in this category",             ur: "اس زمرے میں کوئی ملازم نہیں",              hi: "इस श्रेणी में कोई कर्मचारी नहीं",           bn: "এই বিভাগে কোনো কর্মচারী নেই" },
+
+  // ── Admin – Financial stats ────────────────────────────────────────
+  adminStatRevenue:   { ar: "إيرادات",                                  en: "Revenue",                                   ur: "آمدنی",                                    hi: "राजस्व",                                    bn: "আয়" },
+  adminPmTitle:       { ar: "طرق الدفع",                                en: "Payment Methods",                           ur: "ادائیگی کے طریقے",                         hi: "भुगतान के तरीके",                           bn: "পেমেন্ট পদ্ধতি" },
+
+  // ── Admin – Operations short labels ───────────────────────────────
+  adminStatTotal:     { ar: "إجمالي",                                   en: "Total",                                     ur: "مجموعی",                                   hi: "कुल",                                       bn: "মোট" },
+  adminStatWaiting:   { ar: "انتظار",                                   en: "Wait",                                      ur: "انتظار",                                   hi: "प्रतीक्षा",                                 bn: "অপেক্ষা" },
+  adminStatPreparing: { ar: "تحضير",                                    en: "Prep",                                      ur: "تیاری",                                    hi: "तैयारी",                                    bn: "প্রস্তুতি" },
+  adminStatDone:      { ar: "تم",                                       en: "Done",                                      ur: "مکمل",                                     hi: "हो गया",                                    bn: "সম্পন্ন" },
+
+  // ── Admin – Offers modal labels ────────────────────────────────────
+  adminOfferPhoneLbl: { ar: "رقم هاتف الزبون *",                        en: "Customer Phone *",                          ur: "گاہک کا فون *",                            hi: "ग्राहक फोन *",                              bn: "গ্রাহক ফোন *" },
+  adminOfferNameOpt:  { ar: "اسم الزبون (اختياري)",                     en: "Customer name (optional)",                  ur: "گاہک کا نام (اختیاری)",                    hi: "ग्राहक नाम (वैकल्पिक)",                     bn: "গ্রাহক নাম (ঐচ্ছিক)" },
+  adminOfferTypeLbl:  { ar: "نوع الخصم",                                en: "Discount Type",                             ur: "رعایت کی قسم",                             hi: "छूट का प्रकार",                             bn: "ছাড়ের ধরন" },
+  adminOfferPct:      { ar: "نسبة %",                                   en: "Percent %",                                 ur: "فیصد %",                                   hi: "प्रतिशत %",                                 bn: "শতাংশ %" },
+  adminOfferFixed:    { ar: "مبلغ ثابت ر.س",                           en: "Fixed Amount SAR",                          ur: "مقررہ رقم ر.س",                            hi: "निश्चित राशि SAR",                          bn: "নির্দিষ্ট পরিমাণ SAR" },
+  adminOfferValLbl:   { ar: "قيمة الخصم *",                            en: "Discount Value *",                          ur: "رعایت کی قیمت *",                          hi: "छूट का मूल्य *",                            bn: "ছাড়ের পরিমাণ *" },
+  adminOfferReasonLbl:{ ar: "سبب العرض",                               en: "Offer Reason",                              ur: "پیشکش کی وجہ",                             hi: "ऑफर का कारण",                               bn: "অফারের কারণ" },
+  adminOfferUsageLim: { ar: "تحديد عدد الاستخدامات",                   en: "Limit usage count",                         ur: "استعمال کی حد مقرر کریں",                  hi: "उपयोग सीमा निर्धारित करें",                 bn: "ব্যবহারের সীমা নির্ধারণ করুন" },
+  adminOfferExpiryLbl:{ ar: "تحديد تاريخ انتهاء العرض",               en: "Set offer expiry date",                     ur: "میعاد ختم کی تاریخ",                       hi: "समाप्ति तिथि निर्धारित करें",               bn: "মেয়াদ শেষের তারিখ নির্ধারণ করুন" },
+  adminOfferNotesLbl: { ar: "ملاحظات (اختياري)",                       en: "Notes (optional)",                          ur: "نوٹس (اختیاری)",                           hi: "नोट्स (वैकल्पिक)",                          bn: "নোট (ঐচ্ছিক)" },
+  adminOfferExpiresAt:{ ar: "ينتهي",                                   en: "Expires",                                   ur: "ختم ہوگا",                                 hi: "समाप्त",                                    bn: "মেয়াদ শেষ" },
+  adminOfferUsageCount:{ ar: "استخدام",                                en: "uses",                                      ur: "استعمال",                                  hi: "उपयोग",                                     bn: "ব্যবহার" },
+  adminSaveFail:      { ar: "فشل الحفظ، حاول مرة أخرى",               en: "Save failed, try again",                    ur: "محفوظ ناکام، دوبارہ کوشش کریں",            hi: "सहेजने में विफल, पुनः प्रयास करें",         bn: "সংরক্ষণ ব্যর্থ, আবার চেষ্টা করুন" },
+
+  // ── Admin – Price request ──────────────────────────────────────────
+  adminModifLabel:    { ar: "التعديل:",                                 en: "Change:",                                   ur: "تبدیلی:",                                  hi: "बदलाव:",                                    bn: "পরিবর্তন:" },
+
+  // ── Admin – Features section ───────────────────────────────────────
+  adminFeaturesDesc:  { ar: "تفعيل أو تعطيل الأقسام والميزات",         en: "Enable or disable sections & features",     ur: "حصے اور خصوصیات فعال یا غیر فعال کریں",   hi: "विभाग और सुविधाएं सक्षम/अक्षम करें",       bn: "বিভাগ ও সুবিধাগুলো সক্রিয়/নিষ্ক্রিয় করুন" },
+
+  // ── Admin – Printer section ────────────────────────────────────────
+  adminPrinterTitle:  { ar: "إعدادات الطابعة",                         en: "Printer Settings",                          ur: "پرنٹر ترتیبات",                            hi: "प्रिंटर सेटिंग्स",                          bn: "প্রিন্টার সেটিংস" },
+  adminPrinterDesc:   { ar: "ربط وضبط الطابعة الحرارية أو أي طابعة متصلة", en: "Connect & configure thermal or any printer", ur: "حرارتی یا کسی بھی پرنٹر کو جوڑیں",       hi: "थर्मल या किसी प्रिंटर को कनेक्ट करें",     bn: "থার্মাল বা যেকোনো প্রিন্টার সংযুক্ত করুন" },
+  adminPrinterOpen:   { ar: "فتح إعدادات الطابعة",                    en: "Open Printer Settings",                     ur: "پرنٹر ترتیبات کھولیں",                     hi: "प्रिंटर सेटिंग्स खोलें",                    bn: "প্রিন্টার সেটিংস খুলুন" },
+
+  // ── Admin – Misc ───────────────────────────────────────────────────
+  adminNotSignedIn:   { ar: "غير مسجّل",                               en: "Not signed in",                             ur: "لاگ ان نہیں",                              hi: "साइन इन नहीं",                              bn: "সাইন ইন করা হয়নি" },
+
+  // ── Subscription / plan limits ────────────────────────────────────
+  limitMaxUsersTitle: { ar: "تم بلوغ الحد الأقصى للموظفين",            en: "Employee Limit Reached",                    ur: "ملازمین کی حد پہنچ گئی",                   hi: "कर्मचारी सीमा पहुँच गई",                    bn: "কর্মচারীর সীমা পৌঁছে গেছে" },
+  limitMaxUsersMsg:   { ar: "الخطة الحالية تسمح بـ {n} موظف كحد أقصى", en: "Current plan allows {n} employees max",    ur: "موجودہ پلان {n} ملازمین تک محدود ہے",      hi: "वर्तमान योजना अधिकतम {n} कर्मचारियों की अनुमति देती है", bn: "বর্তমান পরিকল্পনায় সর্বোচ্চ {n} জন কর্মচারী" },
+  limitMaxInvTitle:   { ar: "تم بلوغ الحد الشهري للفواتير",            en: "Monthly Invoice Limit Reached",             ur: "ماہانہ انوائس کی حد پہنچ گئی",             hi: "मासिक चालान सीमा पहुँच गई",                 bn: "মাসিক ইনভয়েস সীমা পৌঁছে গেছে" },
+  limitMaxInvMsg:     { ar: "تم الوصول إلى الحد الشهري ({n} فاتورة)",  en: "Monthly limit reached ({n} invoices)",      ur: "ماہانہ حد ({n} انوائس) پہنچ گئی",          hi: "मासिक सीमा ({n} चालान) पहुँची",             bn: "মাসিক সীমা ({n} ইনভয়েস) পৌঁছে গেছে" },
+
+  // ── Offline indicator ──────────────────────────────────────────────
+  offlineBanner:      { ar: "لا يوجد اتصال بالإنترنت",                 en: "No internet connection",                    ur: "انٹرنیٹ کنکشن نہیں",                       hi: "इंटरनेट कनेक्शन नहीं",                      bn: "ইন্টারনেট সংযোগ নেই" },
+  offlineBannerSub:   { ar: "البيانات المخزنة محلياً تُعرض",            en: "Showing locally cached data",               ur: "مقامی ڈیٹا دکھایا جا رہا ہے",              hi: "स्थानीय कैश डेटा दिखाया जा रहा है",         bn: "স্থানীয় ক্যাশ ডেটা দেখানো হচ্ছে" },
+  // ── Offer modal placeholders ───────────────────────────────────────
+  adminOfferPctPh:    { ar: "مثال: 15",                                en: "e.g. 15",                                   ur: "مثلاً: 15",                                 hi: "उदा: 15",                                   bn: "যেমন: 15" },
+  adminOfferFixedPh:  { ar: "مثال: 25.00",                            en: "e.g. 25.00",                                ur: "مثلاً: 25.00",                              hi: "उदा: 25.00",                                bn: "যেমন: 25.00" },
+  adminOfferReasonPh: { ar: "أو اكتب سبباً مخصصاً...",               en: "Or write a custom reason...",               ur: "یا اپنی وجہ لکھیں...",                     hi: "या कस्टम कारण लिखें...",                    bn: "বা কাস্টম কারণ লিখুন..." },
+  adminOfferUsagePh:  { ar: "عدد مرات الاستخدام (مثال: 3)",           en: "Usage count (e.g. 3)",                      ur: "استعمال کی تعداد (مثلاً: 3)",              hi: "उपयोग गिनती (उदा: 3)",                      bn: "ব্যবহার সংখ্যা (যেমন: 3)" },
+  adminOfferDatePh:   { ar: "YYYY-MM-DD (مثال: 2026-06-01)",          en: "YYYY-MM-DD (e.g. 2026-06-01)",              ur: "YYYY-MM-DD (مثلاً: 2026-06-01)",           hi: "YYYY-MM-DD (उदा: 2026-06-01)",              bn: "YYYY-MM-DD (যেমন: 2026-06-01)" },
+  adminOfferNotesPh:  { ar: "أي ملاحظات...",                          en: "Any notes...",                              ur: "کوئی نوٹ...",                               hi: "कोई नोट्स...",                               bn: "কোনো নোট..." },
+
+  // ── Employee Selector Modal ────────────────────────────────────────────────
+  empDupIdMsg:         { ar: "الرقم الوظيفي أو اليوزر مستخدم مسبقاً", en: "Employee ID or username already in use",    ur: "ملازم نمبر یا یوزر پہلے سے استعمال میں",   hi: "कर्मचारी ID या यूज़रनाम पहले से उपयोग में",  bn: "কর্মচারী আইডি বা ইউজারনাম ইতিমধ্যে ব্যবহৃত" },
+  empRoleRestrict:     { ar: "الدور المحدد غير مسموح لهذا المستخدم.",  en: "Selected role is not allowed for this user.", ur: "منتخب کردار اس صارف کے لیے ممنوع ہے۔",      hi: "चुनी गई भूमिका इस उपयोगकर्ता के लिए अनुमत नहीं।", bn: "নির্বাচিত ভূমিকা এই ব্যবহারকারীর জন্য অনুমোদিত নয়।" },
+  empAddedMsg:         { ar: "تمت إضافة الموظف مع يوزر ورمز دخول.",   en: "Employee added with username and PIN.",      ur: "ملازم یوزر اور پن کے ساتھ شامل ہوگیا۔",    hi: "कर्मचारी यूज़रनाम और PIN के साथ जोड़ा गया।", bn: "কর্মচারী ইউজারনাম ও PIN সহ যোগ করা হয়েছে।" },
+  employeesTitle:      { ar: "الموظفون",                               en: "Employees",                                 ur: "ملازمین",                                   hi: "कर्मचारी",                                  bn: "কর্মচারী" },
+  selectEmpTab:        { ar: "اختيار الموظف",                          en: "Select Employee",                           ur: "ملازم منتخب کریں",                           hi: "कर्मचारी चुनें",                             bn: "কর্মচারী বেছে নিন" },
+  addEmpTab:           { ar: "إضافة موظف",                            en: "Add Employee",                              ur: "ملازم شامل کریں",                            hi: "कर्मचारी जोड़ें",                            bn: "কর্মচারী যোগ করুন" },
+  logoutEmpPrefix:     { ar: "تسجيل خروج",                            en: "Sign out",                                  ur: "لاگ آؤٹ",                                   hi: "साइन आउट",                                  bn: "সাইন আউট" },
+  addEmpBtn:           { ar: "إضافة الموظف",                          en: "Add Employee",                              ur: "ملازم شامل کریں",                            hi: "कर्मचारी जोड़ें",                            bn: "কর্মচারী যোগ করুন" },
+  empFullNamePh:       { ar: "أدخل الاسم الكامل",                     en: "Enter full name",                           ur: "پورا نام درج کریں",                          hi: "पूरा नाम दर्ज करें",                         bn: "পুরো নাম লিখুন" },
+  empUsernameLbl:      { ar: "يوزر الدخول",                           en: "Username",                                  ur: "یوزرنیم",                                   hi: "उपयोगकर्ता नाम",                             bn: "ইউজারনাম" },
+  usernameOptPh:       { ar: "اختياري، الافتراضي الرقم الوظيفي",      en: "Optional, defaults to Employee ID",         ur: "اختیاری، پہلے سے ملازم نمبر",               hi: "वैकल्पिक, डिफ़ॉल्ट कर्मचारी ID",             bn: "ঐচ্ছিক, ডিফল্ট কর্মচারী আইডি" },
+  empPinLabel:         { ar: "رمز الدخول",                            en: "PIN Code",                                  ur: "پن کوڈ",                                    hi: "PIN कोड",                                   bn: "PIN কোড" },
+  pinPh:               { ar: "مثال: 1234",                            en: "e.g. 1234",                                 ur: "مثلاً: 1234",                               hi: "उदा: 1234",                                 bn: "যেমন: 1234" },
+  branchSupAddNote:    { ar: "مشرف الفرع يستطيع إضافة الأدوار التشغيلية ومشرف القسم فقط.", en: "Branch supervisor can only add operational roles and dept. supervisors.", ur: "برانچ سپروائزر صرف آپریشنل کردار اور ڈیپ سپروائزر شامل کر سکتا ہے۔", hi: "शाखा सुपरवाइजर केवल परिचालन भूमिकाएं जोड़ सकता है।", bn: "শাখা সুপারভাইজার শুধু অপারেশনাল ভূমিকা যোগ করতে পারে।" },
+
+  // ── Edit Order Modal ───────────────────────────────────────────────────────
+  editOrderHeader:     { ar: "تعديل الفاتورة #",                      en: "Edit Invoice #",                            ur: "انوائس ترمیم #",                            hi: "चालान संपादित करें #",                       bn: "ইনভয়েস সম্পাদনা #" },
+  editDeliveryTime:    { ar: "موعد التسليم",                           en: "Delivery Time",                             ur: "ترسیل کا وقت",                              hi: "डिलीवरी समय",                               bn: "ডেলিভারির সময়" },
+  editClearSchedule:   { ar: "مسح الموعد",                            en: "Clear Schedule",                            ur: "شیڈول ہٹائیں",                              hi: "शेड्यूल मिटाएं",                             bn: "সময়সূচি মুছুন" },
+  editNotesPh:         { ar: "أدخل الملاحظات هنا...",                 en: "Enter notes here...",                       ur: "یہاں نوٹس درج کریں...",                     hi: "यहाँ नोट्स दर्ज करें...",                    bn: "এখানে নোট লিখুন..." },
+  editItemNamePh:      { ar: "اسم الصنف",                             en: "Item name",                                 ur: "آئٹم کا نام",                               hi: "वस्तु का नाम",                               bn: "আইটেমের নাম" },
+
+  // ── Reports extra ──────────────────────────────────────────────────────────
+  repTabExport:        { ar: "تصدير",                                 en: "Export",                                    ur: "برآمد",                                     hi: "निर्यात",                                   bn: "রপ্তানি" },
+  repTabShifts:        { ar: "ورديات",                                en: "Shifts",                                    ur: "شفٹیں",                                     hi: "शिफ्ट",                                    bn: "শিফট" },
+  repExportSummaryTitle:{ ar: "ملخص البيانات القابلة للتصدير",        en: "Exportable Data Summary",                   ur: "قابل برآمد ڈیٹا خلاصہ",                    hi: "निर्यात योग्य डेटा सारांश",                 bn: "রপ্তানিযোগ্য ডেটা সারসংক্ষেপ" },
+  repExportDataTitle:  { ar: "تصدير البيانات",                        en: "Export Data",                               ur: "ڈیٹا برآمد",                                hi: "डेटा निर्यात",                               bn: "ডেটা রপ্তানি" },
+  repExportCsvWeb:     { ar: "سيتم تحميل ملف CSV مباشرة إلى جهازك.", en: "A CSV file will be downloaded to your device.", ur: "CSV فائل آپ کے آلے پر ڈاؤن لوڈ ہوگی۔",   hi: "CSV फ़ाइल आपके डिवाइस पर डाउनलोड होगी।",    bn: "CSV ফাইল সরাসরি আপনার ডিভাইসে ডাউনলোড হবে।" },
+  repExportCsvMobile:  { ar: "سيتم مشاركة ملف CSV عبر التطبيقات المتاحة.", en: "A CSV will be shared via available apps.", ur: "CSV دستیاب ایپس سے شیئر ہوگا۔",          hi: "CSV उपलब्ध ऐप्स के माध्यम से साझा होगा।",   bn: "CSV উপলব্ধ অ্যাপের মাধ্যমে শেয়ার হবে।" },
+  repExporting:        { ar: "جاري التصدير...",                       en: "Exporting...",                              ur: "برآمد جاری...",                              hi: "निर्यात हो रहा है...",                       bn: "রপ্তানি হচ্ছে..." },
+  repExportOrdersBtn:  { ar: "تصدير قائمة الطلبات",                  en: "Export Orders List",                        ur: "آرڈرز کی فہرست برآمد",                      hi: "ऑर्डर सूची निर्यात",                         bn: "অর্ডার তালিকা রপ্তানি" },
+  repExportProductsBtn:{ ar: "تصدير ملخص المنتجات",                  en: "Export Products Summary",                   ur: "مصنوعات خلاصہ برآمد",                       hi: "उत्पाद सारांश निर्यात",                      bn: "পণ্য সারসংক্ষেপ রপ্তানি" },
+  repNoDataInPeriod:   { ar: "لا توجد بيانات في الفترة المحددة",      en: "No data in selected period",                ur: "منتخب مدت میں کوئی ڈیٹا نہیں",             hi: "चयनित अवधि में कोई डेटा नहीं",              bn: "নির্বাচিত সময়ে কোনো ডেটা নেই" },
+  repCsvNote:          { ar: "الملفات بصيغة CSV مدعومة في Excel، Google Sheets، وجميع برامج الجداول. تأكد من فتح الملف بترميز UTF-8 لعرض العربية صحيحاً.", en: "CSV files are supported in Excel, Google Sheets, and all spreadsheet apps. Open with UTF-8 encoding for correct Arabic display.", ur: "CSV فائلیں Excel اور Google Sheets میں مدعوم ہیں۔ عربی کے لیے UTF-8 انکوڈنگ استعمال کریں۔", hi: "CSV फ़ाइलें Excel, Google Sheets में समर्थित हैं। सही अरबी के लिए UTF-8 से खोलें।", bn: "CSV ফাইল Excel, Google Sheets-এ সমর্থিত। সঠিক আরবির জন্য UTF-8 দিয়ে খুলুন।" },
+  repDiffProducts:     { ar: "منتج مختلف",                            en: "unique products",                           ur: "مختلف مصنوعات",                             hi: "अद्वितीय उत्पाद",                            bn: "অনন্য পণ্য" },
+  shiftNoShifts:       { ar: "لا توجد ورديات مغلقة بعد",              en: "No closed shifts yet",                      ur: "ابھی کوئی بند شفٹ نہیں",                    hi: "अभी कोई बंद शिफ्ट नहीं",                    bn: "এখনো কোনো বন্ধ শিফট নেই" },
+  shiftCloseHint:      { ar: "استخدم زر \"إغلاق الوردية\" لتسجيل نهاية كل وردية", en: "Use the 'Close Shift' button to record the end of each shift", ur: "ہر شفٹ ختم کرنے کے لیے 'شفٹ بند کریں' بٹن استعمال کریں", hi: "प्रत्येक शिफ्ट का अंत दर्ज करने के लिए 'शिफ्ट बंद करें' बटन का उपयोग करें", bn: "প্রতিটি শিফট শেষ রেকর্ড করতে 'শিফট বন্ধ করুন' বাটন ব্যবহার করুন" },
+  shiftCountLabel:     { ar: "وردية مغلقة",                           en: "closed shift(s)",                           ur: "بند شفٹ",                                   hi: "बंद शिफ्ट",                                 bn: "বন্ধ শিফট" },
+  repEmptyToday:       { ar: "لا توجد فواتير اليوم بعد. ابدأ بإنشاء فاتورة من شاشة الكاشير.", en: "No invoices today yet. Start by creating one from the cashier screen.", ur: "آج ابھی کوئی انوائس نہیں۔ کیشیئر سے بنانا شروع کریں۔", hi: "आज अभी कोई चालान नहीं। कैशियर स्क्रीन से बनाएं।", bn: "আজ এখনো কোনো ইনভয়েস নেই। ক্যাশিয়ার স্ক্রিন থেকে তৈরি করুন।" },
+  repEmptyWeek:        { ar: "لا توجد فواتير هذا الأسبوع. حاول توسيع نطاق البحث.", en: "No invoices this week. Try expanding the date range.", ur: "اس ہفتے کوئی انوائس نہیں۔ تاریخ بڑھانے کی کوشش کریں۔", hi: "इस सप्ताह कोई चालान नहीं। दिनांक सीमा बढ़ाएं।", bn: "এই সপ্তাহে কোনো ইনভয়েস নেই। তারিখের পরিধি বাড়ান।" },
+  repEmptyMonth:       { ar: "لا توجد فواتير هذا الشهر.",             en: "No invoices this month.",                   ur: "اس مہینے کوئی انوائس نہیں۔",               hi: "इस महीने कोई चालान नहीं।",                  bn: "এই মাসে কোনো ইনভয়েস নেই।" },
+  repEmptyAll:         { ar: "لا توجد فواتير في النظام بعد.",          en: "No invoices in the system yet.",            ur: "سسٹم میں ابھی کوئی انوائس نہیں۔",          hi: "सिस्टम में अभी कोई चालान नहीं।",            bn: "সিস্টেমে এখনো কোনো ইনভয়েস নেই।" },
+  repShowAllBtn:       { ar: "عرض كل الفواتير",                       en: "Show All Invoices",                         ur: "تمام انوائس دکھائیں",                       hi: "सभी चालान दिखाएं",                           bn: "সব ইনভয়েস দেখান" },
+
+  // ── Cashier AI / Misc ──────────────────────────────────────────────────────
+  aiAnalysisTitle:     { ar: "💡 تحليل الذكاء الاصطناعي",             en: "💡 AI Analysis",                            ur: "💡 AI تجزیہ",                               hi: "💡 AI विश्लेषण",                             bn: "💡 AI বিশ্লেষণ" },
+  aiWarnMsg:           { ar: "لم نتمكن من الحصول على تحليل، تأكد من تشغيل الخادم.", en: "Could not get analysis. Make sure the server is running.", ur: "تجزیہ نہیں ملا، سرور چیک کریں۔",           hi: "विश्लेषण नहीं मिला। सर्वर चलाएं।",          bn: "বিশ্লেষণ পাওয়া যায়নি। সার্ভার চালু আছে কিনা দেখুন।" },
+  aiConnFail:          { ar: "⚠️ فشل الاتصال",                        en: "⚠️ Connection Failed",                      ur: "⚠️ کنکشن ناکام",                            hi: "⚠️ कनेक्शन विफल",                            bn: "⚠️ সংযোগ ব্যর্থ" },
+  aiConnFailMsg:       { ar: "تعذّر الاتصال بخادم Termux. تأكد أنه يعمل في الخلفية.", en: "Could not connect to Termux server. Make sure it is running in the background.", ur: "Termux سرور سے کنکشن نہیں ہو سکا۔", hi: "Termux सर्वर से कनेक्ट नहीं हो सका।", bn: "Termux সার্ভারে সংযোগ ব্যর্থ। ব্যাকগ্রাউন্ডে চালু আছে কিনা দেখুন।" },
+  aiLoading:           { ar: "⏳ جارٍ التحليل...",                     en: "⏳ Analyzing...",                           ur: "⏳ تجزیہ جاری...",                           hi: "⏳ विश्लेषण हो रहा है...",                    bn: "⏳ বিশ্লেষণ হচ্ছে..." },
+  aiBtn:               { ar: "🤖 تحليل بالذكاء الاصطناعي",            en: "🤖 AI Analysis",                            ur: "🤖 AI تجزیہ",                               hi: "🤖 AI विश्लेषण",                             bn: "🤖 AI বিশ্লেষণ" },
+  notesExtraPh:        { ar: "أي ملاحظات إضافية...",                  en: "Any extra notes...",                        ur: "کوئی اضافی نوٹ...",                         hi: "कोई अतिरिक्त नोट्स...",                     bn: "অতিরিক্ত নোট..." },
+
+  // ── Customers screen ───────────────────────────────────────────────────────
+  custSpentLabel:      { ar: "إجمالي الإنفاق",                        en: "Total Spent",                               ur: "کل خرچ",                                    hi: "कुल व्यय",                                  bn: "মোট ব্যয়" },
 } as const;
 
 export type TranslationKey = keyof typeof translations;

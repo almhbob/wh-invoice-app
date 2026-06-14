@@ -23,6 +23,8 @@ import React, {
 
 import { useCompany } from "@/context/CompanyContext";
 import { db } from "@/lib/firebase";
+import { Alert } from "react-native";
+import { t as t_ } from "@/constants/translations";
 
 export type Department = "halwa" | "mawali" | "chocolate" | "cake" | "packaging";
 export type OrderStatus = "pending" | "in_progress" | "done" | "cancelled";
@@ -187,7 +189,7 @@ async function writeLocalOrders(companyId: string, orders: Order[]): Promise<voi
 }
 
 export function OrdersProvider({ children }: { children: React.ReactNode }) {
-  const { companyId } = useCompany();
+  const { companyId, company } = useCompany();
   const [allOrders, setAllOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshTick, setRefreshTick] = useState(0);
@@ -278,6 +280,17 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
     async (
       orderData: Omit<Order, "id" | "companyId" | "orderNumber" | "createdAt" | "updatedAt" | "departmentStatuses" | "departmentReceivers">
     ): Promise<Order> => {
+      const lang = "ar" as const;
+      if (company.maxInvoicesPerMonth) {
+        const thisMonth = new Date().toISOString().slice(0, 7);
+        const monthCount = allOrders.filter((o) => !o.deleted && o.createdAt.startsWith(thisMonth)).length;
+        if (monthCount >= company.maxInvoicesPerMonth) {
+          const msg = t_("limitMaxInvMsg", lang).replace("{n}", String(company.maxInvoicesPerMonth));
+          Alert.alert(t_("limitMaxInvTitle", lang), msg);
+          throw new Error("MAX_INVOICES_EXCEEDED");
+        }
+      }
+
       const orderNumber = await getNextOrderNumber();
       const now = new Date().toISOString();
 
