@@ -321,7 +321,7 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
       }
 
       const lang = "ar" as const;
-      const activeCount = employees.filter((e) => !e.isLocalFallback && !(e as Record<string, unknown>).isLocalBootstrap && e.status !== "suspended").length;
+      const activeCount = employees.filter((e) => !e.isLocalFallback && !((e as unknown) as Record<string, unknown>).isLocalBootstrap && e.status !== "suspended").length;
       if (company.maxUsers && activeCount >= company.maxUsers) {
         const msg = t_("limitMaxUsersMsg", lang).replace("{n}", String(company.maxUsers));
         Alert.alert(t_("limitMaxUsersTitle", lang), msg);
