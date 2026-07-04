@@ -17,7 +17,7 @@ import { Colors } from "@/constants/colors";
 import { canDo, ROLE_CAN_DELETE_ORDERS, ROLE_CAN_EDIT_ORDERS } from "@/constants/rbac";
 import { useLang } from "@/context/LanguageContext";
 import { useEmployee } from "@/context/EmployeeContext";
-import { Department, Order, OrderStatus, PAYMENT_LABELS, useOrders } from "@/context/OrdersContext";
+import { Department, Order, OrderStatus, PAYMENT_LABEL_KEYS, useOrders } from "@/context/OrdersContext";
 import { fmtDate, fmtDateTime } from "@/utils/dateUtils";
 
 import { t as t_, type Lang, type TranslationKey } from "@/constants/translations";
@@ -201,7 +201,7 @@ function ArchiveCard({ order, canDelete, canEdit, onDelete, onEdit }: { order: O
           <View style={styles.footerItem}>
             <Feather name="credit-card" size={11} color={Colors.info} />
             <Text style={[styles.footerText, { color: Colors.info }]}>
-              {PAYMENT_LABELS[order.paymentMethod]}
+              {t(PAYMENT_LABEL_KEYS[order.paymentMethod])}
             </Text>
           </View>
         )}
@@ -368,7 +368,7 @@ export default function ArchiveScreen() {
         <td>${o.customerName || "-"}<br/><small>${o.customerPhone || ""}</small></td>
         <td>${itemsHtml}</td>
         <td style="font-weight:700">${o.totalAmount != null ? o.totalAmount.toFixed(2) + " ر.س" : "-"}</td>
-        <td>${o.paymentMethod ? (PAYMENT_LABELS[o.paymentMethod] || o.paymentMethod) : "-"}</td>
+        <td>${o.paymentMethod ? t(PAYMENT_LABEL_KEYS[o.paymentMethod]) : "-"}</td>
         <td>${discount}</td>
         <td>${fmtDate(o.createdAt, "ar")}</td>
       </tr>`;

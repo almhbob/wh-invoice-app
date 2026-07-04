@@ -16,6 +16,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Colors } from "@/constants/colors";
+import { canDo, ROLE_CAN_VIEW_DELIVERY } from "@/constants/rbac";
 import { useEmployee } from "@/context/EmployeeContext";
 import { useLang } from "@/context/LanguageContext";
 import { Order, useOrders } from "@/context/OrdersContext";
@@ -677,6 +678,7 @@ export default function DeliveryScreen() {
   const { t, lang } = useLang();
   const { orders, updateDeliveryStatus, assignDeliveryDriver } = useOrders();
   const insets = useSafeAreaInsets();
+  const { currentEmployee } = useEmployee();
 
   const [tab, setTab] = useState<TabKey>("all");
   const [sort, setSort] = useState<SortKey>("time");
@@ -727,6 +729,21 @@ export default function DeliveryScreen() {
     { key: "unassigned", label: t("delNoDriverTab"), alert: true },
     { key: "done",       label: t("delDelivered") },
   ];
+
+  if (!currentEmployee || !canDo(currentEmployee.role, ROLE_CAN_VIEW_DELIVERY)) {
+    return (
+      <View style={{ flex: 1, backgroundColor: Colors.background, alignItems: "center", justifyContent: "center", gap: 16 }}>
+        <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: Colors.accent + "18", alignItems: "center", justifyContent: "center" }}>
+          <Feather name="lock" size={32} color={Colors.accent} />
+        </View>
+        <Text style={{ fontSize: 18, fontWeight: "800", color: Colors.text }}>{t("editAccessDenied")}</Text>
+        <Text style={{ fontSize: 14, color: Colors.textSecondary, textAlign: "center", paddingHorizontal: 32 }}>{t("editAccessMsg")}</Text>
+        <Text style={{ fontSize: 12, color: Colors.textMuted }}>
+          {currentEmployee ? `${currentEmployee.name} · ${currentEmployee.role}` : t("adminNotSignedIn")}
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>

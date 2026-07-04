@@ -15,7 +15,9 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Colors } from "@/constants/colors";
+import { canDo, ROLE_CAN_VIEW_CUSTOMERS } from "@/constants/rbac";
 import type { TranslationKey } from "@/constants/translations";
+import { useEmployee } from "@/context/EmployeeContext";
 import { useLang } from "@/context/LanguageContext";
 import { Order, useOrders } from "@/context/OrdersContext";
 import { fmtDate } from "@/utils/dateUtils";
@@ -277,6 +279,7 @@ export default function CustomersScreen() {
   const { t, lang } = useLang();
   const { orders } = useOrders();
   const insets = useSafeAreaInsets();
+  const { currentEmployee } = useEmployee();
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Customer | null>(null);
   const [tab, setTab] = useState<TabKey>("all");
@@ -339,6 +342,21 @@ export default function CustomersScreen() {
     { key: "frequent", label: t("custFrequent") },
     { key: "vip", label: "⭐ VIP" },
   ];
+
+  if (!currentEmployee || !canDo(currentEmployee.role, ROLE_CAN_VIEW_CUSTOMERS)) {
+    return (
+      <View style={[styles.container, { alignItems: "center", justifyContent: "center", gap: 16 }]}>
+        <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: Colors.accent + "18", alignItems: "center", justifyContent: "center" }}>
+          <Feather name="lock" size={32} color={Colors.accent} />
+        </View>
+        <Text style={{ fontSize: 18, fontWeight: "800", color: Colors.text }}>{t("editAccessDenied")}</Text>
+        <Text style={{ fontSize: 14, color: Colors.textSecondary, textAlign: "center", paddingHorizontal: 32 }}>{t("editAccessMsg")}</Text>
+        <Text style={{ fontSize: 12, color: Colors.textMuted }}>
+          {currentEmployee ? `${currentEmployee.name} · ${currentEmployee.role}` : t("adminNotSignedIn")}
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>

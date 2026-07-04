@@ -38,9 +38,9 @@ import {
   Order,
   OrderItem,
   OrderType,
-  ORDER_TYPE_LABELS,
+  ORDER_TYPE_LABEL_KEYS,
   PaymentMethod,
-  PAYMENT_LABELS,
+  PAYMENT_LABEL_KEYS,
   useOrders,
 } from "@/context/OrdersContext";
 import { Offer, normalizePhone, useOffers } from "@/context/OffersContext";
@@ -405,8 +405,8 @@ export default function CashierScreen() {
       : "";
     const deliv = order.deliveryTime ? `\nموعد التسليم: ${order.deliveryTime}` : "";
     const addr = order.deliveryAddress ? `\nعنوان التوصيل: ${order.deliveryAddress}` : "";
-    const pm = order.paymentMethod ? `\nطريقة الدفع: ${PAYMENT_LABELS[order.paymentMethod]}` : "";
-    const otype = order.orderType ? `\nنوع الطلب: ${ORDER_TYPE_LABELS[order.orderType]}` : "";
+    const pm = order.paymentMethod ? `\nطريقة الدفع: ${t(PAYMENT_LABEL_KEYS[order.paymentMethod])}` : "";
+    const otype = order.orderType ? `\nنوع الطلب: ${t(ORDER_TYPE_LABEL_KEYS[order.orderType])}` : "";
     const paid = order.amountPaid != null
       ? `\nالمبلغ المدفوع: ${order.amountPaid.toFixed(2)} ر.س` : "";
     const remaining = order.amountPaid != null && order.totalAmount
@@ -503,7 +503,7 @@ export default function CashierScreen() {
 
     const paymentHtml = order.paymentMethod ? `
       <div style="display:flex;justify-content:space-between;font-size:10px;margin:3px 0">
-        <span>طريقة الدفع</span><span>${PAYMENT_LABELS[order.paymentMethod]}</span>
+        <span>طريقة الدفع</span><span>${t(PAYMENT_LABEL_KEYS[order.paymentMethod])}</span>
       </div>` : "";
 
     const paidHtml = order.amountPaid != null ? `
@@ -1436,7 +1436,7 @@ export default function CashierScreen() {
                 styles.paymentBtnText,
                 paymentMethod === opt.value && styles.paymentBtnTextActive,
               ]}>
-                {PAYMENT_LABELS[opt.value]}
+                {t(PAYMENT_LABEL_KEYS[opt.value])}
               </Text>
             </TouchableOpacity>
           ))}
@@ -1816,7 +1816,7 @@ export default function CashierScreen() {
               >
                 <Feather name={opt.icon as any} size={14} color={paymentMethod === opt.value ? Colors.primary : "rgba(255,255,255,0.6)"} />
                 <Text style={[styles.checkoutPayBtnText, paymentMethod === opt.value && { color: Colors.primary }]}>
-                  {PAYMENT_LABELS[opt.value]}
+                  {t(PAYMENT_LABEL_KEYS[opt.value])}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -2034,7 +2034,7 @@ export default function CashierScreen() {
                   <Text style={styles.previewLabel}>{t("orderTypeLabel")}</Text>
                   <View style={[styles.previewTypeBadge, orderType === "delivery" && { backgroundColor: Colors.info + "18", borderColor: Colors.info + "50" }]}>
                     <Text style={[styles.previewTypeBadgeText, orderType === "delivery" && { color: Colors.info }]}>
-                      {ORDER_TYPE_LABELS[orderType]}
+                      {t(ORDER_TYPE_LABEL_KEYS[orderType])}
                     </Text>
                   </View>
                 </View>
@@ -2123,7 +2123,7 @@ export default function CashierScreen() {
                   )}
                   <View style={styles.previewRow}>
                     <Text style={styles.previewLabel}>{t("paymentMethod")}</Text>
-                    <Text style={styles.previewValue}>{PAYMENT_LABELS[paymentMethod]}</Text>
+                    <Text style={styles.previewValue}>{t(PAYMENT_LABEL_KEYS[paymentMethod])}</Text>
                   </View>
                   {amountPaidVal > 0 && (
                     <View style={styles.previewRow}>
@@ -2322,7 +2322,7 @@ export default function CashierScreen() {
                   <View style={styles.receiptRow}>
                     <Feather name="credit-card" size={14} color={Colors.textMuted} />
                     <Text style={styles.receiptRowLabel}>{t("paymentMethod")}</Text>
-                    <Text style={styles.receiptRowValue}>{PAYMENT_LABELS[receiptOrder.paymentMethod]}</Text>
+                    <Text style={styles.receiptRowValue}>{t(PAYMENT_LABEL_KEYS[receiptOrder.paymentMethod])}</Text>
                   </View>
                 ) : null}
               </View>

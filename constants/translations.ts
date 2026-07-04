@@ -914,6 +914,10 @@ const translations = {
 
   // ── Customers screen ───────────────────────────────────────────────────────
   custSpentLabel:      { ar: "إجمالي الإنفاق",                        en: "Total Spent",                               ur: "کل خرچ",                                    hi: "कुल व्यय",                                  bn: "মোট ব্যয়" },
+
+  // ── Session security ───────────────────────────────────────────────────────
+  sessionKickedTitle:  { ar: "تسجيل دخول من جهاز آخر",               en: "Signed In Elsewhere",                        ur: "دوسرے ڈیوائس سے لاگ ان",                   hi: "दूसरे डिवाइस से लॉगिन",                    bn: "অন্য ডিভাইস থেকে লগইন" },
+  sessionKickedMsg:    { ar: "تم تسجيل دخول \"{name}\" من جهاز آخر. سيتم تسجيل خروجك تلقائياً.", en: "'{name}' signed in from another device. You have been logged out automatically.", ur: "'{name}' کسی اور ڈیوائس سے لاگ ان ہوا۔ آپ لاگ آؤٹ ہو گئے۔", hi: "'{name}' दूसरे डिवाइस से लॉगिन हुआ। आप स्वतः लॉगआउट हो गए।", bn: "'{name}' অন্য ডিভাইস থেকে সাইন ইন করেছে। আপনাকে স্বয়ংক্রিয়ভাবে লগ আউট করা হয়েছে।" },
 } as const;
 
 export type TranslationKey = keyof typeof translations;
