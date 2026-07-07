@@ -31,7 +31,7 @@ import {
   ROLE_LABELS,
   useEmployee,
 } from "@/context/EmployeeContext";
-import { Department, DISCOUNT_REASON_PRESETS, DiscountType, Order, PAYMENT_LABELS, PaymentMethod, useOrders } from "@/context/OrdersContext";
+import { Department, DISCOUNT_REASON_PRESETS, DiscountType, Order, PAYMENT_LABEL_KEYS, PaymentMethod, useOrders } from "@/context/OrdersContext";
 import { Offer, useOffers } from "@/context/OffersContext";
 import { Product, useProducts } from "@/context/ProductsContext";
 import { usePriceChange } from "@/context/PriceChangeContext";
@@ -388,7 +388,7 @@ function FinancialSection({ orders }: { orders: Order[] }) {
               pmCounts[pm] > 0 ? (
                 <View key={pm} style={[styles.pmItem, pm === topPm?.[0] && styles.pmItemTop]}>
                   <Text style={styles.pmCount}>{pmCounts[pm]}</Text>
-                  <Text style={styles.pmLabel}>{PAYMENT_LABELS[pm]}</Text>
+                  <Text style={styles.pmLabel}>{t(PAYMENT_LABEL_KEYS[pm])}</Text>
                 </View>
               ) : null
             ))}

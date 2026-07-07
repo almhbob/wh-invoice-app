@@ -14,7 +14,9 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Colors } from "@/constants/colors";
+import { canDo, ROLE_CAN_VIEW_REPORTS } from "@/constants/rbac";
 import type { TranslationKey } from "@/constants/translations";
+import { useEmployee } from "@/context/EmployeeContext";
 import { useLang } from "@/context/LanguageContext";
 import { useOrders } from "@/context/OrdersContext";
 import { useShift, type ClosedShift } from "@/context/ShiftContext";
@@ -1181,10 +1183,26 @@ export default function ReportsScreen() {
   const { t } = useLang();
   const { orders } = useOrders();
   const insets = useSafeAreaInsets();
+  const { currentEmployee } = useEmployee();
 
   const [filter, setFilter] = useState<Filter>("month");
   const [activeTab, setActiveTab] = useState<Tab>("revenue");
   const [showShiftClose, setShowShiftClose] = useState(false);
+
+  if (!currentEmployee || !canDo(currentEmployee.role, ROLE_CAN_VIEW_REPORTS)) {
+    return (
+      <View style={{ flex: 1, backgroundColor: Colors.background, alignItems: "center", justifyContent: "center", gap: 16 }}>
+        <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: Colors.accent + "18", alignItems: "center", justifyContent: "center" }}>
+          <Feather name="lock" size={32} color={Colors.accent} />
+        </View>
+        <Text style={{ fontSize: 18, fontWeight: "800", color: Colors.text }}>{t("editAccessDenied")}</Text>
+        <Text style={{ fontSize: 14, color: Colors.textSecondary, textAlign: "center", paddingHorizontal: 32 }}>{t("editAccessMsg")}</Text>
+        <Text style={{ fontSize: 12, color: Colors.textMuted }}>
+          {currentEmployee ? `${currentEmployee.name} · ${currentEmployee.role}` : t("adminNotSignedIn")}
+        </Text>
+      </View>
+    );
+  }
 
   const TAB_ITEMS: { key: Tab; label: string; icon: string }[] = [
     { key: "revenue",  label: t("repTabRevenue"),  icon: "trending-up" },

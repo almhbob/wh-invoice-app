@@ -27,6 +27,7 @@ import {
   defaultPermissionsForRole,
 } from "@/constants/branchSupervisorPermissions";
 import { useCompany } from "@/context/CompanyContext";
+import { useLang } from "@/context/LanguageContext";
 import { db } from "@/lib/firebase";
 import { t as t_ } from "@/constants/translations";
 
@@ -137,6 +138,7 @@ function mergeSessionIntoEmployees(employees: Employee[], sessionEmployee: Emplo
 
 export function EmployeeProvider({ children }: { children: React.ReactNode }) {
   const { companyId, company } = useCompany();
+  const { t } = useLang();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [currentEmployee, setCurrentEmployeeState] = useState<Employee | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -279,9 +281,9 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
         AsyncStorage.removeItem(sessionKey).catch(() => {});
         AsyncStorage.removeItem(sessionEmployeeKey).catch(() => {});
         Alert.alert(
-          "تسجيل دخول من جهاز آخر",
-          `تم تسجيل دخول "${empName}" من جهاز آخر. سيتم تسجيل خروجك تلقائياً.`,
-          [{ text: "حسناً" }]
+          t("sessionKickedTitle"),
+          t("sessionKickedMsg").replace("{name}", empName),
+          [{ text: t("ok") }]
         );
       }
     }, () => {}); // ignore Firestore errors silently

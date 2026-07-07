@@ -21,7 +21,6 @@ import { useLang } from "@/context/LanguageContext";
 import {
   Order,
   OrderItem,
-  PAYMENT_LABELS,
   PaymentMethod,
 } from "@/context/OrdersContext";
 

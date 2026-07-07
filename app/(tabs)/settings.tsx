@@ -1,4 +1,5 @@
 import { Feather } from "@expo/vector-icons";
+import * as Linking from "expo-linking";
 import React, { useState } from "react";
 import {
   Alert,
@@ -208,10 +209,11 @@ export default function SettingsScreen() {
   }
 
   function handleSupport() {
-    const phone = "966500000000"; // placeholder — replace with actual support number
-    const url = `https://wa.me/${phone}`;
+    const url = "mailto:almhbob.iii@gmail.com";
     if (Platform.OS === "web" && typeof window !== "undefined") {
       window.open(url, "_blank");
+    } else {
+      Linking.openURL(url);
     }
   }
 

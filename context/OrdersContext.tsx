@@ -34,6 +34,10 @@ export const ORDER_TYPE_LABELS: Record<OrderType, string> = {
   pickup: "استلام من المحل",
   delivery: "توصيل",
 };
+export const ORDER_TYPE_LABEL_KEYS: Record<OrderType, "pickup" | "delivery"> = {
+  pickup: "pickup",
+  delivery: "delivery",
+};
 
 export interface OrderItem {
   id: string;
@@ -50,6 +54,11 @@ export const PAYMENT_LABELS: Record<PaymentMethod, string> = {
   cash: "نقداً",
   card: "بطاقة",
   transfer: "تحويل",
+};
+export const PAYMENT_LABEL_KEYS: Record<PaymentMethod, "cash" | "paidCard" | "transfer"> = {
+  cash: "cash",
+  card: "paidCard",
+  transfer: "transfer",
 };
 
 export type DiscountType = "percentage" | "fixed";
