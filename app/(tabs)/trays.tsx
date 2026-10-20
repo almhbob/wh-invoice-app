@@ -14,7 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors } from "@/constants/colors";
 import { useEmployee } from "@/context/EmployeeContext";
 import { useLang } from "@/context/LanguageContext";
-import { useOrders } from "@/context/OrdersContext";
+import { formatOrderNumber, useOrders } from "@/context/OrdersContext";
 import { fmtCurrency, fmtDate } from "@/utils/dateUtils";
 
 function openWhatsApp(phone: string, message?: string) {
@@ -114,7 +114,7 @@ export default function TraysScreen() {
             <View style={[styles.card, { borderLeftColor: isReturned ? "#16a34a" : Colors.gold }]}>
               <View style={styles.cardHeader}>
                 <View>
-                  <Text style={styles.orderNum}>#{order.orderNumber}</Text>
+                  <Text style={styles.orderNum}>#{formatOrderNumber(order, t("temporaryOrderPrefix"))}</Text>
                   <Text style={styles.orderDate}>{fmtDate(order.createdAt, lang)}</Text>
                 </View>
                 <View style={[styles.amountBadge, { backgroundColor: Colors.gold + "20" }]}>
@@ -138,7 +138,7 @@ export default function TraysScreen() {
                     style={[styles.quickBtn, { backgroundColor: "#25D36618" }]}
                     onPress={() => {
                       Haptics.selectionAsync();
-                      openWhatsApp(order.customerPhone, `أهلاً ${order.customerName}، نذكّركم بإعادة الصينية الخاصة بطلب #${order.orderNumber}. شكراً لكم 🙏`);
+                      openWhatsApp(order.customerPhone, `أهلاً ${order.customerName}، نذكّركم بإعادة الصينية الخاصة بطلب #${formatOrderNumber(order, t("temporaryOrderPrefix"))}. شكراً لكم 🙏`);
                     }}
                   >
                     <Feather name="message-circle" size={13} color="#25D366" />

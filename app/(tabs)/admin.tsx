@@ -31,7 +31,7 @@ import {
   ROLE_LABELS,
   useEmployee,
 } from "@/context/EmployeeContext";
-import { Department, DISCOUNT_REASON_PRESETS, DiscountType, Order, PAYMENT_LABEL_KEYS, PaymentMethod, useOrders } from "@/context/OrdersContext";
+import { Department, DISCOUNT_REASON_PRESETS, DiscountType, formatOrderNumber, Order, PAYMENT_LABEL_KEYS, PaymentMethod, useOrders } from "@/context/OrdersContext";
 import { Offer, useOffers } from "@/context/OffersContext";
 import { Product, useProducts } from "@/context/ProductsContext";
 import { usePriceChange } from "@/context/PriceChangeContext";
@@ -560,7 +560,7 @@ function RecentActivitySection({ orders }: { orders: Order[] }) {
         return (
           <View key={o.id} style={styles.actRow}>
             <View style={styles.actNumBox}>
-              <Text style={styles.actNum}>#{o.orderNumber}</Text>
+              <Text style={styles.actNum}>#{formatOrderNumber(o, t("temporaryOrderPrefix"))}</Text>
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.actName} numberOfLines={1}>{o.customerName}</Text>

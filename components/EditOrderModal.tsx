@@ -22,6 +22,7 @@ import {
   Order,
   OrderItem,
   PaymentMethod,
+  formatOrderNumber,
 } from "@/context/OrdersContext";
 
 // ---------------------------------------------------------------------------
@@ -205,7 +206,7 @@ export default function EditOrderModal({
             </TouchableOpacity>
 
             <Text style={styles.headerTitle}>
-              {t("editOrderHeader")}{order.orderNumber}
+              {t("editOrderHeader")}{formatOrderNumber(order, t("temporaryOrderPrefix"))}
             </Text>
 
             {/* spacer to balance the X button */}

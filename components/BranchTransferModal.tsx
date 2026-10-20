@@ -17,6 +17,7 @@ import { useEmployee } from "@/context/EmployeeContext";
 import {
   BranchTransfer,
   Department,
+  formatOrderNumber,
   Order,
   OrderItem,
   TRANSFER_REASON_PRESETS,
@@ -151,7 +152,7 @@ export function BranchTransferModal({
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.headerTitle}>تحويل لفرع آخر</Text>
-              <Text style={styles.headerSub}>طلب #{order.orderNumber} — {order.customerName}</Text>
+              <Text style={styles.headerSub}>طلب #{formatOrderNumber(order)} — {order.customerName}</Text>
             </View>
             <TouchableOpacity onPress={onClose} hitSlop={10}>
               <Feather name="x" size={20} color={Colors.textMuted} />

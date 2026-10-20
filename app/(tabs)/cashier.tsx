@@ -41,6 +41,7 @@ import {
   ORDER_TYPE_LABEL_KEYS,
   PaymentMethod,
   PAYMENT_LABEL_KEYS,
+  formatOrderNumber,
   useOrders,
 } from "@/context/OrdersContext";
 import { Offer, normalizePhone, useOffers } from "@/context/OffersContext";
@@ -157,6 +158,36 @@ export default function CashierScreen() {
   const [receiptQr, setReceiptQr] = useState<string>("");
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
   const [catalogQtys, setCatalogQtys] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    if (!receiptOrder) return;
+    const latest = orders.find((order) => order.id === receiptOrder.id);
+    if (
+      latest &&
+      (latest.updatedAt !== receiptOrder.updatedAt ||
+        latest.orderNumber !== receiptOrder.orderNumber ||
+        latest.syncStatus !== receiptOrder.syncStatus)
+    ) {
+      setReceiptOrder(latest);
+    }
+  }, [orders, receiptOrder]);
+
+  useEffect(() => {
+    if (!receiptOrder) {
+      setReceiptQr("");
+      return;
+    }
+    let active = true;
+    QRCode.toDataURL(
+      `فاتورة #${formatOrderNumber(receiptOrder, t("temporaryOrderPrefix"))}\n${receiptOrder.customerName}\n${receiptOrder.customerPhone}\n${receiptOrder.receivedAt}${receiptOrder.totalAmount != null ? `\nالإجمالي: ${receiptOrder.totalAmount.toFixed(2)} ر.س` : ""}`,
+      { width: 160, margin: 1, color: { dark: "#2f241d", light: "#ffffff" } }
+    ).then((qr: string) => {
+      if (active) setReceiptQr(qr);
+    }).catch(() => {
+      if (active) setReceiptQr("");
+    });
+    return () => { active = false; };
+  }, [receiptOrder, t]);
 
   // Chocolate card add-on
   const [chocoCard, setChocoCard] = useState<ChocolateCardValue | null>(null);
@@ -386,6 +417,7 @@ export default function CashierScreen() {
 
   // ── WhatsApp share ───────────────────────────────────────────────────────
   const buildReceiptText = (order: Order) => {
+    const invoiceNumber = formatOrderNumber(order, t("temporaryOrderPrefix"));
     const itemLines = order.items
       .map((i) => {
         const lineTotal = i.price ? ` = ${(i.price * i.quantity).toFixed(2)} ر.س` : "";
@@ -421,14 +453,14 @@ export default function CashierScreen() {
     return (
       `${brandHeader}` +
       `━━━━━━━━━━━━━━━━\n` +
-      `رقم الفاتورة: #${order.orderNumber}\n` +
+      `رقم الفاتورة: #${invoiceNumber}\n` +
       `العميل: ${order.customerName}\n` +
       `الهاتف: ${order.customerPhone}${order.customerPhone2 ? ` / ${order.customerPhone2}` : ""}${otype}\n` +
       `تاريخ الطلب: ${order.receivedAt}${deliv}${addr}\n` +
       `━━━━━━━━━━━━━━━━\n` +
       `الأصناف:\n${itemLines}\n` +
       `━━━━━━━━━━━━━━━━\n` +
-      (order.totalAmount ? `الإجمالي: ${order.totalAmount.toFixed(2)} ر.س${disc}${ins}` : "") +
+      (order.totalAmount != null ? `الإجمالي: ${order.totalAmount.toFixed(2)} ر.س${disc}${ins}` : "") +
       `${pm}${paid}${remaining}\n` +
       `━━━━━━━━━━━━━━━━\n` +
       `${cashier}\n` +
@@ -474,9 +506,10 @@ export default function CashierScreen() {
   };
 
   const buildInvoiceHtml = (order: Order, qrDataUrl?: string) => {
+    const invoiceNumber = formatOrderNumber(order, t("temporaryOrderPrefix"));
     const itemRows = order.items.map((item) => {
-      const lineTotal = item.price ? `${(item.price * item.quantity).toFixed(2)} ر.س` : "—";
-      const unitPrice = item.price ? `${item.price} ر.س` : "—";
+      const lineTotal = item.price != null ? `${(item.price * item.quantity).toFixed(2)} ر.س` : "—";
+      const unitPrice = item.price != null ? `${item.price} ر.س` : "—";
       const details = item.details ? `<div style="font-size:8px;color:#555;margin-top:2px">${item.details}</div>` : "";
       const note = item.note ? `<div style="font-size:8px;color:#777">${item.note}</div>` : "";
       return `<tr>
@@ -495,7 +528,7 @@ export default function CashierScreen() {
         <span>${order.discount.type === "percentage" ? `${order.discount.value}%` : `${order.discount.value.toFixed(2)} ر.س`}</span>
       </div>` : "";
 
-    const insuranceHtml = order.insuranceAmount ? `
+    const insuranceHtml = order.insuranceAmount != null ? `
       <div style="display:flex;justify-content:space-between;font-size:10px;margin:3px 0">
         <span>تأمين الصواني (${order.insurancePaymentMethod === "card" ? "شبكة" : "كاش"})</span>
         <span>${order.insuranceAmount.toFixed(2)} ر.س</span>
@@ -510,7 +543,7 @@ export default function CashierScreen() {
       <div style="display:flex;justify-content:space-between;font-size:10px;margin:3px 0">
         <span>المبلغ المدفوع</span><span style="font-weight:700">${order.amountPaid.toFixed(2)} ر.س</span>
       </div>
-      ${order.totalAmount && order.amountPaid < order.totalAmount ? `
+      ${order.totalAmount != null && order.amountPaid < order.totalAmount ? `
       <div style="display:flex;justify-content:space-between;font-size:10px;margin:3px 0">
         <span>المتبقي</span><span style="font-weight:900">${(order.totalAmount - order.amountPaid).toFixed(2)} ر.س</span>
       </div>` : ""}` : "";
@@ -525,7 +558,7 @@ export default function CashierScreen() {
         <span style="color:#555">عنوان التوصيل: </span><span style="font-weight:700">${order.deliveryAddress}</span>
       </div>` : "";
 
-    const insuranceNote = order.insuranceAmount
+    const insuranceNote = order.insuranceAmount != null
       ? `<div style="font-size:9px;border:1px dashed #000;padding:4px 6px;margin-top:6px;border-radius:3px">⚠️ ملاحظة: مدة التأمين 3 أيام حتى استرجاع الصواني</div>` : "";
 
     const cashierHtml = order.cashierEmployee
@@ -541,7 +574,7 @@ export default function CashierScreen() {
 <html dir="rtl" lang="ar">
 <head>
 <meta charset="UTF-8">
-<title>فاتورة #${order.orderNumber}</title>
+<title>فاتورة #${invoiceNumber}</title>
 <style>
   @page { size: auto; margin: 8mm 10mm; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -566,7 +599,7 @@ export default function CashierScreen() {
   </div>
 
   <div class="center" style="margin:5px 0">
-    <div style="font-size:13px;font-weight:900">فاتورة #${order.orderNumber}</div>
+    <div style="font-size:13px;font-weight:900">فاتورة #${invoiceNumber}</div>
     ${order.orderType ? `<span class="badge">${order.orderType === "delivery" ? "توصيل" : "استلام"}</span>` : ""}
   </div>
 
@@ -597,7 +630,7 @@ export default function CashierScreen() {
 
   ${discountHtml}
   ${insuranceHtml}
-  ${order.totalAmount ? `<div class="total-line grand-total"><span>الإجمالي الكلي</span><span>${order.totalAmount.toFixed(2)} ر.س</span></div>` : ""}
+  ${order.totalAmount != null ? `<div class="total-line grand-total"><span>الإجمالي الكلي</span><span>${order.totalAmount.toFixed(2)} ر.س</span></div>` : ""}
   ${paymentHtml}
   ${paidHtml}
 
@@ -613,7 +646,7 @@ export default function CashierScreen() {
     const qrBlock = qrDataUrl
       ? `<div style="text-align:center;margin:10px 0 4px">
            <img src="${qrDataUrl}" alt="QR" style="width:90px;height:90px;" />
-           <div style="font-size:8px;color:#888;margin-top:2px">فاتورة #${order.orderNumber}</div>
+            <div style="font-size:8px;color:#888;margin-top:2px">فاتورة #${invoiceNumber}</div>
          </div>`
       : "";
 
@@ -623,10 +656,11 @@ export default function CashierScreen() {
   const showInlineInvoice = async (order: Order) => {
     if (Platform.OS !== "web" || typeof document === "undefined") return;
 
+    const invoiceNumber = formatOrderNumber(order, t("temporaryOrderPrefix"));
     let qrDataUrl = "";
     try {
       qrDataUrl = await QRCode.toDataURL(
-        `فاتورة #${order.orderNumber}\n${order.customerName}\n${order.customerPhone}\n${order.receivedAt}${order.totalAmount ? `\nالإجمالي: ${order.totalAmount.toFixed(2)} ر.س` : ""}`,
+        `فاتورة #${invoiceNumber}\n${order.customerName}\n${order.customerPhone}\n${order.receivedAt}${order.totalAmount != null ? `\nالإجمالي: ${order.totalAmount.toFixed(2)} ر.س` : ""}`,
         { width: 140, margin: 1, color: { dark: "#2f241d", light: "#ffffff" } }
       );
     } catch { /* skip QR on failure */ }
@@ -643,7 +677,7 @@ export default function CashierScreen() {
     bar.style.cssText = "background:#1a1a1a;padding:10px 16px;display:flex;align-items:center;gap:10px;direction:rtl;flex-shrink:0;";
 
     const title = document.createElement("span");
-    title.textContent = `فاتورة #${order.orderNumber} · ${order.customerName}`;
+    title.textContent = `فاتورة #${invoiceNumber} · ${order.customerName}`;
     title.style.cssText = "color:#fff;font-size:14px;font-weight:700;flex:1;font-family:sans-serif;";
 
     const printBtn = document.createElement("button");
@@ -711,10 +745,6 @@ export default function CashierScreen() {
       });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       if (appliedOfferId) incrementUsage(appliedOfferId).catch(() => {});
-      QRCode.toDataURL(
-        `فاتورة #${created.orderNumber}\n${created.customerName}\n${created.customerPhone}\n${created.receivedAt}${created.totalAmount ? `\nالإجمالي: ${created.totalAmount.toFixed(2)} ر.س` : ""}`,
-        { width: 160, margin: 1, color: { dark: "#2f241d", light: "#ffffff" } }
-      ).then(setReceiptQr).catch(() => setReceiptQr(""));
       resetForm();
       setExpandedItems(new Set());
       setReceiptOrder(created);
@@ -1979,7 +2009,7 @@ export default function CashierScreen() {
                     <Text style={styles.searchResultSub}>{order.customerPhone} · {order.receivedAt?.slice(0, 16)}</Text>
                   </View>
                   <View style={{ alignItems: "flex-end", gap: 2 }}>
-                    <Text style={styles.searchResultNum}>#{order.orderNumber}</Text>
+                    <Text style={styles.searchResultNum}>#{formatOrderNumber(order, t("temporaryOrderPrefix"))}</Text>
                     {order.totalAmount ? (
                       <Text style={styles.searchResultTotal}>{order.totalAmount.toFixed(2)} ر.س</Text>
                     ) : null}
@@ -2244,8 +2274,10 @@ export default function CashierScreen() {
                   <Image source={{ uri: receiptQr }} style={styles.receiptQrImg} contentFit="contain" />
                 ) : null}
               </View>
-              <Text style={styles.receiptBannerTitle}>{t("sentSuccess")}</Text>
-              <Text style={styles.receiptBannerSub}>{t("invoiceNum")}{receiptOrder.orderNumber}</Text>
+              <Text style={styles.receiptBannerTitle}>
+                {receiptOrder.syncStatus === "pending" ? t("orderSavedLocally") : t("sentSuccess")}
+              </Text>
+              <Text style={styles.receiptBannerSub}>{t("invoiceNum")}{formatOrderNumber(receiptOrder, t("temporaryOrderPrefix"))}</Text>
             </View>
 
             <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, gap: 12 }}>
@@ -2330,9 +2362,9 @@ export default function CashierScreen() {
               {/* Items */}
               <View style={styles.receiptCard}>
                 <Text style={styles.receiptSectionTitle}>{t("itemsDetails")}</Text>
-                {receiptOrder.items.map((item) => (
+                {receiptOrder.items.map((item, index) => (
                   <View key={item.id}>
-                    <View style={styles.receiptItemRow}>
+                    <View style={[styles.receiptItemRow, index === receiptOrder.items.length - 1 && styles.receiptItemRowLast]}>
                       <View style={{ flex: 1 }}>
                         <Text style={styles.receiptItemName}>{item.name}</Text>
                         {item.note ? <Text style={styles.receiptItemNote}>{item.note}</Text> : null}
@@ -2341,7 +2373,7 @@ export default function CashierScreen() {
                         ) : null}
                       </View>
                       <Text style={styles.receiptItemQty}>×{item.quantity}</Text>
-                      {item.price ? (
+                      {item.price != null ? (
                         <View style={{ alignItems: "flex-end" }}>
                           <Text style={styles.receiptItemPrice}>
                             {(item.price * item.quantity).toFixed(2)} {t("sar")}
@@ -2367,7 +2399,7 @@ export default function CashierScreen() {
                     </Text>
                   </View>
                 )}
-                {receiptOrder.totalAmount ? (
+                {receiptOrder.totalAmount != null ? (
                   <View style={[styles.receiptItemRow, styles.receiptTotalRow]}>
                     <Text style={styles.receiptTotalLabel}>{t("grandTotalAll")}</Text>
                     <Text style={styles.receiptTotalAmount}>
@@ -2377,8 +2409,15 @@ export default function CashierScreen() {
                 ) : null}
               </View>
 
+              {receiptOrder.notes ? (
+                <View style={styles.receiptCard}>
+                  <Text style={styles.receiptSectionTitle}>{t("notesSection")}</Text>
+                  <Text style={styles.receiptOrderNotes}>{receiptOrder.notes}</Text>
+                </View>
+              ) : null}
+
               {/* Insurance */}
-              {receiptOrder.insuranceAmount ? (
+              {receiptOrder.insuranceAmount != null ? (
                 <View style={[styles.receiptCard, { borderColor: Colors.gold + "40", borderWidth: 1 }]}>
                   <Text style={styles.receiptSectionTitle}>{t("trayInsurance")}</Text>
                   <View style={styles.receiptRow}>
@@ -2816,13 +2855,18 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05, shadowRadius: 4, elevation: 2,
   },
   receiptSectionTitle: { fontSize: 13, fontWeight: "700", color: Colors.textSecondary, marginBottom: 4 },
-  receiptRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  receiptRow: { flexDirection: "row", alignItems: "center", gap: 8, minHeight: 30 },
   receiptRowLabel: { fontSize: 13, color: Colors.textMuted, flex: 1 },
-  receiptRowValue: { fontSize: 13, fontWeight: "600", color: Colors.text, textAlign: "left" },
-  receiptItemRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  receiptRowValue: { fontSize: 13, fontWeight: "600", color: Colors.text, textAlign: "right", flexShrink: 1 },
+  receiptItemRow: {
+    flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 9,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: Colors.border,
+  },
+  receiptItemRowLast: { borderBottomWidth: 0 },
   receiptItemName: { flex: 1, fontSize: 13, color: Colors.text },
   receiptItemQty: { fontSize: 12, color: Colors.textMuted },
-  receiptItemPrice: { fontSize: 13, fontWeight: "600", color: Colors.text, minWidth: 60, textAlign: "left" },
+  receiptItemPrice: { fontSize: 13, fontWeight: "700", color: Colors.text, minWidth: 68, textAlign: "right", fontVariant: ["tabular-nums"] },
+  receiptOrderNotes: { fontSize: 13, color: Colors.textSecondary, lineHeight: 20, textAlign: "right" },
   receiptTotalRow: {
     borderTopWidth: 1, borderTopColor: Colors.border, paddingTop: 8, marginTop: 4,
   },

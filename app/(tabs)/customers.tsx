@@ -19,7 +19,7 @@ import { canDo, ROLE_CAN_VIEW_CUSTOMERS } from "@/constants/rbac";
 import type { TranslationKey } from "@/constants/translations";
 import { useEmployee } from "@/context/EmployeeContext";
 import { useLang } from "@/context/LanguageContext";
-import { Order, useOrders } from "@/context/OrdersContext";
+import { formatOrderNumber, Order, useOrders } from "@/context/OrdersContext";
 import { fmtDate } from "@/utils/dateUtils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -244,7 +244,7 @@ function CustomerHistoryModal({
                   <View style={styles.historyHeader}>
                     <View style={styles.historyNumWrap}>
                       <Text style={styles.historyNum}>
-                        #{order.orderNumber}
+                        #{formatOrderNumber(order, t("temporaryOrderPrefix"))}
                       </Text>
                     </View>
                     <Text style={styles.historyDate}>
