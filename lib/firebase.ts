@@ -26,13 +26,18 @@ const names: Record<keyof typeof configured, string> = {
 };
 const missingKeys = (Object.keys(configured) as (keyof typeof configured)[])
   .filter((key) => !configured[key]?.trim()).map((key) => names[key]);
-export const isFirebaseConfigured = missingKeys.length === 0;
-export const firebaseConfigDiagnostics = { missingKeys };
+const apiKeyValue = configured.apiKey?.trim() ?? "";
+const apiKeyIsValid = /^AIza[0-9A-Za-z_-]{35}$/.test(apiKeyValue);
+const invalidKeys = !apiKeyValue || apiKeyIsValid ? [] : [names.apiKey];
+export const isFirebaseConfigured = missingKeys.length === 0 && invalidKeys.length === 0;
+export const firebaseConfigDiagnostics = { missingKeys, invalidKeys };
 
-// Inert non-production placeholders allow the setup screen to render instead
-// of throwing before ErrorBoundary can mount. Tenant providers stay gated.
+// Firebase Auth validates the API-key format during initialization. Use a
+// syntactically valid, nonfunctional placeholder until real build variables
+// are present so the setup screen can render instead of a blank page.
+const safePlaceholderApiKey = "AIzaSy" + "A".repeat(33);
 const firebaseConfig = {
-  apiKey: configured.apiKey || "configuration-required",
+  apiKey: apiKeyIsValid ? apiKeyValue : safePlaceholderApiKey,
   authDomain: configured.authDomain || "configuration-required.invalid",
   projectId: configured.projectId || "configuration-required",
   storageBucket: configured.storageBucket || "configuration-required.invalid",
