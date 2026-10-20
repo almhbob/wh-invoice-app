@@ -1,6 +1,6 @@
-import { addDoc, collection } from "firebase/firestore";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 
-import { db } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
 
 export type AuditAction =
   | "employee_created"
@@ -21,15 +21,17 @@ export async function writeAuditLog(params: {
   details?: Record<string, unknown>;
 }) {
   try {
-    if (!params.companyId) return;
+    if (!params.companyId || !auth.currentUser || auth.currentUser.isAnonymous) return;
     await addDoc(collection(db, "companies", params.companyId, "auditLogs"), {
       action: params.action,
+      companyId: params.companyId,
+      actorUid: auth.currentUser.uid,
       actorId: params.actorId ?? "system",
       actorName: params.actorName ?? "system",
       targetId: params.targetId ?? null,
       targetType: params.targetType ?? null,
       details: params.details ?? {},
-      createdAt: new Date().toISOString(),
+      createdAt: serverTimestamp(),
     });
   } catch (error) {
     console.warn("Audit log skipped", error);

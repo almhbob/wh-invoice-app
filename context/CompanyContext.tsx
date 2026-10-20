@@ -3,6 +3,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import { Platform } from "react-native";
 
 import { DEFAULT_TENANT } from "@/constants/platform";
+import { useTenantAuth } from "@/context/TenantAuthContext";
 
 export type CompanyStatus = "trial" | "active" | "suspended" | "expired";
 export type CompanyPlan = "starter" | "business" | "enterprise";
@@ -73,7 +74,7 @@ const KNOWN_TRIAL_COMPANIES: Record<string, CompanyTenant> = {
 
 const COMPANY_STORAGE_KEY = "@fawtara_current_tenant_v1";
 const LEGACY_COMPANY_STORAGE_KEY = "@wh_current_company_v1";
-const INVALID_TENANT_IDS = new Set(["default-company", "select-company"]);
+const INVALID_TENANT_IDS = new Set(["select-company"]);
 const CompanyContext = createContext<CompanyContextType | undefined>(undefined);
 
 function companyFromId(companyId: string): CompanyTenant {
@@ -115,7 +116,13 @@ function sanitizeCompanyTenant(company?: Partial<CompanyTenant> | null): Company
 }
 
 export function CompanyProvider({ children }: { children: React.ReactNode }) {
-  const [company, setCompanyState] = useState<CompanyTenant>(DEFAULT_COMPANY);
+  const { identity } = useTenantAuth();
+  const [storedCompany, setCompanyState] = useState<CompanyTenant>(DEFAULT_COMPANY);
+  // URL/local storage may suggest a company before login; only signed claims
+  // decide the active tenant after login.
+  const company = identity && storedCompany.id !== identity.companyId
+    ? companyFromId(identity.companyId)
+    : storedCompany;
 
   useEffect(() => {
     let mounted = true;
@@ -153,9 +160,12 @@ export function CompanyProvider({ children }: { children: React.ReactNode }) {
 
   const setCompany = useCallback(async (nextCompany: CompanyTenant) => {
     const safeCompany = sanitizeCompanyTenant(nextCompany);
+    if (identity && safeCompany.id !== identity.companyId) {
+      throw new Error("AUTH_COMPANY_MISMATCH");
+    }
     setCompanyState(safeCompany);
     await AsyncStorage.setItem(COMPANY_STORAGE_KEY, JSON.stringify(safeCompany));
-  }, []);
+  }, [identity]);
 
   const switchCompanyById = useCallback(async (companyId: string) => {
     await setCompany(companyFromId(companyId));

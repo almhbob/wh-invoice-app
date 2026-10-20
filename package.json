@@ -11,6 +11,8 @@
     "serve": "node server/serve-no-cache.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "audit:project": "node scripts/audit.js",
+    "test:security": "pnpm --dir tools/security run test",
+    "provision:employee": "pnpm --dir tools/security run provision",
     "validate": "pnpm run typecheck && pnpm run audit:project",
     "health": "node -e \"fetch('http://localhost:'+(process.env.PORT||3000)+'/api/healthz').then(r=>r.ok?process.exit(0):process.exit(1)).catch(()=>process.exit(1))\""
   },

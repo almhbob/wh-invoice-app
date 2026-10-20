@@ -109,7 +109,7 @@ type EmpStatusFilter = "all" | "active" | "suspended";
 
 function EmployeesSection() {
   const { employees, addEmployee, removeEmployee, updateEmployee } = useEmployee();
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const [showAdd, setShowAdd] = useState(false);
   const [name, setName] = useState("");
   const [empId, setEmpId] = useState("");
@@ -127,6 +127,11 @@ function EmployeesSection() {
       await addEmployee({ name: name.trim(), employeeId: empId.trim().toUpperCase(), role });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setName(""); setEmpId(""); setRole("cashier"); setShowAdd(false);
+      Alert.alert(t("successTitle"), lang === "ar"
+        ? "تم إنشاء ملف الموظف. يلزم ربطه بحساب دخول من خلال أداة الإدارة الموثوقة قبل أن يتمكن من تسجيل الدخول."
+        : "Employee profile created. Link it to a sign-in account using the trusted provisioning tool before the employee can log in.");
+    } catch {
+      Alert.alert(t("errTitle"), lang === "ar" ? "تعذر حفظ الموظف. تحقق من الاتصال وصلاحيات حسابك." : "Could not save the employee. Check your connection and account permissions.");
     } finally { setSaving(false); }
   };
 

@@ -534,6 +534,10 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
           if (entry.kind === "create" && entry.data.temporaryOrderNumber === true) {
             assignedOrderNumber = await withTimeout(
               runTransaction(db, async (transaction) => {
+                // A previous commit may have succeeded just before disconnect.
+                // Read the stable order ID before allocating another number.
+                const existing = await transaction.get(ref);
+                if (existing.exists()) return existing.data().orderNumber as number;
                 const counterRef = counterDoc();
                 const counter = await transaction.get(counterRef);
                 const next = counter.exists() ? (counter.data().value as number) + 1 : 1;

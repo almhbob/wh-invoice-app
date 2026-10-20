@@ -2,49 +2,62 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     function signedIn() {
-      return request.auth != null;
-    }
-
-    function isPlatformOwner() {
-      return signedIn() && request.auth.token.platformRole in ['owner', 'developer', 'super_admin'];
-    }
-
-    function belongsToCompany(companyId) {
-      return signedIn() && request.auth.token.companyId == companyId;
+      return request.auth != null
+        && request.auth.token.firebase.sign_in_provider != 'anonymous'
+        && request.auth.token.companyId is string
+        && request.auth.token.employeeDocId is string;
     }
 
     function canAccessCompany(companyId) {
-      return isPlatformOwner() || belongsToCompany(companyId);
+      return signedIn() && request.auth.token.companyId == companyId
+        && firestore.exists(/databases/(default)/documents/companies/$(companyId)/employees/$(request.auth.token.employeeDocId))
+        && profile(companyId).authUid == request.auth.uid
+        && profile(companyId).companyId == companyId
+        && profile(companyId).status == 'active';
+    }
+    function profile(companyId) {
+      return firestore.get(/databases/(default)/documents/companies/$(companyId)/employees/$(request.auth.token.employeeDocId)).data;
+    }
+    function isManager(companyId) {
+      return canAccessCompany(companyId) && profile(companyId).role in ['admin', 'branch_supervisor'];
+    }
+    function isAdmin(companyId) {
+      return canAccessCompany(companyId) && profile(companyId).role == 'admin';
     }
 
     function isSafeFile() {
-      return request.resource == null || request.resource.size < 10 * 1024 * 1024;
+      return request.resource == null || (
+        request.resource.size > 0 && request.resource.size <= 10 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*|application/pdf')
+      );
+    }
+    function isImage() {
+      return request.resource == null || request.resource.contentType.matches('image/.*');
     }
 
     match /contracts/{companyId}/{fileName} {
-      allow read: if signedIn();
-      allow write: if signedIn() && isSafeFile();
+      allow read: if isManager(companyId);
+      allow write: if isAdmin(companyId) && isSafeFile();
     }
 
     match /company-documents/{companyId}/{fileName} {
-      allow read: if signedIn();
-      allow write: if signedIn() && isSafeFile();
+      allow read: if isManager(companyId);
+      allow write: if isAdmin(companyId) && isSafeFile();
     }
 
-    // Product images — auth-required read/write (anonymous session covers app users)
     match /product-images/{companyId}/{fileName} {
-      allow read: if signedIn();
-      allow write: if signedIn() && isSafeFile();
+      allow read: if canAccessCompany(companyId);
+      allow write: if isAdmin(companyId) && isSafeFile() && isImage();
     }
 
     match /damage-images/{companyId}/{fileName} {
-      allow read: if signedIn();
-      allow write: if signedIn() && isSafeFile();
+      allow read: if isManager(companyId);
+      allow write: if canAccessCompany(companyId) && profile(companyId).role != 'guest' && isSafeFile() && isImage();
     }
 
     match /logos/{companyId}/{fileName} {
-      allow read: if true;
-      allow write: if signedIn() && isSafeFile();
+      allow read: if canAccessCompany(companyId);
+      allow write: if isAdmin(companyId) && isSafeFile() && isImage();
     }
 
     match /{allPaths=**} {

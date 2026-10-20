@@ -28,7 +28,7 @@ import { PriceChangeProvider } from "@/context/PriceChangeContext";
 import { FeaturesProvider } from "@/context/FeaturesContext";
 import { PrinterProvider } from "@/context/PrinterContext";
 import { ShiftProvider } from "@/context/ShiftContext";
-import { ensureTemporaryFirebaseSession } from "@/lib/authIdentity";
+import { TenantAuthProvider } from "@/context/TenantAuthContext";
 
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
@@ -38,11 +38,9 @@ const FONT_LOAD_FAILSAFE_MS = 2500;
 function RootLayoutNav() {
   return (
     <StrictTenantBoundary>
-      <TenantAccessGate>
         <Stack screenOptions={{ headerBackTitle: "Back" }}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         </Stack>
-      </TenantAccessGate>
     </StrictTenantBoundary>
   );
 }
@@ -55,10 +53,6 @@ export default function RootLayout() {
     Inter_600SemiBold,
     Inter_700Bold,
   });
-
-  useEffect(() => {
-    ensureTemporaryFirebaseSession().catch(() => undefined);
-  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => setForceRender(true), FONT_LOAD_FAILSAFE_MS);
@@ -80,7 +74,9 @@ export default function RootLayout() {
       <ErrorBoundary>
         <QueryClientProvider client={queryClient}>
           <LanguageProvider>
+            <TenantAuthProvider>
             <CompanyProvider>
+              <TenantAccessGate>
               <EmployeeProvider>
                 <ProductsProvider>
                   <OrdersProvider>
@@ -104,7 +100,9 @@ export default function RootLayout() {
                   </OrdersProvider>
                 </ProductsProvider>
               </EmployeeProvider>
+              </TenantAccessGate>
             </CompanyProvider>
+            </TenantAuthProvider>
           </LanguageProvider>
         </QueryClientProvider>
       </ErrorBoundary>
