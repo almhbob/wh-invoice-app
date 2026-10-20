@@ -176,4 +176,9 @@ for (const file of ["_redirects", "_headers"]) {
   if (fs.existsSync(src)) fs.copyFileSync(src, dest);
 }
 
+const offlineReport = require("./offline-web.cjs").createOfflineSupport(outputDir);
+console.log(
+  `Offline app shell prepared (${offlineReport.assetCount} static assets, ${offlineReport.assetBytes} bytes).`
+);
+
 console.log("Build complete: static-build/");

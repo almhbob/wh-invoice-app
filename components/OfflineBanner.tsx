@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
-import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import React, { useEffect, useState } from "react";
+import { Platform, StyleSheet, Text, View } from "react-native";
 
 import { useLang } from "@/context/LanguageContext";
 import { useOrders } from "@/context/OrdersContext";
@@ -10,18 +10,53 @@ export function OfflineBanner() {
   const isOnline = useNetworkStatus();
   const { pendingSyncCount } = useOrders();
   const { t } = useLang();
+  const [offlineShellReady, setOfflineShellReady] = useState(Platform.OS !== "web");
+
+  useEffect(() => {
+    if (Platform.OS !== "web" || typeof navigator === "undefined" || !("serviceWorker" in navigator)) {
+      return;
+    }
+
+    let mounted = true;
+    const refreshReadiness = () => {
+      void navigator.serviceWorker.ready
+        .then((registration) => {
+          if (mounted) setOfflineShellReady(registration.active !== null);
+        })
+        .catch(() => {
+          if (mounted) setOfflineShellReady(false);
+        });
+    };
+
+    navigator.serviceWorker.addEventListener("controllerchange", refreshReadiness);
+    refreshReadiness();
+
+    return () => {
+      mounted = false;
+      navigator.serviceWorker.removeEventListener("controllerchange", refreshReadiness);
+    };
+  }, []);
 
   if (isOnline && pendingSyncCount === 0) return null;
+  const needsOfflinePreparation = !isOnline && Platform.OS === "web" && !offlineShellReady;
 
   return (
     <View style={[styles.banner, isOnline && styles.syncBanner]}>
       <Feather name={isOnline ? "refresh-cw" : "wifi-off"} size={14} color="#fff" />
       <View style={styles.textBlock}>
-        <Text style={styles.title}>{isOnline ? t("syncPendingTitle") : t("offlineBanner")}</Text>
-        <Text style={styles.sub}>
+        <Text style={styles.title}>
           {isOnline
-            ? t("syncPendingSub").replace("{n}", String(pendingSyncCount))
-            : t("offlineBannerSub")}
+            ? t("syncPendingTitle")
+            : needsOfflinePreparation
+              ? t("offlineShellTitle")
+              : t("offlineBanner")}
+        </Text>
+        <Text style={styles.sub}>
+          {needsOfflinePreparation
+            ? t("offlineShellSub")
+            : isOnline
+              ? t("syncPendingSub").replace("{n}", String(pendingSyncCount))
+              : t("offlineBannerSub")}
         </Text>
       </View>
     </View>
