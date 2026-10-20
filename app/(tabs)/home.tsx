@@ -166,7 +166,7 @@ function Tile({ label, icon, accent, primary, badge, size, onPress }: {
 
   const r      = Math.round(size * 0.14);
   const iconSz = size >= 120 ? 32 : size >= 90 ? 26 : 22;
-  const fz     = size >= 120 ? 13 : size >= 90 ? 11 : 10;
+  const fz     = size >= 120 ? 13 : size >= 90 ? 12 : 11;
 
   return (
     <Animated.View style={[{ width: size, height: size }, { transform: [{ scale: sc }] }]}>
@@ -178,20 +178,21 @@ function Tile({ label, icon, accent, primary, badge, size, onPress }: {
           alignItems: "center",
           justifyContent: "center",
           gap: size >= 90 ? 10 : 7,
-          backgroundColor: primary ? "#FBF5E7" : "#FFFFFF",
+          backgroundColor: primary ? "#FBF5E7" : Colors.primary,
           borderWidth: 1,
-          borderColor: primary ? "#E6D4A8" : "#EAE5DD",
-          shadowColor: "#2F241D",
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.05,
-          shadowRadius: 6,
-          elevation: 1,
+          borderColor: primary ? "#E6D4A8" : accent + "55",
+          shadowColor: primary ? "#2F241D" : "#0A1628",
+          shadowOffset: { width: 0, height: 3 },
+          shadowOpacity: 0.12,
+          shadowRadius: 8,
+          elevation: 3,
         }}
         onPress={press}
         activeOpacity={0.8}
         accessibilityRole="button"
         accessibilityLabel={label}
       >
+          <View style={[s.tileAccentLine, { backgroundColor: primary ? Colors.gold : accent }]} />
           <View style={{
             width: iconSz + 20, height: iconSz + 20, borderRadius: (iconSz + 20) / 2,
             backgroundColor: accent + "18", alignItems: "center", justifyContent: "center",
@@ -200,7 +201,7 @@ function Tile({ label, icon, accent, primary, badge, size, onPress }: {
           </View>
 
           <Text
-            style={{ color: "#352A22", fontSize: fz, fontWeight: "700", textAlign: "center", paddingHorizontal: 5 }}
+            style={{ color: primary ? "#352A22" : "#F8FAFC", fontSize: fz, fontWeight: "700", textAlign: "center", paddingHorizontal: 5 }}
             numberOfLines={1}
           >
             {label}
@@ -211,7 +212,7 @@ function Tile({ label, icon, accent, primary, badge, size, onPress }: {
             position: "absolute", top: 8, right: 8,
             minWidth: 18, height: 18, borderRadius: 9,
             backgroundColor: Colors.accent, alignItems: "center", justifyContent: "center",
-            paddingHorizontal: 4, borderWidth: 2, borderColor: primary ? "#FBF5E7" : "#FFFFFF",
+            paddingHorizontal: 4, borderWidth: 2, borderColor: primary ? "#FBF5E7" : Colors.primary,
           }}>
             <Text style={{ color: "#fff", fontSize: 9, fontWeight: "900" }}>
               {badge > 99 ? "99+" : badge}
@@ -456,22 +457,31 @@ export default function HomeScreen() {
           <React.Fragment key={item.lbl}>
             <View style={s.stripCell}>
               <Text style={[s.stripNum, { color: item.color }]}>{item.num}</Text>
-              <Text style={s.stripLbl}>{item.lbl}</Text>
+              <Text style={s.stripLbl} numberOfLines={1}>{item.lbl}</Text>
             </View>
             {i < arr.length - 1 && <View style={s.stripSep} />}
           </React.Fragment>
         ))}
-        <View style={{ flex: 1 }} />
-        <Text style={s.stripClock}>{fmtClock(now)}</Text>
+        <View style={s.stripSpacer} />
+        <View style={s.stripClockPill}>
+          <Feather name="clock" size={12} color={Colors.textMuted} />
+          <Text style={s.stripClock}>{fmtClock(now)}</Text>
+        </View>
       </View>
 
       {/* New invoice CTA */}
       <View style={s.narrowCta}>
-        <TouchableOpacity style={s.narrowCtaBtn} onPress={() => go("cashier")} activeOpacity={0.85}>
-          <View style={s.narrowCtaInner}>
-            <Feather name="plus" size={16} color="#0A1628" />
+        <TouchableOpacity
+          style={s.narrowCtaBtn}
+          onPress={() => go("cashier")}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel={t("newInvoice")}
+        >
+          <LinearGradient colors={[Colors.goldLight, Colors.gold]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.narrowCtaInner}>
+            <Feather name="plus" size={18} color="#0A1628" />
             <Text style={s.narrowCtaTxt}>{t("newInvoice")}</Text>
-          </View>
+          </LinearGradient>
         </TouchableOpacity>
       </View>
 
@@ -524,6 +534,7 @@ const s = StyleSheet.create({
   sectionDivider: { height: StyleSheet.hairlineWidth, backgroundColor: "#E7E0D6", marginVertical: 16 },
   gridContent: { gap: 12, backgroundColor: "#F8F6F1" },
   tileGrid:    { flexDirection: "row", flexWrap: "wrap" },
+  tileAccentLine: { position: "absolute", top: 0, left: 0, right: 0, height: 3 },
 
   // Info panel
   infoPanel:        { flexShrink: 0, borderLeftWidth: 1, borderLeftColor: "rgba(255,255,255,0.06)" },
@@ -573,17 +584,19 @@ const s = StyleSheet.create({
   clockDate:    { color: "rgba(255,255,255,0.35)", fontSize: 11, marginTop: 2 },
 
   // Narrow stats strip
-  statsStrip: { flexDirection: "row", alignItems: "center", backgroundColor: "#FFFEFC", paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "#E7E0D6", gap: 10 },
-  stripCell:  { alignItems: "center", gap: 1 },
-  stripNum:   { fontSize: 20, fontWeight: "900", fontVariant: ["tabular-nums" as any] },
-  stripLbl:   { fontSize: 9, color: Colors.textMuted, fontWeight: "600" },
-  stripSep:   { width: StyleSheet.hairlineWidth, height: 28, backgroundColor: "#E8EDF5" },
-  stripClock: { color: Colors.textMuted, fontSize: 12, fontWeight: "700", fontVariant: ["tabular-nums" as any] },
+  statsStrip: { flexDirection: "row", alignItems: "center", backgroundColor: "#FFFFFF", paddingHorizontal: 12, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: "#E7E0D6", gap: 7 },
+  stripCell:  { flex: 1, minWidth: 0, alignItems: "center", gap: 2 },
+  stripNum:   { fontSize: 21, fontWeight: "900", fontVariant: ["tabular-nums" as any] },
+  stripLbl:   { fontSize: 10, color: Colors.textMuted, fontWeight: "600" },
+  stripSep:   { width: StyleSheet.hairlineWidth, height: 30, backgroundColor: "#E8EDF5" },
+  stripSpacer: { flex: 0.45 },
+  stripClockPill: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#F5F1E8", paddingHorizontal: 8, paddingVertical: 7, borderRadius: 10 },
+  stripClock: { color: Colors.textMuted, fontSize: 11, fontWeight: "700", fontVariant: ["tabular-nums" as any] },
 
   // Narrow CTA
   narrowCta:      { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8, backgroundColor: "#FFFEFC" },
-  narrowCtaBtn:   { borderRadius: 12, overflow: "hidden" },
-  narrowCtaInner: { backgroundColor: Colors.gold, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 13 },
+  narrowCtaBtn:   { borderRadius: 14, overflow: "hidden", borderWidth: 1, borderColor: "#B38A2E" },
+  narrowCtaInner: { minHeight: 48, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 14 },
   narrowCtaTxt:   { color: "#352A22", fontSize: 15, fontWeight: "700" },
 
   // Cashier tracker — desktop info panel
