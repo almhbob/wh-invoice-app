@@ -20,7 +20,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Colors } from "@/constants/colors";
 import { useLang } from "@/context/LanguageContext";
-import { useOrders, Order } from "@/context/OrdersContext";
+import { formatOrderNumber, useOrders, Order } from "@/context/OrdersContext";
 import { Product, useProducts } from "@/context/TenantProductsContext";
 import { DeliveryDatePicker, DeliveryTimePicker } from "@/components/DeliveryDateTimePicker";
 import { ChocolateCardSection, ChocolateCardValue, buildChocoItems, chocoCardTotal } from "@/components/ChocolateCardSection";
@@ -566,7 +566,7 @@ function SuccessScreen({
 
         <View style={successStyles.numBox}>
           <Text style={successStyles.numLabel}>{t("shopOrderNum")}</Text>
-          <Text style={successStyles.numValue}>#{order.orderNumber}</Text>
+          <Text style={successStyles.numValue}>#{formatOrderNumber(order, t("temporaryOrderPrefix"))}</Text>
         </View>
 
         <View style={successStyles.detailsBox}>

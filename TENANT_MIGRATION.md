@@ -1,5 +1,7 @@
 # Tenant Data Migration
 
+> Legacy data-copy reference. For the new employee authentication and strict rules rollout, follow [SECURITY_MIGRATION.md](SECURITY_MIGRATION.md), which supersedes the deployment order below. The old unauthenticated client migration script is not suitable for the new strict rules; use trusted Admin SDK tooling and do not delete legacy data automatically.
+
 This project has been migrated from global Firestore collections to company-scoped collections.
 
 ## New tenant structure

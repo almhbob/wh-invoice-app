@@ -1,0 +1,17 @@
+{
+  "name": "wh-invoice-security-tools",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "packageManager": "pnpm@9.15.4",
+  "scripts": {
+    "test": "node run-tests.cjs",
+    "provision": "node provision-employee.mjs"
+  },
+  "dependencies": {
+    "@firebase/rules-unit-testing": "5.0.0",
+    "firebase": "12.13.0",
+    "firebase-admin": "14.5.0",
+    "firebase-tools": "15.34.0"
+  }
+}

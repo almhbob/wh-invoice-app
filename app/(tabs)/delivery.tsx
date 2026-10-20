@@ -19,7 +19,7 @@ import { Colors } from "@/constants/colors";
 import { canDo, ROLE_CAN_VIEW_DELIVERY } from "@/constants/rbac";
 import { useEmployee } from "@/context/EmployeeContext";
 import { useLang } from "@/context/LanguageContext";
-import { Order, useOrders } from "@/context/OrdersContext";
+import { formatOrderNumber, Order, useOrders } from "@/context/OrdersContext";
 import { fmtDate } from "@/utils/dateUtils";
 
 // ── Types & constants ─────────────────────────────────────────────────────────
@@ -314,7 +314,7 @@ function DriverModal({
 }: {
   visible: boolean;
   orderId: string;
-  orderNumber?: number;
+  orderNumber?: string;
   currentDriver?: { name: string; employeeId: string };
   allOrders: Order[];
   onClose: () => void;
@@ -491,7 +491,7 @@ function DeliveryCard({
       <View style={styles.cardHeader}>
         <View style={{ flex: 1, gap: 5 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-            <Text style={styles.orderNum}>#{order.orderNumber}</Text>
+            <Text style={styles.orderNum}>#{formatOrderNumber(order, t("temporaryOrderPrefix"))}</Text>
             {ready && !delivered && (
               <View style={[styles.badge, { backgroundColor: "#7c3aed12" }]}>
                 <Feather name="check-circle" size={10} color="#7c3aed" />
@@ -644,7 +644,7 @@ function DeliveryCard({
             Haptics.selectionAsync();
             openWhatsApp(
               order.customerPhone,
-              `أهلاً ${order.customerName}، طلبك رقم #${order.orderNumber} جاهز وفي طريقه إليك! 🎉`
+              `أهلاً ${order.customerName}، طلبك رقم #${formatOrderNumber(order, t("temporaryOrderPrefix"))} جاهز وفي طريقه إليك! 🎉`
             );
           }}
           activeOpacity={0.8}
@@ -856,7 +856,7 @@ export default function DeliveryScreen() {
       <DriverModal
         visible={driverModalOrder !== null}
         orderId={driverModalOrder?.id ?? ""}
-        orderNumber={driverModalOrder?.orderNumber}
+        orderNumber={driverModalOrder ? formatOrderNumber(driverModalOrder, t("temporaryOrderPrefix")) : undefined}
         currentDriver={
           driverModalOrder?.deliveryDriver?.employeeId
             ? driverModalOrder.deliveryDriver

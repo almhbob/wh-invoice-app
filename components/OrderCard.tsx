@@ -12,7 +12,7 @@ import {
 
 import { Colors } from "@/constants/colors";
 import { useLang } from "@/context/LanguageContext";
-import { Department, Order, OrderStatus } from "@/context/OrdersContext";
+import { Department, formatOrderNumber, Order, OrderStatus } from "@/context/OrdersContext";
 
 interface OrderCardProps {
   order: Order;
@@ -79,7 +79,7 @@ export function OrderCard({ order, onStatusChange, onPress, compact = false }: O
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <Text style={styles.orderNum}>#{order.orderNumber}</Text>
+            <Text style={styles.orderNum}>#{formatOrderNumber(order, t("temporaryOrderPrefix"))}</Text>
             <View style={[styles.deptBadge, { backgroundColor: deptColor + "20" }]}>
               <Text style={[styles.deptText, { color: deptColor }]}>
                 {departmentLabels[primaryDept]}

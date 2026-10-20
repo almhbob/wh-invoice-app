@@ -31,7 +31,7 @@ import {
   ROLE_LABELS,
   useEmployee,
 } from "@/context/EmployeeContext";
-import { Department, DISCOUNT_REASON_PRESETS, DiscountType, Order, PAYMENT_LABEL_KEYS, PaymentMethod, useOrders } from "@/context/OrdersContext";
+import { Department, DISCOUNT_REASON_PRESETS, DiscountType, formatOrderNumber, Order, PAYMENT_LABEL_KEYS, PaymentMethod, useOrders } from "@/context/OrdersContext";
 import { Offer, useOffers } from "@/context/OffersContext";
 import { Product, useProducts } from "@/context/ProductsContext";
 import { usePriceChange } from "@/context/PriceChangeContext";
@@ -109,7 +109,7 @@ type EmpStatusFilter = "all" | "active" | "suspended";
 
 function EmployeesSection() {
   const { employees, addEmployee, removeEmployee, updateEmployee } = useEmployee();
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const [showAdd, setShowAdd] = useState(false);
   const [name, setName] = useState("");
   const [empId, setEmpId] = useState("");
@@ -127,6 +127,11 @@ function EmployeesSection() {
       await addEmployee({ name: name.trim(), employeeId: empId.trim().toUpperCase(), role });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setName(""); setEmpId(""); setRole("cashier"); setShowAdd(false);
+      Alert.alert(t("successTitle"), lang === "ar"
+        ? "تم إنشاء ملف الموظف. يلزم ربطه بحساب دخول من خلال أداة الإدارة الموثوقة قبل أن يتمكن من تسجيل الدخول."
+        : "Employee profile created. Link it to a sign-in account using the trusted provisioning tool before the employee can log in.");
+    } catch {
+      Alert.alert(t("errTitle"), lang === "ar" ? "تعذر حفظ الموظف. تحقق من الاتصال وصلاحيات حسابك." : "Could not save the employee. Check your connection and account permissions.");
     } finally { setSaving(false); }
   };
 
@@ -560,7 +565,7 @@ function RecentActivitySection({ orders }: { orders: Order[] }) {
         return (
           <View key={o.id} style={styles.actRow}>
             <View style={styles.actNumBox}>
-              <Text style={styles.actNum}>#{o.orderNumber}</Text>
+              <Text style={styles.actNum}>#{formatOrderNumber(o, t("temporaryOrderPrefix"))}</Text>
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.actName} numberOfLines={1}>{o.customerName}</Text>

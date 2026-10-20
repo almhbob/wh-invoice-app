@@ -5,6 +5,7 @@ node_modules/
 static-build/
 dist/
 .expo/
+.firebase/
 
 # Lock files
 yarn.lock

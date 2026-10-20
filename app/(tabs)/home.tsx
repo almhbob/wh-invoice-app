@@ -20,7 +20,7 @@ import { canDo, ROLE_CAN_ACCESS_ADMIN } from "@/constants/rbac";
 import { useCompany } from "@/context/CompanyContext";
 import { useEmployee } from "@/context/EmployeeContext";
 import { useLang } from "@/context/LanguageContext";
-import { Department, Order, useOrders } from "@/context/OrdersContext";
+import { Department, formatOrderNumber, Order, useOrders } from "@/context/OrdersContext";
 import { usePriceChange } from "@/context/PriceChangeContext";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -100,7 +100,7 @@ function CashierOrderTracker({ orders, isDark }: { orders: Order[]; isDark?: boo
           <View key={order.id} style={[ct.card, { backgroundColor: cardBg, borderColor: allDone ? "#34D39940" : cardBorder }]}>
             {allDone && <View style={ct.doneLine} />}
             <View style={ct.cardHead}>
-              <Text style={[ct.orderNum, { color: allDone ? "#34D399" : textColor }]}>#{order.orderNumber}</Text>
+              <Text style={[ct.orderNum, { color: allDone ? "#34D399" : textColor }]}>#{formatOrderNumber(order, t("temporaryOrderPrefix"))}</Text>
               <Text style={[ct.custName, { color: textColor }]} numberOfLines={1}>{order.customerName}</Text>
               <View style={[ct.statusBadge, {
                 backgroundColor: allDone ? "#34D39918" : anyInProg ? "#60A5FA18" : "#6B728018",
@@ -139,7 +139,6 @@ const ROLE_COLOR: Record<string, string> = {
 
 // ── Tile route/icon/accent constants (labels computed at runtime) ──────────────
 const TILE_DEFS = [
-  { key: "cashierLabel" as const, icon: "file-text",   route: "cashier",   accent: Colors.gold,            primary: true  },
   { key: "tabArchive"   as const, icon: "archive",     route: "archive",   accent: "#60A5FA",              primary: false },
   { key: "tabReports"   as const, icon: "bar-chart-2", route: "reports",   accent: "#A78BFA",              primary: false },
   { key: "deptHalwaShort"   as const, icon: "coffee",  route: "halwa",     accent: Colors.halwaLight,      primary: false },
@@ -167,44 +166,53 @@ function Tile({ label, icon, accent, primary, badge, size, onPress }: {
 
   const r      = Math.round(size * 0.14);
   const iconSz = size >= 120 ? 32 : size >= 90 ? 26 : 22;
-  const fz     = size >= 120 ? 13 : size >= 90 ? 11 : 10;
-
-  const bg1 = primary ? "#2A1A00" : "#162038";
-  const bg2 = primary ? "#1A0F00" : "#0C1525";
+  const fz     = size >= 120 ? 13 : size >= 90 ? 12 : 11;
 
   return (
     <Animated.View style={[{ width: size, height: size }, { transform: [{ scale: sc }] }]}>
-      <TouchableOpacity style={{ flex: 1, borderRadius: r, overflow: "hidden" }} onPress={press} activeOpacity={0.8}>
-        <LinearGradient
-          colors={[bg1, bg2]}
-          style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: size >= 90 ? 10 : 7 }}
-          start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-        >
-          {/* Accent strip */}
-          <View style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, backgroundColor: accent }} />
-
-          {/* Icon container */}
+      <TouchableOpacity
+        style={{
+          flex: 1,
+          borderRadius: r,
+          overflow: "hidden",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: size >= 90 ? 10 : 7,
+          backgroundColor: primary ? "#FBF5E7" : Colors.primary,
+          borderWidth: 1,
+          borderColor: primary ? "#E6D4A8" : accent + "55",
+          shadowColor: primary ? "#2F241D" : "#0A1628",
+          shadowOffset: { width: 0, height: 3 },
+          shadowOpacity: 0.12,
+          shadowRadius: 8,
+          elevation: 3,
+        }}
+        onPress={press}
+        activeOpacity={0.8}
+        accessibilityRole="button"
+        accessibilityLabel={label}
+      >
+          <View style={[s.tileAccentLine, { backgroundColor: primary ? Colors.gold : accent }]} />
           <View style={{
             width: iconSz + 20, height: iconSz + 20, borderRadius: (iconSz + 20) / 2,
-            backgroundColor: accent + "22", alignItems: "center", justifyContent: "center",
+            backgroundColor: accent + "18", alignItems: "center", justifyContent: "center",
           }}>
-            <Feather name={icon as any} size={iconSz} color={primary ? Colors.gold : "rgba(255,255,255,0.92)"} />
+            <Feather name={icon as any} size={iconSz} color={primary ? "#8A6B2E" : accent} />
           </View>
 
           <Text
-            style={{ color: primary ? Colors.gold : "rgba(255,255,255,0.88)", fontSize: fz, fontWeight: "800", textAlign: "center" }}
+            style={{ color: primary ? "#352A22" : "#F8FAFC", fontSize: fz, fontWeight: "700", textAlign: "center", paddingHorizontal: 5 }}
             numberOfLines={1}
           >
             {label}
           </Text>
-        </LinearGradient>
 
         {!!badge && (
           <View style={{
             position: "absolute", top: 8, right: 8,
             minWidth: 18, height: 18, borderRadius: 9,
             backgroundColor: Colors.accent, alignItems: "center", justifyContent: "center",
-            paddingHorizontal: 4, borderWidth: 2, borderColor: bg2,
+            paddingHorizontal: 4, borderWidth: 2, borderColor: primary ? "#FBF5E7" : Colors.primary,
           }}>
             <Text style={{ color: "#fff", fontSize: 9, fontWeight: "900" }}>
               {badge > 99 ? "99+" : badge}
@@ -262,7 +270,7 @@ export default function HomeScreen() {
 
   const isAdmin  = canDo(currentEmployee?.role, ROLE_CAN_ACCESS_ADMIN);
   const isLavi   = company.id === LAVIVIANE_COMPANY_ID;
-  const todayStr = useMemo(() => new Date().toDateString(), []);
+  const todayStr = now.toDateString();
 
   const todayOrders   = useMemo(() => orders.filter(o => new Date(o.createdAt).toDateString() === todayStr), [orders, todayStr]);
   const todayRevenue  = useMemo(() => todayOrders.reduce((s, o) => s + (o.totalAmount ?? 0), 0), [todayOrders]);
@@ -277,7 +285,7 @@ export default function HomeScreen() {
       return isAdmin ? [...TILES, ADMIN_TILE] : [...TILES];
     }
     if (role === "cashier") {
-      return TILES.filter(t => ["cashier", "archive", "delivery"].includes(t.route));
+      return TILES.filter(t => ["archive", "delivery"].includes(t.route));
     }
     // Dept workers: only their own dept tile
     return TILES.filter(t => t.route === role);
@@ -308,10 +316,10 @@ export default function HomeScreen() {
             {/* Top CTA row */}
             <View style={[s.ctaRow, { paddingHorizontal: TILE_PAD, paddingTop: TILE_PAD }]}>
               <TouchableOpacity style={s.ctaBtn} onPress={() => go("cashier")} activeOpacity={0.85}>
-                <LinearGradient colors={[Colors.gold, "#A07830"]} style={s.ctaBtnInner} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+                <View style={s.ctaBtnInner}>
                   <Feather name="plus" size={18} color="#0A1628" />
                   <Text style={s.ctaBtnTxt}>{t("newInvoice")}</Text>
-                </LinearGradient>
+                </View>
               </TouchableOpacity>
             </View>
 
@@ -322,29 +330,26 @@ export default function HomeScreen() {
               contentContainerStyle={[s.gridContent, { padding: TILE_PAD, paddingTop: 16, gap: TILE_GAP }]}
               showsVerticalScrollIndicator={false}
             >
-              <View style={[s.tileGrid, { gap: TILE_GAP }]}>
-                {tiles.map(t => (
-                  <Tile
-                    key={t.route}
-                    label={t.label}
-                    icon={t.icon}
-                    accent={t.accent}
-                    primary={(t as any).primary}
-                    badge={t.route === "admin" ? pendingCount || undefined : undefined}
-                    size={tileSize}
-                    onPress={() => go(t.route)}
-                  />
+              <View style={[s.tileGrid, { gap: TILE_GAP, justifyContent: "center" }]}>
+                {tiles.map((t) => (
+                  <React.Fragment key={t.route}>
+                    <Tile
+                      label={t.label}
+                      icon={t.icon}
+                      accent={t.accent}
+                      primary={(t as any).primary}
+                      badge={t.route === "admin" ? pendingCount || undefined : undefined}
+                      size={tileSize}
+                      onPress={() => go(t.route)}
+                    />
+                  </React.Fragment>
                 ))}
               </View>
             </ScrollView>
           </View>
 
           {/* ── Info panel (right) ────────────────────────────────────────── */}
-          <LinearGradient
-            colors={["#080F1E", "#0E1A30", "#152240"]}
-            style={[s.infoPanel, { width: INFO_W }]}
-            start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
-          >
+          <View style={[s.infoPanel, { width: INFO_W, backgroundColor: isLavi ? "#332820" : Colors.primary }]}>
             <ScrollView contentContainerStyle={s.infoPanelContent} showsVerticalScrollIndicator={false}>
 
               {/* Brand */}
@@ -431,7 +436,7 @@ export default function HomeScreen() {
               </View>
 
             </ScrollView>
-          </LinearGradient>
+          </View>
 
         </View>
       </View>
@@ -452,20 +457,29 @@ export default function HomeScreen() {
           <React.Fragment key={item.lbl}>
             <View style={s.stripCell}>
               <Text style={[s.stripNum, { color: item.color }]}>{item.num}</Text>
-              <Text style={s.stripLbl}>{item.lbl}</Text>
+              <Text style={s.stripLbl} numberOfLines={1}>{item.lbl}</Text>
             </View>
             {i < arr.length - 1 && <View style={s.stripSep} />}
           </React.Fragment>
         ))}
-        <View style={{ flex: 1 }} />
-        <Text style={s.stripClock}>{fmtClock(now)}</Text>
+        <View style={s.stripSpacer} />
+        <View style={s.stripClockPill}>
+          <Feather name="clock" size={12} color={Colors.textMuted} />
+          <Text style={s.stripClock}>{fmtClock(now)}</Text>
+        </View>
       </View>
 
       {/* New invoice CTA */}
       <View style={s.narrowCta}>
-        <TouchableOpacity style={s.narrowCtaBtn} onPress={() => go("cashier")} activeOpacity={0.85}>
-          <LinearGradient colors={[Colors.gold, "#A07830"]} style={s.narrowCtaInner} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
-            <Feather name="plus" size={16} color="#0A1628" />
+        <TouchableOpacity
+          style={s.narrowCtaBtn}
+          onPress={() => go("cashier")}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel={t("newInvoice")}
+        >
+          <LinearGradient colors={[Colors.goldLight, Colors.gold]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.narrowCtaInner}>
+            <Feather name="plus" size={18} color="#0A1628" />
             <Text style={s.narrowCtaTxt}>{t("newInvoice")}</Text>
           </LinearGradient>
         </TouchableOpacity>
@@ -481,22 +495,23 @@ export default function HomeScreen() {
 
       {/* Tile grid */}
       <ScrollView
-        style={{ flex: 1, backgroundColor: "#fff" }}
+        style={{ flex: 1, backgroundColor: "#F8F6F1" }}
         contentContainerStyle={[s.gridContent, { padding: 16, gap: TILE_GAP, paddingBottom: insets.bottom + 90 }]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={[s.tileGrid, { gap: TILE_GAP }]}>
-          {tiles.map(t => (
-            <Tile
-              key={t.route}
-              label={t.label}
-              icon={t.icon}
-              accent={t.accent}
-              primary={(t as any).primary}
-              badge={t.route === "admin" ? pendingCount || undefined : undefined}
-              size={tileSize}
-              onPress={() => go(t.route)}
-            />
+        <View style={[s.tileGrid, { gap: TILE_GAP, justifyContent: "center" }]}>
+          {tiles.map((t) => (
+            <React.Fragment key={t.route}>
+              <Tile
+                label={t.label}
+                icon={t.icon}
+                accent={t.accent}
+                primary={(t as any).primary}
+                badge={t.route === "admin" ? pendingCount || undefined : undefined}
+                size={tileSize}
+                onPress={() => go(t.route)}
+              />
+            </React.Fragment>
           ))}
         </View>
       </ScrollView>
@@ -507,18 +522,19 @@ export default function HomeScreen() {
 // ── Styles ─────────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  screen:      { flex: 1, backgroundColor: "#fff" },
+  screen:      { flex: 1, backgroundColor: "#F8F6F1" },
   wideLayout:  { flex: 1, flexDirection: "row" },
 
   // Grid panel
-  gridPanel:   { flex: 1, backgroundColor: "#fff", overflow: "hidden" as any },
+  gridPanel:   { flex: 1, backgroundColor: "#F8F6F1", overflow: "hidden" as any },
   ctaRow:      { },
   ctaBtn:      { borderRadius: 14, overflow: "hidden" },
-  ctaBtnInner: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, paddingVertical: 16 },
-  ctaBtnTxt:   { color: "#0A1628", fontSize: 16, fontWeight: "900" },
-  sectionDivider: { height: StyleSheet.hairlineWidth, backgroundColor: "#E8EDF5", marginVertical: 16 },
-  gridContent: { gap: 12 },
+  ctaBtnInner: { backgroundColor: Colors.gold, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, paddingVertical: 16 },
+  ctaBtnTxt:   { color: "#352A22", fontSize: 16, fontWeight: "700" },
+  sectionDivider: { height: StyleSheet.hairlineWidth, backgroundColor: "#E7E0D6", marginVertical: 16 },
+  gridContent: { gap: 12, backgroundColor: "#F8F6F1" },
   tileGrid:    { flexDirection: "row", flexWrap: "wrap" },
+  tileAccentLine: { position: "absolute", top: 0, left: 0, right: 0, height: 3 },
 
   // Info panel
   infoPanel:        { flexShrink: 0, borderLeftWidth: 1, borderLeftColor: "rgba(255,255,255,0.06)" },
@@ -568,25 +584,27 @@ const s = StyleSheet.create({
   clockDate:    { color: "rgba(255,255,255,0.35)", fontSize: 11, marginTop: 2 },
 
   // Narrow stats strip
-  statsStrip: { flexDirection: "row", alignItems: "center", backgroundColor: "#fff", paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "#F0F4FB", gap: 10 },
-  stripCell:  { alignItems: "center", gap: 1 },
-  stripNum:   { fontSize: 20, fontWeight: "900", fontVariant: ["tabular-nums" as any] },
-  stripLbl:   { fontSize: 9, color: Colors.textMuted, fontWeight: "600" },
-  stripSep:   { width: StyleSheet.hairlineWidth, height: 28, backgroundColor: "#E8EDF5" },
-  stripClock: { color: Colors.textMuted, fontSize: 12, fontWeight: "700", fontVariant: ["tabular-nums" as any] },
+  statsStrip: { flexDirection: "row", alignItems: "center", backgroundColor: "#FFFFFF", paddingHorizontal: 12, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: "#E7E0D6", gap: 7 },
+  stripCell:  { flex: 1, minWidth: 0, alignItems: "center", gap: 2 },
+  stripNum:   { fontSize: 21, fontWeight: "900", fontVariant: ["tabular-nums" as any] },
+  stripLbl:   { fontSize: 10, color: Colors.textMuted, fontWeight: "600" },
+  stripSep:   { width: StyleSheet.hairlineWidth, height: 30, backgroundColor: "#E8EDF5" },
+  stripSpacer: { flex: 0.45 },
+  stripClockPill: { flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "#F5F1E8", paddingHorizontal: 8, paddingVertical: 7, borderRadius: 10 },
+  stripClock: { color: Colors.textMuted, fontSize: 11, fontWeight: "700", fontVariant: ["tabular-nums" as any] },
 
   // Narrow CTA
-  narrowCta:      { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8, backgroundColor: "#fff" },
-  narrowCtaBtn:   { borderRadius: 12, overflow: "hidden" },
-  narrowCtaInner: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 13 },
-  narrowCtaTxt:   { color: "#0A1628", fontSize: 15, fontWeight: "900" },
+  narrowCta:      { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8, backgroundColor: "#FFFEFC" },
+  narrowCtaBtn:   { borderRadius: 14, overflow: "hidden", borderWidth: 1, borderColor: "#B38A2E" },
+  narrowCtaInner: { minHeight: 48, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 14 },
+  narrowCtaTxt:   { color: "#352A22", fontSize: 15, fontWeight: "700" },
 
   // Cashier tracker — desktop info panel
   trackerSection:  { gap: 10 },
   trackerTitle:    { color: "rgba(255,255,255,0.35)", fontSize: 10, fontWeight: "700", letterSpacing: 1 },
 
   // Cashier tracker — mobile
-  narrowTracker:      { paddingHorizontal: 16, paddingBottom: 10, backgroundColor: "#fff" },
+  narrowTracker:      { paddingHorizontal: 16, paddingBottom: 10, backgroundColor: "#FFFEFC" },
   narrowTrackerTitle: { fontSize: 12, fontWeight: "700", color: Colors.textMuted, marginBottom: 8, letterSpacing: 0.5 },
 });
 

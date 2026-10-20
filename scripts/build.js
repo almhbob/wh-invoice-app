@@ -27,7 +27,12 @@ if (fs.existsSync(outputDir)) {
 }
 
 console.log("Building production Expo web export...");
-run("pnpm", ["exec", "expo", "export", "--platform", "web", "--output-dir", "static-build"]);
+const exportArgs = [require.resolve("@expo/cli"), "export", "--platform", "web", "--output-dir", "static-build"];
+const maxWorkers = Number(process.env.EXPO_MAX_WORKERS);
+if (Number.isInteger(maxWorkers) && maxWorkers > 0) {
+  exportArgs.push("--max-workers", String(maxWorkers));
+}
+run(process.execPath, exportArgs);
 
 // Fix: Cloudflare Pages fails to serve font files whose paths contain @ and +
 // (pnpm symlink paths like /assets/node_modules/.pnpm/@expo+vector-icons@...).
@@ -170,5 +175,10 @@ for (const file of ["_redirects", "_headers"]) {
   const dest = path.join(outputDir, file);
   if (fs.existsSync(src)) fs.copyFileSync(src, dest);
 }
+
+const offlineReport = require("./offline-web.cjs").createOfflineSupport(outputDir);
+console.log(
+  `Offline app shell prepared (${offlineReport.assetCount} static assets, ${offlineReport.assetBytes} bytes).`
+);
 
 console.log("Build complete: static-build/");

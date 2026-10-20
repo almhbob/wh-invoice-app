@@ -17,7 +17,7 @@ import { Colors } from "@/constants/colors";
 import { canDo, ROLE_CAN_DELETE_ORDERS, ROLE_CAN_EDIT_ORDERS } from "@/constants/rbac";
 import { useLang } from "@/context/LanguageContext";
 import { useEmployee } from "@/context/EmployeeContext";
-import { Department, Order, OrderStatus, PAYMENT_LABEL_KEYS, useOrders } from "@/context/OrdersContext";
+import { Department, formatOrderNumber, Order, OrderStatus, PAYMENT_LABEL_KEYS, useOrders } from "@/context/OrdersContext";
 import { fmtDate, fmtDateTime } from "@/utils/dateUtils";
 
 import { t as t_, type Lang, type TranslationKey } from "@/constants/translations";
@@ -54,7 +54,7 @@ function ArchiveCard({ order, canDelete, canEdit, onDelete, onEdit }: { order: O
       {/* Header */}
       <View style={styles.archiveHeader}>
         <View style={styles.archiveHeaderLeft}>
-          <Text style={styles.archiveNum}>#{order.orderNumber}</Text>
+          <Text style={styles.archiveNum}>#{formatOrderNumber(order, t("temporaryOrderPrefix"))}</Text>
           <Text style={styles.archiveDate}>{fmtDate(order.createdAt, lang)}</Text>
         </View>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
@@ -245,7 +245,7 @@ function DeletedCard({ order, onRestore }: { order: Order; onRestore: (id: strin
     <View style={[styles.archiveCard, { borderRightWidth: 3, borderRightColor: Colors.accent }]}>
       <View style={styles.archiveHeader}>
         <View style={styles.archiveHeaderLeft}>
-          <Text style={styles.archiveNum}>#{order.orderNumber}</Text>
+          <Text style={styles.archiveNum}>#{formatOrderNumber(order, t("temporaryOrderPrefix"))}</Text>
           <Text style={styles.archiveDate}>{fmtDate(order.createdAt, lang)}</Text>
         </View>
         <View style={[styles.deptTag, { backgroundColor: Colors.accent + "18", borderRadius: 8 }]}>
@@ -338,11 +338,11 @@ export default function ArchiveScreen() {
       currentEmployee ? { name: currentEmployee.name, employeeId: currentEmployee.employeeId } : undefined
     );
     if (Platform.OS === "web") {
-      if ((window as any).confirm(`${t("delete")} #${order.orderNumber} — "${order.customerName}"?`)) doDelete();
+      if ((window as any).confirm(`${t("delete")} #${formatOrderNumber(order, t("temporaryOrderPrefix"))} — "${order.customerName}"?`)) doDelete();
       return;
     }
     Alert.alert(
-      `${t("delete")} #${order.orderNumber}`,
+      `${t("delete")} #${formatOrderNumber(order, t("temporaryOrderPrefix"))}`,
       `${t("deleteConfirm")} "${order.customerName}"?`,
       [{ text: t("cancel"), style: "cancel" }, { text: t("delete"), style: "destructive", onPress: doDelete }]
     );
@@ -364,7 +364,7 @@ export default function ArchiveScreen() {
         ? (o.discount.type === "percentage" ? `خصم ${o.discount.value}%` : `خصم ${o.discount.value.toFixed(2)} ر.س`)
         : "";
       return `<tr>
-        <td>#${o.orderNumber}</td>
+        <td>#${formatOrderNumber(o, t("temporaryOrderPrefix"))}</td>
         <td>${o.customerName || "-"}<br/><small>${o.customerPhone || ""}</small></td>
         <td>${itemsHtml}</td>
         <td style="font-weight:700">${o.totalAmount != null ? o.totalAmount.toFixed(2) + " ر.س" : "-"}</td>

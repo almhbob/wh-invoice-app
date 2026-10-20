@@ -12,7 +12,7 @@ import {
 import { Colors } from "@/constants/colors";
 import { useEmployee } from "@/context/EmployeeContext";
 import { useLang } from "@/context/LanguageContext";
-import { Department, Order, OrderStatus, useOrders } from "@/context/OrdersContext";
+import { Department, formatOrderNumber, Order, OrderStatus, useOrders } from "@/context/OrdersContext";
 
 // ─── constants ────────────────────────────────────────────────────────────────
 
@@ -129,7 +129,7 @@ export function PackagingOrderCard({ order }: Props) {
         <Feather name={cfg.icon} size={14} color={cfg.color} />
         <Text style={[styles.statusLabel, { color: cfg.color }]}>{statusLabel[packStatus]}</Text>
         <View style={{ flex: 1 }} />
-        <Text style={styles.orderNum}>#{order.orderNumber}</Text>
+        <Text style={styles.orderNum}>#{formatOrderNumber(order, t("temporaryOrderPrefix"))}</Text>
       </View>
 
       {/* ── customer info ─────────────────────────────────────────────────── */}

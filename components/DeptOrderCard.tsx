@@ -12,6 +12,7 @@ import {
   BranchTransfer,
   Department,
   EmployeeRef,
+  formatOrderNumber,
   Order,
   OrderStatus,
   useOrders,
@@ -156,7 +157,13 @@ export function DeptOrderCard({ order, department, onStatusChange }: DeptOrderCa
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
-            <Text style={styles.num}>#{order.orderNumber}</Text>
+            <Text style={styles.num}>#{formatOrderNumber(order, t("temporaryOrderPrefix"))}</Text>
+            {order.syncStatus === "pending" && (
+              <View style={styles.syncBadge}>
+                <Feather name="cloud-off" size={11} color={Colors.warning} />
+                <Text style={styles.syncBadgeText}>{t("syncPendingShort")}</Text>
+              </View>
+            )}
             <View style={[styles.statusBadge, { backgroundColor: meta.bg }]}>
               <View style={[styles.statusDot, { backgroundColor: meta.color }]} />
               <Text style={[styles.statusLabel, { color: meta.color }]}>{statusLabel[deptStatus]}</Text>
@@ -184,15 +191,19 @@ export function DeptOrderCard({ order, department, onStatusChange }: DeptOrderCa
         <View style={styles.itemsBox}>
           <Text style={styles.itemsTitle}>{t("itemsSection")}</Text>
           {deptItems.map((item, idx) => (
-            <View key={idx} style={styles.itemRow}>
+            <View key={item.id || idx} style={styles.itemRow}>
               <View style={[styles.bullet, { backgroundColor: deptColor }]} />
-              <Text style={styles.itemName} numberOfLines={1}>
-                <Text style={styles.itemQty}>{item.quantity}×  </Text>
-                {item.name}
-              </Text>
-              {item.note ? (
-                <Text style={styles.itemNote} numberOfLines={1}>({item.note})</Text>
-              ) : null}
+              <View style={styles.itemContent}>
+                <Text style={styles.itemName} numberOfLines={2}>{item.name}</Text>
+                {(item.details || item.note) ? (
+                  <Text style={styles.itemMeta} numberOfLines={2}>
+                    {[item.details, item.note].filter(Boolean).join(" · ")}
+                  </Text>
+                ) : null}
+              </View>
+              <View style={styles.quantityBadge}>
+                <Text style={styles.itemQty}>× {item.quantity}</Text>
+              </View>
             </View>
           ))}
         </View>
@@ -200,8 +211,11 @@ export function DeptOrderCard({ order, department, onStatusChange }: DeptOrderCa
         {/* Notes */}
         {!!order.notes && (
           <View style={styles.notesRow}>
-            <Feather name="file-text" size={12} color={Colors.info} />
-            <Text style={styles.notesText} numberOfLines={3}>{order.notes}</Text>
+            <Feather name="file-text" size={13} color={Colors.info} />
+            <View style={styles.notesContent}>
+              <Text style={styles.notesTitle}>{t("notesSection")}</Text>
+              <Text style={styles.notesText} numberOfLines={4}>{order.notes}</Text>
+            </View>
           </View>
         )}
 
@@ -255,13 +269,6 @@ export function DeptOrderCard({ order, department, onStatusChange }: DeptOrderCa
         {order.imageUri && (
           <Image source={{ uri: order.imageUri }} style={styles.img} contentFit="cover" />
         )}
-
-        {order.notes ? (
-          <View style={styles.infoItem}>
-            <Feather name="file-text" size={12} color={Colors.textMuted} />
-            <Text style={styles.notesTextMuted} numberOfLines={1}>{order.notes}</Text>
-          </View>
-        ) : null}
 
         {/* Transfer button (only when order is active and no transfer done yet OR received) */}
         {canTransfer && canTransferFromDept && !isSentTransfer && (
@@ -374,6 +381,12 @@ const styles = StyleSheet.create({
   },
   statusDot: { width: 6, height: 6, borderRadius: 3 },
   statusLabel: { fontSize: 11, fontWeight: "700" },
+  syncBadge: {
+    flexDirection: "row", alignItems: "center", gap: 4,
+    paddingHorizontal: 8, paddingVertical: 4, borderRadius: 20,
+    backgroundColor: "#FEF3C7",
+  },
+  syncBadgeText: { fontSize: 10, fontWeight: "700", color: Colors.warning },
   time: { fontSize: 13, color: Colors.textMuted, fontWeight: "500" },
   customerRow: { flexDirection: "row", gap: 16 },
   infoItem: { flexDirection: "row", alignItems: "center", gap: 5 },
@@ -383,15 +396,21 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surfaceSecondary, borderRadius: 10, padding: 10, gap: 6,
   },
   itemsTitle: { fontSize: 11, color: Colors.textMuted, fontWeight: "600", marginBottom: 2 },
-  itemRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  itemRow: {
+    flexDirection: "row", alignItems: "center", gap: 9,
+    paddingVertical: 7, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: Colors.border,
+  },
   bullet: { width: 6, height: 6, borderRadius: 3 },
-  itemName: { flex: 1, fontSize: 14, color: Colors.text },
-  itemQty: { fontWeight: "700", color: Colors.primary },
-  itemNote: { fontSize: 12, color: Colors.textMuted, fontStyle: "italic" },
+  itemContent: { flex: 1, gap: 3 },
+  itemName: { fontSize: 14, fontWeight: "600", color: Colors.text },
+  itemMeta: { fontSize: 11, color: Colors.textMuted, lineHeight: 16 },
+  quantityBadge: { minWidth: 42, alignItems: "center", paddingHorizontal: 8, paddingVertical: 5, borderRadius: 8, backgroundColor: Colors.surface },
+  itemQty: { fontSize: 12, fontWeight: "700", color: Colors.primary, fontVariant: ["tabular-nums"] },
   metaRow: { flexDirection: "row", gap: 16 },
-  notesRow: { flexDirection: "row", alignItems: "flex-start", gap: 6, backgroundColor: Colors.info + "10", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 },
+  notesRow: { flexDirection: "row", alignItems: "flex-start", gap: 8, backgroundColor: Colors.info + "10", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8 },
+  notesContent: { flex: 1, gap: 3 },
+  notesTitle: { fontSize: 10, fontWeight: "700", color: Colors.info },
   notesText: { flex: 1, fontSize: 12, color: Colors.info, lineHeight: 18 },
-  notesTextMuted: { fontSize: 12, color: Colors.textMuted, flex: 1, fontStyle: "italic" },
   metaText: { fontSize: 12, color: Colors.textSecondary },
   trailBox: {
     backgroundColor: Colors.primary + "07",

@@ -8,7 +8,8 @@ import {
   query,
   updateDoc,
 } from "firebase/firestore";
-import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 
 import { LAVIVIANE_COMPANY_ID, buildLavivianeProducts } from "@/constants/lavivianeProducts";
 import { useCompany } from "@/context/CompanyContext";
@@ -92,6 +93,7 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
   const { companyId } = useCompany();
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const cachedProducts = useRef<Product[]>([]);
 
   const productsCollection = useCallback(() => collection(db, "companies", companyId, "products"), [companyId]);
   const productDoc = useCallback((id: string) => doc(db, "companies", companyId, "products", id), [companyId]);
@@ -101,13 +103,31 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
     let resolved = false;
     setIsLoading(true);
     setProducts([]);
+    cachedProducts.current = [];
+
+    AsyncStorage.getItem(`@products_local_v1_${companyId}`).then((raw) => {
+      if (!mounted || !raw) return;
+      try {
+        const cached = JSON.parse(raw) as Product[];
+        if (cached.length) {
+          cachedProducts.current = sortProducts(cached);
+          resolved = true;
+          setProducts(cachedProducts.current);
+          setIsLoading(false);
+        }
+      } catch {
+        // Ignore a damaged cache and let Firestore or the bundled catalog load.
+      }
+    }).catch(() => undefined);
 
     // Fallback timer: if Firestore doesn't respond in 4 s (e.g. anonymous auth
     // is disabled or network is slow) load hardcoded products immediately.
     const timer = setTimeout(() => {
       if (!mounted || resolved) return;
       resolved = true;
-      setProducts(sortProducts(fallbackProducts(companyId)));
+      setProducts(cachedProducts.current.length
+        ? cachedProducts.current
+        : sortProducts(fallbackProducts(companyId)));
       setIsLoading(false);
     }, 4000);
 
@@ -123,16 +143,27 @@ export function ProductsProvider({ children }: { children: React.ReactNode }) {
           companyId,
           ...(d.data() as Omit<Product, "id">),
         }));
-        const visibleProducts = loaded.length ? loaded : fallbackProducts(companyId);
-        setProducts(sortProducts(visibleProducts));
+        const visibleProducts = loaded.length
+          ? loaded
+          : snapshot.metadata.fromCache && cachedProducts.current.length
+            ? cachedProducts.current
+            : fallbackProducts(companyId);
+        const sortedProducts = sortProducts(visibleProducts);
+        cachedProducts.current = sortedProducts;
+        setProducts(sortedProducts);
         setIsLoading(false);
+        if (loaded.length > 0 || !snapshot.metadata.fromCache) {
+          AsyncStorage.setItem(`@products_local_v1_${companyId}`, JSON.stringify(sortedProducts)).catch(() => undefined);
+        }
       },
       (err) => {
         if (!mounted) return;
         resolved = true;
         clearTimeout(timer);
         console.error("Firestore tenant products error:", err);
-        setProducts(sortProducts(fallbackProducts(companyId)));
+        setProducts(cachedProducts.current.length
+          ? cachedProducts.current
+          : sortProducts(fallbackProducts(companyId)));
         setIsLoading(false);
       }
     );

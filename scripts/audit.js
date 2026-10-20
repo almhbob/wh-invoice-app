@@ -22,6 +22,9 @@ function check(condition, message, level = "error") {
 const requiredFiles = [
   "lib/firebase.ts",
   "lib/authIdentity.ts",
+  "context/TenantAuthContext.tsx",
+  "lib/tenantIdentity.ts",
+  "tools/security/security.test.mjs",
   "lib/bootstrapPolicy.ts",
   "lib/employeeCredentials.ts",
   "storage.rules",
@@ -42,24 +45,26 @@ check(firebase.includes("firebaseConfigDiagnostics"), "Firebase config diagnosti
 check(firebase.includes("getStorage"), "Firebase Storage is not exported");
 
 const gate = exists("components/TenantAccessGate.tsx") ? read("components/TenantAccessGate.tsx") : "";
-check(gate.includes("EMPLOYEE_LOAD_TIMEOUT_MS"), "Tenant access gate can hang without employee load timeout");
-check(gate.includes("isLocalBootstrap"), "Tenant access gate does not mark local bootstrap users", "warn");
-check(gate.includes("pinCode"), "Tenant access gate does not support employee PIN login");
+check(gate.includes("useTenantAuth"), "Tenant access gate is not backed by verified Firebase identity");
+check(!gate.includes("isLocalBootstrap") && !gate.includes("pinCode"), "Client-side bootstrap or PIN authentication is still enabled");
+const authContext = exists("context/TenantAuthContext.tsx") ? read("context/TenantAuthContext.tsx") : "";
+check(authContext.includes("signInWithEmailAndPassword") && authContext.includes("identityFromClaims"), "Company sign-in is not verified against trusted claims");
+check(!authContext.includes("signInAnonymously"), "Anonymous login is still enabled");
 
 const employeeModal = exists("components/EmployeeSelectorModal.tsx") ? read("components/EmployeeSelectorModal.tsx") : "";
-check(employeeModal.includes("newUsername"), "Employee creation UI does not capture username");
-check(employeeModal.includes("newPin"), "Employee creation UI does not capture PIN");
-check(employeeModal.includes("prepareEmployeeCredentialPayload"), "Employee creation UI does not normalize credentials");
-check(employeeModal.includes("employeeCredentialErrorMessage"), "Employee creation UI does not show credential-aware errors");
+check(!employeeModal.includes("setCurrentEmployee(emp)"), "Employee identity can be selected without authentication");
+check(employeeModal.includes("setCurrentEmployee(null)"), "Employee switching does not require sign-out");
 
 const developer = exists("app/(tabs)/developer.tsx") ? read("app/(tabs)/developer.tsx") : "";
-check(developer.includes("canAccessDeveloperDashboard"), "Developer dashboard content is not guarded");
-check(developer.includes("ProductionReadinessPanel"), "Developer dashboard does not show production readiness panel");
+const developerIsDisabled = developer.includes('return <Redirect href="/(tabs)/cashier"');
+check(developerIsDisabled || developer.includes("canAccessDeveloperDashboard"), "Developer dashboard content is not guarded");
 
 const firestoreRules = exists("firestore.rules") ? read("firestore.rules") : "";
 check(firestoreRules.includes("request.auth"), "Firestore rules do not require authentication");
 check(firestoreRules.includes("companyId"), "Firestore rules do not enforce companyId isolation");
 check(firestoreRules.includes("auditLogs"), "Firestore rules do not include auditLogs");
+check(firestoreRules.includes("request.auth.token.employeeDocId") && firestoreRules.includes("data.authUid == request.auth.uid"), "Firestore identity is not bound to an employee record");
+check(!/allow read, write: if request\.auth != null/.test(firestoreRules), "Firestore has unrestricted authenticated access");
 
 const storageRules = exists("storage.rules") ? read("storage.rules") : "";
 check(storageRules.includes("contracts/{companyId}"), "Storage rules do not protect contracts by companyId");
@@ -67,9 +72,8 @@ check(storageRules.includes("product-images/{companyId}"), "Storage rules do not
 check(storageRules.includes("request.auth"), "Storage rules do not require authentication");
 
 const employeeContext = exists("context/EmployeeContext.tsx") ? read("context/EmployeeContext.tsx") : "";
-check(employeeContext.includes("username") || employeeModal.includes("newUsername"), "Employee credentials are not represented in context or creation UI", "warn");
-check(employeeContext.includes("pinCode") || employeeModal.includes("newPin"), "Employee PIN is not represented in context or creation UI", "warn");
-check(employeeContext.includes("lastLoginAt"), "Employee type does not track lastLoginAt", "warn");
+check(!employeeContext.includes("function fallbackEmployee"), "Default administrator fallback is still enabled");
+check(employeeContext.includes("AUTH_EMPLOYEE_SWITCH_REQUIRES_SIGN_IN"), "Employee switching is not identity-bound");
 
 const tabLayout = exists("app/(tabs)/_layout.tsx") ? read("app/(tabs)/_layout.tsx") : "";
 check(!tabLayout.includes('{ name: "developer"') || tabLayout.includes("canAccessDeveloperDashboard"), "Developer tab is visible in More menu without navigation-level permission filtering", "warn");
