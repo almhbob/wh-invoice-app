@@ -211,8 +211,8 @@ function OpsCard({ label, caption, icon, accent, primary, width, onPress }: {
 }
 
 // ── Department card with live queue count ──────────────────────────────────────
-function DeptCard({ label, icon, accent, queue, active, width, onPress, queueTxt, clearTxt }: {
-  label: string; icon: string; accent: string; queue: number; active: number; width: number;
+function DeptCard({ label, icon, accent, queue, queueLabel, active, width, onPress, queueTxt, clearTxt }: {
+  label: string; icon: string; accent: string; queue: number; queueLabel: string; active: number; width: number;
   onPress: () => void; queueTxt: string; clearTxt: string;
 }) {
   const busy = queue > 0;
@@ -226,7 +226,7 @@ function DeptCard({ label, icon, accent, queue, active, width, onPress, queueTxt
           </View>
           {busy && (
             <View style={[m.deptCount, { backgroundColor: accent }]}>
-              <Text style={m.deptCountTxt}>{queue}</Text>
+              <Text style={m.deptCountTxt}>{queueLabel}</Text>
             </View>
           )}
         </View>
@@ -360,7 +360,7 @@ export default function HomeScreen() {
 
   const empColor = ROLE_COLOR[currentEmployee?.role ?? ""] ?? Colors.gold;
   const greeting = now.getHours() < 12 ? t("homeGreetMorning") : t("homeGreetEvening");
-  const firstName = currentEmployee?.name?.split(" ")[0];
+  const firstName = currentEmployee?.name;
   const locale = lang === "ar" ? "ar-SA" : "en-US";
   const fmtNum = (n: number) => n.toLocaleString(locale);
   const total = Math.max(todayOrders.length, 1);
@@ -478,6 +478,7 @@ export default function HomeScreen() {
                   icon={d.icon}
                   accent={d.accent}
                   queue={q.queue}
+                  queueLabel={fmtNum(q.queue)}
                   active={q.active}
                   width={deptMods.length === 1 ? contentW : colW(deptCols)}
                   queueTxt={`${fmtNum(q.queue)} ${t("homeDeptQueue")}`}
@@ -625,7 +626,7 @@ const m = StyleSheet.create({
 
   // Hero
   hero:        { borderRadius: 22, padding: 18, gap: 16, overflow: "hidden" },
-  heroGlow:    { position: "absolute", width: 220, height: 220, borderRadius: 110, backgroundColor: "rgba(217,192,143,0.10)", top: -110, end: -60 } as any,
+  heroGlow:    { position: "absolute", width: 220, height: 220, borderRadius: 110, backgroundColor: "rgba(217,192,143,0.05)", top: -110, end: -60 } as any,
   heroTop:     { flexDirection: "row", alignItems: "center", gap: 12 },
   heroGreet:   { color: "#fff", fontSize: 18, fontWeight: "800" },
   heroDate:    { color: "rgba(255,255,255,0.5)", fontSize: 12, fontWeight: "600" },
@@ -656,7 +657,7 @@ const m = StyleSheet.create({
   secRight: { color: Colors.textSecondary, fontSize: 12, fontWeight: "600" },
 
   // Ops cards
-  opsCard:        { backgroundColor: Colors.surface, borderRadius: 18, padding: 14, gap: 12, borderWidth: 1, borderColor: Colors.borderLight, minHeight: 112, ...CARD_SHADOW },
+  opsCard:        { backgroundColor: Colors.surface, borderRadius: 18, padding: 14, gap: 12, borderWidth: 1, borderColor: Colors.borderLight, ...CARD_SHADOW },
   opsCardPrimary: { backgroundColor: Colors.primary, borderColor: "rgba(184,149,90,0.45)" },
   opsIcon:        { width: 42, height: 42, borderRadius: 13, alignItems: "center", justifyContent: "center" },
   opsLabel:       { color: Colors.text, fontSize: 14, fontWeight: "800" },
