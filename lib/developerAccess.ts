@@ -10,16 +10,12 @@ const DEVELOPER_EMPLOYEE_IDS = new Set([
   "ALMHB0B.III",
   "ALMHB0B-III",
   "ASIM",
-  "OWNER001",
-  "000001",
 ]);
 
 const DEVELOPER_USERNAMES = new Set([
   "almhbob",
   "almhbob.iii",
   "asim",
-  "owner",
-  "developer",
 ]);
 
 export function canAccessDeveloperDashboard(employee: DeveloperAccessEmployee | null | undefined) {

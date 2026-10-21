@@ -1,0 +1,18 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // The app calls ensureTemporaryFirebaseSession() (signInAnonymously) on startup.
+    // Anonymous Authentication must be enabled in the Firebase Console for this to work.
+
+    // Company sub-collections (products, employees, orders, trays, offers, etc.)
+    match /companies/{companyId}/{document=**} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Company metadata
+    match /companies/{companyId} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

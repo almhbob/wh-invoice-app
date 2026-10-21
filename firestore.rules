@@ -1,18 +1,72 @@
 rules_version = '2';
+
+// Secure rules — require server-verified sign-in (Cloudflare function /api/auth/login).
+// Every employee session carries custom claims: companyId, role, eid (employee doc id).
+// Activate ONLY after /api/auth/status reports {"configured": true}. See SECURITY_SETUP.md.
+// Rollback: publish firestore.legacy.rules.
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // The app calls ensureTemporaryFirebaseSession() (signInAnonymously) on startup.
-    // Anonymous Authentication must be enabled in the Firebase Console for this to work.
-
-    // Company sub-collections (products, employees, orders, trays, offers, etc.)
-    match /companies/{companyId}/{document=**} {
-      allow read, write: if request.auth != null;
+    function signedIn() {
+      return request.auth != null && request.auth.token.firebase.sign_in_provider == 'custom';
+    }
+    function inCompany(companyId) {
+      return signedIn() && request.auth.token.companyId == companyId;
+    }
+    function role() {
+      return request.auth.token.role;
+    }
+    function isAdmin(companyId) {
+      return inCompany(companyId) && role() == 'admin';
+    }
+    function isManager(companyId) {
+      return inCompany(companyId) && role() in ['admin', 'branch_supervisor'];
+    }
+    function noPlaintextPin() {
+      return !('pinCode' in request.resource.data)
+        || (resource != null && request.resource.data.pinCode == resource.data.pinCode);
+    }
+    function supervisorMayAssign(data) {
+      return role() == 'admin' || !(data.role in ['admin', 'branch_supervisor']);
     }
 
     // Company metadata
     match /companies/{companyId} {
-      allow read, write: if request.auth != null;
+      allow read: if inCompany(companyId);
+      allow write: if isAdmin(companyId);
+    }
+
+    // Hashed PINs — server only.
+    match /companies/{companyId}/employeeSecrets/{id} {
+      allow read, write: if false;
+    }
+
+    // Employees: readable by colleagues; only managers create/edit; never with a plaintext PIN.
+    match /companies/{companyId}/employees/{id} {
+      allow read: if inCompany(companyId);
+      allow create: if isManager(companyId)
+        && noPlaintextPin()
+        && supervisorMayAssign(request.resource.data);
+      allow update: if isManager(companyId)
+        && noPlaintextPin()
+        && supervisorMayAssign(resource.data)
+        && supervisorMayAssign(request.resource.data);
+      allow delete: if isManager(companyId) && supervisorMayAssign(resource.data);
+    }
+
+    // Everything else inside a company (orders, products, counters, settings, sessions, logs…)
+    match /companies/{companyId}/{sub}/{docId=**} {
+      allow read, write: if inCompany(companyId)
+        && !(sub in ['employees', 'employeeSecrets']);
+    }
+
+    // Login throttling state — server only.
+    match /authThrottle/{key} {
+      allow read, write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }

@@ -10,6 +10,9 @@ import { DEFAULT_TENANT } from "@/constants/platform";
 import { tenantAccessText } from "@/constants/tenantAccessTranslations";
 import { CompanyTenant, useCompany } from "@/context/CompanyContext";
 import { Employee, useEmployee } from "@/context/EmployeeContext";
+import { PinChangeModal } from "@/components/PinChangeModal";
+import { secureAuthErrorText, secureAuthText } from "@/constants/secureAuthText";
+import { secureLogin, secureLogout, secureSetPin, SecureAuthFailure } from "@/lib/secureAuth";
 import { useLang } from "@/context/LanguageContext";
 
 const ACCESS_KEY = "@fawtara_access_gate_v1";
@@ -164,7 +167,10 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
   const textAlign = isRTL ? "right" : "left";
   const rowDirection = isRTL ? "row-reverse" : "row";
   const { company, setCompany, switchCompanyById } = useCompany();
-  const { employees, currentEmployee, setCurrentEmployee, checkAndLogin, addEmployee, isLoading } = useEmployee();
+  const { employees, currentEmployee, setCurrentEmployee, checkAndLogin, addEmployee, isLoading, authMode } = useEmployee();
+  const isSecure = authMode === "secure";
+  const [loggingIn, setLoggingIn] = useState(false);
+  const [pendingPinChange, setPendingPinChange] = useState<{ employee: Employee; pin: string } | null>(null);
   const [ready, setReady] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
   const [companyCode, setCompanyCode] = useState("");
@@ -204,6 +210,8 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
   }, [unlocked, isLoading, company.id]);
 
   const allUsers = useMemo(() => {
+    // Secure mode: the employee list is private until sign-in, and hardcoded accounts never apply.
+    if (isSecure) return [] as BootstrapEmployee[];
     const firestoreAndLocal = [...employees, ...localUsers];
     const existingIds = new Set(firestoreAndLocal.map((e) => e.employeeId.toLowerCase()));
     if (company.id === LAVIVIANE_COMPANY_ID) {
@@ -215,9 +223,9 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
       return [...firestoreAndLocal, ...extras];
     }
     return firestoreAndLocal;
-  }, [employees, localUsers, company.id]);
+  }, [employees, localUsers, company.id, isSecure]);
   const employeeCountLabel = useMemo(() => allUsers.length ? `${allUsers.length} ${tx("usersCount")}` : tx("noUsers"), [allUsers.length, lang]);
-  const shouldShowBootstrapForm = !isLoading || employeeLoadTimedOut || allUsers.length > 0;
+  const shouldShowBootstrapForm = isSecure || (authMode !== "checking" && (!isLoading || employeeLoadTimedOut || allUsers.length > 0));
 
   const saveLocalUser = async (employee: BootstrapEmployee) => {
     const next = [employee, ...localUsers.filter((u) => u.employeeId !== employee.employeeId)];
@@ -273,11 +281,54 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
     setUnlocked(false);
   };
 
+  const finishLogin = async (emp: Employee) => {
+    const result = await checkAndLogin(emp);
+    if (result === "conflict") {
+      Alert.alert(
+        tx("deviceConflictTitle"),
+        `"${emp.name}" ${tx("deviceConflictMessage")}`,
+        [
+          { text: tx("deviceConflictCancel"), style: "cancel", onPress: () => { if (isSecure) void secureLogout(); } },
+          { text: tx("deviceConflictForce"), style: "destructive", onPress: () => void checkAndLogin(emp, true) },
+        ]
+      );
+    }
+  };
+
+  const loginEmployeeSecure = async (user: string, pin: string) => {
+    setLoggingIn(true);
+    try {
+      const { employee, mustChangePin } = await secureLogin(company.id, user, pin);
+      const emp: Employee = {
+        ...employee,
+        role: employee.role as Employee["role"],
+        status: (employee.status as Employee["status"]) ?? "active",
+        createdAt: new Date().toISOString(),
+      };
+      setLoginPin("");
+      if (mustChangePin) {
+        setPendingPinChange({ employee: emp, pin });
+        return;
+      }
+      await finishLogin(emp);
+    } catch (e) {
+      const f = e instanceof SecureAuthFailure ? e : null;
+      const code = f?.code ?? "server_error";
+      Alert.alert(tx("invalidCredentialsTitle"), code === "invalid_credentials" ? tx("invalidCredentialsMessage") : secureAuthErrorText(code, lang, f?.retryAfter));
+    } finally {
+      setLoggingIn(false);
+    }
+  };
+
   const loginEmployee = async () => {
     const user = normalize(loginId);
     const pin = loginPin.trim();
     if (!user || !pin) {
       Alert.alert(tx("requiredTitle"), tx("requiredCredentialsMessage"));
+      return;
+    }
+    if (isSecure) {
+      await loginEmployeeSecure(loginId.trim(), pin);
       return;
     }
 
@@ -293,21 +344,7 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const result = await checkAndLogin(found);
-    if (result === "conflict") {
-      Alert.alert(
-        tx("deviceConflictTitle"),
-        `"${found.name}" ${tx("deviceConflictMessage")}`,
-        [
-          { text: tx("deviceConflictCancel"), style: "cancel" },
-          {
-            text: tx("deviceConflictForce"),
-            style: "destructive",
-            onPress: () => void checkAndLogin(found, true),
-          },
-        ]
-      );
-    }
+    await finishLogin(found);
   };
 
   const createOwner = async () => {
@@ -417,6 +454,7 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
           <Text style={styles.subtitle}>{tx("companyLoginSubtitle")}</Text>
           <TextInput style={[styles.input, { textAlign }]} value={companyCode} onChangeText={setCompanyCode} placeholder={tx("companyCodePlaceholder")} placeholderTextColor={Colors.textMuted} />
           <TouchableOpacity style={[styles.primaryBtn, { flexDirection: rowDirection }]} onPress={unlockByCode}><Feather name="log-in" size={16} color="#fff" /><Text style={styles.primaryText}>{tx("loginByCode")}</Text></TouchableOpacity>
+          {!isSecure && (<>
           <TouchableOpacity style={[styles.secondaryBtn, { flexDirection: rowDirection }]} onPress={unlockNewTrial}><Feather name="star" size={16} color={Colors.gold} /><Text style={styles.secondaryText}>{tx("createTrialCompany")}</Text></TouchableOpacity>
           <TouchableOpacity style={[styles.secondaryBtn, { flexDirection: rowDirection }]} onPress={unlockDemo}><Feather name="briefcase" size={16} color={Colors.gold} /><Text style={styles.secondaryText}>{tx("openDemoCompany")}</Text></TouchableOpacity>
 
@@ -437,6 +475,7 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
               <Text style={styles.nukhbaBtnSub}>Nukhba Fine Foods · Starter Plan · كود: nukhba-food</Text>
             </View>
           </TouchableOpacity>
+          </>)}
         </View>
       </ScrollView>
     );
@@ -467,25 +506,25 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
                 <View style={[styles.nukhbaPill, { backgroundColor: "#7C3AED18" }]}><Text style={[styles.nukhbaPillTxt, { color: "#7C3AED" }]}>800 فاتورة/شهر</Text></View>
                 <View style={[styles.nukhbaPill, { backgroundColor: "#05966918" }]}><Text style={[styles.nukhbaPillTxt, { color: "#059669" }]}>نشط</Text></View>
               </View>
-              <Text style={styles.nukhbaCredLabel}>المستخدمون: NK001–NK004 · رمز: 5678</Text>
+              {!isSecure && <Text style={styles.nukhbaCredLabel}>المستخدمون: NK001–NK004 · رمز: 5678</Text>}
             </View>
           )}
           <TouchableOpacity style={styles.switchBtn} onPress={resetCompany}><Text style={styles.switchText}>{tx("changeCompany")}</Text></TouchableOpacity>
           <Text style={styles.title}>{tx("employeeLoginTitle")}</Text>
-          <Text style={styles.subtitle}>{tx("currentCompany")}: {company.name} · {employeeCountLabel}</Text>
+          <Text style={styles.subtitle}>{tx("currentCompany")}: {company.name} · {isSecure ? `🔒 ${secureAuthText("secureBadge", lang)}` : employeeCountLabel}</Text>
 
           {!shouldShowBootstrapForm ? (
             <View style={styles.loadingBox}>
               <ActivityIndicator color={Colors.gold} />
               <Text style={styles.hint}>{tx("loadingCompanyUsers")}</Text>
             </View>
-          ) : allUsers.length > 0 ? (
+          ) : isSecure || allUsers.length > 0 ? (
             <View style={styles.list}>
               {employeeLoadTimedOut ? <Text style={styles.warningText}>{tx("firestoreTimeout")}</Text> : null}
               <TextInput style={[styles.input, { textAlign }]} value={loginId} onChangeText={setLoginId} placeholder={tx("employeeLoginPlaceholder")} placeholderTextColor={Colors.textMuted} autoCapitalize="none" />
               <TextInput style={[styles.input, { textAlign }]} value={loginPin} onChangeText={setLoginPin} placeholder={tx("pinPlaceholder")} placeholderTextColor={Colors.textMuted} secureTextEntry keyboardType="number-pad" />
-              <TouchableOpacity style={[styles.primaryBtn, { flexDirection: rowDirection }]} onPress={loginEmployee}><Feather name="unlock" size={16} color="#fff" /><Text style={styles.primaryText}>{tx("employeeLoginButton")}</Text></TouchableOpacity>
-              <Text style={styles.hint}>{tx("employeeLoginHint")}</Text>
+              <TouchableOpacity style={[styles.primaryBtn, { flexDirection: rowDirection }, loggingIn && { opacity: 0.6 }]} onPress={loginEmployee} disabled={loggingIn}>{loggingIn ? <ActivityIndicator color="#fff" /> : <Feather name="unlock" size={16} color="#fff" />}<Text style={styles.primaryText}>{tx("employeeLoginButton")}</Text></TouchableOpacity>
+              {!isSecure && <Text style={styles.hint}>{tx("employeeLoginHint")}</Text>}
             </View>
           ) : (
             <View style={styles.list}>
@@ -498,6 +537,19 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
             </View>
           )}
         </View>
+        <PinChangeModal
+          visible={!!pendingPinChange}
+          mode="self"
+          forced
+          knownCurrentPin={pendingPinChange?.pin}
+          onSubmit={async (newPin, currentPin) => {
+            await secureSetPin({ newPin, currentPin });
+            const emp = pendingPinChange!.employee;
+            setPendingPinChange(null);
+            await finishLogin(emp);
+          }}
+          onCancel={() => { setPendingPinChange(null); void secureLogout(); }}
+        />
       </ScrollView>
     );
   }
