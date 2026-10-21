@@ -40,11 +40,3 @@ jobs:
 
       - name: Verify static build exists
         run: test -f static-build/index.html
-
-      - name: Upload web build (PR preview artifact)
-        if: github.event_name == 'pull_request'
-        uses: actions/upload-artifact@v4
-        with:
-          name: web-build
-          path: static-build
-          retention-days: 3
