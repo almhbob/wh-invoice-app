@@ -371,7 +371,6 @@ export default function HomeScreen() {
   // ── Shared blocks ────────────────────────────────────────────────────────────
   const heroCard = (
     <LinearGradient colors={[Colors.espressoSoft, Colors.espressoDeep]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={m.hero}>
-      <View style={m.heroGlow} />
       <View style={m.heroTop}>
         <View style={{ flex: 1, gap: 3 }}>
           <Text style={m.heroGreet} numberOfLines={1}>
@@ -626,7 +625,6 @@ const m = StyleSheet.create({
 
   // Hero
   hero:        { borderRadius: 22, padding: 18, gap: 16, overflow: "hidden" },
-  heroGlow:    { position: "absolute", width: 220, height: 220, borderRadius: 110, backgroundColor: "rgba(217,192,143,0.05)", top: -110, end: -60 } as any,
   heroTop:     { flexDirection: "row", alignItems: "center", gap: 12 },
   heroGreet:   { color: "#fff", fontSize: 18, fontWeight: "800" },
   heroDate:    { color: "rgba(255,255,255,0.5)", fontSize: 12, fontWeight: "600" },
