@@ -44,8 +44,8 @@ const ROLE_COLORS: Record<string, string> = {
   cake: Colors.cake,
   packaging: Colors.packaging,
   admin: Colors.primaryLight,
-  branch_supervisor: "#0d9488",
-  dept_supervisor: "#0891b2",
+  branch_supervisor: Colors.success,
+  dept_supervisor: Colors.info,
   guest: Colors.textMuted,
 };
 
@@ -54,8 +54,8 @@ const TENANT_BRANDS: Record<string, { name: string; subtitle: string; logoText: 
     name: "Laviviane",
     subtitle: "Maison de Pâtisserie",
     logoText: "L",
-    primary: "#2f241d",
-    accent: "#d6b56d",
+    primary: Colors.espressoMid,
+    accent: Colors.goldLight,
   },
   "select-company": {
     name: PLATFORM_OWNER.nameAr,
@@ -197,10 +197,10 @@ const DEPT_TABS: TabDef[] = [
 
 const MORE_TABS: TabDef[] = [
   { name: "branch-orders",    labelKey: "tabBranchOrders",    titleKey: "titleBranchOrders",    icon: "clipboard",    sf: "list.clipboard",                   accent: Colors.gold },
-  { name: "branch-inventory", labelKey: "tabBranchInventory", titleKey: "titleBranchInventory", icon: "bar-chart-2",  sf: "chart.bar",                        accent: "#2563eb" },
-  { name: "branches",         labelKey: "tabBranches",        titleKey: "titleManageBranches",  icon: "git-branch",   sf: "building.2",                       accent: "#0d9488" },
-  { name: "customers",        labelKey: "tabCustomers",       titleKey: "titleCustomers",       icon: "users",        sf: "person.2",                         accent: "#0891b2" },
-  { name: "delivery",         labelKey: "tabDelivery",        titleKey: "titleDelivery",        icon: "truck",        sf: "shippingbox.and.arrow.backward",   accent: "#0d9488" },
+  { name: "branch-inventory", labelKey: "tabBranchInventory", titleKey: "titleBranchInventory", icon: "bar-chart-2",  sf: "chart.bar",                        accent: Colors.info },
+  { name: "branches",         labelKey: "tabBranches",        titleKey: "titleManageBranches",  icon: "git-branch",   sf: "building.2",                       accent: Colors.success },
+  { name: "customers",        labelKey: "tabCustomers",       titleKey: "titleCustomers",       icon: "users",        sf: "person.2",                         accent: Colors.packaging },
+  { name: "delivery",         labelKey: "tabDelivery",        titleKey: "titleDelivery",        icon: "truck",        sf: "shippingbox.and.arrow.backward",   accent: Colors.success },
   { name: "trays",            labelKey: "tabTrays",           titleKey: "titleTrays",           icon: "layers",       sf: "tray.2",                           accent: Colors.gold },
   { name: "admin",            labelKey: "tabAdmin",           titleKey: "titleAdmin",           icon: "settings",     sf: "gearshape",                        accent: Colors.primaryLight },
   { name: "settings",         labelKey: "tabSettings",        titleKey: "tabSettings",          icon: "sliders",      sf: "gearshape.2",                      accent: Colors.primary },
@@ -319,8 +319,8 @@ function DesktopSidebar({ activePath, navigate, isRTL }: { activePath: string; n
             />
           ))}
 
-          {showArchiveNav && <SideNavItem label={t("tabArchive")} icon="archive" active={isArchive} accent={Colors.primaryLight} onPress={() => navigate("archive")} />}
-          {showReportsNav && <SideNavItem label={t("tabReports")} icon="pie-chart" active={isReports} accent="#8b5cf6" onPress={() => navigate("reports")} />}
+          {showArchiveNav && <SideNavItem label={t("tabArchive")} icon="archive" active={isArchive} accent={Colors.info} onPress={() => navigate("archive")} />}
+          {showReportsNav && <SideNavItem label={t("tabReports")} icon="pie-chart" active={isReports} accent={Colors.purple} onPress={() => navigate("reports")} />}
 
           {visibleMore.length > 0 && (
             <SideNavItem
@@ -450,8 +450,8 @@ function CustomTabBar() {
   const isMore = visibleMoreTab.some((m) => pathname.includes(m.name));
   const activeDeptAccent = visibleDeptsTab.find((d) => pathname.includes(d.name))?.accent ?? Colors.primary;
   const activeMoreAccent = visibleMoreTab.find((m) => pathname.includes(m.name))?.accent ?? Colors.primary;
-  const bg = isDark ? "#0d1117" : "#ffffff";
-  const border = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.07)";
+  const bg = isDark ? Colors.espressoDeep : Colors.surface;
+  const border = isDark ? "rgba(217,192,143,0.12)" : Colors.border;
   const tabH = 64;
   const pb = Platform.OS === "ios" ? insets.bottom : 8;
   const isWeb = Platform.OS === "web";
@@ -465,8 +465,8 @@ function CustomTabBar() {
         <BarItem label={t("tabLiveOrders")} icon="activity" sf="list.bullet.rectangle" active={isHome} accent={Colors.gold} onPress={() => navigate("home")} />
         {showCashierTab && <BarItem label={t("tabCashier")} icon="file-text" sf="doc.text" active={isCashier} accent={Colors.gold} onPress={() => navigate("cashier")} />}
         {visibleDeptsTab.length > 0 && <BarItem label={t("tabDepts")} icon="grid" sf="square.grid.2x2" active={isDept} accent={activeDeptAccent} badge={showDepts ? "▲" : "▼"} onPress={() => setShowDepts((v) => !v)} />}
-        {showArchiveTab && <BarItem label={t("tabArchive")} icon="archive" sf="archivebox" active={isArchive} accent={Colors.primaryLight} onPress={() => navigate("archive")} />}
-        {showReportsTab && <BarItem label={t("tabReports")} icon="pie-chart" sf="chart.pie" active={isReports} accent="#8b5cf6" onPress={() => navigate("reports")} />}
+        {showArchiveTab && <BarItem label={t("tabArchive")} icon="archive" sf="archivebox" active={isArchive} accent={Colors.info} onPress={() => navigate("archive")} />}
+        {showReportsTab && <BarItem label={t("tabReports")} icon="pie-chart" sf="chart.pie" active={isReports} accent={Colors.purple} onPress={() => navigate("reports")} />}
         {visibleMoreTab.length > 0 && <BarItem label={t("tabMore")} icon="more-horizontal" sf="ellipsis" active={isMore} accent={activeMoreAccent} badge={showMore ? "▲" : "▼"} onPress={() => setShowMore((v) => !v)} />}
       </View>
     </>
@@ -501,13 +501,13 @@ const SCREEN_META: Record<string, { titleKey: string; accent: string }> = {
   cake:             { titleKey: "titleCake",       accent: Colors.cake },
   packaging:        { titleKey: "titlePackaging",  accent: Colors.packaging },
   archive:          { titleKey: "titleArchive",    accent: Colors.primaryLight },
-  reports:          { titleKey: "titleReports",    accent: "#8b5cf6" },
-  developer:        { titleKey: "titleDeveloper",      accent: "#7c3aed" },
+  reports:          { titleKey: "titleReports",    accent: Colors.purple },
+  developer:        { titleKey: "titleDeveloper",      accent: Colors.purple },
   "branch-orders":  { titleKey: "titleBranchOrders",   accent: Colors.gold },
-  "branch-inventory": { titleKey: "titleBranchInventory", accent: "#2563eb" },
-  branches:         { titleKey: "titleManageBranches", accent: "#0d9488" },
-  customers:        { titleKey: "titleCustomers",  accent: "#0891b2" },
-  delivery:         { titleKey: "titleDelivery",   accent: "#0d9488" },
+  "branch-inventory": { titleKey: "titleBranchInventory", accent: Colors.info },
+  branches:         { titleKey: "titleManageBranches", accent: Colors.success },
+  customers:        { titleKey: "titleCustomers",  accent: Colors.packaging },
+  delivery:         { titleKey: "titleDelivery",   accent: Colors.success },
   trays:            { titleKey: "titleTrays",      accent: Colors.gold },
   admin:            { titleKey: "titleAdmin",      accent: Colors.primaryLight },
   settings:         { titleKey: "tabSettings",      accent: Colors.primary },
@@ -630,9 +630,9 @@ const styles = StyleSheet.create({
   barLabel: { fontSize: 10, fontWeight: "500", color: Colors.textMuted, letterSpacing: 0.1 },
   sheetBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)" },
   sheetContainer: { backgroundColor: "#fff", borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingTop: 12, paddingHorizontal: 16, shadowColor: "#000", shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.12, shadowRadius: 16, elevation: 20 },
-  sheetHandle: { alignSelf: "center", width: 40, height: 4, borderRadius: 2, backgroundColor: "#d1d5db", marginBottom: 18 },
+  sheetHandle: { alignSelf: "center", width: 40, height: 4, borderRadius: 2, backgroundColor: Colors.border, marginBottom: 18 },
   sheetGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12, justifyContent: "center", paddingBottom: 8 },
-  sheetItem: { width: 88, alignItems: "center", gap: 8, paddingVertical: 14, paddingHorizontal: 8, borderRadius: 16, borderWidth: 1.5, borderColor: "transparent", backgroundColor: "#f8f9fb", position: "relative" },
+  sheetItem: { width: 88, alignItems: "center", gap: 8, paddingVertical: 14, paddingHorizontal: 8, borderRadius: 16, borderWidth: 1.5, borderColor: "transparent", backgroundColor: Colors.surfaceSecondary, position: "relative" },
   sheetIconCircle: { width: 52, height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center" },
   sheetItemLabel: { fontSize: 11, fontWeight: "600", color: Colors.textMuted, textAlign: "center" },
   sheetActiveDot: { position: "absolute", top: 8, right: 10, width: 7, height: 7, borderRadius: 4 },

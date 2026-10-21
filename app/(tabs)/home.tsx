@@ -53,14 +53,22 @@ const DEPT_COLORS = {
   cake: Colors.cake, packaging: Colors.packaging,
 } as const;
 
+// On light surfaces use the base status tones; on dark espresso use the lifted ones.
+const HERO_WAIT = "#E0B56E";
+const HERO_PROG = "#9DB5D0";
+const HERO_DONE = "#93C6A6";
+
 const STATUS_COLORS = {
-  pending:     "#6B7280",
-  in_progress: "#60A5FA",
-  done:        "#34D399",
-  cancelled:   "#F87171",
+  pending:     Colors.textSecondary,
+  in_progress: Colors.statusInProgress,
+  done:        Colors.statusDone,
+  cancelled:   Colors.statusCancelled,
 };
 
 function CashierOrderTracker({ orders, isDark }: { orders: Order[]; isDark?: boolean }) {
+  const DONE_C = isDark ? HERO_DONE : Colors.statusDone;
+  const PROG_C = isDark ? HERO_PROG : Colors.statusInProgress;
+  const WAIT_C = isDark ? "#B9AC9C" : Colors.textSecondary;
   const { t } = useLang();
   const deptMeta = useMemo(() => ({
     halwa:     { short: t("deptHalwaShort"),     color: Colors.halwa },
@@ -98,16 +106,16 @@ function CashierOrderTracker({ orders, isDark }: { orders: Order[]; isDark?: boo
         const anyInProg = depts.some(d => order.departmentStatuses?.[d] === "in_progress");
 
         return (
-          <View key={order.id} style={[ct.card, { backgroundColor: cardBg, borderColor: allDone ? "#34D39940" : cardBorder }]}>
+          <View key={order.id} style={[ct.card, { backgroundColor: cardBg, borderColor: allDone ? Colors.statusDone + "40" : cardBorder }]}>
             {allDone && <View style={ct.doneLine} />}
             <View style={ct.cardHead}>
-              <Text style={[ct.orderNum, { color: allDone ? "#34D399" : textColor }]}>#{order.orderNumber}</Text>
+              <Text style={[ct.orderNum, { color: allDone ? DONE_C : textColor }]}>#{order.orderNumber}</Text>
               <Text style={[ct.custName, { color: textColor }]} numberOfLines={1}>{order.customerName}</Text>
               <View style={[ct.statusBadge, {
-                backgroundColor: allDone ? "#34D39918" : anyInProg ? "#60A5FA18" : "#6B728018",
+                backgroundColor: allDone ? DONE_C + "18" : anyInProg ? PROG_C + "18" : WAIT_C + "18",
               }]}>
-                <View style={[ct.statusDot, { backgroundColor: allDone ? "#34D399" : anyInProg ? "#60A5FA" : "#6B7280" }]} />
-                <Text style={[ct.statusTxt, { color: allDone ? "#34D399" : anyInProg ? "#60A5FA" : "#6B7280" }]}>
+                <View style={[ct.statusDot, { backgroundColor: allDone ? DONE_C : anyInProg ? PROG_C : WAIT_C }]} />
+                <Text style={[ct.statusTxt, { color: allDone ? DONE_C : anyInProg ? PROG_C : WAIT_C }]}>
                   {allDone ? t("statusReady") : anyInProg ? t("statusPrepping") : t("statusWaiting")}
                 </Text>
               </View>
@@ -115,7 +123,7 @@ function CashierOrderTracker({ orders, isDark }: { orders: Order[]; isDark?: boo
             <View style={ct.chips}>
               {depts.map(d => {
                 const status = order.departmentStatuses?.[d] ?? "pending";
-                const col = STATUS_COLORS[status] ?? "#6B7280";
+                const col = STATUS_COLORS[status] ?? Colors.textSecondary;
                 const dm = deptMeta[d];
                 return (
                   <View key={d} style={[ct.chip, { backgroundColor: col + "18", borderColor: col + "35" }]}>
@@ -133,8 +141,8 @@ function CashierOrderTracker({ orders, isDark }: { orders: Order[]; isDark?: boo
 }
 
 const ROLE_COLOR: Record<string, string> = {
-  cashier: Colors.gold, admin: "#7C3AED", branch_supervisor: "#0D9488",
-  dept_supervisor: "#0891B2", halwa: Colors.halwa, mawali: Colors.mawali,
+  cashier: Colors.gold, admin: Colors.purple, branch_supervisor: Colors.success,
+  dept_supervisor: Colors.info, halwa: Colors.halwa, mawali: Colors.mawali,
   chocolate: Colors.chocolate, cake: Colors.cake, packaging: Colors.packaging,
 };
 
@@ -151,9 +159,9 @@ type ModuleDef = {
 
 const MODULE_DEFS: ModuleDef[] = [
   { route: "cashier",   icon: "file-text",   accent: Colors.gold,     labelKey: "homeTileCashier",    capKey: "homeCapCashier",  group: "ops", primary: true },
-  { route: "archive",   icon: "archive",     accent: "#3B82F6",       labelKey: "tabArchive",         capKey: "homeCapArchive",  group: "ops" },
-  { route: "reports",   icon: "bar-chart-2", accent: "#8B5CF6",       labelKey: "tabReports",         capKey: "homeCapReports",  group: "ops" },
-  { route: "delivery",  icon: "truck",       accent: "#14B8A6",       labelKey: "tabDelivery",        capKey: "homeCapDelivery", group: "ops" },
+  { route: "archive",   icon: "archive",     accent: Colors.info,     labelKey: "tabArchive",         capKey: "homeCapArchive",  group: "ops" },
+  { route: "reports",   icon: "bar-chart-2", accent: Colors.purple,   labelKey: "tabReports",         capKey: "homeCapReports",  group: "ops" },
+  { route: "delivery",  icon: "truck",       accent: Colors.success,  labelKey: "tabDelivery",        capKey: "homeCapDelivery", group: "ops" },
   { route: "halwa",     icon: "coffee",      accent: Colors.halwa,    labelKey: "deptHalwaShort",     group: "dept" },
   { route: "mawali",    icon: "package",     accent: Colors.mawali,   labelKey: "deptMawaliShort",    group: "dept" },
   { route: "chocolate", icon: "gift",        accent: Colors.chocolate,labelKey: "deptChocolateShort", group: "dept" },
@@ -188,7 +196,7 @@ function OpsCard({ label, caption, icon, accent, primary, width, onPress }: {
   return (
     <PressScale onPress={onPress} style={{ width }}>
       <View style={[m.opsCard, primary && m.opsCardPrimary]}>
-        <View style={[m.opsIcon, { backgroundColor: primary ? "rgba(201,168,76,0.18)" : accent + "14" }]}>
+        <View style={[m.opsIcon, { backgroundColor: primary ? "rgba(217,192,143,0.16)" : accent + "14" }]}>
           <Feather name={icon as any} size={20} color={primary ? Colors.goldLight : accent} />
         </View>
         <View style={{ gap: 2 }}>
@@ -224,7 +232,7 @@ function DeptCard({ label, icon, accent, queue, active, width, onPress, queueTxt
         </View>
         <Text style={m.deptLabel} numberOfLines={1}>{label}</Text>
         <View style={m.deptStatusRow}>
-          <View style={[m.deptDot, { backgroundColor: busy ? (active > 0 ? "#3B82F6" : "#F59E0B") : "#10B981" }]} />
+          <View style={[m.deptDot, { backgroundColor: busy ? (active > 0 ? Colors.statusInProgress : Colors.statusPending) : Colors.statusDone }]} />
           <Text style={m.deptStatus} numberOfLines={1}>{busy ? queueTxt : clearTxt}</Text>
         </View>
       </View>
@@ -362,7 +370,7 @@ export default function HomeScreen() {
 
   // ── Shared blocks ────────────────────────────────────────────────────────────
   const heroCard = (
-    <LinearGradient colors={["#1A2744", "#0F1A33"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={m.hero}>
+    <LinearGradient colors={[Colors.espressoSoft, Colors.espressoDeep]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={m.hero}>
       <View style={m.heroGlow} />
       <View style={m.heroTop}>
         <View style={{ flex: 1, gap: 3 }}>
@@ -396,18 +404,18 @@ export default function HomeScreen() {
           <View style={{ flex: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
         ) : (
           <>
-            {doneCnt > 0       && <View style={{ flex: doneCnt / total,       backgroundColor: "#10B981" }} />}
-            {inProgressCnt > 0 && <View style={{ flex: inProgressCnt / total, backgroundColor: "#3B82F6" }} />}
-            {pendingCnt > 0    && <View style={{ flex: pendingCnt / total,    backgroundColor: "#F59E0B" }} />}
+            {doneCnt > 0       && <View style={{ flex: doneCnt / total,       backgroundColor: HERO_DONE }} />}
+            {inProgressCnt > 0 && <View style={{ flex: inProgressCnt / total, backgroundColor: HERO_PROG }} />}
+            {pendingCnt > 0    && <View style={{ flex: pendingCnt / total,    backgroundColor: HERO_WAIT }} />}
           </>
         )}
       </View>
 
       <View style={m.heroStats}>
         {[
-          { n: pendingCnt,    l: t("statusWaiting"),   c: "#FBBF24" },
-          { n: inProgressCnt, l: t("inProgressShort"), c: "#60A5FA" },
-          { n: doneCnt,       l: t("statusReady"),     c: "#34D399" },
+          { n: pendingCnt,    l: t("statusWaiting"),   c: HERO_WAIT },
+          { n: inProgressCnt, l: t("inProgressShort"), c: HERO_PROG },
+          { n: doneCnt,       l: t("statusReady"),     c: HERO_DONE },
         ].map(x => (
           <View key={x.l} style={m.heroStat}>
             <View style={[m.heroStatDot, { backgroundColor: x.c }]} />
@@ -421,13 +429,13 @@ export default function HomeScreen() {
 
   const ctaButton = canInvoice && (
     <PressScale onPress={() => go("cashier")}>
-      <LinearGradient colors={[Colors.goldLight, Colors.gold, "#A9873A"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={m.cta}>
+      <LinearGradient colors={[Colors.goldLight, Colors.gold]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={m.cta}>
         <View style={m.ctaIcon}><Feather name="plus" size={20} color={Colors.gold} /></View>
         <View style={{ flex: 1, gap: 1 }}>
           <Text style={m.ctaTxt}>{t("newInvoice")}</Text>
           <Text style={m.ctaSub}>{t("homeNewInvoiceSub")}</Text>
         </View>
-        <Feather name={isRTL ? "arrow-left" : "arrow-right"} size={20} color="#1A2744" />
+        <Feather name={isRTL ? "arrow-left" : "arrow-right"} size={20} color={Colors.primary} />
       </LinearGradient>
     </PressScale>
   );
@@ -509,7 +517,7 @@ export default function HomeScreen() {
           </ScrollView>
 
           {/* Info panel */}
-          <LinearGradient colors={["#080F1E", "#0E1A30", "#152240"]} style={[s.infoPanel, { width: INFO_W }]} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}>
+          <LinearGradient colors={[Colors.espressoDeep, Colors.espressoMid, Colors.espressoSoft]} style={[s.infoPanel, { width: INFO_W }]} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}>
             <ScrollView contentContainerStyle={s.infoPanelContent} showsVerticalScrollIndicator={false}>
               {isLavi ? (
                 <View style={s.laviWrap}>
@@ -552,9 +560,9 @@ export default function HomeScreen() {
                 <Text style={s.statsTitle}>{t("todayStatsTitle")}</Text>
                 <View style={s.statsGrid}>
                   <StatCard label={t("total")}         value={todayOrders.length} color={Colors.gold} icon="list" />
-                  <StatCard label={t("statusWaiting")} value={pendingCnt}         color="#F59E0B"      icon="clock" />
-                  <StatCard label={t("inProgress")}    value={inProgressCnt}      color="#60A5FA"      icon="zap" />
-                  <StatCard label={t("statusReady")}   value={doneCnt}            color="#34D399"      icon="check-circle" />
+                  <StatCard label={t("statusWaiting")} value={pendingCnt}         color={HERO_WAIT}     icon="clock" />
+                  <StatCard label={t("inProgress")}    value={inProgressCnt}      color={HERO_PROG}     icon="zap" />
+                  <StatCard label={t("statusReady")}   value={doneCnt}            color={HERO_DONE}     icon="check-circle" />
                 </View>
               </View>
 
@@ -604,7 +612,7 @@ export default function HomeScreen() {
 // ── Styles ─────────────────────────────────────────────────────────────────────
 
 const CARD_SHADOW = {
-  shadowColor: "#1A2744",
+  shadowColor: Colors.primary,
   shadowOpacity: 0.06,
   shadowRadius: 12,
   shadowOffset: { width: 0, height: 4 },
@@ -617,7 +625,7 @@ const m = StyleSheet.create({
 
   // Hero
   hero:        { borderRadius: 22, padding: 18, gap: 16, overflow: "hidden" },
-  heroGlow:    { position: "absolute", width: 220, height: 220, borderRadius: 110, backgroundColor: "rgba(201,168,76,0.10)", top: -110, end: -60 } as any,
+  heroGlow:    { position: "absolute", width: 220, height: 220, borderRadius: 110, backgroundColor: "rgba(217,192,143,0.10)", top: -110, end: -60 } as any,
   heroTop:     { flexDirection: "row", alignItems: "center", gap: 12 },
   heroGreet:   { color: "#fff", fontSize: 18, fontWeight: "800" },
   heroDate:    { color: "rgba(255,255,255,0.5)", fontSize: 12, fontWeight: "600" },
@@ -638,9 +646,9 @@ const m = StyleSheet.create({
 
   // CTA
   cta:     { flexDirection: "row", alignItems: "center", gap: 12, borderRadius: 18, paddingVertical: 14, paddingHorizontal: 16, ...CARD_SHADOW, shadowColor: Colors.gold, shadowOpacity: 0.3 },
-  ctaIcon: { width: 38, height: 38, borderRadius: 12, backgroundColor: "#1A2744", alignItems: "center", justifyContent: "center" },
-  ctaTxt:  { color: "#1A2744", fontSize: 16, fontWeight: "900" },
-  ctaSub:  { color: "rgba(26,39,68,0.65)", fontSize: 11, fontWeight: "600" },
+  ctaIcon: { width: 38, height: 38, borderRadius: 12, backgroundColor: Colors.primary, alignItems: "center", justifyContent: "center" },
+  ctaTxt:  { color: Colors.primary, fontSize: 16, fontWeight: "900" },
+  ctaSub:  { color: "rgba(43,33,27,0.62)", fontSize: 11, fontWeight: "600" },
 
   // Section heading
   secHead:  { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 2 },
@@ -649,7 +657,7 @@ const m = StyleSheet.create({
 
   // Ops cards
   opsCard:        { backgroundColor: Colors.surface, borderRadius: 18, padding: 14, gap: 12, borderWidth: 1, borderColor: Colors.borderLight, minHeight: 112, ...CARD_SHADOW },
-  opsCardPrimary: { backgroundColor: "#1A2744", borderColor: "rgba(201,168,76,0.35)" },
+  opsCardPrimary: { backgroundColor: Colors.primary, borderColor: "rgba(184,149,90,0.45)" },
   opsIcon:        { width: 42, height: 42, borderRadius: 13, alignItems: "center", justifyContent: "center" },
   opsLabel:       { color: Colors.text, fontSize: 14, fontWeight: "800" },
   opsCap:         { color: Colors.textMuted, fontSize: 11, fontWeight: "600" },
@@ -680,13 +688,13 @@ const s = StyleSheet.create({
   laviLogo:     { width: 190, height: 72 },
   brandWrap:    { alignItems: "center", gap: 10, paddingTop: 8 },
   brandBadge:   { width: 52, height: 52, borderRadius: 16, alignItems: "center", justifyContent: "center" },
-  brandBadgeTxt:{ fontSize: 26, fontWeight: "900", color: "#0A1628" },
+  brandBadgeTxt:{ fontSize: 26, fontWeight: "900", color: Colors.primary },
   brandName:    { color: "#fff", fontSize: 15, fontWeight: "800", textAlign: "center" },
   goldRule:     { height: 1, borderRadius: 1 },
   empSection:   { gap: 10 },
   liveRow:      { flexDirection: "row", alignItems: "center", gap: 7 },
-  liveDot:      { width: 8, height: 8, borderRadius: 4, backgroundColor: "#34D399" },
-  liveTxt:      { color: "#34D399", fontSize: 11, fontWeight: "700" },
+  liveDot:      { width: 8, height: 8, borderRadius: 4, backgroundColor: HERO_DONE },
+  liveTxt:      { color: HERO_DONE, fontSize: 11, fontWeight: "700" },
   empCard:      { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: "rgba(255,255,255,0.05)", borderRadius: 12, padding: 12, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" },
   empAvatar:    { width: 42, height: 42, borderRadius: 21, borderWidth: 2, alignItems: "center", justifyContent: "center" },
   empAvatarTxt: { fontSize: 18, fontWeight: "900" },
@@ -716,7 +724,7 @@ const sc2 = StyleSheet.create({
 const ct = StyleSheet.create({
   emptyTxt:    { fontSize: 12, marginTop: 8 },
   card:        { borderRadius: 10, borderWidth: 1, padding: 10, gap: 7, overflow: "hidden" as const, position: "relative" as const },
-  doneLine:    { position: "absolute", top: 0, left: 0, right: 0, height: 2, backgroundColor: "#34D399" },
+  doneLine:    { position: "absolute", top: 0, left: 0, right: 0, height: 2, backgroundColor: Colors.statusDone },
   cardHead:    { flexDirection: "row", alignItems: "center", gap: 8 },
   orderNum:    { fontSize: 13, fontWeight: "800", minWidth: 36 },
   custName:    { flex: 1, fontSize: 12, fontWeight: "600" },
