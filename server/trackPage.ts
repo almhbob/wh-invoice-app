@@ -64,7 +64,7 @@ export const TRACK_PAGE_HTML = `<!doctype html>
     rejected: ["نعتذر، لم نتمكن من قبول الطلب", null]
   };
   var LABEL = { received: "استلام", in_production: "تحضير", ready: "جاهز", out_for_delivery: "مع السائق", delivered: "تسليم", picked_up: "استلام العميل" };
-  var EV = { created: "استُلم الطلب", dept_started: "بدأ التحضير", ready: "اكتمل التحضير", dispatched: "خرج للتوصيل", delivered: "تم التسليم", picked_up: "استلمه العميل", delivery_failed: "تعذّر التسليم" };
+  var EV = { online_received: "وصل طلبك الأونلاين", created: "استُلم الطلب", dept_started: "بدأ التحضير", ready: "اكتمل التحضير", dispatched: "خرج للتوصيل", delivered: "تم التسليم", picked_up: "استلمه العميل", delivery_failed: "تعذّر التسليم" };
   function el(id) { return document.getElementById(id); }
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (m) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]; }); }
   function fmt(iso) { var d = new Date(iso); return isNaN(d) ? "" : d.toLocaleString("ar-SA", { weekday: "short", hour: "2-digit", minute: "2-digit" }); }

@@ -9,6 +9,7 @@ export const ORDER_PAGE_HTML = `<!doctype html>
 <style>
   :root { --esp:#2B211B; --esp2:#1C1511; --gold:#B8955A; --gold2:#D9C08F; --ivory:#F6F2EC; --ivory2:#F1EBE2; --ink:#231B16; --muted:#8C7F72; --line:#E7DFD3; --ok:#4F8A68; --bad:#B5544A; --plum:#7A6290; }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { overflow-x:hidden; }
   body { margin:0; background:var(--ivory); color:var(--ink); font-family:-apple-system,"Segoe UI",Tahoma,"Noto Kufi Arabic",sans-serif; }
   button, input, select, textarea { font:inherit; }
   .hero { background:linear-gradient(160deg,var(--esp),var(--esp2)); color:#fff; padding:26px 18px 22px; text-align:center; }
@@ -68,7 +69,7 @@ export const ORDER_PAGE_HTML = `<!doctype html>
   .ok { text-align:center; padding:30px 10px; }
   .ok .big { font-size:46px; }
   .ok h2 { margin:10px 0 6px; }
-  .hp { position:absolute; left:-9999px; }
+  .hp { position:absolute; width:1px; height:1px; overflow:hidden; opacity:0; pointer-events:none; inset:0 auto auto 0; }
   .empty { text-align:center; color:var(--muted); padding:30px; }
 </style>
 </head>
@@ -132,6 +133,8 @@ export const ORDER_PAGE_HTML = `<!doctype html>
   var slug = parts[1] || new URLSearchParams(location.search).get("s") || "laviviane";
   var KEY = "order_cart_" + slug;
   var data = null, cart = {}, writing = {}, cat = "", q = "", type = "pickup", locUrl = "";
+  var CAT_AR = { "New Cake Collection": "تشكيلة الكيك الجديدة", "Laviviane Cakes": "كيك لافيفيان", "Celebration Bites": "قطع الاحتفالات", "Mousse Cake": "كيك الموس", "Laviviane Bites": "قطع لافيفيان", "Sandwich": "ساندويتشات", "Luxury Chocolate": "شوكولاتة فاخرة", "Occasion Chocolate": "شوكولاتة المناسبات", "Distributions and Gifts": "توزيعات وهدايا" };
+  function catName(c) { return CAT_AR[c] || c; }
   var SURF = [["cream","كريمة مباشرة"],["jelly","جلي"],["jelly_on_sugar","جلي على سكر"],["sugar_print","طباعة على سكر"],["card","كرت"],["other","أخرى"]];
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (m) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]; }); }
@@ -147,7 +150,7 @@ export const ORDER_PAGE_HTML = `<!doctype html>
 
   function renderCats() {
     var h = '<button class="cat' + (cat ? "" : " on") + '" data-c="">الكل</button>';
-    data.categories.forEach(function (c) { h += '<button class="cat' + (cat === c ? " on" : "") + '" data-c="' + esc(c) + '">' + esc(c) + "</button>"; });
+    data.categories.forEach(function (c) { h += '<button class="cat' + (cat === c ? " on" : "") + '" data-c="' + esc(c) + '">' + esc(catName(c)) + "</button>"; });
     $("cats").innerHTML = h;
   }
   function renderMenu() {
@@ -163,7 +166,7 @@ export const ORDER_PAGE_HTML = `<!doctype html>
     var h = "";
     data.categories.forEach(function (c) {
       if (!groups[c]) return;
-      h += '<div class="sec">' + esc(c) + '</div><div class="grid">';
+      h += '<div class="sec">' + esc(catName(c)) + '</div><div class="grid">';
       groups[c].forEach(function (p) {
         var n = cart[p.id] || 0;
         h += '<div class="p">' + (p.imageUri ? '<img loading="lazy" src="' + esc(p.imageUri) + '" alt="" onerror="this.style.visibility=\\'hidden\\'" />' : "") +
