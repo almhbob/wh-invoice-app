@@ -24,9 +24,12 @@ export function publicStage(o: Rec): string {
   const depts = new Set<string>(items.map((i) => String(i.department)));
   Object.entries(statuses).forEach(([d, s]) => { if (s && s !== "cancelled") depts.add(d); });
   const list = DEPTS.filter((d) => depts.has(d));
-  const done = list.filter((d) => statuses[d] === "done").length;
-  const started = list.filter((d) => statuses[d] === "in_progress").length;
-  if (list.length && done === list.length) return "ready";
+  const writing = items.some((i) => String((i.writing as Rec | undefined)?.text ?? "").trim());
+  const ws = String(o.writingStatus ?? "pending");
+  const done = list.filter((d) => statuses[d] === "done").length + (writing && ws === "done" ? 1 : 0);
+  const started = list.filter((d) => statuses[d] === "in_progress").length + (writing && ws === "in_progress" ? 1 : 0);
+  const total = list.length + (writing ? 1 : 0);
+  if (total && done === total) return "ready";
   if (done || started) return "in_production";
   return "received";
 }

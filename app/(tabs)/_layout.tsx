@@ -43,6 +43,7 @@ const ROLE_COLORS: Record<string, string> = {
   chocolate: Colors.chocolate,
   cake: Colors.cake,
   packaging: Colors.packaging,
+  calligrapher: Colors.purple,
   admin: Colors.primaryLight,
   branch_supervisor: Colors.success,
   dept_supervisor: Colors.info,
@@ -193,6 +194,7 @@ const DEPT_TABS: TabDef[] = [
   { name: "chocolate", labelKey: "tabChocolate",  titleKey: "titleChocolate", icon: "gift",     sf: "gift",                         accent: Colors.chocolate },
   { name: "cake",      labelKey: "tabCake",       titleKey: "titleCake",      icon: "layers",   sf: "birthday.cake",                accent: Colors.cake },
   { name: "packaging", labelKey: "tabPackaging",  titleKey: "titlePackaging", icon: "box",      sf: "shippingbox",                  accent: Colors.packaging },
+  { name: "writing",   labelKey: "tabWriting",    titleKey: "titleWriting",   icon: "edit-3",   sf: "pencil",                       accent: Colors.purple },
 ];
 
 const MORE_TABS: TabDef[] = [
@@ -509,6 +511,7 @@ const SCREEN_META: Record<string, { titleKey: string; accent: string }> = {
   branches:         { titleKey: "titleManageBranches", accent: Colors.success },
   customers:        { titleKey: "titleCustomers",  accent: Colors.packaging },
   tracking:         { titleKey: "titleTracking",   accent: Colors.gold },
+  writing:          { titleKey: "titleWriting",    accent: Colors.purple },
   delivery:         { titleKey: "titleDelivery",   accent: Colors.success },
   trays:            { titleKey: "titleTrays",      accent: Colors.gold },
   admin:            { titleKey: "titleAdmin",      accent: Colors.primaryLight },
@@ -552,6 +555,7 @@ export default function TabLayout() {
       <Tabs.Screen name="customers"        options={{ title: t("titleCustomers"), headerShown: false }} />
       <Tabs.Screen name="delivery"         options={{ title: t("titleDelivery"),  headerShown: false }} />
       <Tabs.Screen name="tracking"         options={{ title: t("titleTracking"),  headerShown: false }} />
+      <Tabs.Screen name="writing"          options={{ title: t("titleWriting"),   headerShown: false }} />
       <Tabs.Screen name="trays"            options={{ title: t("titleTrays"),     headerShown: false }} />
       <Tabs.Screen name="admin"            options={{ title: t("titleAdmin"),     headerShown: false }} />
       <Tabs.Screen name="settings"         options={{ title: t("tabSettings"),    headerShown: false }} />

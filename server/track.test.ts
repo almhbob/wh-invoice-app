@@ -25,6 +25,9 @@ describe("public tracking", () => {
     expect(publicStage({ ...order, deliveryStatus: "assigned" })).toBe("ready");
     expect(publicStage({ ...order, deliveryStatus: undefined, departmentStatuses: { cake: "in_progress", packaging: "pending" } })).toBe("in_production");
     expect(publicStage({ orderType: "pickup", pickedUpAt: "x", items: [] })).toBe("picked_up");
+    const withWriting = { ...order, deliveryStatus: "assigned", items: [{ ...order.items[0], writing: { text: "سنة حلوة", surface: "cream" } }] };
+    expect(publicStage({ ...withWriting, writingStatus: "pending" })).toBe("in_production");
+    expect(publicStage({ ...withWriting, writingStatus: "done" })).toBe("ready");
   });
 
   test("returns a sanitized view and never leaks contact or money", async () => {

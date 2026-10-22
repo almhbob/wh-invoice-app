@@ -6,6 +6,7 @@ import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View
 import { Colors } from "@/constants/colors";
 import { useLang } from "@/context/LanguageContext";
 import { Department, OrderItem, OrderType, PAYMENT_LABEL_KEYS, PaymentMethod } from "@/context/OrdersContext";
+import { WritingBlock } from "@/components/WritingBlock";
 import { DEPT_COLOR, DEPT_ICON, DEPT_ORDER } from "@/utils/orderFlow";
 
 export interface OrderDraft {
@@ -120,6 +121,7 @@ export function OrderReviewSheet({ visible, draft, submitting, onConfirm, onEdit
                         <Text style={st.itemName}>{i.name}</Text>
                         {i.note ? <Text style={st.itemNote}>{i.note}</Text> : null}
                         {i.details ? <Text style={st.itemNote} numberOfLines={3}>{i.details}</Text> : null}
+                        <WritingBlock item={i} />
                       </View>
                       <Text style={[st.price, !i.price && { color: Colors.accent }]}>{i.price ? (i.price * i.quantity).toFixed(2) : "—"}</Text>
                     </View>
@@ -156,8 +158,8 @@ export function OrderReviewSheet({ visible, draft, submitting, onConfirm, onEdit
               {draft.paid > 0 && <Row label={ar ? "المدفوع" : "Paid"} value={`${draft.paid.toFixed(2)} ${sar}`} />}
               <Row
                 label={draft.remaining > 0 ? (ar ? "المتبقي" : "Remaining") : (ar ? "الحالة" : "Status")}
-                value={draft.remaining > 0 ? `${draft.remaining.toFixed(2)} ${sar}` : (ar ? "مدفوع بالكامل ✓" : "Fully paid ✓")}
-                color={draft.remaining > 0 ? Colors.accent : Colors.success}
+                value={draft.grandTotal <= 0 ? "—" : draft.remaining > 0 ? `${draft.remaining.toFixed(2)} ${sar}` : (ar ? "مدفوع بالكامل ✓" : "Fully paid ✓")}
+                color={draft.grandTotal <= 0 ? Colors.textMuted : draft.remaining > 0 ? Colors.accent : Colors.success}
               />
             </View>
 

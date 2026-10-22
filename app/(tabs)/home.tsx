@@ -168,6 +168,7 @@ const MODULE_DEFS: ModuleDef[] = [
   { route: "mawali",    icon: "package",     accent: Colors.mawali,   labelKey: "deptMawaliShort",    group: "dept" },
   { route: "chocolate", icon: "gift",        accent: Colors.chocolate,labelKey: "deptChocolateShort", group: "dept" },
   { route: "cake",      icon: "layers",      accent: Colors.cake,     labelKey: "deptCakeShort",      group: "dept" },
+  { route: "writing",   icon: "edit-3",      accent: Colors.purple,   labelKey: "tabWriting",         group: "dept" },
   { route: "packaging", icon: "box",         accent: Colors.packaging,labelKey: "deptPackagingShort", group: "dept" },
   { route: "admin",     icon: "settings",    accent: Colors.primary,  labelKey: "tabAdmin",           capKey: "homeCapAdmin",    group: "admin" },
 ];
@@ -331,6 +332,11 @@ export default function HomeScreen() {
     return out;
   }, [todayOrders]);
 
+  const writingQueue = useMemo(() => {
+    const open = todayOrders.filter(o => o.items?.some(i => i.writing?.text?.trim()) && (o.writingStatus ?? "pending") !== "done");
+    return { queue: open.length, active: open.filter(o => o.writingStatus === "in_progress").length };
+  }, [todayOrders]);
+
   // Role-based module visibility (same rules as before)
   const role = currentEmployee?.role;
   const isCashierRole = role === "cashier";
@@ -340,7 +346,8 @@ export default function HomeScreen() {
       return isAdmin ? MODULE_DEFS : base;
     }
     if (role === "cashier") return base.filter(d => ["cashier", "tracking", "delivery", "archive"].includes(d.route));
-    return base.filter(d => d.route === role);
+    const own = role === "calligrapher" ? "writing" : role;
+    return base.filter(d => d.route === own || (role === "cake" && d.route === "writing"));
   }, [role, isAdmin]);
 
   const opsMods   = visible.filter(d => d.group === "ops");
@@ -358,7 +365,7 @@ export default function HomeScreen() {
   const contentW  = Math.min(winW - SIDEBAR_W - INFO_W, 1100) - PAD * 2;
   const colW = (cols: number) => Math.floor((contentW - GAP * (cols - 1)) / cols);
   const opsCols  = isWide ? Math.min(5, Math.max(opsMods.length, 1)) : (opsMods.length === 1 ? 1 : 2);
-  const deptCols = isWide ? 5 : 3;
+  const deptCols = isWide ? 6 : 3;
 
   const empColor = ROLE_COLOR[currentEmployee?.role ?? ""] ?? Colors.gold;
   const greeting = now.getHours() < 12 ? t("homeGreetMorning") : t("homeGreetEvening");
@@ -471,7 +478,7 @@ export default function HomeScreen() {
           />
           <View style={[m.grid, { gap: GAP }]}>
             {deptMods.map(d => {
-              const q = deptQueues[d.route as Department] ?? { queue: 0, active: 0 };
+              const q = d.route === "writing" ? writingQueue : (deptQueues[d.route as Department] ?? { queue: 0, active: 0 });
               return (
                 <DeptCard
                   key={d.route}

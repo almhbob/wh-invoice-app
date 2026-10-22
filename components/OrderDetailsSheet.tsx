@@ -5,6 +5,7 @@ import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, Tex
 
 import { DriversModal } from "@/components/DriversModal";
 import { OrderTracker, StageBadge } from "@/components/OrderTracker";
+import { WritingBlock } from "@/components/WritingBlock";
 import { Colors } from "@/constants/colors";
 import { canDo, ROLE_CAN_VIEW_DELIVERY } from "@/constants/rbac";
 import { useCompany } from "@/context/CompanyContext";
@@ -251,6 +252,7 @@ export function OrderDetailsSheet({ orderId, visible, onClose }: { orderId: stri
                           <Text style={st.itemName}>{i.name}</Text>
                           {i.note ? <Text style={st.itemNote}>{i.note}</Text> : null}
                           {i.details ? <Text style={st.itemNote}>{i.details}</Text> : null}
+                          <WritingBlock item={i} status={order.writingStatus ?? "pending"} />
                         </View>
                         {i.price ? <Text style={st.itemPrice}>{(i.price * i.quantity).toFixed(2)}</Text> : null}
                       </View>

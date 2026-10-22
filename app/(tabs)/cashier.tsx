@@ -47,6 +47,7 @@ import { Offer, normalizePhone, useOffers } from "@/context/OffersContext";
 import { DeliveryDatePicker, DeliveryTimePicker } from "@/components/DeliveryDateTimePicker";
 import { DailyClosingModal } from "@/components/DailyClosingModal";
 import { OrderReviewSheet } from "@/components/OrderReviewSheet";
+import { WritingEditor } from "@/components/WritingEditor";
 import { SyncStatusBanner } from "@/components/SyncStatusBanner";
 import { OrderTracker } from "@/components/OrderTracker";
 import { customerTrackingMessage, openWhatsApp as waSend } from "@/utils/orderFlow";
@@ -1219,6 +1220,12 @@ export default function CashierScreen() {
                   autoFocus={isExpanded && !hasNote}
                 />
               )}
+              {item.name.trim() ? (
+                <WritingEditor
+                  value={item.writing}
+                  onChange={(w) => updateItem(item.id, "writing", w)}
+                />
+              ) : null}
             </View>
           );
           });
@@ -1762,13 +1769,18 @@ export default function CashierScreen() {
                 const dc = DEPT_OPTIONS.find((d) => d.value === item.department)!;
                 const lt = (item.price || 0) * item.quantity;
                 return (
-                  <View key={item.id} style={styles.checkoutItem}>
-                    <View style={[styles.checkoutItemAccent, { backgroundColor: dc.color }]} />
-                    <Text style={styles.checkoutItemName} numberOfLines={1}>{item.name}</Text>
-                    <Text style={styles.checkoutItemQty}>×{item.quantity}</Text>
-                    <Text style={[styles.checkoutItemAmt, !item.price && { color: "#f87171" }]}>
-                      {lt > 0 ? `${lt.toFixed(0)} ر.س` : "—"}
-                    </Text>
+                  <View key={item.id}>
+                    <View style={styles.checkoutItem}>
+                      <View style={[styles.checkoutItemAccent, { backgroundColor: dc.color }]} />
+                      <Text style={styles.checkoutItemName} numberOfLines={1}>{item.name}</Text>
+                      <Text style={styles.checkoutItemQty}>×{item.quantity}</Text>
+                      <Text style={[styles.checkoutItemAmt, !item.price && { color: "#f87171" }]}>
+                        {lt > 0 ? `${lt.toFixed(0)} ر.س` : "—"}
+                      </Text>
+                    </View>
+                    <View style={{ backgroundColor: Colors.surface, borderRadius: 12, paddingHorizontal: 8, paddingBottom: 6, marginBottom: 6 }}>
+                      <WritingEditor value={item.writing} onChange={(w) => updateItem(item.id, "writing", w)} />
+                    </View>
                   </View>
                 );
               })}

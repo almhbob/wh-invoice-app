@@ -1,7 +1,7 @@
 import { Linking, Platform } from "react-native";
 
 import { Colors } from "@/constants/colors";
-import type { Department, Order } from "@/context/OrdersContext";
+import type { Department, Order, OrderItem, WritingSurface } from "@/context/OrdersContext";
 
 /**
  * Order lifecycle — one source of truth for every screen.
@@ -25,6 +25,8 @@ export type OrderEventType =
   | "created"
   | "dept_started"
   | "dept_done"
+  | "writing_started"
+  | "writing_done"
   | "ready"
   | "driver_assigned"
   | "dispatched"
@@ -68,11 +70,39 @@ export function orderDepartments(order: Order): Department[] {
   return DEPT_ORDER.filter((d) => set.has(d));
 }
 
+export function writingItems(order: Order): OrderItem[] {
+  return order.items.filter((i) => i.writing?.text?.trim());
+}
+
+export function hasWriting(order: Order) {
+  return writingItems(order).length > 0;
+}
+
 export function productionProgress(order: Order) {
   const depts = orderDepartments(order);
-  const done = depts.filter((d) => order.departmentStatuses?.[d] === "done").length;
-  const started = depts.filter((d) => order.departmentStatuses?.[d] === "in_progress").length;
-  return { depts, done, started, total: depts.length, ratio: depts.length ? done / depts.length : 0 };
+  const writing = hasWriting(order);
+  const ws = order.writingStatus ?? "pending";
+  const done = depts.filter((d) => order.departmentStatuses?.[d] === "done").length + (writing && ws === "done" ? 1 : 0);
+  const started = depts.filter((d) => order.departmentStatuses?.[d] === "in_progress").length + (writing && ws === "in_progress" ? 1 : 0);
+  const total = depts.length + (writing ? 1 : 0);
+  return { depts, done, started, total, ratio: total ? done / total : 0 };
+}
+
+export const WRITING_SURFACES: { key: WritingSurface; ar: string; en: string; icon: string }[] = [
+  { key: "cream",          ar: "كريمة مباشرة",   en: "Cream (direct)",    icon: "edit-3" },
+  { key: "jelly",          ar: "جلي",            en: "Jelly",             icon: "droplet" },
+  { key: "jelly_on_sugar", ar: "جلي على سكر",    en: "Jelly on sugar",    icon: "layers" },
+  { key: "sugar_print",    ar: "طباعة على سكر",  en: "Sugar print",       icon: "printer" },
+  { key: "card",           ar: "كرت",            en: "Card",              icon: "credit-card" },
+  { key: "other",          ar: "أخرى",           en: "Other",             icon: "more-horizontal" },
+];
+
+export function surfaceLabel(item: OrderItem, lang: string) {
+  const w = item.writing;
+  if (!w) return "";
+  if (w.surface === "other" && w.surfaceOther?.trim()) return w.surfaceOther.trim();
+  const m = WRITING_SURFACES.find((s) => s.key === w.surface);
+  return m ? (lang === "ar" ? m.ar : m.en) : w.surface;
 }
 
 export function isProductionDone(order: Order) {
@@ -116,6 +146,8 @@ export const EVENT_META: Record<OrderEventType, { ar: string; en: string; icon: 
   created:          { ar: "استُلم الطلب وأُرسل للأقسام", en: "Order received", icon: "file-plus" },
   dept_started:     { ar: "بدأ التحضير",                 en: "Preparation started", icon: "play" },
   dept_done:        { ar: "انتهى التحضير",               en: "Preparation done", icon: "check" },
+  writing_started:  { ar: "بدأ الخطاط الكتابة",          en: "Writing started", icon: "edit-3" },
+  writing_done:     { ar: "انتهت الكتابة",               en: "Writing done", icon: "check-square" },
   ready:            { ar: "الطلب جاهز بالكامل",          en: "Order ready", icon: "check-circle" },
   driver_assigned:  { ar: "تم تعيين السائق",             en: "Driver assigned", icon: "user-check" },
   dispatched:       { ar: "خرج للتوصيل",                 en: "Out for delivery", icon: "truck" },

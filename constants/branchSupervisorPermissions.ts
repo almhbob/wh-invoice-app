@@ -38,6 +38,7 @@ export const BRANCH_SUPERVISOR_ALLOWED_ROLES: EmployeeRole[] = [
   "chocolate",
   "cake",
   "packaging",
+  "calligrapher",
   "dept_supervisor",
   "guest",
 ];
@@ -64,6 +65,8 @@ export function defaultPermissionsForRole(role: EmployeeRole): string[] {
     case "chocolate":
     case "cake":
       return ["department.orders.view", "department.orders.update", "department.tasks.complete"];
+    case "calligrapher":
+      return ["writing.orders.view", "writing.orders.update"];
     case "packaging":
       return ["packaging.orders.view", "packaging.orders.update", "returns.receive"];
     case "dept_supervisor":

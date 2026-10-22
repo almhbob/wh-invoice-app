@@ -9,6 +9,7 @@ import { Colors } from "@/constants/colors";
 import { useEmployee } from "@/context/EmployeeContext";
 import { useLang } from "@/context/LanguageContext";
 import { BranchTransfer, Department, EmployeeRef, Order, OrderStatus, useOrders } from "@/context/OrdersContext";
+import { WritingBlock } from "@/components/WritingBlock";
 import { DEPT_COLOR, DEPT_ICON, dueLabel, dueUrgency, orderDepartments, URGENCY_COLOR } from "@/utils/orderFlow";
 
 interface DeptOrderCardProps {
@@ -155,6 +156,7 @@ export function DeptOrderCard({ order, department, onStatusChange }: DeptOrderCa
               {isPackaging && it.department !== "packaging" ? <Text style={st.itemDept}>{deptName[it.department]}</Text> : null}
               {it.note ? <Text style={st.itemNote}>{it.note}</Text> : null}
               {it.details ? <Text style={st.itemNote}>{it.details}</Text> : null}
+              <WritingBlock item={it} status={order.writingStatus ?? "pending"} />
             </View>
           </View>
         ))}

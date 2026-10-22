@@ -34,6 +34,7 @@ const ROLE_COLORS: Record<EmployeeRole, string> = {
   chocolate: Colors.chocolate,
   cake: Colors.cake,
   packaging: Colors.packaging,
+  calligrapher: Colors.purple,
   admin: Colors.gold,
   branch_supervisor: "#0d9488",
   dept_supervisor: "#0891b2",
@@ -47,14 +48,15 @@ const ROLE_ICONS: Record<EmployeeRole, string> = {
   chocolate: "gift",
   cake: "layers",
   packaging: "box",
+  calligrapher: "edit-3",
   admin: "shield",
   branch_supervisor: "git-branch",
   dept_supervisor: "briefcase",
   guest: "eye",
 };
 
-const ALL_ROLES: EmployeeRole[] = ["cashier", "halwa", "mawali", "chocolate", "cake", "packaging", "dept_supervisor", "branch_supervisor", "admin", "guest"];
-const DEFAULT_ADD_ROLES: EmployeeRole[] = ["cashier", "halwa", "mawali", "chocolate", "cake", "packaging", "dept_supervisor", "admin"];
+const ALL_ROLES: EmployeeRole[] = ["cashier", "halwa", "mawali", "chocolate", "cake", "packaging", "calligrapher", "dept_supervisor", "branch_supervisor", "admin", "guest"];
+const DEFAULT_ADD_ROLES: EmployeeRole[] = ["cashier", "halwa", "mawali", "chocolate", "cake", "packaging", "calligrapher", "dept_supervisor", "admin"];
 
 interface Props {
   visible: boolean;
@@ -67,6 +69,9 @@ export function EmployeeSelectorModal({ visible, onClose }: Props) {
   const { employees, currentEmployee, setCurrentEmployee, addEmployee, removeEmployee, authMode } =
     useEmployee();
   const [tab, setTab] = useState<"select" | "add">("select");
+  // Only managers see colleagues and can add/remove; everyone else sees just their own account.
+  const isManager = currentEmployee?.role === "admin" || currentEmployee?.role === "branch_supervisor";
+  const listed = isManager ? employees : employees.filter((e) => e.id === currentEmployee?.id);
   const [newName, setNewName] = useState("");
   const [newEmpId, setNewEmpId] = useState("");
   const [newUsername, setNewUsername] = useState("");
@@ -88,8 +93,8 @@ export function EmployeeSelectorModal({ visible, onClose }: Props) {
 
   const handleSelect = (emp: Employee) => {
     Haptics.selectionAsync();
-    // Secure mode: switching identity always requires that employee's own PIN.
-    if (authMode === "secure" && emp.id !== currentEmployee?.id) {
+    // Switching identity always requires signing in with that employee's own PIN.
+    if (emp.id !== currentEmployee?.id) {
       Alert.alert(emp.name, secureAuthText("switchNeedsLogin", lang), [
         { text: secureAuthText("cancel", lang), style: "cancel" },
         { text: secureAuthText("logout", lang), style: "destructive", onPress: () => { setCurrentEmployee(null); onClose(); } },
@@ -179,12 +184,14 @@ export function EmployeeSelectorModal({ visible, onClose }: Props) {
           <TouchableOpacity style={[styles.tab, tab === "select" && styles.tabActive]} onPress={() => setTab("select")}>
             <Text style={[styles.tabText, tab === "select" && styles.tabTextActive]}>{t("selectEmpTab")}</Text>
           </TouchableOpacity>
+          {isManager && (
           <TouchableOpacity style={[styles.tab, tab === "add" && styles.tabActive]} onPress={() => setTab("add")}>
             <Text style={[styles.tabText, tab === "add" && styles.tabTextActive]}>{t("addEmpTab")}</Text>
           </TouchableOpacity>
+          )}
         </View>
 
-        {tab === "select" ? (
+        {tab === "select" || !isManager ? (
           <ScrollView contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false}>
             {currentEmployee && (
               <TouchableOpacity style={styles.logoutRow} onPress={handleLogout}>
@@ -193,7 +200,7 @@ export function EmployeeSelectorModal({ visible, onClose }: Props) {
               </TouchableOpacity>
             )}
 
-            {employees.length === 0 ? (
+            {listed.length === 0 ? (
               <View style={styles.emptyBox}>
                 <Feather name="users" size={40} color={Colors.textMuted} />
                 <Text style={styles.emptyText}>{t("noEmpYet")}</Text>
@@ -201,7 +208,7 @@ export function EmployeeSelectorModal({ visible, onClose }: Props) {
               </View>
             ) : (
               visibleRoles.map((role) => {
-                const roleEmps = employees.filter((e) => e.role === role);
+                const roleEmps = listed.filter((e) => e.role === role);
                 if (roleEmps.length === 0) return null;
                 return (
                   <View key={role} style={styles.roleGroup}>
@@ -221,9 +228,11 @@ export function EmployeeSelectorModal({ visible, onClose }: Props) {
                             <Text style={styles.empIdText}>#{emp.employeeId} · {emp.username || emp.employeeId}</Text>
                           </View>
                           {isCurrent ? <Feather name="check-circle" size={20} color={ROLE_COLORS[role]} /> : null}
+                          {isManager && !isCurrent && (
                           <TouchableOpacity style={styles.delBtn} onPress={() => handleRemove(emp)} hitSlop={10}>
                             <Feather name="trash-2" size={15} color={Colors.textMuted} />
                           </TouchableOpacity>
+                          )}
                         </TouchableOpacity>
                       );
                     })}

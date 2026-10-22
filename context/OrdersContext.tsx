@@ -42,6 +42,18 @@ export const ORDER_TYPE_LABEL_KEYS: Record<OrderType, "pickup" | "delivery"> = {
   delivery: "delivery",
 };
 
+export type WritingSurface = "cream" | "jelly" | "jelly_on_sugar" | "sugar_print" | "card" | "other";
+
+/** Text the calligrapher writes on/with an item. */
+export interface CakeWriting {
+  text: string;
+  surface: WritingSurface;
+  /** Free description when surface is "other". */
+  surfaceOther?: string;
+  color?: string;
+  note?: string;
+}
+
 export interface OrderItem {
   id: string;
   name: string;
@@ -50,6 +62,7 @@ export interface OrderItem {
   department: Department;
   note?: string;
   details?: string;
+  writing?: CakeWriting;
 }
 
 export type PaymentMethod = "cash" | "card" | "transfer";
@@ -149,6 +162,9 @@ export interface Order {
   trackingCode?: string;
   /** Lifecycle log (see utils/orderFlow). */
   events?: OrderEvent[];
+  /** Calligraphy progress for items that carry a writing request. */
+  writingStatus?: OrderStatus;
+  writingBy?: EmployeeRef;
   /** Client-only: not yet saved to the server. Never written to Firestore. */
   syncState?: "pending" | "failed";
 }
@@ -180,6 +196,7 @@ interface OrdersContextType {
   markDeliveryFailed: (orderId: string, reason: string, by?: ActorRef) => Promise<void>;
   markPickedUp: (orderId: string, by?: ActorRef) => Promise<void>;
   ensureTrackingCode: (orderId: string) => Promise<string | null>;
+  updateWritingStatus: (orderId: string, status: OrderStatus, by?: EmployeeRef) => Promise<void>;
   updateOrder: (id: string, patch: Partial<Omit<Order, "id" | "companyId" | "orderNumber" | "createdAt">>) => Promise<void>;
   getOrdersForDepartment: (department: Department) => Order[];
   refreshOrders: () => void;
@@ -495,6 +512,7 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
         departmentStatuses,
         departmentReceivers: {},
         deliveryStatus: orderData.orderType === "delivery" ? "pending" : undefined,
+        writingStatus: orderData.items.some((i) => i.writing?.text?.trim()) ? "pending" : undefined,
         trackingCode: newTrackingCode(),
         events: [{ type: "created", at: now, by: orderData.cashierEmployee ? { name: orderData.cashierEmployee.name, employeeId: orderData.cashierEmployee.employeeId } : undefined }],
         createdAt: now,
@@ -649,6 +667,23 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
     );
   }, [markDelivered, patchOrder]);
 
+  const updateWritingStatus = useCallback(async (orderId: string, status: OrderStatus, by?: EmployeeRef) => {
+    const now = new Date().toISOString();
+    const actor = by ? { name: by.name, employeeId: by.employeeId } : undefined;
+    const ev: OrderEvent | null = status === "in_progress" ? { type: "writing_started", at: now, by: actor } : status === "done" ? { type: "writing_done", at: now, by: actor } : null;
+    const apply = (o: Order): Order => {
+      let next: Order = { ...o, writingStatus: status, writingBy: status === "in_progress" && by ? by : o.writingBy, updatedAt: now };
+      if (ev) next = withEvent(next, ev);
+      if (status === "done" && !isProductionDone(o) && isProductionDone(next)) next = withEvent(next, { type: "ready", at: now });
+      return next;
+    };
+    await patchOrder(orderId, apply, (o) => {
+      const n = apply(o);
+      const added = (n.events ?? []).slice((o.events ?? []).length);
+      return { writingStatus: status, writingBy: n.writingBy ?? null, ...(added.length ? { events: arrayUnion(...deepClean(added)) } : {}) };
+    });
+  }, [patchOrder]);
+
   const ensureTrackingCode = useCallback(async (orderId: string) => {
     const o = [...outboxRef.current, ...serverRef.current].find((x) => x.id === orderId);
     if (!o) return null;
@@ -715,6 +750,7 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
         markDeliveryFailed,
         markPickedUp,
         ensureTrackingCode,
+        updateWritingStatus,
         updateOrder,
         getOrdersForDepartment,
         refreshOrders,
