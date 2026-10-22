@@ -200,6 +200,7 @@ const MORE_TABS: TabDef[] = [
   { name: "branch-inventory", labelKey: "tabBranchInventory", titleKey: "titleBranchInventory", icon: "bar-chart-2",  sf: "chart.bar",                        accent: Colors.info },
   { name: "branches",         labelKey: "tabBranches",        titleKey: "titleManageBranches",  icon: "git-branch",   sf: "building.2",                       accent: Colors.success },
   { name: "customers",        labelKey: "tabCustomers",       titleKey: "titleCustomers",       icon: "users",        sf: "person.2",                         accent: Colors.packaging },
+  { name: "tracking",         labelKey: "tabTracking",        titleKey: "titleTracking",        icon: "navigation",   sf: "location",                         accent: Colors.gold },
   { name: "delivery",         labelKey: "tabDelivery",        titleKey: "titleDelivery",        icon: "truck",        sf: "shippingbox.and.arrow.backward",   accent: Colors.success },
   { name: "trays",            labelKey: "tabTrays",           titleKey: "titleTrays",           icon: "layers",       sf: "tray.2",                           accent: Colors.gold },
   { name: "admin",            labelKey: "tabAdmin",           titleKey: "titleAdmin",           icon: "settings",     sf: "gearshape",                        accent: Colors.primaryLight },
@@ -244,7 +245,7 @@ function DesktopSidebar({ activePath, navigate, isRTL }: { activePath: string; n
   const visibleMore = (!hasRole ? MORE_TABS : MORE_TABS.filter(m => {
     if (["branch-orders", "branch-inventory", "branches"].includes(m.name)) return canDo(role, ROLE_CAN_VIEW_BRANCH_FEATURES);
     if (m.name === "customers") return canDo(role, ROLE_CAN_VIEW_CUSTOMERS);
-    if (m.name === "delivery") return canDo(role, ROLE_CAN_VIEW_DELIVERY);
+    if (m.name === "delivery" || m.name === "tracking") return canDo(role, ROLE_CAN_VIEW_DELIVERY);
     if (m.name === "trays") return canDo(role, ROLE_CAN_VIEW_TRAYS);
     if (m.name === "admin") return canDo(role, ROLE_CAN_ACCESS_ADMIN);
     return true;
@@ -436,7 +437,7 @@ function CustomTabBar() {
   const visibleMoreTab = (!hasRole ? MORE_TABS : MORE_TABS.filter(m => {
     if (["branch-orders", "branch-inventory", "branches"].includes(m.name)) return canDo(role, ROLE_CAN_VIEW_BRANCH_FEATURES);
     if (m.name === "customers") return canDo(role, ROLE_CAN_VIEW_CUSTOMERS);
-    if (m.name === "delivery") return canDo(role, ROLE_CAN_VIEW_DELIVERY);
+    if (m.name === "delivery" || m.name === "tracking") return canDo(role, ROLE_CAN_VIEW_DELIVERY);
     if (m.name === "trays") return canDo(role, ROLE_CAN_VIEW_TRAYS);
     if (m.name === "admin") return canDo(role, ROLE_CAN_ACCESS_ADMIN);
     return true;
@@ -507,6 +508,7 @@ const SCREEN_META: Record<string, { titleKey: string; accent: string }> = {
   "branch-inventory": { titleKey: "titleBranchInventory", accent: Colors.info },
   branches:         { titleKey: "titleManageBranches", accent: Colors.success },
   customers:        { titleKey: "titleCustomers",  accent: Colors.packaging },
+  tracking:         { titleKey: "titleTracking",   accent: Colors.gold },
   delivery:         { titleKey: "titleDelivery",   accent: Colors.success },
   trays:            { titleKey: "titleTrays",      accent: Colors.gold },
   admin:            { titleKey: "titleAdmin",      accent: Colors.primaryLight },
@@ -549,6 +551,7 @@ export default function TabLayout() {
       <Tabs.Screen name="branches"         options={{ title: t("titleManageBranches"), headerShown: false }} />
       <Tabs.Screen name="customers"        options={{ title: t("titleCustomers"), headerShown: false }} />
       <Tabs.Screen name="delivery"         options={{ title: t("titleDelivery"),  headerShown: false }} />
+      <Tabs.Screen name="tracking"         options={{ title: t("titleTracking"),  headerShown: false }} />
       <Tabs.Screen name="trays"            options={{ title: t("titleTrays"),     headerShown: false }} />
       <Tabs.Screen name="admin"            options={{ title: t("titleAdmin"),     headerShown: false }} />
       <Tabs.Screen name="settings"         options={{ title: t("tabSettings"),    headerShown: false }} />

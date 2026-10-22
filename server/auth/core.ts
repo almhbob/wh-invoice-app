@@ -248,6 +248,14 @@ export class Firestore {
     return out;
   }
 
+  /** Run a structured query under a parent document path ("" for root). */
+  async runQuery(parentPath: string, structuredQuery: Record<string, unknown>): Promise<{ id: string; data: Record<string, unknown> }[]> {
+    const res = await this.req(`${parentPath}:runQuery`, { method: "POST", body: JSON.stringify({ structuredQuery }) });
+    if (!res.ok) throw new Error(`firestore_query_failed:${res.status}`);
+    const rows = (await res.json()) as { document?: { name: string; fields?: Record<string, FsValue> } }[];
+    return rows.filter((r) => r.document).map((r) => ({ id: r.document!.name.split("/").pop() as string, data: decodeFields(r.document!.fields ?? {}) }));
+  }
+
   /** Set (merge=false) or patch specific fields. Fields listed in deleteFields are removed. */
   async patch(path: string, data: Record<string, unknown>, opts: { merge?: boolean; deleteFields?: string[] } = {}) {
     const fieldPaths = [...Object.keys(data), ...(opts.deleteFields ?? [])];

@@ -19,6 +19,7 @@ const translations = {
   tabMore:          { ar: "المزيد",           en: "More",             ur: "مزید",               hi: "अधिक",             bn: "আরও" },
   tabReports:       { ar: "التقارير",         en: "Reports",          ur: "رپورٹس",            hi: "रिपोर्ट्स",          bn: "রিপোর্ট" },
   tabCustomers:     { ar: "العملاء",          en: "Customers",        ur: "صارفین",            hi: "ग्राहक",            bn: "গ্রাহক" },
+  tabTracking:      { ar: "متابعة الطلبات",   en: "Order tracking",   ur: "آرڈر ٹریکنگ",       hi: "ऑर्डर ट्रैकिंग",    bn: "অর্ডার ট্র্যাকিং" },
   tabDelivery:      { ar: "التوصيل",          en: "Delivery",         ur: "ڈیلیوری",           hi: "डिलीवरी",          bn: "ডেলিভারি" },
   tabTrays:         { ar: "الصواني",          en: "Trays",            ur: "ٹرے",               hi: "ट्रे",             bn: "ট্রে" },
 
@@ -34,6 +35,7 @@ const translations = {
   titleAdmin:       { ar: "لوحة المشرف",      en: "Admin Panel",      ur: "ایڈمن پینل",         hi: "एडमिन पैनल",       bn: "প্রশাসক প্যানেল" },
   titleReports:     { ar: "التقارير",         en: "Reports",          ur: "رپورٹس",            hi: "रिपोर्ट्स",          bn: "রিপোর্ট" },
   titleCustomers:   { ar: "العملاء",          en: "Customers",        ur: "صارفین",            hi: "ग्राहक",            bn: "গ্রাহক" },
+  titleTracking:    { ar: "متابعة الطلبات",   en: "Order tracking",   ur: "آرڈر ٹریکنگ",       hi: "ऑर्डर ट्रैकिंग",    bn: "অর্ডার ট্র্যাকিং" },
   titleDelivery:    { ar: "التوصيل",          en: "Delivery",         ur: "ڈیلیوری",           hi: "डिलीवरी",          bn: "ডেলিভারি" },
   titleTrays:       { ar: "الصواني",          en: "Trays",            ur: "ٹرے",               hi: "ट्रे",             bn: "ট্রে" },
 
@@ -927,6 +929,7 @@ const translations = {
   homeCapCashier:      { ar: "إصدار الفواتير",  en: "Issue invoices",   ur: "انوائس بنائیں",   hi: "इनवॉइस बनाएं",     bn: "ইনভয়েস তৈরি" },
   homeCapArchive:      { ar: "الطلبات السابقة", en: "Past orders",      ur: "پرانے آرڈر",      hi: "पिछले ऑर्डर",       bn: "পূর্বের অর্ডার" },
   homeCapReports:      { ar: "المبيعات والأداء", en: "Sales & performance", ur: "فروخت اور کارکردگی", hi: "बिक्री व प्रदर्शन", bn: "বিক্রয় ও কর্মক্ষমতা" },
+  homeCapTracking:     { ar: "من الطلب حتى التسليم", en: "From order to delivery", ur: "آرڈر سے ڈیلیوری تک", hi: "ऑर्डर से डिलीवरी तक", bn: "অর্ডার থেকে ডেলিভারি" },
   homeCapDelivery:     { ar: "متابعة الطلبات",  en: "Track orders",     ur: "آرڈر ٹریک کریں",  hi: "ऑर्डर ट्रैक करें",  bn: "অর্ডার ট্র্যাক" },
   homeCapAdmin:        { ar: "الموظفون والأسعار والإعدادات", en: "Staff, prices & settings", ur: "عملہ، قیمتیں اور سیٹنگز", hi: "स्टाफ, कीमतें और सेटिंग्स", bn: "কর্মী, মূল্য ও সেটিংস" },
   homeDeptQueue:       { ar: "قيد العمل",       en: "in queue",         ur: "قطار میں",        hi: "कतार में",          bn: "সারিতে" },

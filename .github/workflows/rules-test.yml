@@ -2,10 +2,10 @@ name: Security tests
 
 on:
   pull_request:
-    paths: ["firestore.rules", "tests/rules/**", "server/auth/**", "functions/**", ".github/workflows/rules-test.yml"]
+    paths: ["firestore.rules", "tests/rules/**", "server/**", "functions/**", ".github/workflows/rules-test.yml"]
   push:
     branches: [main]
-    paths: ["firestore.rules", "tests/rules/**", "server/auth/**", "functions/**"]
+    paths: ["firestore.rules", "tests/rules/**", "server/**", "functions/**"]
   workflow_dispatch:
 
 jobs:
@@ -15,7 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
-      - run: bun test server/auth
+      - run: bun test server
 
   rules:
     name: Firestore rules (emulator)

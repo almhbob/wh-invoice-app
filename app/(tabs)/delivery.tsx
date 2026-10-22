@@ -3,6 +3,7 @@ import * as Haptics from "expo-haptics";
 import * as Linking from "expo-linking";
 import React, { useMemo, useState } from "react";
 import {
+  Alert,
   FlatList,
   Modal,
   Pressable,
@@ -21,6 +22,12 @@ import { useEmployee } from "@/context/EmployeeContext";
 import { useLang } from "@/context/LanguageContext";
 import { Order, useOrders } from "@/context/OrdersContext";
 import { fmtDate } from "@/utils/dateUtils";
+import { DriversModal } from "@/components/DriversModal";
+import { OrderDetailsSheet } from "@/components/OrderDetailsSheet";
+import { StageBadge } from "@/components/OrderTracker";
+import { SyncStatusBanner } from "@/components/SyncStatusBanner";
+import { useCompany } from "@/context/CompanyContext";
+import { customerTrackingMessage, driverDispatchMessage, isOrderOpen, isProductionDone, openWhatsApp as waSend, orderStage } from "@/utils/orderFlow";
 
 // ── Types & constants ─────────────────────────────────────────────────────────
 
@@ -74,9 +81,7 @@ function parseDeliveryDT(dt?: string): Date | null {
 
 function isReadyForDelivery(o: Order) {
   if (isDelivered(o)) return false;
-  const depts = [...new Set(o.items.map((i) => i.department))];
-  if (!depts.length) return false;
-  return depts.every((d) => o.departmentStatuses?.[d] === "done");
+  return isProductionDone(o);
 }
 
 function getUrgency(o: Order): Urgency {
@@ -301,160 +306,6 @@ function DriverChips({
   );
 }
 
-// ── Driver Assignment Modal ───────────────────────────────────────────────────
-
-function DriverModal({
-  visible,
-  orderId,
-  orderNumber,
-  currentDriver,
-  allOrders,
-  onClose,
-  onAssign,
-}: {
-  visible: boolean;
-  orderId: string;
-  orderNumber?: number;
-  currentDriver?: { name: string; employeeId: string };
-  allOrders: Order[];
-  onClose: () => void;
-  onAssign: (id: string, driver: { name: string; employeeId: string }) => void;
-}) {
-  const { employees } = useEmployee();
-  const { t } = useLang();
-  const [search, setSearch] = useState("");
-
-  const workload: Record<string, number> = useMemo(() => {
-    const m: Record<string, number> = {};
-    allOrders.forEach((o) => {
-      if (o.deliveryDriver?.employeeId && !isDelivered(o)) {
-        const id = o.deliveryDriver.employeeId;
-        m[id] = (m[id] ?? 0) + 1;
-      }
-    });
-    return m;
-  }, [allOrders]);
-
-  const filteredEmployees = employees
-    .filter((e) => e.status !== "suspended")
-    .filter((e) =>
-      search.trim()
-        ? e.name.toLowerCase().includes(search.toLowerCase()) ||
-          e.employeeId.includes(search.trim())
-        : true
-    );
-
-  return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.modalOverlay} onPress={onClose}>
-        <Pressable style={styles.modalSheet} onPress={() => {}}>
-          <View style={styles.modalHandle} />
-
-          {/* Modal header */}
-          <View style={styles.modalHeader}>
-            <View style={styles.modalHeaderIcon}>
-              <Feather name="truck" size={16} color="#fff" />
-            </View>
-            <View>
-              <Text style={styles.modalTitle}>{t("delAssignTitle")}</Text>
-              {orderNumber ? (
-                <Text style={styles.modalSub}>#{orderNumber}</Text>
-              ) : null}
-            </View>
-          </View>
-
-          {/* Current driver */}
-          {currentDriver?.employeeId ? (
-            <View style={styles.currentDriverBox}>
-              <View style={styles.currentDriverAvatar}>
-                <Text style={styles.currentDriverAvatarText}>{currentDriver.name.charAt(0)}</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.currentDriverLabel}>{t("delCurrentDriver")}</Text>
-                <Text style={styles.currentDriverName}>{currentDriver.name}</Text>
-              </View>
-              <TouchableOpacity
-                style={styles.removeBtn}
-                onPress={() => { onAssign(orderId, { name: "", employeeId: "" }); onClose(); }}
-              >
-                <Feather name="user-x" size={13} color={Colors.accent} />
-                <Text style={styles.removeBtnText}>{t("delRemoveDriver")}</Text>
-              </TouchableOpacity>
-            </View>
-          ) : null}
-
-          {/* Search */}
-          <View style={styles.searchRow}>
-            <Feather name="search" size={15} color={Colors.textMuted} />
-            <TextInput
-              style={styles.searchInput}
-              value={search}
-              onChangeText={setSearch}
-              placeholder={t("delSearchDriver")}
-              placeholderTextColor={Colors.textMuted}
-              textAlign="right"
-            />
-            {search.length > 0 && (
-              <TouchableOpacity onPress={() => setSearch("")}>
-                <Feather name="x" size={14} color={Colors.textMuted} />
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {/* Employee list */}
-          <FlatList
-            data={filteredEmployees}
-            keyExtractor={(e) => e.id}
-            contentContainerStyle={{ gap: 8, padding: 16 }}
-            renderItem={({ item: emp }) => {
-              const isCurrent = currentDriver?.employeeId === emp.employeeId;
-              const load = workload[emp.employeeId] ?? 0;
-              return (
-                <TouchableOpacity
-                  style={[styles.empRow, isCurrent && styles.empRowActive]}
-                  onPress={() => {
-                    Haptics.selectionAsync();
-                    onAssign(orderId, { name: emp.name, employeeId: emp.employeeId });
-                    onClose();
-                  }}
-                  activeOpacity={0.8}
-                >
-                  <View style={[styles.empAvatar, isCurrent && { backgroundColor: Colors.primary }]}>
-                    <Text style={[styles.empAvatarText, isCurrent && { color: "#fff" }]}>
-                      {emp.name.charAt(0)}
-                    </Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.empName, isCurrent && { color: Colors.primary }]}>
-                      {emp.name}
-                    </Text>
-                    <Text style={styles.empId}>#{emp.employeeId}</Text>
-                  </View>
-                  {load > 0 && (
-                    <View style={[styles.loadBadge, load >= 3 && styles.loadBadgeHeavy]}>
-                      <Feather
-                        name="package"
-                        size={11}
-                        color={load >= 3 ? "#ea580c" : Colors.textSecondary}
-                      />
-                      <Text style={[styles.loadBadgeText, load >= 3 && { color: "#ea580c" }]}>
-                        {load}
-                      </Text>
-                    </View>
-                  )}
-                  {isCurrent && (
-                    <Feather name="check-circle" size={18} color={Colors.primary} />
-                  )}
-                </TouchableOpacity>
-              );
-            }}
-          />
-        </Pressable>
-      </Pressable>
-    </Modal>
-  );
-}
-
 // ── Delivery Card ─────────────────────────────────────────────────────────────
 
 function DeliveryCard({
@@ -462,13 +313,20 @@ function DeliveryCard({
   lang,
   onMarkDelivered,
   onOpenDriverModal,
+  onDispatch,
+  onOpenDetails,
 }: {
   order: Order;
   lang: string;
   onMarkDelivered: (id: string) => void;
   onOpenDriverModal: (order: Order) => void;
+  onDispatch: (order: Order) => void;
+  onOpenDetails: (order: Order) => void;
 }) {
   const { t } = useLang();
+  const { company } = useCompany();
+  const stage = orderStage(order);
+  const outForDelivery = stage === "out_for_delivery";
   const delivered = isDelivered(order);
   const urgency = getUrgency(order);
   const urgencyColor = URGENCY_COLOR[urgency];
@@ -515,11 +373,10 @@ function DeliveryCard({
             <DeptDots order={order} />
           </View>
         </View>
-        <View style={[styles.statusPill, { backgroundColor: accentColor + "18" }]}>
-          <Text style={[styles.statusPillText, { color: accentColor }]}>
-            {delivered ? t("delDeliveredMark") : t("delPending")}
-          </Text>
-        </View>
+        <TouchableOpacity onPress={() => onOpenDetails(order)} style={{ alignItems: "flex-end", gap: 6 }} activeOpacity={0.7}>
+          <StageBadge order={order} size="sm" />
+          <Text style={{ fontSize: 11, color: Colors.primary, fontWeight: "800" }}>{lang === "ar" ? "التفاصيل ‹" : "Details ›"}</Text>
+        </TouchableOpacity>
       </View>
 
       {/* ── Customer row ── */}
@@ -642,10 +499,7 @@ function DeliveryCard({
           style={styles.waReadyBtn}
           onPress={() => {
             Haptics.selectionAsync();
-            openWhatsApp(
-              order.customerPhone,
-              `أهلاً ${order.customerName}، طلبك رقم #${order.orderNumber} جاهز وفي طريقه إليك! 🎉`
-            );
+            waSend(order.customerPhone, customerTrackingMessage(order, company.name || "Laviviane"));
           }}
           activeOpacity={0.8}
         >
@@ -654,10 +508,20 @@ function DeliveryCard({
         </TouchableOpacity>
       )}
 
-      {/* ── Mark as delivered ── */}
-      {!delivered && (
+      {/* ── Next step: dispatch → delivered ── */}
+      {!delivered && hasDriver && !outForDelivery && (
         <TouchableOpacity
-          style={styles.deliverBtn}
+          style={[styles.deliverBtn, { backgroundColor: Colors.primary }]}
+          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onDispatch(order); }}
+          activeOpacity={0.8}
+        >
+          <Feather name="truck" size={16} color={Colors.goldLight} />
+          <Text style={styles.deliverBtnText}>{lang === "ar" ? "خرج للتوصيل · إرسال التفاصيل للسائق" : "Out for delivery · send to driver"}</Text>
+        </TouchableOpacity>
+      )}
+      {!delivered && (outForDelivery || !hasDriver) && (
+        <TouchableOpacity
+          style={[styles.deliverBtn, !outForDelivery && { opacity: 0.85 }]}
           onPress={() => {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             onMarkDelivered(order.id);
@@ -676,14 +540,24 @@ function DeliveryCard({
 
 export default function DeliveryScreen() {
   const { t, lang } = useLang();
-  const { orders, updateDeliveryStatus, assignDeliveryDriver } = useOrders();
+  const { orders, assignDeliveryDriver, dispatchOrder, markDelivered } = useOrders();
+  const { company } = useCompany();
+  const [detailsId, setDetailsId] = useState<string | null>(null);
+  const [manageDrivers, setManageDrivers] = useState(false);
   const insets = useSafeAreaInsets();
   const { currentEmployee } = useEmployee();
 
-  const [tab, setTab] = useState<TabKey>("all");
+  const [tab, setTab] = useState<TabKey>("pending");
   const [sort, setSort] = useState<SortKey>("time");
   const [selectedDriver, setSelectedDriver] = useState<string | null>(null);
   const [driverModalOrder, setDriverModalOrder] = useState<Order | null>(null);
+
+  const actor = currentEmployee ? { name: currentEmployee.name, employeeId: currentEmployee.employeeId } : undefined;
+  const driverLoad = useMemo(() => {
+    const m: Record<string, number> = {};
+    orders.forEach((o) => { if (o.deliveryDriver?.employeeId && isOrderOpen(o)) m[o.deliveryDriver.employeeId] = (m[o.deliveryDriver.employeeId] ?? 0) + 1; });
+    return m;
+  }, [orders]);
 
   const deliveryOrders = useMemo(
     () => orders.filter((o) => o.orderType === "delivery"),
@@ -760,6 +634,15 @@ export default function DeliveryScreen() {
           <>
             {/* Stats + title */}
             <StatsHeader orders={deliveryOrders} />
+
+            <View style={{ gap: 10, marginBottom: 6 }}>
+              <SyncStatusBanner />
+              <TouchableOpacity style={styles.manageDriversBtn} onPress={() => setManageDrivers(true)} activeOpacity={0.8}>
+                <Feather name="users" size={16} color={Colors.primary} />
+                <Text style={styles.manageDriversTxt}>{lang === "ar" ? "إدارة السائقين" : "Manage drivers"}</Text>
+                <Feather name={lang === "ar" ? "chevron-left" : "chevron-right"} size={16} color={Colors.textMuted} />
+              </TouchableOpacity>
+            </View>
 
             {/* Driver filter chips */}
             <DriverChips
@@ -847,25 +730,41 @@ export default function DeliveryScreen() {
           <DeliveryCard
             order={item}
             lang={lang}
-            onMarkDelivered={(id) => updateDeliveryStatus(id, "delivered")}
+            onMarkDelivered={(id) => void markDelivered(id, actor)}
             onOpenDriverModal={setDriverModalOrder}
+            onOpenDetails={(o) => setDetailsId(o.id)}
+            onDispatch={(o) => {
+              const send = () => {
+                void dispatchOrder(o.id, actor);
+                if (o.deliveryDriver?.phone) waSend(o.deliveryDriver.phone, driverDispatchMessage(o, company.name || "Laviviane"));
+              };
+              if (isProductionDone(o)) return send();
+              Alert.alert(
+                lang === "ar" ? "التحضير لم يكتمل" : "Not ready yet",
+                lang === "ar" ? "بعض الأقسام لم تُنهِ الطلب. إخراجه للتوصيل الآن؟" : "Some departments are not done. Dispatch anyway?",
+                [{ text: lang === "ar" ? "إلغاء" : "Cancel", style: "cancel" }, { text: lang === "ar" ? "نعم" : "Yes", onPress: send }]
+              );
+            }}
           />
         )}
       />
 
-      <DriverModal
+      <DriversModal
         visible={driverModalOrder !== null}
-        orderId={driverModalOrder?.id ?? ""}
-        orderNumber={driverModalOrder?.orderNumber}
-        currentDriver={
-          driverModalOrder?.deliveryDriver?.employeeId
-            ? driverModalOrder.deliveryDriver
-            : undefined
-        }
-        allOrders={deliveryOrders}
         onClose={() => setDriverModalOrder(null)}
-        onAssign={assignDeliveryDriver}
+        currentDriverId={driverModalOrder?.deliveryDriver?.employeeId}
+        loadByDriver={driverLoad}
+        onPick={(d) => {
+          if (driverModalOrder) void assignDeliveryDriver(driverModalOrder.id, { name: d.name, employeeId: d.id, phone: d.phone }, actor);
+          setDriverModalOrder(null);
+        }}
+        onUnassign={() => {
+          if (driverModalOrder) void assignDeliveryDriver(driverModalOrder.id, { name: "", employeeId: "" }, actor);
+          setDriverModalOrder(null);
+        }}
       />
+      <DriversModal visible={manageDrivers} onClose={() => setManageDrivers(false)} />
+      <OrderDetailsSheet orderId={detailsId} visible={!!detailsId} onClose={() => setDetailsId(null)} />
     </View>
   );
 }
@@ -874,6 +773,8 @@ export default function DeliveryScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
+  manageDriversBtn: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: Colors.surface, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, borderWidth: 1, borderColor: Colors.borderLight },
+  manageDriversTxt: { flex: 1, fontSize: 14, fontWeight: "800", color: Colors.primary },
 
   // ─ Stats Header ─
   statsWrap: { padding: 14, paddingBottom: 8, gap: 10 },
