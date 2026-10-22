@@ -50,7 +50,7 @@ function getOrCreateDeviceId(): string {
 }
 const MY_DEVICE_ID = getOrCreateDeviceId();
 
-export type EmployeeRole = "cashier" | "halwa" | "mawali" | "chocolate" | "cake" | "packaging" | "admin" | "branch_supervisor" | "dept_supervisor" | "guest";
+export type EmployeeRole = "cashier" | "halwa" | "mawali" | "chocolate" | "cake" | "packaging" | "calligrapher" | "admin" | "branch_supervisor" | "dept_supervisor" | "guest";
 
 export interface Employee {
   id: string;
@@ -96,6 +96,7 @@ const ROLE_LABELS: Record<EmployeeRole, string> = {
   chocolate: "قسم شوكولاتة",
   cake: "قسم الكيك",
   packaging: "قسم التغليف",
+  calligrapher: "الخطاط",
   admin: "مشرف",
   branch_supervisor: "مشرف فرع",
   dept_supervisor: "مشرف قسم",

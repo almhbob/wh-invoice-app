@@ -46,6 +46,11 @@ import {
 import { Offer, normalizePhone, useOffers } from "@/context/OffersContext";
 import { DeliveryDatePicker, DeliveryTimePicker } from "@/components/DeliveryDateTimePicker";
 import { DailyClosingModal } from "@/components/DailyClosingModal";
+import { OrderReviewSheet } from "@/components/OrderReviewSheet";
+import { WritingEditor } from "@/components/WritingEditor";
+import { SyncStatusBanner } from "@/components/SyncStatusBanner";
+import { OrderTracker } from "@/components/OrderTracker";
+import { customerTrackingMessage, openWhatsApp as waSend } from "@/utils/orderFlow";
 import { ChocolateCardSection, ChocolateCardValue, buildChocoItems, chocoCardTotal } from "@/components/ChocolateCardSection";
 import { canDo, ROLE_CAN_CLOSE_SHIFT } from "@/constants/rbac";
 import { useShift } from "@/context/ShiftContext";
@@ -115,7 +120,7 @@ const PAYMENT_OPTIONS: { value: PaymentMethod; icon: string }[] = [
 
 export default function CashierScreen() {
   const insets = useSafeAreaInsets();
-  const { addOrder, orders } = useOrders();
+  const { addOrder, orders, ensureTrackingCode } = useOrders();
   const { currentEmployee, setCurrentEmployee } = useEmployee();
   const { getOfferByPhone, incrementUsage } = useOffers();
   const { t, lang } = useLang();
@@ -153,6 +158,8 @@ export default function CashierScreen() {
   const [showPreview, setShowPreview] = useState(false);
   const [showGallery, setShowGallery] = useState(false);
   const [receiptOrder, setReceiptOrder] = useState<Order | null>(null);
+  // The receipt follows the live order so its sync state and progress update in place.
+  const liveReceipt = receiptOrder ? (orders.find((o) => o.id === receiptOrder.id) ?? receiptOrder) : null;
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [receiptQr, setReceiptQr] = useState<string>("");
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
@@ -770,6 +777,7 @@ export default function CashierScreen() {
       ]}
       keyboardShouldPersistTaps="handled"
     >
+      <SyncStatusBanner />
       {/* Today's summary strip + close shift */}
       <View style={styles.todayStrip}>
         <View style={styles.todayStripLeft}>
@@ -1212,6 +1220,12 @@ export default function CashierScreen() {
                   autoFocus={isExpanded && !hasNote}
                 />
               )}
+              {item.name.trim() ? (
+                <WritingEditor
+                  value={item.writing}
+                  onChange={(w) => updateItem(item.id, "writing", w)}
+                />
+              ) : null}
             </View>
           );
           });
@@ -1755,13 +1769,18 @@ export default function CashierScreen() {
                 const dc = DEPT_OPTIONS.find((d) => d.value === item.department)!;
                 const lt = (item.price || 0) * item.quantity;
                 return (
-                  <View key={item.id} style={styles.checkoutItem}>
-                    <View style={[styles.checkoutItemAccent, { backgroundColor: dc.color }]} />
-                    <Text style={styles.checkoutItemName} numberOfLines={1}>{item.name}</Text>
-                    <Text style={styles.checkoutItemQty}>×{item.quantity}</Text>
-                    <Text style={[styles.checkoutItemAmt, !item.price && { color: "#f87171" }]}>
-                      {lt > 0 ? `${lt.toFixed(0)} ر.س` : "—"}
-                    </Text>
+                  <View key={item.id}>
+                    <View style={styles.checkoutItem}>
+                      <View style={[styles.checkoutItemAccent, { backgroundColor: dc.color }]} />
+                      <Text style={styles.checkoutItemName} numberOfLines={1}>{item.name}</Text>
+                      <Text style={styles.checkoutItemQty}>×{item.quantity}</Text>
+                      <Text style={[styles.checkoutItemAmt, !item.price && { color: "#f87171" }]}>
+                        {lt > 0 ? `${lt.toFixed(0)} ر.س` : "—"}
+                      </Text>
+                    </View>
+                    <View style={{ backgroundColor: Colors.surface, borderRadius: 12, paddingHorizontal: 8, paddingBottom: 6, marginBottom: 6 }}>
+                      <WritingEditor value={item.writing} onChange={(w) => updateItem(item.id, "writing", w)} />
+                    </View>
                   </View>
                 );
               })}
@@ -1992,221 +2011,34 @@ export default function CashierScreen() {
       </Modal>
     )}
 
-    {/* ─── Preview Modal ──────────────────────────────────────────── */}
+    {/* ─── Review before sending ─────────────────────────────────── */}
     {showPreview && (
-      <Modal visible transparent animationType="slide" onRequestClose={() => setShowPreview(false)}>
-        <View style={styles.previewOverlay}>
-          <View style={styles.previewSheet}>
-            <View style={styles.previewHandle} />
-
-            {/* Header */}
-            <View style={styles.previewHeader}>
-              <TouchableOpacity style={styles.previewBackBtn} onPress={() => setShowPreview(false)}>
-                <Feather name="arrow-right" size={20} color={Colors.primary} />
-              </TouchableOpacity>
-              <Text style={styles.previewTitle}>{t("previewOrder")}</Text>
-              <View style={{ width: 36 }} />
-            </View>
-
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 8 }}>
-
-              {/* بيانات العميل */}
-              <View style={styles.previewSection}>
-                <View style={styles.previewSectionHeader}>
-                  <Feather name="user" size={14} color={Colors.primary} />
-                  <Text style={styles.previewSectionTitle}>{t("customerData")}</Text>
-                </View>
-                <View style={styles.previewRow}>
-                  <Text style={styles.previewLabel}>{t("nameLabel")}</Text>
-                  <Text style={styles.previewValue}>{customerName.trim()}</Text>
-                </View>
-                <View style={styles.previewRow}>
-                  <Text style={styles.previewLabel}>{t("phoneLabel")}</Text>
-                  <Text style={styles.previewValue}>{customerPhone.trim()}</Text>
-                </View>
-                {customerPhone2.trim() ? (
-                  <View style={styles.previewRow}>
-                    <Text style={styles.previewLabel}>{t("phone2Label")}</Text>
-                    <Text style={styles.previewValue}>{customerPhone2.trim()}</Text>
-                  </View>
-                ) : null}
-                <View style={styles.previewRow}>
-                  <Text style={styles.previewLabel}>{t("orderTypeLabel")}</Text>
-                  <View style={[styles.previewTypeBadge, orderType === "delivery" && { backgroundColor: Colors.info + "18", borderColor: Colors.info + "50" }]}>
-                    <Text style={[styles.previewTypeBadgeText, orderType === "delivery" && { color: Colors.info }]}>
-                      {t(ORDER_TYPE_LABEL_KEYS[orderType])}
-                    </Text>
-                  </View>
-                </View>
-                {orderType === "delivery" && deliveryAddress.trim() ? (
-                  <View style={styles.previewRow}>
-                    <Text style={styles.previewLabel}>{t("addressLabel")}</Text>
-                    <Text style={[styles.previewValue, { flex: 1, textAlign: "left", marginLeft: 8 }]}>{deliveryAddress.trim()}</Text>
-                  </View>
-                ) : null}
-                {deliveryDateTime ? (
-                  <View style={styles.previewRow}>
-                    <Text style={styles.previewLabel}>{t("delivSchedule")}</Text>
-                    <Text style={[styles.previewValue, { color: Colors.primary, fontWeight: "700" }]}>{deliveryDateTime}</Text>
-                  </View>
-                ) : null}
-              </View>
-
-              {/* الأصناف */}
-              {(() => {
-                const previewItems = items.filter((i) => i.name.trim() && i.quantity > 0);
-                return (
-                  <View style={styles.previewSection}>
-                    <View style={styles.previewSectionHeader}>
-                      <Feather name="shopping-bag" size={14} color={Colors.primary} />
-                      <Text style={styles.previewSectionTitle}>{t("itemsSection")} ({previewItems.length})</Text>
-                    </View>
-                    {previewItems.map((item) => {
-                      const deptConf = DEPT_OPTIONS.find((d) => d.value === item.department)!;
-                      const lineTotal = item.price ? (item.price * item.quantity).toFixed(2) : null;
-                      return (
-                        <View key={item.id} style={styles.previewItemRow}>
-                          <View style={[styles.previewDeptDot, { backgroundColor: deptConf.color }]} />
-                          <View style={{ flex: 1 }}>
-                            <Text style={styles.previewItemName}>{item.name}</Text>
-                            {item.note ? <Text style={styles.previewItemNote}>{item.note}</Text> : null}
-                          </View>
-                          <Text style={styles.previewItemQty}>×{item.quantity}</Text>
-                          <Text style={[styles.previewItemPrice, !item.price && { color: Colors.accent }]}>
-                            {lineTotal ? `${lineTotal} ر.س` : t("noPrice")}
-                          </Text>
-                        </View>
-                      );
-                    })}
-                    {previewItems.some((i) => !i.price) && (
-                      <View style={styles.previewWarning}>
-                        <Feather name="alert-triangle" size={13} color={Colors.warning} />
-                        <Text style={styles.previewWarningText}>{t("someNoPriceWarn")}</Text>
-                      </View>
-                    )}
-                  </View>
-                );
-              })()}
-
-              {/* الإجمالي */}
-              {(grandTotal > 0 || discountEnabled || insuranceVal > 0) && (
-                <View style={styles.previewSection}>
-                  <View style={styles.previewSectionHeader}>
-                    <Feather name="dollar-sign" size={14} color={Colors.primary} />
-                    <Text style={styles.previewSectionTitle}>{t("previewTotalLabel")}</Text>
-                  </View>
-                  {subtotal > 0 && (discountAmount > 0 || insuranceVal > 0) ? (
-                    <View style={styles.previewRow}>
-                      <Text style={styles.previewLabel}>{t("previewSubtotal")}</Text>
-                      <Text style={styles.previewValue}>{subtotal.toFixed(2)} {t("sar")}</Text>
-                    </View>
-                  ) : null}
-                  {discountAmount > 0 && (
-                    <View style={styles.previewRow}>
-                      <Text style={[styles.previewLabel, { color: Colors.success }]}>
-                        {t("discount")}{discountReason.trim() ? ` (${discountReason.trim()})` : ""}
-                      </Text>
-                      <Text style={[styles.previewValue, { color: Colors.success }]}>- {discountAmount.toFixed(2)} {t("sar")}</Text>
-                    </View>
-                  )}
-                  {insuranceVal > 0 && (
-                    <View style={styles.previewRow}>
-                      <Text style={styles.previewLabel}>{t("trayInsurance")}</Text>
-                      <Text style={styles.previewValue}>{insuranceVal.toFixed(2)} {t("sar")}</Text>
-                    </View>
-                  )}
-                  {grandTotal > 0 && (
-                    <View style={[styles.previewRow, styles.previewTotalRow]}>
-                      <Text style={styles.previewTotalLabel}>{t("grandTotalAll")}</Text>
-                      <Text style={styles.previewTotalValue}>{grandTotal.toFixed(2)} {t("sar")}</Text>
-                    </View>
-                  )}
-                  <View style={styles.previewRow}>
-                    <Text style={styles.previewLabel}>{t("paymentMethod")}</Text>
-                    <Text style={styles.previewValue}>{t(PAYMENT_LABEL_KEYS[paymentMethod])}</Text>
-                  </View>
-                  {amountPaidVal > 0 && (
-                    <View style={styles.previewRow}>
-                      <Text style={styles.previewLabel}>{t("paidShort")}</Text>
-                      <Text style={styles.previewValue}>{amountPaidVal.toFixed(2)} {t("sar")}</Text>
-                    </View>
-                  )}
-                  {remainingAmount > 0 && (
-                    <View style={styles.previewRow}>
-                      <Text style={[styles.previewLabel, { color: Colors.accent }]}>{t("remaining")}</Text>
-                      <Text style={[styles.previewValue, { color: Colors.accent, fontWeight: "800" }]}>{remainingAmount.toFixed(2)} {t("sar")}</Text>
-                    </View>
-                  )}
-                </View>
-              )}
-
-              {/* ملاحظات */}
-              {notes.trim() ? (
-                <View style={styles.previewSection}>
-                  <View style={styles.previewSectionHeader}>
-                    <Feather name="file-text" size={14} color={Colors.primary} />
-                    <Text style={styles.previewSectionTitle}>{t("notesSection")}</Text>
-                  </View>
-                  <Text style={styles.previewNotes}>{notes.trim()}</Text>
-                </View>
-              ) : null}
-
-              {/* الصور المرفقة */}
-              {(imageUri || referenceImages.length > 0) && (
-                <View style={styles.previewSection}>
-                  <View style={styles.previewSectionHeader}>
-                    <Feather name="image" size={14} color={Colors.primary} />
-                    <Text style={styles.previewSectionTitle}>{t("attachedImages")}</Text>
-                  </View>
-                  <View style={styles.previewImgsRow}>
-                    {imageUri && (
-                      <View style={{ alignItems: "center" }}>
-                        <Image source={{ uri: imageUri }} style={styles.previewThumb} contentFit="cover" />
-                        <Text style={styles.previewThumbLabel}>{t("orderImageLabel")}</Text>
-                      </View>
-                    )}
-                    {referenceImages.map((uri, i) => (
-                      <View key={i} style={{ alignItems: "center" }}>
-                        <Image source={{ uri }} style={styles.previewThumb} contentFit="cover" />
-                        <Text style={styles.previewThumbLabel}>{t("refThumbLabel")} {i + 1}</Text>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              )}
-
-              {/* منشئ الطلب */}
-              {currentEmployee && (
-                <View style={styles.previewCashierRow}>
-                  <Feather name="user-check" size={13} color={Colors.textMuted} />
-                  <Text style={styles.previewCashierText}>
-                    المنشئ: {currentEmployee.name} #{currentEmployee.employeeId}
-                  </Text>
-                </View>
-              )}
-
-              <View style={{ height: 8 }} />
-            </ScrollView>
-
-            {/* Action buttons */}
-            <View style={styles.previewActions}>
-              <TouchableOpacity style={styles.previewEditBtn} onPress={() => setShowPreview(false)} activeOpacity={0.8}>
-                <Feather name="edit-2" size={16} color={Colors.primary} />
-                <Text style={styles.previewEditBtnText}>{t("edit")}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.previewConfirmBtn, isSubmitting && { opacity: 0.6 }]}
-                onPress={() => void doSubmit()}
-                disabled={isSubmitting}
-                activeOpacity={0.85}
-              >
-                <Feather name="check-circle" size={18} color="#fff" />
-                <Text style={styles.previewConfirmBtnText}>{isSubmitting ? t("sending") : t("confirmSend")}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      <OrderReviewSheet
+        visible
+        submitting={isSubmitting}
+        onEdit={() => setShowPreview(false)}
+        onConfirm={() => void doSubmit()}
+        draft={{
+          customerName,
+          customerPhone: customerPhone.trim(),
+          customerPhone2: customerPhone2.trim() || undefined,
+          orderType,
+          deliveryAddress: deliveryAddress.trim() || undefined,
+          deliveryTime: deliveryDateTime || undefined,
+          items: [...items.filter((i) => i.name.trim() && i.quantity > 0), ...buildChocoItems(chocoCard)],
+          notes,
+          images: [imageUri, ...referenceImages].filter(Boolean) as string[],
+          subtotal,
+          discountAmount,
+          discountReason: discountReason.trim() || undefined,
+          insurance: insuranceVal,
+          grandTotal,
+          paid: amountPaidVal,
+          remaining: remainingAmount,
+          paymentMethod,
+          cashierName: currentEmployee ? `${currentEmployee.name} #${currentEmployee.employeeId}` : undefined,
+        }}
+      />
     )}
 
     {/* ─── Receipt Modal ──────────────────────────────────────────── */}
@@ -2244,11 +2076,29 @@ export default function CashierScreen() {
                   <Image source={{ uri: receiptQr }} style={styles.receiptQrImg} contentFit="contain" />
                 ) : null}
               </View>
-              <Text style={styles.receiptBannerTitle}>{t("sentSuccess")}</Text>
+              <Text style={styles.receiptBannerTitle}>
+                {liveReceipt?.syncState ? (lang === "ar" ? "حُفظ على الجهاز — جارٍ الإرسال للأقسام" : "Saved — sending to departments…") : t("sentSuccess")}
+              </Text>
               <Text style={styles.receiptBannerSub}>{t("invoiceNum")}{receiptOrder.orderNumber}</Text>
             </View>
 
             <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, gap: 12 }}>
+              {liveReceipt && (
+                <View style={[styles.receiptCard, { gap: 10 }]}>
+                  <OrderTracker order={liveReceipt} />
+                  <TouchableOpacity
+                    style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: Colors.primary, borderRadius: 12, paddingVertical: 11 }}
+                    onPress={async () => {
+                      const code = await ensureTrackingCode(liveReceipt.id);
+                      waSend(liveReceipt.customerPhone, customerTrackingMessage({ ...liveReceipt, trackingCode: code ?? liveReceipt.trackingCode }, company.name || "Laviviane"));
+                    }}
+                    activeOpacity={0.85}
+                  >
+                    <Feather name="send" size={15} color={Colors.goldLight} />
+                    <Text style={{ color: "#fff", fontWeight: "800" }}>{lang === "ar" ? "إرسال رابط تتبع الطلب للعميل" : "Send tracking link to customer"}</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
 
               {/* Order type badge */}
               {receiptOrder.orderType && (

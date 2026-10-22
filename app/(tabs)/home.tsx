@@ -21,6 +21,7 @@ import { useCompany } from "@/context/CompanyContext";
 import { useEmployee } from "@/context/EmployeeContext";
 import { useLang } from "@/context/LanguageContext";
 import { Department, Order, useOrders } from "@/context/OrdersContext";
+import { SyncStatusBanner } from "@/components/SyncStatusBanner";
 import { usePriceChange } from "@/context/PriceChangeContext";
 import type { TranslationKey } from "@/constants/translations";
 
@@ -161,11 +162,13 @@ const MODULE_DEFS: ModuleDef[] = [
   { route: "cashier",   icon: "file-text",   accent: Colors.gold,     labelKey: "homeTileCashier",    capKey: "homeCapCashier",  group: "ops", primary: true },
   { route: "archive",   icon: "archive",     accent: Colors.info,     labelKey: "tabArchive",         capKey: "homeCapArchive",  group: "ops" },
   { route: "reports",   icon: "bar-chart-2", accent: Colors.purple,   labelKey: "tabReports",         capKey: "homeCapReports",  group: "ops" },
+  { route: "tracking",  icon: "navigation",  accent: Colors.gold,     labelKey: "tabTracking",        capKey: "homeCapTracking", group: "ops" },
   { route: "delivery",  icon: "truck",       accent: Colors.success,  labelKey: "tabDelivery",        capKey: "homeCapDelivery", group: "ops" },
   { route: "halwa",     icon: "coffee",      accent: Colors.halwa,    labelKey: "deptHalwaShort",     group: "dept" },
   { route: "mawali",    icon: "package",     accent: Colors.mawali,   labelKey: "deptMawaliShort",    group: "dept" },
   { route: "chocolate", icon: "gift",        accent: Colors.chocolate,labelKey: "deptChocolateShort", group: "dept" },
   { route: "cake",      icon: "layers",      accent: Colors.cake,     labelKey: "deptCakeShort",      group: "dept" },
+  { route: "writing",   icon: "edit-3",      accent: Colors.purple,   labelKey: "tabWriting",         group: "dept" },
   { route: "packaging", icon: "box",         accent: Colors.packaging,labelKey: "deptPackagingShort", group: "dept" },
   { route: "admin",     icon: "settings",    accent: Colors.primary,  labelKey: "tabAdmin",           capKey: "homeCapAdmin",    group: "admin" },
 ];
@@ -329,6 +332,11 @@ export default function HomeScreen() {
     return out;
   }, [todayOrders]);
 
+  const writingQueue = useMemo(() => {
+    const open = todayOrders.filter(o => o.items?.some(i => i.writing?.text?.trim()) && (o.writingStatus ?? "pending") !== "done");
+    return { queue: open.length, active: open.filter(o => o.writingStatus === "in_progress").length };
+  }, [todayOrders]);
+
   // Role-based module visibility (same rules as before)
   const role = currentEmployee?.role;
   const isCashierRole = role === "cashier";
@@ -337,8 +345,9 @@ export default function HomeScreen() {
     if (!role || role === "admin" || role === "branch_supervisor" || role === "dept_supervisor") {
       return isAdmin ? MODULE_DEFS : base;
     }
-    if (role === "cashier") return base.filter(d => ["cashier", "archive", "delivery"].includes(d.route));
-    return base.filter(d => d.route === role);
+    if (role === "cashier") return base.filter(d => ["cashier", "tracking", "delivery", "archive"].includes(d.route));
+    const own = role === "calligrapher" ? "writing" : role;
+    return base.filter(d => d.route === own || (role === "cake" && d.route === "writing"));
   }, [role, isAdmin]);
 
   const opsMods   = visible.filter(d => d.group === "ops");
@@ -355,8 +364,8 @@ export default function HomeScreen() {
   const GAP       = isWide ? 14 : 10;
   const contentW  = Math.min(winW - SIDEBAR_W - INFO_W, 1100) - PAD * 2;
   const colW = (cols: number) => Math.floor((contentW - GAP * (cols - 1)) / cols);
-  const opsCols  = isWide ? Math.min(4, Math.max(opsMods.length, 1)) : (opsMods.length === 1 ? 1 : 2);
-  const deptCols = isWide ? 5 : 3;
+  const opsCols  = isWide ? Math.min(5, Math.max(opsMods.length, 1)) : (opsMods.length === 1 ? 1 : 2);
+  const deptCols = isWide ? 6 : 3;
 
   const empColor = ROLE_COLOR[currentEmployee?.role ?? ""] ?? Colors.gold;
   const greeting = now.getHours() < 12 ? t("homeGreetMorning") : t("homeGreetEvening");
@@ -453,7 +462,7 @@ export default function HomeScreen() {
                 icon={d.icon}
                 accent={d.accent}
                 primary={d.primary}
-                width={colW(opsCols)}
+                width={!isWide && d.primary && opsMods.length % 2 === 1 ? contentW : colW(opsCols)}
                 onPress={() => go(d.route)}
               />
             ))}
@@ -469,7 +478,7 @@ export default function HomeScreen() {
           />
           <View style={[m.grid, { gap: GAP }]}>
             {deptMods.map(d => {
-              const q = deptQueues[d.route as Department] ?? { queue: 0, active: 0 };
+              const q = d.route === "writing" ? writingQueue : (deptQueues[d.route as Department] ?? { queue: 0, active: 0 });
               return (
                 <DeptCard
                   key={d.route}
@@ -512,6 +521,7 @@ export default function HomeScreen() {
         <View style={{ flex: 1, flexDirection: "row" }}>
           <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: PAD, gap: 18, maxWidth: 1100 + PAD * 2, width: "100%", alignSelf: "center" }} showsVerticalScrollIndicator={false}>
             {heroCard}
+            <SyncStatusBanner />
             {ctaButton}
             {modules}
           </ScrollView>
@@ -594,6 +604,7 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
       >
         {heroCard}
+        <SyncStatusBanner />
         {ctaButton}
 
         {isCashierRole && (

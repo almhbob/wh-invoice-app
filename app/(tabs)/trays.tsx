@@ -1,6 +1,8 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as Linking from "expo-linking";
+import { RoleGate } from "@/components/RoleGate";
+import { ROLE_CAN_VIEW_TRAYS } from "@/constants/rbac";
 import React, { useMemo, useState } from "react";
 import {
   FlatList,
@@ -24,7 +26,7 @@ function openWhatsApp(phone: string, message?: string) {
   Linking.openURL(`https://wa.me/${intl}${text}`).catch(() => {});
 }
 
-export default function TraysScreen() {
+function TraysScreenInner() {
   const { t, lang } = useLang();
   const { orders, markTrayReturned } = useOrders();
   const { currentEmployee } = useEmployee();
@@ -222,3 +224,11 @@ const styles = StyleSheet.create({
   emptyState: { alignItems: "center", paddingTop: 60, gap: 12 },
   emptyText: { fontSize: 15, color: Colors.textMuted },
 });
+
+export default function TraysScreen() {
+  return (
+    <RoleGate allow={ROLE_CAN_VIEW_TRAYS}>
+      <TraysScreenInner />
+    </RoleGate>
+  );
+}

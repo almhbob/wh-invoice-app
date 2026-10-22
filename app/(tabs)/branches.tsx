@@ -1,3 +1,5 @@
+import { RoleGate } from "@/components/RoleGate";
+import { ROLE_CAN_VIEW_BRANCH_FEATURES } from "@/constants/rbac";
 import React from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -12,7 +14,7 @@ import { BranchWorkflowGuidePanel } from "@/components/BranchWorkflowGuidePanel"
 import { EnterpriseOpsPanel } from "@/components/EnterpriseOpsPanel";
 import { Colors } from "@/constants/colors";
 
-export default function BranchesScreen() {
+function BranchesScreenInner() {
   const insets = useSafeAreaInsets();
 
   return (
@@ -38,3 +40,11 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
   content: { padding: 16, gap: 16 },
 });
+
+export default function BranchesScreen() {
+  return (
+    <RoleGate allow={ROLE_CAN_VIEW_BRANCH_FEATURES}>
+      <BranchesScreenInner />
+    </RoleGate>
+  );
+}

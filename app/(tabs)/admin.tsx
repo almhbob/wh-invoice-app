@@ -58,6 +58,7 @@ const ROLE_COLORS: Record<EmployeeRole, string> = {
   chocolate: Colors.chocolate,
   cake: Colors.cake,
   packaging: Colors.packaging,
+  calligrapher: Colors.purple,
   admin: Colors.primaryLight,
   branch_supervisor: "#0d9488",
   dept_supervisor: "#0891b2",
@@ -70,12 +71,13 @@ const ROLE_ICONS: Record<EmployeeRole, any> = {
   chocolate: "gift",
   cake: "layers",
   packaging: "box",
+  calligrapher: "edit-3",
   admin: "shield",
   branch_supervisor: "git-branch",
   dept_supervisor: "users",
   guest: "user",
 };
-const ALL_ROLES: EmployeeRole[] = ["cashier", "halwa", "mawali", "chocolate", "cake", "packaging", "admin"];
+const ALL_ROLES: EmployeeRole[] = ["cashier", "halwa", "mawali", "chocolate", "cake", "packaging", "calligrapher", "branch_supervisor", "admin"];
 
 // ─── sub-components ────────────────────────────────────────────────────────
 function StatCard({

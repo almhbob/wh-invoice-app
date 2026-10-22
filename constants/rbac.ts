@@ -59,6 +59,7 @@ export const DEPT_ROLE_ACCESS: Record<string, Set<EmployeeRole>> = {
   chocolate: new Set(["admin", "branch_supervisor", "dept_supervisor", "chocolate"]),
   cake:      new Set(["admin", "branch_supervisor", "dept_supervisor", "cake"]),
   packaging: new Set(["admin", "branch_supervisor", "dept_supervisor", "packaging"]),
+  writing:   new Set(["admin", "branch_supervisor", "dept_supervisor", "calligrapher", "cake"]),
 };
 
 export function canDo(role: EmployeeRole | undefined, permission: Set<EmployeeRole>): boolean {
