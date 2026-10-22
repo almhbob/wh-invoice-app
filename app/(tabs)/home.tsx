@@ -22,6 +22,7 @@ import { useEmployee } from "@/context/EmployeeContext";
 import { useLang } from "@/context/LanguageContext";
 import { Department, Order, useOrders } from "@/context/OrdersContext";
 import { SyncStatusBanner } from "@/components/SyncStatusBanner";
+import { AttentionBanner } from "@/components/AttentionBanner";
 import { usePriceChange } from "@/context/PriceChangeContext";
 import type { TranslationKey } from "@/constants/translations";
 
@@ -162,6 +163,8 @@ const MODULE_DEFS: ModuleDef[] = [
   { route: "cashier",   icon: "file-text",   accent: Colors.gold,     labelKey: "homeTileCashier",    capKey: "homeCapCashier",  group: "ops", primary: true },
   { route: "archive",   icon: "archive",     accent: Colors.info,     labelKey: "tabArchive",         capKey: "homeCapArchive",  group: "ops" },
   { route: "reports",   icon: "bar-chart-2", accent: Colors.purple,   labelKey: "tabReports",         capKey: "homeCapReports",  group: "ops" },
+  { route: "online",    icon: "globe",       accent: Colors.info,     labelKey: "tabOnline",          capKey: "homeCapOnline",   group: "ops" },
+  { route: "driver",    icon: "truck",       accent: Colors.success,  labelKey: "tabMyDeliveries",    capKey: "homeCapDriver",   group: "ops" },
   { route: "tracking",  icon: "navigation",  accent: Colors.gold,     labelKey: "tabTracking",        capKey: "homeCapTracking", group: "ops" },
   { route: "delivery",  icon: "truck",       accent: Colors.success,  labelKey: "tabDelivery",        capKey: "homeCapDelivery", group: "ops" },
   { route: "halwa",     icon: "coffee",      accent: Colors.halwa,    labelKey: "deptHalwaShort",     group: "dept" },
@@ -339,13 +342,16 @@ export default function HomeScreen() {
 
   // Role-based module visibility (same rules as before)
   const role = currentEmployee?.role;
+  // Sales figures are for management and the cashier only.
+  const canSeeMoney = !role || ["admin", "branch_supervisor", "cashier"].includes(role);
   const isCashierRole = role === "cashier";
   const visible = useMemo(() => {
-    const base = MODULE_DEFS.filter(d => d.group !== "admin");
+    const base = MODULE_DEFS.filter(d => d.group !== "admin" && d.route !== "driver");
     if (!role || role === "admin" || role === "branch_supervisor" || role === "dept_supervisor") {
       return isAdmin ? MODULE_DEFS : base;
     }
-    if (role === "cashier") return base.filter(d => ["cashier", "tracking", "delivery", "archive"].includes(d.route));
+    if (role === "cashier") return base.filter(d => ["cashier", "online", "tracking", "delivery", "archive"].includes(d.route));
+    if (role === "driver") return MODULE_DEFS.filter(d => d.route === "driver");
     const own = role === "calligrapher" ? "writing" : role;
     return base.filter(d => d.route === own || (role === "cake" && d.route === "writing"));
   }, [role, isAdmin]);
@@ -394,12 +400,14 @@ export default function HomeScreen() {
       </View>
 
       <View style={m.heroMid}>
+        {canSeeMoney ? (
         <View style={{ gap: 2 }}>
           <Text style={m.heroLbl}>{t("revenueToday")}</Text>
           <Text style={m.heroRevenue}>
             {fmtNum(todayRevenue)} <Text style={m.heroCur}>{t("sarCurrency")}</Text>
           </Text>
         </View>
+        ) : <View />}
         <View style={m.heroOrders}>
           <Text style={m.heroOrdersNum}>{fmtNum(todayOrders.length)}</Text>
           <Text style={m.heroLbl}>{t("homeOrdersToday")}</Text>
@@ -522,6 +530,7 @@ export default function HomeScreen() {
           <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: PAD, gap: 18, maxWidth: 1100 + PAD * 2, width: "100%", alignSelf: "center" }} showsVerticalScrollIndicator={false}>
             {heroCard}
             <SyncStatusBanner />
+            <AttentionBanner />
             {ctaButton}
             {modules}
           </ScrollView>
@@ -605,6 +614,7 @@ export default function HomeScreen() {
       >
         {heroCard}
         <SyncStatusBanner />
+        <AttentionBanner />
         {ctaButton}
 
         {isCashierRole && (

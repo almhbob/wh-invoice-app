@@ -17,6 +17,7 @@ import {
   DEPT_COLOR,
   dueLabel,
   dueUrgency,
+  hasOpenDriverRequest,
   isOrderOpen,
   orderDepartments,
   orderStage,
@@ -25,7 +26,7 @@ import {
   URGENCY_COLOR,
 } from "@/utils/orderFlow";
 
-type Filter = "active" | "production" | "ready" | "driver" | "late" | "done";
+type Filter = "active" | "production" | "ready" | "driver" | "late" | "requests" | "done";
 type Scope = "today" | "upcoming" | "all";
 
 const FILTERS: { key: Filter; ar: string; en: string; stages?: OrderStage[] }[] = [
@@ -34,6 +35,7 @@ const FILTERS: { key: Filter; ar: string; en: string; stages?: OrderStage[] }[] 
   { key: "ready",      ar: "جاهزة",        en: "Ready",         stages: ["ready", "delivery_failed"] },
   { key: "driver",     ar: "مع السائق",    en: "With driver",   stages: ["out_for_delivery"] },
   { key: "late",       ar: "متأخرة",       en: "Late" },
+  { key: "requests",   ar: "طلبات السائقين", en: "Driver requests" },
   { key: "done",       ar: "مكتملة",       en: "Completed",     stages: ["delivered", "picked_up"] },
 ];
 
@@ -70,12 +72,13 @@ export default function TrackingScreen() {
   }, [orders, scope]);
 
   const counts = useMemo(() => {
-    const c: Record<Filter, number> = { active: 0, production: 0, ready: 0, driver: 0, late: 0, done: 0 };
+    const c: Record<Filter, number> = { active: 0, production: 0, ready: 0, driver: 0, late: 0, requests: 0, done: 0 };
     scoped.forEach((o) => {
       const s = orderStage(o);
       if (isOrderOpen(o)) c.active++;
       FILTERS.forEach((f) => { if (f.stages?.includes(s)) c[f.key]++; });
       if (dueUrgency(o) === "overdue") c.late++;
+      if (hasOpenDriverRequest(o)) c.requests++;
     });
     return c;
   }, [scoped]);
@@ -91,6 +94,7 @@ export default function TrackingScreen() {
         }
         if (filter === "active") return isOrderOpen(o);
         if (filter === "late") return dueUrgency(o) === "overdue";
+        if (filter === "requests") return hasOpenDriverRequest(o);
         return f.stages!.includes(orderStage(o));
       })
       .sort(filter === "done" ? (a, b) => b.updatedAt.localeCompare(a.updatedAt) : byDueThenNewest);
@@ -116,6 +120,13 @@ export default function TrackingScreen() {
         {/* Summary */}
         <View style={{ gap: 12 }}>
           <SyncStatusBanner />
+          {counts.requests > 0 && (
+            <Pressable style={st.reqBanner} onPress={() => setFilter("requests")}>
+              <Feather name="life-buoy" size={16} color={Colors.warning} />
+              <Text style={st.reqBannerTxt}>{ar ? `${counts.requests} طلب من السائقين بانتظار المعالجة (دعم / تحويل)` : `${counts.requests} driver request(s) waiting (support / transfer)`}</Text>
+              <Feather name={ar ? "chevron-left" : "chevron-right"} size={16} color={Colors.warning} />
+            </Pressable>
+          )}
           <View style={st.summary}>
             {[
               { k: "production" as Filter, icon: "loader", color: Colors.statusInProgress },
@@ -223,6 +234,18 @@ function TrackCard({ order, onPress, wide }: { order: Order; onPress: () => void
             <Text style={st.metaTxt}>{order.deliveryDriver.name}</Text>
           </View>
         ) : null}
+        {order.source === "online" ? (
+          <View style={[st.metaPill, { backgroundColor: Colors.info + "16" }]}>
+            <Feather name="globe" size={11} color={Colors.info} />
+            <Text style={[st.metaTxt, { color: Colors.info }]}>{ar ? "أونلاين" : "Online"}</Text>
+          </View>
+        ) : null}
+        {hasOpenDriverRequest(order) ? (
+          <View style={[st.metaPill, { backgroundColor: Colors.warning + "18" }]}>
+            <Feather name={order.driverRequest!.type === "transfer" ? "repeat" : "life-buoy"} size={11} color={Colors.warning} />
+            <Text style={[st.metaTxt, { color: Colors.warning }]}>{order.driverRequest!.type === "transfer" ? (ar ? "طلب تحويل" : "Transfer") : (ar ? "طلب دعم" : "Support")}</Text>
+          </View>
+        ) : null}
         {order.syncState ? (
           <View style={[st.metaPill, { backgroundColor: Colors.warning + "18" }]}>
             <Feather name="upload-cloud" size={11} color={Colors.warning} />
@@ -248,6 +271,8 @@ const st = StyleSheet.create({
   locked: { flex: 1, alignItems: "center", justifyContent: "center", gap: 10, backgroundColor: Colors.background },
   lockedTxt: { color: Colors.textSecondary, fontWeight: "700" },
   summary: { flexDirection: "row", gap: 8 },
+  reqBanner: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: Colors.warning + "16", borderColor: Colors.warning + "55", borderWidth: 1, borderRadius: 14, padding: 12 },
+  reqBannerTxt: { flex: 1, fontSize: 13, fontWeight: "700", color: Colors.text },
   sumCard: { flex: 1, backgroundColor: Colors.surface, borderRadius: 16, padding: 10, gap: 4, alignItems: "center", borderWidth: 1.5, borderColor: Colors.borderLight },
   sumNum: { fontSize: 20, fontWeight: "900" },
   sumLbl: { fontSize: 10, fontWeight: "700", color: Colors.textSecondary },

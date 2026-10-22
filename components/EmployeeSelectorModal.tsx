@@ -35,6 +35,7 @@ const ROLE_COLORS: Record<EmployeeRole, string> = {
   cake: Colors.cake,
   packaging: Colors.packaging,
   calligrapher: Colors.purple,
+  driver: Colors.success,
   admin: Colors.gold,
   branch_supervisor: "#0d9488",
   dept_supervisor: "#0891b2",
@@ -49,14 +50,15 @@ const ROLE_ICONS: Record<EmployeeRole, string> = {
   cake: "layers",
   packaging: "box",
   calligrapher: "edit-3",
+  driver: "truck",
   admin: "shield",
   branch_supervisor: "git-branch",
   dept_supervisor: "briefcase",
   guest: "eye",
 };
 
-const ALL_ROLES: EmployeeRole[] = ["cashier", "halwa", "mawali", "chocolate", "cake", "packaging", "calligrapher", "dept_supervisor", "branch_supervisor", "admin", "guest"];
-const DEFAULT_ADD_ROLES: EmployeeRole[] = ["cashier", "halwa", "mawali", "chocolate", "cake", "packaging", "calligrapher", "dept_supervisor", "admin"];
+const ALL_ROLES: EmployeeRole[] = ["cashier", "halwa", "mawali", "chocolate", "cake", "packaging", "calligrapher", "driver", "dept_supervisor", "branch_supervisor", "admin", "guest"];
+const DEFAULT_ADD_ROLES: EmployeeRole[] = ["cashier", "halwa", "mawali", "chocolate", "cake", "packaging", "calligrapher", "driver", "dept_supervisor", "admin"];
 
 interface Props {
   visible: boolean;

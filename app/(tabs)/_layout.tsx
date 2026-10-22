@@ -28,7 +28,7 @@ import {
   ROLE_CAN_ACCESS_ADMIN,
   ROLE_CAN_VIEW_ARCHIVE, ROLE_CAN_VIEW_BRANCH_FEATURES,
   ROLE_CAN_VIEW_CASHIER, ROLE_CAN_VIEW_CUSTOMERS,
-  ROLE_CAN_VIEW_DELIVERY, ROLE_CAN_VIEW_REPORTS,
+  ROLE_CAN_VIEW_DELIVERY, ROLE_CAN_VIEW_ONLINE_ORDERS, ROLE_CAN_VIEW_REPORTS,
   ROLE_CAN_VIEW_TRAYS,
 } from "@/constants/rbac";
 import { useCompany } from "@/context/CompanyContext";
@@ -44,6 +44,7 @@ const ROLE_COLORS: Record<string, string> = {
   cake: Colors.cake,
   packaging: Colors.packaging,
   calligrapher: Colors.purple,
+  driver: Colors.success,
   admin: Colors.primaryLight,
   branch_supervisor: Colors.success,
   dept_supervisor: Colors.info,
@@ -202,6 +203,8 @@ const MORE_TABS: TabDef[] = [
   { name: "branch-inventory", labelKey: "tabBranchInventory", titleKey: "titleBranchInventory", icon: "bar-chart-2",  sf: "chart.bar",                        accent: Colors.info },
   { name: "branches",         labelKey: "tabBranches",        titleKey: "titleManageBranches",  icon: "git-branch",   sf: "building.2",                       accent: Colors.success },
   { name: "customers",        labelKey: "tabCustomers",       titleKey: "titleCustomers",       icon: "users",        sf: "person.2",                         accent: Colors.packaging },
+  { name: "online",           labelKey: "tabOnline",          titleKey: "titleOnline",          icon: "globe",        sf: "globe",                            accent: Colors.info },
+  { name: "driver",           labelKey: "tabMyDeliveries",    titleKey: "titleMyDeliveries",    icon: "truck",        sf: "car",                              accent: Colors.success },
   { name: "tracking",         labelKey: "tabTracking",        titleKey: "titleTracking",        icon: "navigation",   sf: "location",                         accent: Colors.gold },
   { name: "delivery",         labelKey: "tabDelivery",        titleKey: "titleDelivery",        icon: "truck",        sf: "shippingbox.and.arrow.backward",   accent: Colors.success },
   { name: "trays",            labelKey: "tabTrays",           titleKey: "titleTrays",           icon: "layers",       sf: "tray.2",                           accent: Colors.gold },
@@ -248,6 +251,8 @@ function DesktopSidebar({ activePath, navigate, isRTL }: { activePath: string; n
     if (["branch-orders", "branch-inventory", "branches"].includes(m.name)) return canDo(role, ROLE_CAN_VIEW_BRANCH_FEATURES);
     if (m.name === "customers") return canDo(role, ROLE_CAN_VIEW_CUSTOMERS);
     if (m.name === "delivery" || m.name === "tracking") return canDo(role, ROLE_CAN_VIEW_DELIVERY);
+    if (m.name === "online") return canDo(role, ROLE_CAN_VIEW_ONLINE_ORDERS);
+    if (m.name === "driver") return role === "driver";
     if (m.name === "trays") return canDo(role, ROLE_CAN_VIEW_TRAYS);
     if (m.name === "admin") return canDo(role, ROLE_CAN_ACCESS_ADMIN);
     return true;
@@ -304,6 +309,7 @@ function DesktopSidebar({ activePath, navigate, isRTL }: { activePath: string; n
         {/* Navigation */}
         <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8 }}>
           <SideNavItem label={t("tabLiveOrders")} icon="activity" active={isHome} accent={Colors.gold} onPress={() => navigate("home")} />
+          {role === "driver" && <SideNavItem label={t("tabMyDeliveries")} icon="truck" active={activePath.includes("driver")} accent={Colors.success} onPress={() => navigate("driver")} />}
           {showCashierNav && <SideNavItem label={t("tabCashier")} icon="file-text" active={isCashier} accent={Colors.gold} onPress={() => navigate("cashier")} />}
 
           {visibleDepts.length > 0 && (
@@ -440,6 +446,8 @@ function CustomTabBar() {
     if (["branch-orders", "branch-inventory", "branches"].includes(m.name)) return canDo(role, ROLE_CAN_VIEW_BRANCH_FEATURES);
     if (m.name === "customers") return canDo(role, ROLE_CAN_VIEW_CUSTOMERS);
     if (m.name === "delivery" || m.name === "tracking") return canDo(role, ROLE_CAN_VIEW_DELIVERY);
+    if (m.name === "online") return canDo(role, ROLE_CAN_VIEW_ONLINE_ORDERS);
+    if (m.name === "driver") return role === "driver";
     if (m.name === "trays") return canDo(role, ROLE_CAN_VIEW_TRAYS);
     if (m.name === "admin") return canDo(role, ROLE_CAN_ACCESS_ADMIN);
     return true;
@@ -466,6 +474,7 @@ function CustomTabBar() {
         {isIOS && <BlurView intensity={90} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />}
         {!isIOS && <View style={[StyleSheet.absoluteFill, { backgroundColor: bg }]} />}
         <BarItem label={t("tabLiveOrders")} icon="activity" sf="list.bullet.rectangle" active={isHome} accent={Colors.gold} onPress={() => navigate("home")} />
+        {role === "driver" && <BarItem label={t("tabMyDeliveries")} icon="truck" sf="car" active={pathname.includes("driver")} accent={Colors.success} onPress={() => navigate("driver")} />}
         {showCashierTab && <BarItem label={t("tabCashier")} icon="file-text" sf="doc.text" active={isCashier} accent={Colors.gold} onPress={() => navigate("cashier")} />}
         {visibleDeptsTab.length > 0 && <BarItem label={t("tabDepts")} icon="grid" sf="square.grid.2x2" active={isDept} accent={activeDeptAccent} badge={showDepts ? "▲" : "▼"} onPress={() => setShowDepts((v) => !v)} />}
         {showArchiveTab && <BarItem label={t("tabArchive")} icon="archive" sf="archivebox" active={isArchive} accent={Colors.info} onPress={() => navigate("archive")} />}
@@ -512,6 +521,8 @@ const SCREEN_META: Record<string, { titleKey: string; accent: string }> = {
   customers:        { titleKey: "titleCustomers",  accent: Colors.packaging },
   tracking:         { titleKey: "titleTracking",   accent: Colors.gold },
   writing:          { titleKey: "titleWriting",    accent: Colors.purple },
+  driver:           { titleKey: "titleMyDeliveries", accent: Colors.success },
+  online:           { titleKey: "titleOnline",     accent: Colors.info },
   delivery:         { titleKey: "titleDelivery",   accent: Colors.success },
   trays:            { titleKey: "titleTrays",      accent: Colors.gold },
   admin:            { titleKey: "titleAdmin",      accent: Colors.primaryLight },
@@ -556,6 +567,8 @@ export default function TabLayout() {
       <Tabs.Screen name="delivery"         options={{ title: t("titleDelivery"),  headerShown: false }} />
       <Tabs.Screen name="tracking"         options={{ title: t("titleTracking"),  headerShown: false }} />
       <Tabs.Screen name="writing"          options={{ title: t("titleWriting"),   headerShown: false }} />
+      <Tabs.Screen name="driver"           options={{ title: t("titleMyDeliveries"), headerShown: false }} />
+      <Tabs.Screen name="online"           options={{ title: t("titleOnline"),    headerShown: false }} />
       <Tabs.Screen name="trays"            options={{ title: t("titleTrays"),     headerShown: false }} />
       <Tabs.Screen name="admin"            options={{ title: t("titleAdmin"),     headerShown: false }} />
       <Tabs.Screen name="settings"         options={{ title: t("tabSettings"),    headerShown: false }} />

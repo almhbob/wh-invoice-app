@@ -162,12 +162,33 @@ export interface Order {
   trackingCode?: string;
   /** Lifecycle log (see utils/orderFlow). */
   events?: OrderEvent[];
+  driverRequest?: DriverRequest;
+  /** Where the order came from; online orders were accepted from the customer link. */
+  source?: OrderSource;
+  onlineOrderId?: string;
   /** Calligraphy progress for items that carry a writing request. */
   writingStatus?: OrderStatus;
   writingBy?: EmployeeRef;
   /** Client-only: not yet saved to the server. Never written to Firestore. */
   syncState?: "pending" | "failed";
 }
+
+export type DriverRequestType = "support" | "transfer";
+
+/** A driver asking the branch for help or to hand the delivery to another driver. */
+export interface DriverRequest {
+  type: DriverRequestType;
+  reason: string;
+  note?: string;
+  at: string;
+  by: ActorRef;
+  status: "open" | "resolved";
+  resolvedAt?: string;
+  resolvedBy?: ActorRef;
+  response?: string;
+}
+
+export type OrderSource = "branch" | "online";
 
 export type DeliveryStatus = "pending" | "assigned" | "out_for_delivery" | "delivered" | "failed";
 export type ActorRef = { name: string; employeeId: string };
@@ -197,6 +218,8 @@ interface OrdersContextType {
   markPickedUp: (orderId: string, by?: ActorRef) => Promise<void>;
   ensureTrackingCode: (orderId: string) => Promise<string | null>;
   updateWritingStatus: (orderId: string, status: OrderStatus, by?: EmployeeRef) => Promise<void>;
+  raiseDriverRequest: (orderId: string, type: DriverRequestType, reason: string, note: string | undefined, by: ActorRef) => Promise<void>;
+  resolveDriverRequest: (orderId: string, by: ActorRef, response?: string) => Promise<void>;
   updateOrder: (id: string, patch: Partial<Omit<Order, "id" | "companyId" | "orderNumber" | "createdAt">>) => Promise<void>;
   getOrdersForDepartment: (department: Department) => Order[];
   refreshOrders: () => void;
@@ -513,8 +536,11 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
         departmentReceivers: {},
         deliveryStatus: orderData.orderType === "delivery" ? "pending" : undefined,
         writingStatus: orderData.items.some((i) => i.writing?.text?.trim()) ? "pending" : undefined,
-        trackingCode: newTrackingCode(),
-        events: [{ type: "created", at: now, by: orderData.cashierEmployee ? { name: orderData.cashierEmployee.name, employeeId: orderData.cashierEmployee.employeeId } : undefined }],
+        trackingCode: orderData.trackingCode || newTrackingCode(),
+        events: [
+          ...(orderData.source === "online" ? [{ type: "online_received" as const, at: orderData.receivedAt && !isNaN(Date.parse(orderData.receivedAt)) ? new Date(orderData.receivedAt).toISOString() : now }] : []),
+          { type: "created", at: now, by: orderData.cashierEmployee ? { name: orderData.cashierEmployee.name, employeeId: orderData.cashierEmployee.employeeId } : undefined },
+        ],
         createdAt: now,
         updatedAt: now,
         syncState: "pending",
@@ -609,10 +635,19 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
         orderId,
         (o) => removing
           ? { ...o, deliveryDriver: undefined, deliveryStatus: o.deliveryStatus === "out_for_delivery" ? o.deliveryStatus : "pending", updatedAt: now }
-          : withEvent(o, ev, { deliveryDriver: { ...driver, assignedAt: now }, deliveryStatus: o.deliveryStatus === "out_for_delivery" ? "out_for_delivery" : "assigned" }),
+          : withEvent(o, ev, {
+              deliveryDriver: { ...driver, assignedAt: now },
+              deliveryStatus: o.deliveryStatus === "out_for_delivery" && o.deliveryDriver?.employeeId === driver.employeeId ? "out_for_delivery" : "assigned",
+              driverRequest: o.driverRequest?.status === "open" ? { ...o.driverRequest, status: "resolved", resolvedAt: now, resolvedBy: by, response: `أُسند إلى ${driver.name}` } : o.driverRequest,
+            }),
         (o) => removing
           ? { deliveryDriver: null, deliveryStatus: o.deliveryStatus === "out_for_delivery" ? o.deliveryStatus : "pending" }
-          : { deliveryDriver: deepClean({ ...driver, assignedAt: now }), deliveryStatus: o.deliveryStatus === "out_for_delivery" ? "out_for_delivery" : "assigned", events: arrayUnion(deepClean(ev)) }
+          : {
+              deliveryDriver: deepClean({ ...driver, assignedAt: now }),
+              deliveryStatus: o.deliveryStatus === "out_for_delivery" && o.deliveryDriver?.employeeId === driver.employeeId ? "out_for_delivery" : "assigned",
+              events: arrayUnion(deepClean(ev)),
+              ...(o.driverRequest?.status === "open" ? { driverRequest: deepClean({ ...o.driverRequest, status: "resolved", resolvedAt: now, resolvedBy: by, response: `أُسند إلى ${driver.name}` }) } : {}),
+            }
       );
     },
     [patchOrder]
@@ -684,6 +719,29 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
     });
   }, [patchOrder]);
 
+  const raiseDriverRequest = useCallback(async (orderId: string, type: DriverRequestType, reason: string, note: string | undefined, by: ActorRef) => {
+    const now = new Date().toISOString();
+    const req: DriverRequest = deepClean({ type, reason, note: note?.trim() || undefined, at: now, by, status: "open" as const });
+    const ev: OrderEvent = { type: type === "transfer" ? "transfer_requested" : "support_requested", at: now, by, note: [reason, note?.trim()].filter(Boolean).join(" — ") };
+    await patchOrder(
+      orderId,
+      (o) => withEvent(o, ev, { driverRequest: req }),
+      () => ({ driverRequest: req, events: arrayUnion(deepClean(ev)) })
+    );
+  }, [patchOrder]);
+
+  const resolveDriverRequest = useCallback(async (orderId: string, by: ActorRef, response?: string) => {
+    const now = new Date().toISOString();
+    const ev: OrderEvent = { type: "request_resolved", at: now, by, note: response?.trim() || undefined };
+    await patchOrder(
+      orderId,
+      (o) => o.driverRequest ? withEvent(o, ev, { driverRequest: { ...o.driverRequest, status: "resolved", resolvedAt: now, resolvedBy: by, response: response?.trim() || undefined } }) : o,
+      (o) => o.driverRequest
+        ? { driverRequest: deepClean({ ...o.driverRequest, status: "resolved", resolvedAt: now, resolvedBy: by, response: response?.trim() || undefined }), events: arrayUnion(deepClean(ev)) }
+        : {}
+    );
+  }, [patchOrder]);
+
   const ensureTrackingCode = useCallback(async (orderId: string) => {
     const o = [...outboxRef.current, ...serverRef.current].find((x) => x.id === orderId);
     if (!o) return null;
@@ -751,6 +809,8 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
         markPickedUp,
         ensureTrackingCode,
         updateWritingStatus,
+        raiseDriverRequest,
+        resolveDriverRequest,
         updateOrder,
         getOrdersForDepartment,
         refreshOrders,
