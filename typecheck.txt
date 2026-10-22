@@ -1,0 +1,4 @@
+
+> wh-invoice-app@1.0.1-no-cache typecheck /home/runner/work/wh-invoice-app/wh-invoice-app
+> tsc -p tsconfig.json --noEmit
+
