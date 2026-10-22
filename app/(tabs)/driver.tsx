@@ -9,7 +9,7 @@ import { StageBadge } from "@/components/OrderTracker";
 import { Colors } from "@/constants/colors";
 import { useEmployee } from "@/context/EmployeeContext";
 import { useLang } from "@/context/LanguageContext";
-import { DriverRequestType, Order, useOrders } from "@/context/OrdersContext";
+import { DriverRequestType, Order, useOrders, useOrderHistory } from "@/context/OrdersContext";
 import {
   byDueThenNewest,
   callPhone,
@@ -31,6 +31,7 @@ type Tab = "active" | "done";
 /** The driver's own workspace: only deliveries assigned to the signed-in driver. */
 export default function DriverScreen() {
   const { orders, isLoading, refreshOrders } = useOrders();
+  useOrderHistory(366);
   const { currentEmployee } = useEmployee();
   const { lang } = useLang();
   const ar = lang === "ar";

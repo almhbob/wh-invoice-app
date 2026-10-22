@@ -29,6 +29,11 @@ export interface OnlineOrder {
   notes?: string;
   items: OnlineItem[];
   subtotal: number;
+  deliveryFee?: number;
+  total?: number;
+  branchId?: string;
+  branchName?: string;
+  leadHours?: number;
   trackingCode: string;
   createdAt: string;
   updatedAt: string;

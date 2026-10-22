@@ -16,7 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors } from "@/constants/colors";
 import { useEmployee } from "@/context/EmployeeContext";
 import { useLang } from "@/context/LanguageContext";
-import { useOrders } from "@/context/OrdersContext";
+import { useOrders, useOrderHistory } from "@/context/OrdersContext";
 import { fmtCurrency, fmtDate } from "@/utils/dateUtils";
 
 function openWhatsApp(phone: string, message?: string) {
@@ -29,6 +29,7 @@ function openWhatsApp(phone: string, message?: string) {
 function TraysScreenInner() {
   const { t, lang } = useLang();
   const { orders, markTrayReturned } = useOrders();
+  useOrderHistory(365);
   const { currentEmployee } = useEmployee();
   const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<"pending" | "returned">("pending");

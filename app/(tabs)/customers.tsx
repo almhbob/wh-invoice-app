@@ -19,7 +19,7 @@ import { canDo, ROLE_CAN_VIEW_CUSTOMERS } from "@/constants/rbac";
 import type { TranslationKey } from "@/constants/translations";
 import { useEmployee } from "@/context/EmployeeContext";
 import { useLang } from "@/context/LanguageContext";
-import { Order, useOrders } from "@/context/OrdersContext";
+import { Order, useOrders, useOrderHistory } from "@/context/OrdersContext";
 import { fmtDate } from "@/utils/dateUtils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -278,6 +278,7 @@ function CustomerHistoryModal({
 export default function CustomersScreen() {
   const { t, lang } = useLang();
   const { orders } = useOrders();
+  useOrderHistory(730);
   const insets = useSafeAreaInsets();
   const { currentEmployee } = useEmployee();
   const [search, setSearch] = useState("");

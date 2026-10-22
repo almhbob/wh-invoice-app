@@ -17,7 +17,7 @@ import { Colors } from "@/constants/colors";
 import { canDo, ROLE_CAN_DELETE_ORDERS, ROLE_CAN_EDIT_ORDERS } from "@/constants/rbac";
 import { useLang } from "@/context/LanguageContext";
 import { useEmployee } from "@/context/EmployeeContext";
-import { Department, Order, OrderStatus, PAYMENT_LABEL_KEYS, useOrders } from "@/context/OrdersContext";
+import { Department, Order, OrderStatus, PAYMENT_LABEL_KEYS, useOrders, useOrderHistory } from "@/context/OrdersContext";
 import { fmtDate, fmtDateTime } from "@/utils/dateUtils";
 
 import { t as t_, type Lang, type TranslationKey } from "@/constants/translations";
@@ -286,6 +286,7 @@ function DeletedCard({ order, onRestore }: { order: Order; onRestore: (id: strin
 
 export default function ArchiveScreen() {
   const { orders, deletedOrders, deleteOrder, restoreOrder, updateOrder } = useOrders();
+  useOrderHistory(730);
   const { currentEmployee } = useEmployee();
   const { t, lang } = useLang();
   const isAdmin = canDo(currentEmployee?.role, ROLE_CAN_DELETE_ORDERS);

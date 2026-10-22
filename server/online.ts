@@ -1,4 +1,5 @@
 import { LAVIVIANE_CATEGORY_ORDER, LAVIVIANE_PRODUCTS } from "../constants/lavivianeProducts";
+import { deliveryFeeFor, earliestSlot, leadHoursFor, normalizeStoreSettings, scheduleError, type OnlineStoreSettings } from "../constants/onlineStore";
 import { clientIp, Firestore, isValidCompanyId, json, nowSec, readJson, readServiceAccount, sha256Hex, type AuthEnv } from "./auth/core";
 
 /**
@@ -42,10 +43,16 @@ export async function loadCatalog(env: AuthEnv, companyId: string, fetchImpl: ty
   const sa = readServiceAccount(env);
   let products: CatalogProduct[] = [];
   let brand = companyId === "laviviane-trial" ? "Laviviane" : "";
+  let store: OnlineStoreSettings = normalizeStoreSettings(null);
   if (sa) {
     try {
       const fs = new Firestore(sa, fetchImpl);
-      const [docs, company] = await Promise.all([fs.list(`companies/${companyId}/products`), fs.get(`companies/${companyId}`).catch(() => null)]);
+      const [docs, company, settings] = await Promise.all([
+        fs.list(`companies/${companyId}/products`),
+        fs.get(`companies/${companyId}`).catch(() => null),
+        fs.get(`companies/${companyId}/settings/onlineStore`).catch(() => null),
+      ]);
+      store = normalizeStoreSettings(settings);
       if (company?.name) brand = String(company.name);
       products = docs
         .map(({ id, data }) => ({
@@ -73,7 +80,7 @@ export async function loadCatalog(env: AuthEnv, companyId: string, fetchImpl: ty
     const ia = order.indexOf(a), ib = order.indexOf(b);
     return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib);
   });
-  return { brand: brand || companyId, companyId, products, categories: cats, orderingEnabled: Boolean(sa) };
+  return { brand: brand || companyId, companyId, products, categories: cats, orderingEnabled: Boolean(sa) && store.enabled, store };
 }
 
 export async function handleCatalog(request: Request, env: AuthEnv, fetchImpl: typeof fetch = fetch) {
@@ -81,7 +88,7 @@ export async function handleCatalog(request: Request, env: AuthEnv, fetchImpl: t
   if (!companyId) return json({ error: "bad_request" }, 400);
   const cat = await loadCatalog(env, companyId, fetchImpl);
   if (!cat.products.length) return json({ error: "not_found" }, 404);
-  return json(cat, 200, { "Cache-Control": "public, max-age=60" });
+  return json({ ...cat, serverNow: Date.now() }, 200, { "Cache-Control": "no-store" });
 }
 
 // ── Order intake ───────────────────────────────────────────────────────────────
@@ -89,7 +96,7 @@ export async function handleCatalog(request: Request, env: AuthEnv, fetchImpl: t
 interface IncomingItem { productId?: unknown; qty?: unknown; writing?: { text?: unknown; surface?: unknown; note?: unknown } }
 interface IncomingOrder {
   s?: unknown; name?: unknown; phone?: unknown; orderType?: unknown; address?: unknown; locationUrl?: unknown;
-  date?: unknown; time?: unknown; notes?: unknown; items?: unknown; website?: unknown;
+  date?: unknown; time?: unknown; notes?: unknown; items?: unknown; website?: unknown; branchId?: unknown;
 }
 
 const str = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
@@ -142,18 +149,9 @@ export async function handleOnlineOrder(request: Request, env: AuthEnv, fetchImp
   if (locationUrl && !/^https:\/\/(www\.)?(google\.[a-z.]+\/maps|maps\.google\.[a-z.]+)/.test(locationUrl)) errors.push("location");
   if (errors.length) return json({ error: "invalid", fields: errors }, 400);
 
-  // The requested time must be in the future (Riyadh, UTC+3) and within 60 days.
-  const due = Date.parse(`${date}T${time}:00+03:00`);
-  if (isNaN(due) || due < Date.now() - 5 * 60_000 || due > Date.now() + 60 * 86400_000) return json({ error: "invalid", fields: ["datetime"] }, 400);
 
   const fs = new Firestore(sa, fetchImpl);
   try {
-    const ipKey = await sha256Hex(`online|ip|${clientIp(request)}`);
-    const phoneKey = await sha256Hex(`online|phone|${companyId}|${phone}`);
-    if ((await rateLimited(fs, ipKey, 8, 3600)) || (await rateLimited(fs, phoneKey, 5, 3600))) {
-      return json({ error: "rate_limited" }, 429);
-    }
-
     const catalog = await loadCatalog(env, companyId!, fetchImpl);
     const byId = new Map(catalog.products.map((p) => [p.id, p]));
     const items: Record<string, unknown>[] = [];
@@ -174,6 +172,41 @@ export async function handleOnlineOrder(request: Request, env: AuthEnv, fetchImp
       });
     }
     const subtotal = items.reduce((s, i) => s + Number(i.price) * Number(i.quantity), 0);
+    const store = catalog.store;
+
+    // Store rules: open days/hours, preparation lead time, booking horizon.
+    const lead = leadHoursFor(rawItems.map((it) => byId.get(String(it.productId))?.category ?? ""), store);
+    const sched = scheduleError(store, date, time, lead);
+    if (sched) return json({ error: sched, leadHours: lead, earliest: earliestSlot(store, lead) }, 400);
+    if (orderType === "delivery" && !store.delivery.enabled) return json({ error: "delivery_disabled" }, 400);
+    if (store.minOrder > 0 && subtotal < store.minOrder) return json({ error: "min_order", minOrder: store.minOrder }, 400);
+    let branch: { id: string; name: string } | undefined;
+    if (store.branches.length) {
+      branch = store.branches.find((b) => b.id === String(body.branchId ?? ""));
+      if (!branch && orderType === "pickup") return json({ error: "invalid", fields: ["branch"] }, 400);
+    }
+
+    // Capacity per day / per slot (online orders not rejected).
+    if (store.maxOrdersPerDay > 0 || store.maxOrdersPerSlot > 0) {
+      const sameDay = await fs.runQuery(`companies/${companyId}`, {
+        from: [{ collectionId: "onlineOrders" }],
+        where: { fieldFilter: { field: { fieldPath: "deliveryDate" }, op: "EQUAL", value: { stringValue: date } } },
+        limit: 1000,
+      });
+      const live = sameDay.filter((r) => r.data.status !== "rejected");
+      if (store.maxOrdersPerDay > 0 && live.length >= store.maxOrdersPerDay) return json({ error: "capacity_day" }, 409);
+      if (store.maxOrdersPerSlot > 0 && live.filter((r) => r.data.deliveryTime === `${date} ${time}`).length >= store.maxOrdersPerSlot) {
+        return json({ error: "capacity_slot" }, 409);
+      }
+    }
+    const deliveryFee = orderType === "delivery" ? deliveryFeeFor(store, subtotal) : 0;
+    // Rate limiting counts only orders that passed validation.
+    const ipKey = await sha256Hex(`online|ip|${clientIp(request)}`);
+    const phoneKey = await sha256Hex(`online|phone|${companyId}|${phone}`);
+    if ((await rateLimited(fs, ipKey, 8, 3600)) || (await rateLimited(fs, phoneKey, 5, 3600))) {
+      return json({ error: "rate_limited" }, 429);
+    }
+
     const trackingCode = newCode();
     const now = new Date().toISOString();
     const id = await fs.create(`companies/${companyId}/onlineOrders`, {
@@ -185,6 +218,11 @@ export async function handleOnlineOrder(request: Request, env: AuthEnv, fetchImp
       ...(address ? { deliveryAddress: address } : {}),
       ...(locationUrl ? { locationUrl } : {}),
       deliveryTime: `${date} ${time}`,
+      deliveryDate: date,
+      ...(branch ? { branchId: branch.id, branchName: branch.name } : {}),
+      ...(deliveryFee ? { deliveryFee } : {}),
+      total: subtotal + deliveryFee,
+      leadHours: lead,
       ...(notes ? { notes } : {}),
       items,
       subtotal,
@@ -192,7 +230,7 @@ export async function handleOnlineOrder(request: Request, env: AuthEnv, fetchImp
       createdAt: now,
       updatedAt: now,
     });
-    return json({ ok: true, id, trackingCode, subtotal, brand: catalog.brand });
+    return json({ ok: true, id, trackingCode, subtotal, deliveryFee, total: subtotal + deliveryFee, brand: catalog.brand });
   } catch (err) {
     console.error("online_order_error", err instanceof Error ? err.message : err);
     return json({ error: "server_error" }, 500);
