@@ -1,0 +1,38 @@
+name: Security tests
+
+on:
+  pull_request:
+    paths: ["firestore.rules", "tests/rules/**", "server/auth/**", "functions/**", ".github/workflows/rules-test.yml"]
+  push:
+    branches: [main]
+    paths: ["firestore.rules", "tests/rules/**", "server/auth/**", "functions/**"]
+  workflow_dispatch:
+
+jobs:
+  auth-server:
+    name: Auth server unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun test server/auth
+
+  rules:
+    name: Firestore rules (emulator)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 21 }
+      - name: Prepare isolated test workspace
+        run: |
+          mkdir -p /tmp/rt && cp firestore.rules tests/rules/firestore.rules.test.mjs /tmp/rt/
+          cd /tmp/rt
+          echo '{"type":"module"}' > package.json
+          echo '{"firestore":{"rules":"firestore.rules"},"emulators":{"firestore":{"port":8080},"ui":{"enabled":false}}}' > firebase.json
+          npm i firebase-tools@14 @firebase/rules-unit-testing@4 firebase@11 >/dev/null
+      - name: Run rules tests against the emulator
+        working-directory: /tmp/rt
+        run: npx firebase emulators:exec --only firestore --project rules-test "node firestore.rules.test.mjs"

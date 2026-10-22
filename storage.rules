@@ -1,8 +1,9 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
+    // Secure mode: only server-issued (custom token) sessions count as signed in.
     function signedIn() {
-      return request.auth != null;
+      return request.auth != null && request.auth.token.firebase.sign_in_provider == 'custom';
     }
 
     function isPlatformOwner() {
@@ -22,29 +23,29 @@ service firebase.storage {
     }
 
     match /contracts/{companyId}/{fileName} {
-      allow read: if signedIn();
-      allow write: if signedIn() && isSafeFile();
+      allow read: if canAccessCompany(companyId);
+      allow write: if canAccessCompany(companyId) && isSafeFile();
     }
 
     match /company-documents/{companyId}/{fileName} {
-      allow read: if signedIn();
-      allow write: if signedIn() && isSafeFile();
+      allow read: if canAccessCompany(companyId);
+      allow write: if canAccessCompany(companyId) && isSafeFile();
     }
 
-    // Product images — auth-required read/write (anonymous session covers app users)
+    // Product images — company members only (download URLs with tokens keep working for display)
     match /product-images/{companyId}/{fileName} {
-      allow read: if signedIn();
-      allow write: if signedIn() && isSafeFile();
+      allow read: if canAccessCompany(companyId);
+      allow write: if canAccessCompany(companyId) && isSafeFile();
     }
 
     match /damage-images/{companyId}/{fileName} {
-      allow read: if signedIn();
-      allow write: if signedIn() && isSafeFile();
+      allow read: if canAccessCompany(companyId);
+      allow write: if canAccessCompany(companyId) && isSafeFile();
     }
 
     match /logos/{companyId}/{fileName} {
       allow read: if true;
-      allow write: if signedIn() && isSafeFile();
+      allow write: if canAccessCompany(companyId) && isSafeFile();
     }
 
     match /{allPaths=**} {

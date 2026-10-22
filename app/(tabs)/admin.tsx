@@ -25,6 +25,10 @@ import { DevSettingsModal } from "@/components/DevSettingsModal";
 import { PrinterSettingsModal } from "@/components/PrinterSettingsModal";
 import { ProductManagerModal } from "@/components/ProductManagerModal";
 import { useLang } from "@/context/LanguageContext";
+import { PinChangeModal } from "@/components/PinChangeModal";
+import { secureAuthErrorText, secureAuthText } from "@/constants/secureAuthText";
+import { employeeCredentialErrorMessage } from "@/lib/employeeCredentials";
+import { localPinError, SecureAuthFailure } from "@/lib/secureAuth";
 import {
   Employee,
   EmployeeRole,
@@ -108,8 +112,11 @@ function SectionHeader({ title, icon }: { title: string; icon: any }) {
 type EmpStatusFilter = "all" | "active" | "suspended";
 
 function EmployeesSection() {
-  const { employees, addEmployee, removeEmployee, updateEmployee } = useEmployee();
-  const { t } = useLang();
+  const { employees, addEmployee, removeEmployee, updateEmployee, setEmployeePin, authMode, currentEmployee } = useEmployee();
+  const { t, lang } = useLang();
+  const isSecure = authMode === "secure";
+  const [pin, setPin] = useState("");
+  const [pinTarget, setPinTarget] = useState<Employee | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [name, setName] = useState("");
   const [empId, setEmpId] = useState("");
@@ -122,11 +129,18 @@ function EmployeesSection() {
     if (!empId.trim()) { Alert.alert(t("errTitle"), t("empIdRequired")); return; }
     const dup = employees.find((e) => e.employeeId.toLowerCase() === empId.trim().toLowerCase());
     if (dup) { Alert.alert(t("errTitle"), t("adminEmpDupId")); return; }
+    if (isSecure) {
+      const pinErr = localPinError(pin.trim());
+      if (pinErr) { Alert.alert(t("errTitle"), secureAuthErrorText(pinErr, lang)); return; }
+    }
     setSaving(true);
     try {
-      await addEmployee({ name: name.trim(), employeeId: empId.trim().toUpperCase(), role });
+      await addEmployee({ name: name.trim(), employeeId: empId.trim().toUpperCase(), role, ...(isSecure ? { pinCode: pin.trim() } : {}) });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setName(""); setEmpId(""); setRole("cashier"); setShowAdd(false);
+      setName(""); setEmpId(""); setPin(""); setRole("cashier"); setShowAdd(false);
+    } catch (e) {
+      const f = e instanceof SecureAuthFailure ? e : null;
+      Alert.alert(t("errTitle"), f ? secureAuthErrorText(f.code, lang, f.retryAfter) : employeeCredentialErrorMessage(e));
     } finally { setSaving(false); }
   };
 
@@ -173,6 +187,9 @@ function EmployeesSection() {
       `#${emp.employeeId} · ${ROLE_LABELS[emp.role]}`,
       [
         { text: t("adminChangeRole"), onPress: () => handleChangeRole(emp) },
+        ...(isSecure && emp.id !== currentEmployee?.id
+          ? [{ text: secureAuthText("setPinAction", lang), onPress: () => setPinTarget(emp) }]
+          : []),
         {
           text: isSuspended ? t("adminActivateAcc") : t("adminSuspendAcc"),
           onPress: () => toggleStatus(emp),
@@ -287,6 +304,19 @@ function EmployeesSection() {
         })
       )}
 
+      <PinChangeModal
+        visible={!!pinTarget}
+        mode="other"
+        employeeName={pinTarget?.name}
+        onSubmit={async (newPin) => {
+          await setEmployeePin(pinTarget!.id, newPin);
+          setPinTarget(null);
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          Alert.alert(t("successTitle"), secureAuthText("pinSaved", lang));
+        }}
+        onCancel={() => setPinTarget(null)}
+      />
+
       {/* Add form */}
       {showAdd ? (
         <View style={styles.addForm}>
@@ -297,6 +327,14 @@ function EmployeesSection() {
           <TextInput style={styles.formInput} value={empId} onChangeText={setEmpId}
             placeholder={t("adminEmpIdPh")} placeholderTextColor={Colors.textMuted}
             textAlign="right" autoCapitalize="characters" />
+          {isSecure && (
+            <>
+              <Text style={styles.formLabel}>{secureAuthText("pinRequiredForNew", lang)} *</Text>
+              <TextInput style={styles.formInput} value={pin} onChangeText={setPin}
+                placeholder="••••" placeholderTextColor={Colors.textMuted}
+                textAlign="right" secureTextEntry keyboardType="number-pad" maxLength={8} />
+            </>
+          )}
           <Text style={styles.formLabel}>{t("adminEmpRoleLabel")}</Text>
           <View style={styles.roleRow}>
             {ALL_ROLES.map((r) => (

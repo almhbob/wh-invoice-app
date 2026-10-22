@@ -23,6 +23,8 @@ import {
   ROLE_LABELS,
   useEmployee,
 } from "@/context/EmployeeContext";
+import { secureAuthErrorText, secureAuthText } from "@/constants/secureAuthText";
+import { localPinError } from "@/lib/secureAuth";
 import { employeeCredentialErrorMessage, prepareEmployeeCredentialPayload } from "@/lib/employeeCredentials";
 
 const ROLE_COLORS: Record<EmployeeRole, string> = {
@@ -60,15 +62,15 @@ interface Props {
 }
 
 export function EmployeeSelectorModal({ visible, onClose }: Props) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const insets = useSafeAreaInsets();
-  const { employees, currentEmployee, setCurrentEmployee, addEmployee, removeEmployee } =
+  const { employees, currentEmployee, setCurrentEmployee, addEmployee, removeEmployee, authMode } =
     useEmployee();
   const [tab, setTab] = useState<"select" | "add">("select");
   const [newName, setNewName] = useState("");
   const [newEmpId, setNewEmpId] = useState("");
   const [newUsername, setNewUsername] = useState("");
-  const [newPin, setNewPin] = useState("1234");
+  const [newPin, setNewPin] = useState("");
   const [newRole, setNewRole] = useState<EmployeeRole>("cashier");
   const [saving, setSaving] = useState(false);
 
@@ -86,6 +88,14 @@ export function EmployeeSelectorModal({ visible, onClose }: Props) {
 
   const handleSelect = (emp: Employee) => {
     Haptics.selectionAsync();
+    // Secure mode: switching identity always requires that employee's own PIN.
+    if (authMode === "secure" && emp.id !== currentEmployee?.id) {
+      Alert.alert(emp.name, secureAuthText("switchNeedsLogin", lang), [
+        { text: secureAuthText("cancel", lang), style: "cancel" },
+        { text: secureAuthText("logout", lang), style: "destructive", onPress: () => { setCurrentEmployee(null); onClose(); } },
+      ]);
+      return;
+    }
     setCurrentEmployee(emp);
     onClose();
   };
@@ -105,6 +115,10 @@ export function EmployeeSelectorModal({ visible, onClose }: Props) {
       return e.employeeId.toLowerCase() === normalizedEmpId.toLowerCase() || empUsername === normalizedUsername;
     });
     if (exists) { Alert.alert(t("errTitle"), t("empDupIdMsg")); return; }
+    if (authMode === "secure") {
+      const pinErr = localPinError(newPin.trim());
+      if (pinErr) { Alert.alert(t("errTitle"), secureAuthErrorText(pinErr, lang)); return; }
+    }
     if (!addRoles.includes(newRole)) {
       Alert.alert(t("permissionTitle"), t("empRoleRestrict"));
       return;
@@ -120,7 +134,7 @@ export function EmployeeSelectorModal({ visible, onClose }: Props) {
       });
       await addEmployee(payload as any);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setNewName(""); setNewEmpId(""); setNewUsername(""); setNewPin("1234"); setNewRole("cashier");
+      setNewName(""); setNewEmpId(""); setNewUsername(""); setNewPin(""); setNewRole("cashier");
       setTab("select");
       Alert.alert(t("successTitle"), t("empAddedMsg"));
     } catch (error) {
