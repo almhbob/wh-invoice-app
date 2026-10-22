@@ -5,7 +5,7 @@ import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, Swi
 import { Colors } from "@/constants/colors";
 import { useLang } from "@/context/LanguageContext";
 import { useEmployee } from "@/context/EmployeeContext";
-import { useOrders } from "@/context/OrdersContext";
+import { useOrders, useOrderHistory } from "@/context/OrdersContext";
 import { Driver, useDrivers } from "@/hooks/useDrivers";
 import { callPhone, driverStats } from "@/utils/orderFlow";
 
@@ -28,6 +28,7 @@ export function DriversModal({ visible, onClose, onPick, currentDriverId, onUnas
   const { drivers, loading, addDriver, updateDriver, removeDriver } = useDrivers();
   const { employees } = useEmployee();
   const { orders } = useOrders();
+  useOrderHistory(visible && !onPick ? 366 : 0);
   // Drivers with an app account (role "driver") come first; they see their deliveries in the app.
   const accountDrivers: Entry[] = employees
     .filter((e) => e.role === "driver")

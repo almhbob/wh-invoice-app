@@ -18,7 +18,7 @@ import { canDo, ROLE_CAN_VIEW_REPORTS } from "@/constants/rbac";
 import type { TranslationKey } from "@/constants/translations";
 import { useEmployee } from "@/context/EmployeeContext";
 import { useLang } from "@/context/LanguageContext";
-import { useOrders } from "@/context/OrdersContext";
+import { useOrders, useOrderHistory } from "@/context/OrdersContext";
 import { useShift, type ClosedShift } from "@/context/ShiftContext";
 import { fmtCurrency, fmtDate, fmtDateTime } from "@/utils/dateUtils";
 import { ShiftCloseModal } from "@/components/ShiftCloseModal";
@@ -1182,6 +1182,7 @@ function ShiftsTab() {
 export default function ReportsScreen() {
   const { t } = useLang();
   const { orders } = useOrders();
+  useOrderHistory(730);
   const insets = useSafeAreaInsets();
   const { currentEmployee } = useEmployee();
 

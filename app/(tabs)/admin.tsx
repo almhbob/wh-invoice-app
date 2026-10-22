@@ -35,7 +35,7 @@ import {
   ROLE_LABELS,
   useEmployee,
 } from "@/context/EmployeeContext";
-import { Department, DISCOUNT_REASON_PRESETS, DiscountType, Order, PAYMENT_LABEL_KEYS, PaymentMethod, useOrders } from "@/context/OrdersContext";
+import { Department, DISCOUNT_REASON_PRESETS, DiscountType, Order, PAYMENT_LABEL_KEYS, PaymentMethod, useOrders, useOrderHistory } from "@/context/OrdersContext";
 import { Offer, useOffers } from "@/context/OffersContext";
 import { Product, useProducts } from "@/context/ProductsContext";
 import { usePriceChange } from "@/context/PriceChangeContext";
@@ -1319,6 +1319,7 @@ function PriceRequestsSection() {
 // ─── Backup Section ────────────────────────────────────────────────────────
 function BackupSection() {
   const { orders } = useOrders();
+  useOrderHistory(365);
   const { t } = useLang();
   const [exporting, setExporting] = useState(false);
 
@@ -1482,6 +1483,7 @@ function PrinterSection() {
 export default function AdminScreen() {
   const insets = useSafeAreaInsets();
   const { orders } = useOrders();
+  useOrderHistory(365);
   const { currentEmployee } = useEmployee();
   const { t } = useLang();
   const [activeTab, setActiveTab] = useState<"overview" | "employees" | "products" | "offers" | "priceRequests" | "features" | "backup" | "printer">("overview");

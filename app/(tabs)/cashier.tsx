@@ -2079,7 +2079,7 @@ export default function CashierScreen() {
               <Text style={styles.receiptBannerTitle}>
                 {liveReceipt?.syncState ? (lang === "ar" ? "حُفظ على الجهاز — جارٍ الإرسال للأقسام" : "Saved — sending to departments…") : t("sentSuccess")}
               </Text>
-              <Text style={styles.receiptBannerSub}>{t("invoiceNum")}{receiptOrder.orderNumber}</Text>
+              <Text style={styles.receiptBannerSub}>{t("invoiceNum")}{liveReceipt?.orderNumber ?? receiptOrder.orderNumber}{liveReceipt?.provisionalNumber ? (lang === "ar" ? " (رقم مؤقت حتى يعود الاتصال)" : " (provisional)") : ""}</Text>
             </View>
 
             <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, gap: 12 }}>

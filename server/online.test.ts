@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 import { decodeFields } from "./auth/core";
 import { handleCatalog, handleOnlineOrder, normalizePhone, resolveCompany } from "./online";
+import { DEFAULT_STORE_SETTINGS, earliestSlot, normalizeStoreSettings, scheduleError, riyadhMs } from "../constants/onlineStore";
 import { LAVIVIANE_PRODUCTS } from "../constants/lavivianeProducts";
 
 async function pem() {
@@ -11,11 +12,22 @@ async function pem() {
   return `-----BEGIN PRIVATE KEY-----\n${btoa(bin)}\n-----END PRIVATE KEY-----`;
 }
 
-function future(hours: number) {
-  const d = new Date(Date.now() + hours * 3600_000 + 3 * 3600_000); // as Riyadh wall clock
-  const iso = d.toISOString();
-  return { date: iso.slice(0, 10), time: iso.slice(11, 16) };
-}
+
+describe("store rules", () => {
+  const s = normalizeStoreSettings({ openDays: [0, 1, 2, 3, 4], openFrom: "10:00", openTo: "22:00", closedDates: ["2030-01-02"] });
+  const now = riyadhMs("2030-01-01", "09:00"); // Tuesday
+  test("schedule checks", () => {
+    expect(scheduleError(s, "2030-01-01", "15:00", 4, now)).toBeNull();
+    expect(scheduleError(s, "2030-01-01", "12:00", 4, now)).toBe("lead_time");
+    expect(scheduleError(s, "2030-01-01", "23:00", 0, now)).toBe("outside_hours");
+    expect(scheduleError(s, "2030-01-01", "15:10", 0, now)).toBe("bad_slot");
+    expect(scheduleError(s, "2030-01-02", "15:00", 0, now)).toBe("closed_date");
+    expect(scheduleError(s, "2030-01-04", "15:00", 0, now)).toBe("closed_day"); // Friday
+    expect(earliestSlot(s, 30, now)).toEqual({ date: "2030-01-03", time: "10:00" }); // skips the closed date, opens 10:00
+    expect(earliestSlot({ ...s, enabled: false }, 0, now)).toBeNull();
+    expect(DEFAULT_STORE_SETTINGS.categoryLeadHours["Laviviane Cakes"]).toBe(24);
+  });
+});
 
 describe("online ordering", () => {
   test("helpers", () => {
@@ -48,7 +60,7 @@ describe("online ordering", () => {
       return new Response("{}", { status: 404 });
     }) as typeof fetch;
     const p = LAVIVIANE_PRODUCTS[0];
-    const when = future(5);
+    const when = earliestSlot(normalizeStoreSettings(null), 24)!;
     const send = (extra: Record<string, unknown>) =>
       handleOnlineOrder(new Request("https://x/api/online-order", { method: "POST", body: JSON.stringify({
         s: "laviviane", name: "ريم", phone: "0501234567", orderType: "pickup", ...when,
@@ -68,6 +80,9 @@ describe("online ordering", () => {
     expect((await send({ orderType: "delivery", address: "" })).status).toBe(400);
     expect((await send({ items: [{ productId: "nope", qty: 1 }] })).status).toBe(400);
     expect((await send({ date: "2020-01-01" })).status).toBe(400);
+    const tooSoon = await send(earliestSlot(normalizeStoreSettings(null), 4)!);
+    expect(tooSoon.status).toBe(400); // cake needs 24h lead time
+    expect(((await tooSoon.json()) as { error: string }).error).toBe("lead_time");
     const bot = await send({ website: "spam" });
     expect(bot.status).toBe(200);
     expect(created).toHaveLength(1); // honeypot dropped silently

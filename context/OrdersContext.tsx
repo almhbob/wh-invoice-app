@@ -8,6 +8,7 @@ import {
   onSnapshot,
   orderBy,
   query,
+  where,
   runTransaction,
   setDoc,
   updateDoc,
@@ -169,6 +170,8 @@ export interface Order {
   /** Calligraphy progress for items that carry a writing request. */
   writingStatus?: OrderStatus;
   writingBy?: EmployeeRef;
+  /** Client-only: number assigned offline, replaced by the shared counter when syncing. */
+  provisionalNumber?: boolean;
   /** Client-only: not yet saved to the server. Never written to Firestore. */
   syncState?: "pending" | "failed";
 }
@@ -226,6 +229,9 @@ interface OrdersContextType {
   purgeAllOrders: () => Promise<void>;
   /** Orders saved on this device but not yet on the server. */
   pendingSyncCount: number;
+  /** Widen the live window to at least `days` days (archive, reports, stats). */
+  requestHistory: (days: number) => void;
+  windowDays: number;
   retrySync: () => void;
   isLoading: boolean;
 }
@@ -236,6 +242,8 @@ const LOCAL_COUNTER_KEY = "@order_counter_v4_fallback";
 const LOCAL_ORDERS_KEY = "@orders_local_v2";
 const OUTBOX_KEY = "@orders_outbox_v1";
 const SYNC_INTERVAL_MS = 15000;
+/** Days of orders kept live on every device (more is loaded on demand). */
+const DEFAULT_WINDOW_DAYS = 21;
 
 const localOrdersKey = (companyId: string) => `${LOCAL_ORDERS_KEY}_${companyId}`;
 const outboxKey = (companyId: string) => `${OUTBOX_KEY}_${companyId}`;
@@ -281,6 +289,21 @@ function toServer(order: Order): Record<string, unknown> {
   return deepClean(rest as Record<string, unknown>);
 }
 
+/** Atomically take the next order number from companies/{id}/counters/orders. */
+async function claimCounterNumber(companyId: string): Promise<number> {
+  const counterRef = doc(db, "companies", companyId, "counters", "orders");
+  let next = 1;
+  await Promise.race([
+    runTransaction(db, async (txn) => {
+      const snap = await txn.get(counterRef);
+      next = snap.exists() ? (snap.data().value as number) + 1 : 1;
+      txn.set(counterRef, { value: next, companyId, updatedAt: new Date().toISOString() });
+    }),
+    new Promise<never>((_, reject) => setTimeout(() => reject(new Error("counter-timeout")), 6000)),
+  ]);
+  return next;
+}
+
 const isRemoteUri = (uri?: string) => !!uri && /^https?:\/\//.test(uri);
 
 export function OrdersProvider({ children }: { children: React.ReactNode }) {
@@ -289,6 +312,8 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
   const [outbox, setOutbox] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshTick, setRefreshTick] = useState(0);
+  const [windowDays, setWindowDays] = useState(DEFAULT_WINDOW_DAYS);
+  const requestHistory = useCallback((days: number) => setWindowDays((d) => (days > d ? days : d)), []);
   const [syncTick, setSyncTick] = useState(0);
   const outboxRef = useRef<Order[]>([]);
   const serverRef = useRef<Order[]>([]);
@@ -308,7 +333,6 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
 
   const ordersCollection = useCallback(() => collection(db, "companies", companyId, "orders"), [companyId]);
   const orderDoc = useCallback((id: string) => doc(db, "companies", companyId, "orders", id), [companyId]);
-  const counterDoc = useCallback(() => doc(db, "companies", companyId, "counters", "orders"), [companyId]);
 
   const saveOutbox = useCallback((next: Order[]) => {
     outboxRef.current = next;
@@ -340,42 +364,65 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
       setSyncTick((t) => t + 1);
     });
 
-    const q = query(ordersCollection(), orderBy("createdAt", "desc"));
-    const unsub = onSnapshot(
-      q,
-      (snapshot) => {
-        if (!mounted) return;
-        const loaded: Order[] = snapshot.docs.map((d) => ({ ...(d.data() as Omit<Order, "id">), id: d.id, companyId }));
-        if (snapshot.metadata.fromCache) {
-          // Offline/local view: merge over what we already show, never wipe the cache with it.
-          setServerOrders((prev) => {
-            const byId = new Map(prev.map((o) => [o.id, o]));
-            loaded.forEach((o) => byId.set(o.id, o));
-            return [...byId.values()].sort((x, y) => y.createdAt.localeCompare(x.createdAt));
-          });
-        } else {
-          setServerOrders(loaded);
-          void writeJson(localOrdersKey(companyId), loaded);
-        }
-        setIsLoading(false);
-        // Only writes the server has acknowledged may leave the outbox
-        // (a pending local write is lost if the page is closed).
-        const confirmed = new Set(snapshot.docs.filter((d) => !d.metadata.hasPendingWrites && !snapshot.metadata.fromCache).map((d) => d.id));
-        if (outboxRef.current.some((o) => confirmed.has(o.id))) {
-          saveOutbox(outboxRef.current.filter((o) => !confirmed.has(o.id)));
-        }
-      },
-      (err) => {
-        console.warn("Firestore orders unavailable, using local data:", err.code);
-        if (mounted) setIsLoading(false);
+    // Only the operational window is kept live: orders created in the last `windowDays`
+    // plus anything due from today onward (e.g. a cake booked weeks ahead).
+    // Screens that need history (archive, reports…) widen the window via useOrderHistory().
+    const cutoff = new Date(Date.now() - windowDays * 86400_000).toISOString();
+    const t = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const today = `${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}`;
+    const sources: Record<string, Order[]> = { recent: [], upcoming: [] };
+    const fromServer: Record<string, boolean> = { recent: false, upcoming: false };
+
+    const publish = () => {
+      const byId = new Map<string, Order>();
+      [...sources.upcoming, ...sources.recent].forEach((o) => byId.set(o.id, o));
+      const merged = [...byId.values()].sort((x, y) => y.createdAt.localeCompare(x.createdAt));
+      if (fromServer.recent && fromServer.upcoming) {
+        setServerOrders(merged);
+        // Cache only the recent window to keep device storage small.
+        void writeJson(localOrdersKey(companyId), merged.filter((o) => o.createdAt >= new Date(Date.now() - 14 * 86400_000).toISOString() || o.deliveryTime && o.deliveryTime >= today));
+      } else {
+        // Offline/partial view: merge over what we already show, never wipe the cache with it.
+        setServerOrders((prev) => {
+          const m = new Map(prev.map((o) => [o.id, o]));
+          merged.forEach((o) => m.set(o.id, o));
+          return [...m.values()].sort((x, y) => y.createdAt.localeCompare(x.createdAt));
+        });
       }
-    );
+    };
+
+    const listen = (key: "recent" | "upcoming", q: ReturnType<typeof query>) =>
+      onSnapshot(
+        q,
+        (snapshot) => {
+          if (!mounted) return;
+          sources[key] = snapshot.docs.map((d) => ({ ...(d.data() as Omit<Order, "id">), id: d.id, companyId }));
+          fromServer[key] = !snapshot.metadata.fromCache;
+          publish();
+          setIsLoading(false);
+          // Only writes the server has acknowledged may leave the outbox
+          // (a pending local write is lost if the page is closed).
+          const confirmed = new Set(snapshot.docs.filter((d) => !d.metadata.hasPendingWrites && !snapshot.metadata.fromCache).map((d) => d.id));
+          if (outboxRef.current.some((o) => confirmed.has(o.id))) {
+            saveOutbox(outboxRef.current.filter((o) => !confirmed.has(o.id)));
+          }
+        },
+        (err) => {
+          console.warn("Firestore orders unavailable, using local data:", err.code);
+          if (mounted) setIsLoading(false);
+        }
+      );
+
+    const unsubRecent = listen("recent", query(ordersCollection(), where("createdAt", ">=", cutoff), orderBy("createdAt", "desc")));
+    const unsubUpcoming = listen("upcoming", query(ordersCollection(), where("deliveryTime", ">=", today)));
+    const unsub = () => { unsubRecent(); unsubUpcoming(); };
 
     return () => {
       mounted = false;
       unsub();
     };
-  }, [companyId, ordersCollection, refreshTick, saveOutbox]);
+  }, [companyId, ordersCollection, refreshTick, saveOutbox, windowDays]);
 
   // ── Outbox sync ──────────────────────────────────────────────────────────────
   const flushOutbox = useCallback(async () => {
@@ -408,6 +455,10 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
               if (url) urls.push(url);
             }
             order = { ...order, referenceImages: urls };
+          }
+          if (order.provisionalNumber) {
+            // Offline numbers could collide between devices: take the real one now (throws → retry later).
+            order = { ...order, orderNumber: await claimCounterNumber(companyId), provisionalNumber: undefined };
           }
           if (order !== pending) {
             // Keep uploaded URLs so a retry does not upload the same images again.
@@ -483,28 +534,19 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
     updatedAt: ev.at,
   });
 
-  const getNextOrderNumber = useCallback(async (): Promise<number> => {
+  /** A real number from the shared counter, or a provisional one when offline (replaced at sync). */
+  const getNextOrderNumber = useCallback(async (): Promise<{ number: number; provisional: boolean }> => {
     try {
-      const counterRef = counterDoc();
-      let next = 1;
-      await Promise.race([
-        runTransaction(db, async (txn) => {
-          const snap = await txn.get(counterRef);
-          next = snap.exists() ? (snap.data().value as number) + 1 : 1;
-          txn.set(counterRef, { value: next, companyId, updatedAt: new Date().toISOString() });
-        }),
-        new Promise<never>((_, reject) => setTimeout(() => reject(new Error("counter-timeout")), 4000)),
-      ]);
-      return next;
+      return { number: await claimCounterNumber(companyId), provisional: false };
     } catch {
       const key = `${LOCAL_COUNTER_KEY}_${companyId}`;
       const stored = await AsyncStorage.getItem(key);
       const known = Math.max(0, ...serverRef.current.map((o) => o.orderNumber || 0), ...outboxRef.current.map((o) => o.orderNumber || 0));
       const next = Math.max(stored ? parseInt(stored, 10) : 0, known) + 1;
       await AsyncStorage.setItem(key, next.toString());
-      return next;
+      return { number: next, provisional: true };
     }
-  }, [companyId, counterDoc]);
+  }, [companyId]);
 
   const addOrder = useCallback(
     async (
@@ -520,7 +562,7 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      const orderNumber = await getNextOrderNumber();
+      const { number: orderNumber, provisional } = await getNextOrderNumber();
       const now = new Date().toISOString();
       const depts = new Set(orderData.items.map((i) => i.department));
       depts.add("packaging");
@@ -537,6 +579,7 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
         deliveryStatus: orderData.orderType === "delivery" ? "pending" : undefined,
         writingStatus: orderData.items.some((i) => i.writing?.text?.trim()) ? "pending" : undefined,
         trackingCode: orderData.trackingCode || newTrackingCode(),
+        provisionalNumber: provisional || undefined,
         events: [
           ...(orderData.source === "online" ? [{ type: "online_received" as const, at: orderData.receivedAt && !isNaN(Date.parse(orderData.receivedAt)) ? new Date(orderData.receivedAt).toISOString() : now }] : []),
           { type: "created", at: now, by: orderData.cashierEmployee ? { name: orderData.cashierEmployee.name, employeeId: orderData.cashierEmployee.employeeId } : undefined },
@@ -816,6 +859,8 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
         refreshOrders,
         purgeAllOrders,
         pendingSyncCount: outbox.length,
+        requestHistory,
+        windowDays,
         retrySync,
         isLoading,
       }}
@@ -827,6 +872,12 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
 
 function navigatorOffline() {
   return typeof navigator !== "undefined" && (navigator as { onLine?: boolean }).onLine === false;
+}
+
+/** Make sure orders from the last `days` days are loaded while the calling screen is open. */
+export function useOrderHistory(days: number) {
+  const request = useContext(OrdersContext)?.requestHistory;
+  useEffect(() => { request?.(days); }, [request, days]);
 }
 
 export function useOrders() {

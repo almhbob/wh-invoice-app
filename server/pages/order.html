@@ -68,12 +68,18 @@
   .ok { text-align:center; padding:30px 10px; }
   .ok .big { font-size:46px; }
   .ok h2 { margin:10px 0 6px; }
+  .notice { display:none; background:#B8955A1F; color:var(--esp); font-weight:700; font-size:13px; text-align:center; padding:10px 16px; border-bottom:1px solid var(--line); line-height:1.7; }
+  .notice.on { display:block; }
+  .hint { background:#4F6D8F14; color:#3d5672; border-radius:12px; padding:10px 12px; font-size:12px; font-weight:700; margin-top:10px; line-height:1.7; }
+  .row { display:flex; justify-content:space-between; font-size:13px; color:var(--muted); padding:4px 2px; }
+  .row b { color:var(--ink); }
   .hp { position:absolute; width:1px; height:1px; overflow:hidden; opacity:0; pointer-events:none; inset:0 auto auto 0; }
   .empty { text-align:center; color:var(--muted); padding:30px; }
 </style>
 </head>
 <body>
-<div class="hero"><div class="brand" id="brand">&nbsp;</div><div class="tag">اطلب أونلاين · استلام من الفرع أو توصيل</div></div>
+<div class="hero"><div class="brand" id="brand">&nbsp;</div><div class="tag" id="tag">اطلب أونلاين · استلام من الفرع أو توصيل</div></div>
+<div class="notice" id="notice"></div>
 
 <div class="view on" id="v-menu">
   <div class="bar">
@@ -98,15 +104,20 @@
         <button class="loc" id="loc">📍 مشاركة موقعي الحالي</button>
         <div class="note" id="locNote"></div>
       </div>
+      <div id="branchBox" style="display:none"><label>الفرع</label><select class="in" id="branch"></select></div>
       <div class="row2">
         <div><label>التاريخ</label><input class="in" type="date" id="date" /></div>
         <div><label>الوقت</label><select class="in" id="time"></select></div>
       </div>
+      <div class="hint" id="leadHint"></div>
       <label>ملاحظات (اختياري)</label><textarea class="in" id="notes" maxlength="500" placeholder="تفضيلات، حساسية، تفاصيل التغليف…"></textarea>
       <input class="hp" id="website" tabindex="-1" autocomplete="off" />
     </div>
     <div class="card">
+      <div class="row"><span>المجموع</span><b id="subtotal">0</b></div>
+      <div class="row" id="feeRow" style="display:none"><span>رسوم التوصيل</span><b id="fee">0</b></div>
       <div class="tot"><span>الإجمالي التقديري</span><b id="total">0</b></div>
+      <div class="hint" id="minHint" style="display:none"></div>
       <div class="note">الدفع عند الاستلام أو برابط دفع يرسله الفرع. سيراجع الفرع طلبك ويؤكده لك عبر واتساب، وقد نتواصل معك إذا تعذّر توفر أحد الأصناف.</div>
       <div class="err" id="err"></div>
       <button class="primary" id="send">إرسال الطلب</button>
@@ -131,7 +142,33 @@
   var parts = location.pathname.split("/").filter(Boolean);
   var slug = parts[1] || new URLSearchParams(location.search).get("s") || "laviviane";
   var KEY = "order_cart_" + slug;
-  var data = null, cart = {}, writing = {}, cat = "", q = "", type = "pickup", locUrl = "";
+  var data = null, cart = {}, writing = {}, cat = "", q = "", type = "pickup", locUrl = "", STORE = null, skew = 0;
+  function pad(n) { return String(n).padStart(2, "0"); }
+  function nowMs() { return Date.now() + skew; }
+  function rParts(ms) { var d = new Date(ms + 180 * 60000); return { date: d.getUTCFullYear() + "-" + pad(d.getUTCMonth() + 1) + "-" + pad(d.getUTCDate()), wd: d.getUTCDay() }; }
+  function rMs(date, time) { return Date.parse(date + "T" + time + ":00+03:00"); }
+  function toMin(t) { return +t.slice(0, 2) * 60 + +t.slice(3, 5); }
+  function slots() { var out = []; for (var m = toMin(STORE.openFrom); m <= toMin(STORE.openTo); m += STORE.slotMinutes) out.push(pad(Math.floor(m / 60)) + ":" + pad(m % 60)); return out; }
+  function leadHours() {
+    var h = STORE.defaultLeadHours;
+    Object.keys(cart).forEach(function (id) { var p = prod(id); if (p && STORE.categoryLeadHours[p.category] > h) h = STORE.categoryLeadHours[p.category]; });
+    return h;
+  }
+  function slotOk(date, time, lead) {
+    if (!STORE.enabled) return false;
+    if (STORE.closedDates.indexOf(date) >= 0) return false;
+    var at = rMs(date, time);
+    if (STORE.openDays.indexOf(rParts(at).wd) < 0) return false;
+    return at >= nowMs() + lead * 3600000 && at <= nowMs() + STORE.maxDaysAhead * 86400000;
+  }
+  function dayOpen(date) { return STORE.closedDates.indexOf(date) < 0 && STORE.openDays.indexOf(rParts(rMs(date, "12:00")).wd) >= 0; }
+  function earliest(lead) {
+    var sl = slots();
+    for (var i = 0; i <= STORE.maxDaysAhead; i++) { var d = rParts(nowMs() + i * 86400000).date; for (var j = 0; j < sl.length; j++) if (slotOk(d, sl[j], lead)) return { date: d, time: sl[j] }; }
+    return null;
+  }
+  function label12(t) { var h = +t.slice(0, 2); return (h % 12 || 12) + ":" + t.slice(3) + (h >= 12 ? " م" : " ص"); }
+  function fee() { if (type !== "delivery" || !STORE.delivery.enabled) return 0; if (STORE.delivery.freeOver > 0 && sum() >= STORE.delivery.freeOver) return 0; return STORE.delivery.fee; }
   var CAT_AR = { "New Cake Collection": "تشكيلة الكيك الجديدة", "Laviviane Cakes": "كيك لافيفيان", "Celebration Bites": "قطع الاحتفالات", "Mousse Cake": "كيك الموس", "Laviviane Bites": "قطع لافيفيان", "Sandwich": "ساندويتشات", "Luxury Chocolate": "شوكولاتة فاخرة", "Occasion Chocolate": "شوكولاتة المناسبات", "Distributions and Gifts": "توزيعات وهدايا" };
   function catName(c) { return CAT_AR[c] || c; }
   var SURF = [["cream","كريمة مباشرة"],["jelly","جلي"],["jelly_on_sugar","جلي على سكر"],["sugar_print","طباعة على سكر"],["card","كرت"],["other","أخرى"]];
@@ -145,7 +182,7 @@
   function count() { return Object.keys(cart).reduce(function (n, k) { return n + cart[k]; }, 0); }
   function sum() { return Object.keys(cart).reduce(function (n, k) { var p = prod(k); return n + (p ? p.price * cart[k] : 0); }, 0); }
 
-  function setQty(id, n) { if (n <= 0) { delete cart[id]; delete writing[id]; } else cart[id] = Math.min(50, n); save(); renderMenu(); renderLines(); renderCart(); }
+  function setQty(id, n) { if (n <= 0) { delete cart[id]; delete writing[id]; } else cart[id] = Math.min(50, n); save(); renderMenu(); renderLines(); renderCart(); if ($("v-checkout").classList.contains("on") && STORE) setupDateTime(); }
 
   function renderCats() {
     var h = '<button class="cat' + (cat ? "" : " on") + '" data-c="">الكل</button>';
@@ -180,7 +217,17 @@
   function renderCart() {
     var n = count();
     $("cart").classList.toggle("show", n > 0 && $("v-menu").classList.contains("on"));
-    $("cCount").textContent = n; $("cSum").textContent = money(sum()); $("total").textContent = money(sum());
+    $("cCount").textContent = n; $("cSum").textContent = money(sum());
+    if (!STORE) return;
+    var f = fee();
+    $("subtotal").textContent = money(sum());
+    $("feeRow").style.display = type === "delivery" && STORE.delivery.enabled ? "flex" : "none";
+    $("fee").textContent = f ? money(f) : (STORE.delivery.freeOver > 0 ? "مجاني" : "يحددها الفرع");
+    $("total").textContent = money(sum() + f);
+    var below = STORE.minOrder > 0 && sum() < STORE.minOrder;
+    $("minHint").style.display = below ? "block" : "none";
+    if (below) $("minHint").textContent = "الحد الأدنى للطلب " + money(STORE.minOrder);
+    else if (type === "delivery" && STORE.delivery.freeOver > 0 && f) { $("minHint").style.display = "block"; $("minHint").textContent = "التوصيل مجاني للطلبات من " + money(STORE.delivery.freeOver); }
   }
   function renderLines() {
     var ids = Object.keys(cart);
@@ -199,26 +246,25 @@
     }).join("");
   }
 
-  function setupDateTime() {
-    var now = new Date();
-    var pad = function (n) { return String(n).padStart(2, "0"); };
-    var today = now.getFullYear() + "-" + pad(now.getMonth() + 1) + "-" + pad(now.getDate());
-    $("date").min = today;
-    var max = new Date(now.getTime() + 60 * 86400000);
-    $("date").max = max.getFullYear() + "-" + pad(max.getMonth() + 1) + "-" + pad(max.getDate());
-    if (!$("date").value) $("date").value = today;
-    var opts = "";
-    for (var h = 9; h <= 23; h++) for (var m = 0; m < 60; m += 30) {
-      var v = pad(h) + ":" + pad(m);
-      var label = (h > 12 ? h - 12 : h) + ":" + pad(m) + (h >= 12 ? " م" : " ص");
-      opts += '<option value="' + v + '">' + label + "</option>";
-    }
+  function renderTimes() {
+    var lead = leadHours(), date = $("date").value, cur = $("time").value;
+    var sl = slots(), opts = "", firstOk = "";
+    sl.forEach(function (t) { var ok = slotOk(date, t, lead); if (ok && !firstOk) firstOk = t; opts += '<option value="' + t + '"' + (ok ? "" : " disabled") + ">" + label12(t) + (ok ? "" : " — غير متاح") + "</option>"; });
     $("time").innerHTML = opts;
-    // Default: the first slot at least 3 hours from now (preparation time).
-    var soon = new Date(now.getTime() + 3 * 3600000);
-    var slot = pad(soon.getHours()) + ":" + (soon.getMinutes() < 30 ? "30" : "00");
-    if (soon.getMinutes() >= 30) slot = pad(Math.min(23, soon.getHours() + 1)) + ":00";
-    if ([].some.call($("time").options, function (o) { return o.value === slot; })) $("time").value = slot;
+    $("time").value = cur && slotOk(date, cur, lead) ? cur : firstOk;
+    var e = earliest(lead);
+    var msg = lead >= 24 ? "هذا الطلب يحتاج " + (lead % 24 === 0 ? lead / 24 + (lead / 24 === 1 ? " يوم" : " أيام") : lead + " ساعة") + " للتحضير." : "مدة التحضير " + lead + " ساعات.";
+    if (!dayOpen(date)) msg += " هذا اليوم مغلق، اختر يوماً آخر.";
+    else if (!firstOk) msg += " لا توجد مواعيد متاحة في هذا اليوم.";
+    if (e) msg += " أقرب موعد متاح: " + e.date + " " + label12(e.time) + ".";
+    $("leadHint").textContent = msg;
+  }
+  function setupDateTime() {
+    var lead = leadHours(), e = earliest(lead);
+    var max = rParts(nowMs() + STORE.maxDaysAhead * 86400000).date;
+    $("date").min = e ? e.date : rParts(nowMs()).date; $("date").max = max;
+    if (!$("date").value || ($("date").value < $("date").min)) $("date").value = e ? e.date : $("date").min;
+    renderTimes();
   }
 
   document.addEventListener("click", function (e) {
@@ -228,7 +274,7 @@
     else if (t.dataset.c !== undefined && t.classList.contains("cat")) { cat = t.dataset.c; renderCats(); renderMenu(); }
     else if (t.dataset.wa) { writing[t.dataset.wa] = { text: "", surface: "cream" }; save(); renderLines(); }
     else if (t.dataset.wr) { delete writing[t.dataset.wr]; save(); renderLines(); }
-    else if (t.dataset.v) { type = t.dataset.v; [].forEach.call($("type").children, function (b) { b.classList.toggle("on", b.dataset.v === type); }); $("addrBox").style.display = type === "delivery" ? "block" : "none"; }
+    else if (t.dataset.v) { type = t.dataset.v; [].forEach.call($("type").children, function (b) { b.classList.toggle("on", b.dataset.v === type); }); $("addrBox").style.display = type === "delivery" ? "block" : "none"; renderCart(); }
   });
   document.addEventListener("input", function (e) {
     var t = e.target;
@@ -236,7 +282,7 @@
     if (t.dataset.ws) { writing[t.dataset.ws].surface = t.value; save(); }
     if (t.id === "q") { q = t.value.trim().toLowerCase(); renderMenu(); }
   });
-  document.addEventListener("change", function (e) { var t = e.target; if (t.dataset.ws) { writing[t.dataset.ws].surface = t.value; save(); } });
+  document.addEventListener("change", function (e) { var t = e.target; if (t.dataset.ws) { writing[t.dataset.ws].surface = t.value; save(); } if (t.id === "date") renderTimes(); });
   $("cart").onclick = function () { renderLines(); setupDateTime(); show("checkout"); };
   $("back").onclick = function () { show("menu"); };
   $("again").onclick = function () { show("menu"); };
@@ -249,7 +295,13 @@
     }, function () { $("locNote").textContent = "تعذّر تحديد الموقع — اكتب العنوان يدوياً"; }, { enableHighAccuracy: true, timeout: 10000 });
   };
 
-  var ERR = { name: "اكتب اسمك", phone: "رقم الجوال يجب أن يبدأ بـ 05 ومن 10 أرقام", address: "اكتب عنوان التوصيل أو شارك موقعك", datetime: "اختر تاريخاً ووقتاً قادمين", items: "السلة فارغة", location: "رابط الموقع غير صالح" };
+  var ERR2 = {
+    store_closed: "المتجر الأونلاين مغلق حالياً.", closed_day: "الفرع مغلق في هذا اليوم.", closed_date: "هذا التاريخ غير متاح.",
+    outside_hours: "الوقت خارج ساعات العمل.", bad_slot: "اختر وقتاً من القائمة.", lead_time: "الموعد قريب جداً لمدة تحضير طلبك.",
+    too_far: "التاريخ بعيد جداً.", capacity_day: "اكتملت طلبات هذا اليوم، اختر يوماً آخر.", capacity_slot: "هذا الوقت ممتلئ، اختر وقتاً آخر.",
+    min_order: "لم يصل الطلب للحد الأدنى.", delivery_disabled: "التوصيل غير متاح حالياً، اختر الاستلام من الفرع.", rate_limited: "طلبات كثيرة من هذا الرقم، حاول بعد قليل."
+  };
+  var ERR = { branch: "اختر الفرع", name: "اكتب اسمك", phone: "رقم الجوال يجب أن يبدأ بـ 05 ومن 10 أرقام", address: "اكتب عنوان التوصيل أو شارك موقعك", datetime: "اختر تاريخاً ووقتاً قادمين", items: "السلة فارغة", location: "رابط الموقع غير صالح" };
   $("send").onclick = function () {
     var items = Object.keys(cart).map(function (id) {
       var it = { productId: id, qty: cart[id] };
@@ -257,7 +309,7 @@
       return it;
     });
     var body = { s: slug, name: $("name").value, phone: $("phone").value, orderType: type, address: $("address").value, locationUrl: locUrl,
-      date: $("date").value, time: $("time").value, notes: $("notes").value, items: items, website: $("website").value };
+      date: $("date").value, time: $("time").value, notes: $("notes").value, items: items, website: $("website").value, branchId: $("branch").value };
     $("err").textContent = ""; $("send").disabled = true; $("send").textContent = "جارٍ الإرسال…";
     fetch("/api/online-order", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
       .then(function (r) { return r.json().then(function (b) { return { ok: r.ok, status: r.status, body: b }; }); })
@@ -268,7 +320,10 @@
           renderMenu(); show("done"); return;
         }
         if (r.status === 503) $("err").textContent = "الطلب الأونلاين قيد التفعيل حالياً — تواصل مع الفرع مباشرة.";
-        else if (r.status === 429) $("err").textContent = "طلبات كثيرة من هذا الرقم، حاول بعد قليل.";
+        else if (r.body && ERR2[r.body.error]) {
+          $("err").textContent = ERR2[r.body.error] + (r.body.earliest ? " أقرب موعد: " + r.body.earliest.date + " " + label12(r.body.earliest.time) : "");
+          if (r.body.error === "lead_time" || r.body.error === "capacity_slot" || r.body.error === "capacity_day") renderTimes();
+        }
         else if (r.body && r.body.fields) $("err").textContent = r.body.fields.map(function (f) { return ERR[f] || f; }).join(" · ");
         else $("err").textContent = "تعذّر إرسال الطلب، حاول مرة أخرى.";
       })
@@ -279,10 +334,17 @@
   load();
   fetch("/api/catalog?s=" + encodeURIComponent(slug)).then(function (r) { return r.json(); }).then(function (d) {
     if (!d.products) { $("menu").innerHTML = '<div class="empty">المتجر غير متاح</div>'; return; }
-    data = d;
+    data = d; STORE = d.store; skew = (d.serverNow || Date.now()) - Date.now();
     $("brand").textContent = d.brand; document.title = "اطلب من " + d.brand;
+    if (STORE.notice) { $("notice").textContent = STORE.notice; $("notice").classList.add("on"); }
+    if (!STORE.delivery.enabled) { $("type").querySelector('[data-v="delivery"]').style.display = "none"; $("tag").textContent = "اطلب أونلاين · استلام من الفرع"; }
+    if (STORE.branches.length) {
+      $("branchBox").style.display = "block";
+      $("branch").innerHTML = (STORE.branches.length > 1 ? '<option value="">— اختر الفرع —</option>' : "") + STORE.branches.map(function (b) { return '<option value="' + esc(b.id) + '">' + esc(b.name) + "</option>"; }).join("");
+    }
+    if (!STORE.enabled) { $("notice").textContent = "المتجر الأونلاين مغلق حالياً — يمكنك تصفح القائمة."; $("notice").classList.add("on"); }
     Object.keys(cart).forEach(function (id) { if (!prod(id)) { delete cart[id]; delete writing[id]; } });
-    if (!d.orderingEnabled) $("err").textContent = "الطلب الأونلاين قيد التفعيل حالياً — يمكنك تصفح القائمة.";
+    if (!d.orderingEnabled) { $("err").textContent = STORE.enabled ? "الطلب الأونلاين قيد التفعيل حالياً — يمكنك تصفح القائمة." : "المتجر الأونلاين مغلق حالياً."; $("send").disabled = true; }
     renderCats(); renderMenu(); renderCart();
   }).catch(function () { $("menu").innerHTML = '<div class="empty">تعذّر تحميل القائمة</div>'; });
 })();

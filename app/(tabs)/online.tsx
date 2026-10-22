@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { NewOrderBanner } from "@/components/NewOrderBanner";
 import { RoleGate } from "@/components/RoleGate";
+import { StoreSettingsModal } from "@/components/StoreSettingsModal";
 import { WritingBlock } from "@/components/WritingBlock";
 import { Colors } from "@/constants/colors";
 import { LAVIVIANE_COMPANY_ID } from "@/constants/lavivianeProducts";
@@ -58,6 +59,9 @@ function OnlineInner() {
   const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<"new" | "done">("new");
   const [banner, setBanner] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const { currentEmployee } = useEmployee();
+  const canManage = currentEmployee?.role === "admin" || currentEmployee?.role === "branch_supervisor";
   useNewOrderAlert(pending.length, () => setBanner(true));
   const list = tab === "new" ? pending : decidedToday;
 
@@ -66,6 +70,13 @@ function OnlineInner() {
       <NewOrderBanner visible={banner} count={pending.length} accentColor={Colors.info} onDismiss={() => setBanner(false)} />
       <ScrollView contentContainerStyle={[st.content, { paddingBottom: insets.bottom + 110 }]} showsVerticalScrollIndicator={false}>
         <ShareCard companyId={company.id} />
+        {canManage && (
+          <Pressable style={st.settingsBtn} onPress={() => setShowSettings(true)}>
+            <Feather name="sliders" size={16} color={Colors.primary} />
+            <Text style={st.settingsTxt}>{ar ? "إعدادات المتجر: الساعات، مدة التحضير، الطاقة، التوصيل، الفروع" : "Store settings: hours, lead time, capacity, delivery, branches"}</Text>
+            <Feather name={ar ? "chevron-left" : "chevron-right"} size={16} color={Colors.textMuted} />
+          </Pressable>
+        )}
 
         <View style={st.tabs}>
           {([["new", ar ? "بانتظار القبول" : "Awaiting", pending.length], ["done", ar ? "عولجت اليوم" : "Handled today", decidedToday.length]] as const).map(([k, l, n]) => (
@@ -85,6 +96,7 @@ function OnlineInner() {
         )}
         {list.map((o) => <OnlineCard key={o.id} order={o} decide={decide} />)}
       </ScrollView>
+      <StoreSettingsModal visible={showSettings} onClose={() => setShowSettings(false)} />
     </View>
   );
 }
@@ -137,7 +149,9 @@ function OnlineCard({ order, decide }: { order: OnlineOrder; decide: (id: string
 
   const isNew = order.status === "new";
   const modified = JSON.stringify(items.map((i) => [i.productId, i.name, i.quantity])) !== JSON.stringify(order.items.map((i) => [i.productId, i.name, i.quantity]));
-  const total = items.reduce((s, i) => s + i.price * i.quantity, 0);
+  const itemsTotal = items.reduce((s, i) => s + i.price * i.quantity, 0);
+  const fee = order.orderType === "delivery" ? order.deliveryFee ?? 0 : 0;
+  const total = itemsTotal + fee;
   const by = currentEmployee ? { name: currentEmployee.name, employeeId: currentEmployee.employeeId } : undefined;
   const brand = company.name || "Laviviane";
   const trackUrl = `${appOrigin()}/track?c=${encodeURIComponent(company.id)}&t=${order.trackingCode}`;
@@ -165,7 +179,7 @@ function OnlineCard({ order, decide }: { order: OnlineOrder; decide: (id: string
     setBusy(true);
     try {
       const orderItems: OrderItem[] = items.map((i) => ({ id: i.id, name: i.name, quantity: i.quantity, price: i.price, department: i.department, ...(i.writing ? { writing: i.writing } : {}) }));
-      const notes = [order.notes, order.locationUrl ? `📍 ${order.locationUrl}` : "", modified && changeNote.trim() ? `تعديل: ${changeNote.trim()}` : ""].filter(Boolean).join("\n");
+      const notes = [order.branchName ? `الفرع: ${order.branchName}` : "", order.notes, order.locationUrl ? `📍 ${order.locationUrl}` : "", fee ? `رسوم توصيل: ${fee} ر.س` : "", modified && changeNote.trim() ? `تعديل: ${changeNote.trim()}` : ""].filter(Boolean).join("\n");
       const created = await addOrder({
         customerName: order.customerName,
         customerPhone: order.customerPhone,
@@ -244,6 +258,7 @@ function OnlineCard({ order, decide }: { order: OnlineOrder; decide: (id: string
         <View style={st.meta}><Feather name={order.orderType === "delivery" ? "truck" : "shopping-bag"} size={12} color={Colors.textSecondary} /><Text style={st.metaTxt}>{order.orderType === "delivery" ? (ar ? "توصيل" : "Delivery") : (ar ? "استلام" : "Pickup")}</Text></View>
         <View style={[st.meta, { backgroundColor: Colors.gold + "1A" }]}><Feather name="calendar" size={12} color={Colors.primary} /><Text style={[st.metaTxt, { color: Colors.primary }]}>{order.deliveryTime}</Text></View>
       </View>
+      {order.branchName ? <Text style={st.addr}>🏬 {order.branchName}</Text> : null}
       {order.deliveryAddress ? <Text style={st.addr}>📍 {order.deliveryAddress}</Text> : null}
       {order.locationUrl ? <Pressable onPress={() => Linking.openURL(order.locationUrl!)}><Text style={st.loc}>🗺️ {ar ? "موقع العميل على الخريطة" : "Customer location"}</Text></Pressable> : null}
 
@@ -278,6 +293,7 @@ function OnlineCard({ order, decide }: { order: OnlineOrder; decide: (id: string
       {order.rejectReason ? <Text style={[st.notes, { backgroundColor: Colors.accent + "12" }]}>{ar ? "سبب الرفض:" : "Reason:"} {order.rejectReason}</Text> : null}
       {order.changeNote ? <Text style={st.notes}>{ar ? "ملاحظة التعديل:" : "Change note:"} {order.changeNote}</Text> : null}
 
+      {fee > 0 ? <View style={[st.total, { paddingVertical: 6 }]}><Text style={st.totalLbl}>{ar ? "رسوم التوصيل" : "Delivery fee"}</Text><Text style={[st.totalVal, { fontSize: 13 }]}>{fee.toFixed(2)} ر.س</Text></View> : null}
       <View style={st.total}><Text style={st.totalLbl}>{ar ? "الإجمالي" : "Total"}{modified ? (ar ? " (بعد التعديل)" : " (modified)") : ""}</Text><Text style={st.totalVal}>{total.toFixed(2)} ر.س</Text></View>
 
       {isNew && !rejecting && (
@@ -343,6 +359,8 @@ function OnlineCard({ order, decide }: { order: OnlineOrder; decide: (id: string
 
 const st = StyleSheet.create({
   screen: { flex: 1, backgroundColor: Colors.background },
+  settingsBtn: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: Colors.surface, borderRadius: 14, padding: 12, borderWidth: 1, borderColor: Colors.borderLight },
+  settingsTxt: { flex: 1, fontSize: 12, fontWeight: "800", color: Colors.primary },
   content: { padding: 16, gap: 12 },
   share: { flexDirection: "row", gap: 12, alignItems: "center", backgroundColor: Colors.primary, borderRadius: 20, padding: 14 },
   shareTitle: { color: "#fff", fontSize: 15, fontWeight: "900" },
