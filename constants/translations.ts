@@ -917,6 +917,23 @@ const translations = {
 
   // ── Session security ───────────────────────────────────────────────────────
   sessionKickedTitle:  { ar: "تسجيل دخول من جهاز آخر",               en: "Signed In Elsewhere",                        ur: "دوسرے ڈیوائس سے لاگ ان",                   hi: "दूसरे डिवाइस से लॉगिन",                    bn: "অন্য ডিভাইস থেকে লগইন" },
+  // ── Home dashboard (v2) ─────────────────────────────────────────────────────
+  homeGreetMorning:    { ar: "صباح الخير",      en: "Good morning",     ur: "صبح بخیر",        hi: "सुप्रभात",          bn: "সুপ্রভাত" },
+  homeGreetEvening:    { ar: "مساء الخير",      en: "Good evening",     ur: "شام بخیر",        hi: "शुभ संध्या",        bn: "শুভ সন্ধ্যা" },
+  homeSecOperations:   { ar: "العمليات",        en: "Operations",       ur: "آپریشنز",         hi: "संचालन",           bn: "কার্যক্রম" },
+  homeSecDepartments:  { ar: "الأقسام",         en: "Departments",      ur: "شعبے",            hi: "विभाग",             bn: "বিভাগ" },
+  homeSecManagement:   { ar: "الإدارة",         en: "Management",       ur: "انتظامیہ",        hi: "प्रबंधन",           bn: "ব্যবস্থাপনা" },
+  homeTileCashier:     { ar: "الكاشير",         en: "Cashier",          ur: "کاشیر",           hi: "कैशियर",           bn: "ক্যাশিয়ার" },
+  homeCapCashier:      { ar: "إصدار الفواتير",  en: "Issue invoices",   ur: "انوائس بنائیں",   hi: "इनवॉइस बनाएं",     bn: "ইনভয়েস তৈরি" },
+  homeCapArchive:      { ar: "الطلبات السابقة", en: "Past orders",      ur: "پرانے آرڈر",      hi: "पिछले ऑर्डर",       bn: "পূর্বের অর্ডার" },
+  homeCapReports:      { ar: "المبيعات والأداء", en: "Sales & performance", ur: "فروخت اور کارکردگی", hi: "बिक्री व प्रदर्शन", bn: "বিক্রয় ও কর্মক্ষমতা" },
+  homeCapDelivery:     { ar: "متابعة الطلبات",  en: "Track orders",     ur: "آرڈر ٹریک کریں",  hi: "ऑर्डर ट्रैक करें",  bn: "অর্ডার ট্র্যাক" },
+  homeCapAdmin:        { ar: "الموظفون والأسعار والإعدادات", en: "Staff, prices & settings", ur: "عملہ، قیمتیں اور سیٹنگز", hi: "स्टाफ, कीमतें और सेटिंग्स", bn: "কর্মী, মূল্য ও সেটিংস" },
+  homeDeptQueue:       { ar: "قيد العمل",       en: "in queue",         ur: "قطار میں",        hi: "कतार में",          bn: "সারিতে" },
+  homeDeptClear:       { ar: "لا طلبات",        en: "All clear",        ur: "کوئی آرڈر نہیں",  hi: "कोई ऑर्डर नहीं",    bn: "কোনো অর্ডার নেই" },
+  homeOrdersToday:     { ar: "طلبات اليوم",     en: "Orders today",     ur: "آج کے آرڈر",      hi: "आज के ऑर्डर",       bn: "আজকের অর্ডার" },
+  homeNewInvoiceSub:   { ar: "ابدأ طلباً جديداً للعميل", en: "Start a new customer order", ur: "نیا آرڈر شروع کریں", hi: "नया ऑर्डर शुरू करें", bn: "নতুন অর্ডার শুরু করুন" },
+
   sessionKickedMsg:    { ar: "تم تسجيل دخول \"{name}\" من جهاز آخر. سيتم تسجيل خروجك تلقائياً.", en: "'{name}' signed in from another device. You have been logged out automatically.", ur: "'{name}' کسی اور ڈیوائس سے لاگ ان ہوا۔ آپ لاگ آؤٹ ہو گئے۔", hi: "'{name}' दूसरे डिवाइस से लॉगिन हुआ। आप स्वतः लॉगआउट हो गए।", bn: "'{name}' অন্য ডিভাইস থেকে সাইন ইন করেছে। আপনাকে স্বয়ংক্রিয়ভাবে লগ আউট করা হয়েছে।" },
 } as const;
 
