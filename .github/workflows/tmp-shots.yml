@@ -1,0 +1,25 @@
+name: tmp shots
+on: { push: { branches: [ci/ui-shots] } }
+permissions: { contents: write }
+jobs:
+  shots:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: corepack enable
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: corepack prepare pnpm@9.15.4 --activate && pnpm install --frozen-lockfile=false
+      - name: Typecheck
+        run: mkdir -p shots && pnpm run typecheck > shots/typecheck.txt 2>&1
+      - run: pnpm run build
+      - run: |
+          mkdir -p /tmp/pw && cd /tmp/pw && npm init -y >/dev/null && npm i playwright@1.48.2 serve >/dev/null
+          npx playwright install --with-deps chromium >/dev/null
+          (npx --prefix /tmp/pw serve -s $GITHUB_WORKSPACE/static-build -l 4000 &) ; sleep 5
+          cd $GITHUB_WORKSPACE && NODE_PATH=/tmp/pw/node_modules node scripts/ci/shots.js > shots/log.txt 2>&1 || echo "SCRIPT FAILED" >> shots/log.txt
+      - if: always()
+        run: |
+          cd shots && git init -q && git checkout -q -b out
+          git add . && git -c user.name=ci -c user.email=ci@local commit -qm "shots ${GITHUB_SHA::7}"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" out:ci/ui-shots-output
