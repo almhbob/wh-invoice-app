@@ -11,7 +11,7 @@ export default function Root({ children }: PropsWithChildren) {
           name="viewport"
           content="width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover"
         />
-        <meta name="theme-color" content="#2B211B" />
+        <meta name="theme-color" content="#141414" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -31,7 +31,7 @@ export default function Root({ children }: PropsWithChildren) {
               }
 
               body {
-                background: #F5F7FA;
+                background: #F3F3F1;
                 overscroll-behavior-y: contain;
                 touch-action: manipulation;
                 -webkit-font-smoothing: antialiased;
@@ -48,20 +48,15 @@ export default function Root({ children }: PropsWithChildren) {
 
               /* ── Desktop background ── */
               @media (min-width: 768px) {
-                body {
-                  background:
-                    radial-gradient(ellipse at 20% 0%, rgba(26,39,68,0.07) 0%, transparent 60%),
-                    radial-gradient(ellipse at 80% 100%, rgba(201,168,76,0.05) 0%, transparent 60%),
-                    linear-gradient(135deg, #eef2f7 0%, #f5f7fa 50%, #edf1f8 100%);
-                }
+                body { background: #F3F3F1; }
               }
 
               /* ── Scrollbar styling (desktop) ── */
               @media (min-width: 768px) {
                 ::-webkit-scrollbar { width: 6px; height: 6px; }
                 ::-webkit-scrollbar-track { background: transparent; }
-                ::-webkit-scrollbar-thumb { background: rgba(26,39,68,0.18); border-radius: 3px; }
-                ::-webkit-scrollbar-thumb:hover { background: rgba(26,39,68,0.32); }
+                ::-webkit-scrollbar-thumb { background: rgba(20,20,20,0.16); border-radius: 3px; }
+                ::-webkit-scrollbar-thumb:hover { background: rgba(20,20,20,0.3); }
               }
 
               /* ── Hide scrollbar on mobile for cleaner look ── */

@@ -21,7 +21,7 @@ const DEPT_META: Record<
   { color: string; bg: string }
 > = {
   halwa:     { color: Colors.halwa,     bg: "#FFF5EE" },
-  mawali:    { color: Colors.mawali,    bg: "#EAF4FB" },
+  mawali:    { color: Colors.mawali,    bg: "#E6F0F2" },
   chocolate: { color: Colors.chocolate, bg: "#FDF0E8" },
   cake:      { color: Colors.cake,      bg: "#FDE8F5" },
 };
@@ -31,9 +31,9 @@ const STATUS_CONFIG: Record<
   { nextStatus: OrderStatus | null; color: string; bg: string; icon: any }
 > = {
   pending:     { nextStatus: "in_progress", color: Colors.statusPending,            bg: "#FEF9EE", icon: "clock" },
-  in_progress: { nextStatus: "done",        color: Colors.statusInProgress,         bg: "#EAF4FB", icon: "package" },
-  done:        { nextStatus: null,           color: Colors.statusDone,               bg: "#E9F7EF", icon: "check-circle" },
-  cancelled:   { nextStatus: null,           color: Colors.statusCancelled ?? "#E74C3C", bg: "#FDEDEC", icon: "x-circle" },
+  in_progress: { nextStatus: "done",        color: Colors.statusInProgress,         bg: "#E6F0F2", icon: "package" },
+  done:        { nextStatus: null,           color: Colors.statusDone,               bg: "#E5F3EC", icon: "check-circle" },
+  cancelled:   { nextStatus: null,           color: Colors.statusCancelled ?? "#C8323F", bg: "#FBE9EA", icon: "x-circle" },
 };
 
 function fmtCurrency(n: number) {

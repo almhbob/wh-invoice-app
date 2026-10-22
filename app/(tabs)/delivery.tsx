@@ -36,10 +36,10 @@ type TabKey = "all" | "pending" | "unassigned" | "done";
 type SortKey = "time" | "date";
 
 const URGENCY_COLOR: Record<Urgency, string> = {
-  overdue: "#dc2626",
-  urgent: "#ea580c",
+  overdue: "#C8323F",
+  urgent: "#D9602B",
   soon: Colors.gold,
-  ok: "#16a34a",
+  ok: "#1F8A5B",
   none: Colors.textMuted,
 };
 // URGENCY_LABEL is built inside components using t() — see useUrgencyLabel()
@@ -175,22 +175,22 @@ function StatsHeader({ orders }: { orders: Order[] }) {
           <Text style={[styles.statNum, { color: Colors.gold }]}>{pendingCount}</Text>
           <Text style={styles.statLabel}>{t("delInProgress")}</Text>
         </View>
-        <View style={[styles.statCard, { borderColor: "#16a34a60" }]}>
-          <Text style={[styles.statNum, { color: "#16a34a" }]}>{deliveredCount}</Text>
+        <View style={[styles.statCard, { borderColor: "#1F8A5B60" }]}>
+          <Text style={[styles.statNum, { color: "#1F8A5B" }]}>{deliveredCount}</Text>
           <Text style={styles.statLabel}>{t("delDelivered")}</Text>
         </View>
         <View style={[styles.statCard, {
-          borderColor: unassignedCount > 0 ? "#ea580c60" : Colors.border,
+          borderColor: unassignedCount > 0 ? "#D9602B60" : Colors.border,
         }]}>
-          <Text style={[styles.statNum, { color: unassignedCount > 0 ? "#ea580c" : Colors.textMuted }]}>
+          <Text style={[styles.statNum, { color: unassignedCount > 0 ? "#D9602B" : Colors.textMuted }]}>
             {unassignedCount}
           </Text>
           <Text style={styles.statLabel}>{t("delNoDriverTab")}</Text>
         </View>
         <View style={[styles.statCard, {
-          borderColor: readyCount > 0 ? "#7c3aed60" : Colors.border,
+          borderColor: readyCount > 0 ? "#8C4A5E60" : Colors.border,
         }]}>
-          <Text style={[styles.statNum, { color: readyCount > 0 ? "#7c3aed" : Colors.textMuted }]}>
+          <Text style={[styles.statNum, { color: readyCount > 0 ? "#8C4A5E" : Colors.textMuted }]}>
             {readyCount}
           </Text>
           <Text style={styles.statLabel}>{t("delReadyLabel")}</Text>
@@ -296,7 +296,7 @@ function DriverChips({
                 </Text>
               </View>
               {d.readyCount > 0 && (
-                <View style={[styles.chipReadyDot, active && { backgroundColor: "#7c3aed" }]} />
+                <View style={[styles.chipReadyDot, active && { backgroundColor: "#8C4A5E" }]} />
               )}
             </TouchableOpacity>
           );
@@ -334,9 +334,9 @@ function DeliveryCard({
   const hasDriver = !!order.deliveryDriver?.employeeId;
 
   const accentColor = delivered
-    ? "#16a34a"
+    ? "#1F8A5B"
     : ready
-    ? "#7c3aed"
+    ? "#8C4A5E"
     : urgency !== "none"
     ? urgencyColor
     : Colors.gold;
@@ -351,9 +351,9 @@ function DeliveryCard({
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
             <Text style={styles.orderNum}>#{order.orderNumber}</Text>
             {ready && !delivered && (
-              <View style={[styles.badge, { backgroundColor: "#7c3aed12" }]}>
-                <Feather name="check-circle" size={10} color="#7c3aed" />
-                <Text style={[styles.badgeText, { color: "#7c3aed" }]}>{t("delReadyForDel")}</Text>
+              <View style={[styles.badge, { backgroundColor: "#8C4A5E12" }]}>
+                <Feather name="check-circle" size={10} color="#8C4A5E" />
+                <Text style={[styles.badgeText, { color: "#8C4A5E" }]}>{t("delReadyForDel")}</Text>
               </View>
             )}
             {!delivered && !ready && urgency !== "none" && (
@@ -387,10 +387,10 @@ function DeliveryCard({
         </View>
         <View style={styles.quickActions}>
           <TouchableOpacity
-            style={[styles.quickBtn, { backgroundColor: "#16a34a18" }]}
+            style={[styles.quickBtn, { backgroundColor: "#1F8A5B18" }]}
             onPress={() => { Haptics.selectionAsync(); callPhone(order.customerPhone); }}
           >
-            <Feather name="phone" size={15} color="#16a34a" />
+            <Feather name="phone" size={15} color="#1F8A5B" />
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.quickBtn, { backgroundColor: "#25D36618" }]}
@@ -400,10 +400,10 @@ function DeliveryCard({
           </TouchableOpacity>
           {order.customerPhone2 ? (
             <TouchableOpacity
-              style={[styles.quickBtn, { backgroundColor: "#16a34a18" }]}
+              style={[styles.quickBtn, { backgroundColor: "#1F8A5B18" }]}
               onPress={() => { Haptics.selectionAsync(); callPhone(order.customerPhone2!); }}
             >
-              <Feather name="phone-call" size={15} color="#16a34a" />
+              <Feather name="phone-call" size={15} color="#1F8A5B" />
             </TouchableOpacity>
           ) : null}
         </View>
@@ -789,9 +789,9 @@ const styles = StyleSheet.create({
   screenSub: { fontSize: 11, color: Colors.textMuted, marginTop: 1 },
   alertBadge: {
     flexDirection: "row", alignItems: "center", gap: 5,
-    backgroundColor: "#dc2626", borderRadius: 20,
+    backgroundColor: "#C8323F", borderRadius: 20,
     paddingHorizontal: 10, paddingVertical: 5,
-    shadowColor: "#dc2626", shadowOpacity: 0.3, shadowRadius: 4,
+    shadowColor: "#C8323F", shadowOpacity: 0.3, shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 }, elevation: 3,
   },
   alertBadgeText: { fontSize: 11, fontWeight: "800", color: "#fff" },
@@ -852,7 +852,7 @@ const styles = StyleSheet.create({
   chipBadgeText: { fontSize: 11, fontWeight: "800", color: Colors.primary },
   chipReadyDot: {
     width: 7, height: 7, borderRadius: 4,
-    backgroundColor: "#7c3aed",
+    backgroundColor: "#8C4A5E",
     position: "absolute", top: 0, right: 0,
   },
 
@@ -868,10 +868,10 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface, borderWidth: 1.5, borderColor: Colors.border,
   },
   tabBtnActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  tabBtnAlert: { borderColor: "#ea580c50", backgroundColor: "#ea580c0A" },
+  tabBtnAlert: { borderColor: "#D9602B50", backgroundColor: "#D9602B0A" },
   tabText: { fontSize: 12, fontWeight: "600", color: Colors.textSecondary },
   tabTextActive: { color: "#fff" },
-  tabTextAlert: { color: "#ea580c", fontWeight: "700" },
+  tabTextAlert: { color: "#D9602B", fontWeight: "700" },
   tabBadge: {
     minWidth: 20, height: 18, borderRadius: 9,
     backgroundColor: Colors.surfaceSecondary,
@@ -879,7 +879,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
   },
   tabBadgeActive: { backgroundColor: "rgba(255,255,255,0.25)" },
-  tabBadgeAlert: { backgroundColor: "#ea580c" },
+  tabBadgeAlert: { backgroundColor: "#D9602B" },
   tabBadgeText: { fontSize: 10, fontWeight: "800", color: Colors.textSecondary },
   sortBtn: {
     width: 38, height: 38, borderRadius: 12,
@@ -982,8 +982,8 @@ const styles = StyleSheet.create({
   deliverBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
     marginTop: 10, paddingVertical: 13, borderRadius: 12,
-    backgroundColor: "#16a34a",
-    shadowColor: "#16a34a", shadowOpacity: 0.25, shadowRadius: 6,
+    backgroundColor: "#1F8A5B",
+    shadowColor: "#1F8A5B", shadowOpacity: 0.25, shadowRadius: 6,
     shadowOffset: { width: 0, height: 3 }, elevation: 3,
   },
   deliverBtnText: { color: "#fff", fontSize: 14, fontWeight: "800" },
@@ -1069,6 +1069,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surfaceSecondary,
     borderWidth: 1, borderColor: Colors.border,
   },
-  loadBadgeHeavy: { backgroundColor: "#ea580c12", borderColor: "#ea580c30" },
+  loadBadgeHeavy: { backgroundColor: "#D9602B12", borderColor: "#D9602B30" },
   loadBadgeText: { fontSize: 11, fontWeight: "700", color: Colors.textSecondary },
 });

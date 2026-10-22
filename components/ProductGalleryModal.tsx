@@ -39,15 +39,15 @@ const DEPT_FILTERS: { value: Department | "all"; labelAr: string; labelEn: strin
 
 // Laviviane category colours — cycle through brand palette
 const LAVI_CATEGORY_COLORS: Record<string, string> = {
-  "New Cake Collection":      "#c0392b",
-  "Laviviane Cakes":          "#8e44ad",
-  "Celebration Bites":        "#2f241d",
-  "Mousse Cake":              "#16a085",
-  "Laviviane Bites":          "#d35400",
-  "Sandwich":                 "#27ae60",
-  "Luxury Chocolate":         "#d6b56d",
-  "Occasion Chocolate":       "#2980b9",
-  "Distributions and Gifts":  "#7f8c8d",
+  "New Cake Collection":      "#C8323F",
+  "Laviviane Cakes":          "#8C4A5E",
+  "Celebration Bites":        "#161616",
+  "Mousse Cake":              "#2D6E7E",
+  "Laviviane Bites":          "#D9602B",
+  "Sandwich":                 "#1F8A5B",
+  "Luxury Chocolate":         "#F2A27A",
+  "Occasion Chocolate":       "#2D6E7E",
+  "Distributions and Gifts":  "#5C5C59",
 };
 
 function makeOrderItemId() {
@@ -304,7 +304,7 @@ export function ProductGalleryModal({ visible, onClose, onConfirm }: Props) {
           <View style={styles.headerCenter}>
             {isLaviviane ? (
               <>
-                <Text style={[styles.headerTitle, { color: "#2f241d" }]}>LAVIVIANE</Text>
+                <Text style={[styles.headerTitle, { color: "#161616" }]}>LAVIVIANE</Text>
                 <Text style={styles.headerSubtitle}>اختر من كتالوج لاففيان · {visibleProducts.length} منتج</Text>
               </>
             ) : (
@@ -348,10 +348,10 @@ export function ProductGalleryModal({ visible, onClose, onConfirm }: Props) {
             contentContainerStyle={styles.laviFilterRow}
           >
             <TouchableOpacity
-              style={[styles.laviChip, categoryFilter === "all" && { backgroundColor: "#2f241d", borderColor: "#2f241d" }]}
+              style={[styles.laviChip, categoryFilter === "all" && { backgroundColor: "#161616", borderColor: "#161616" }]}
               onPress={() => setCategoryFilter("all")}
             >
-              <Text style={[styles.laviChipText, categoryFilter === "all" && { color: "#d6b56d" }]}>
+              <Text style={[styles.laviChipText, categoryFilter === "all" && { color: "#F2A27A" }]}>
                 الكل ({visibleProducts.length})
               </Text>
             </TouchableOpacity>
@@ -545,9 +545,9 @@ const styles = StyleSheet.create({
   },
   laviChip: {
     paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
-    borderWidth: 1.5, borderColor: "#d6b56d", backgroundColor: "#fefcf8",
+    borderWidth: 1.5, borderColor: "#F2A27A", backgroundColor: "#FAFAF8",
   },
-  laviChipText: { fontSize: 12, fontWeight: "700", color: "#2f241d" },
+  laviChipText: { fontSize: 12, fontWeight: "700", color: "#161616" },
   laviResultCount: { fontSize: 11, color: Colors.textMuted, textAlign: "right", paddingHorizontal: 16, paddingBottom: 4 },
 
   // Generic dept filter

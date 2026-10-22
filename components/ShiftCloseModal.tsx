@@ -50,9 +50,9 @@ function formatTimeAr(): string {
 // ─── Payment method config ────────────────────────────────────────────────────
 
 const PAYMENT_CONFIG = {
-  cash:     { label: "💵 نقداً",  color: "#16a34a" },
-  card:     { label: "💳 بطاقة",  color: "#2563eb" },
-  transfer: { label: "📲 تحويل", color: "#d97706" },
+  cash:     { label: "💵 نقداً",  color: "#1F8A5B" },
+  card:     { label: "💳 بطاقة",  color: "#2D6E7E" },
+  transfer: { label: "📲 تحويل", color: "#D9971E" },
 } as const;
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -333,7 +333,7 @@ export function ShiftCloseModal({ visible, onClose }: Props) {
           <View style={styles.cashDrawerBox}>
             <View style={styles.cashDrawerLeft}>
               <View style={styles.cashDrawerIconWrap}>
-                <Feather name="archive" size={22} color="#16a34a" />
+                <Feather name="archive" size={22} color="#1F8A5B" />
               </View>
               <View>
                 <Text style={styles.cashDrawerTitle}>الصندوق المتوقع</Text>
@@ -590,7 +590,7 @@ const styles = StyleSheet.create({
     flexDirection:    "row",
     alignItems:       "center",
     justifyContent:   "space-between",
-    shadowColor:      "#16a34a",
+    shadowColor:      "#1F8A5B",
     shadowOffset:     { width: 0, height: 2 },
     shadowOpacity:    0.1,
     shadowRadius:     6,
@@ -616,14 +616,14 @@ const styles = StyleSheet.create({
   },
   cashDrawerLabel: {
     fontSize:   11,
-    color:      "#4ade80",
+    color:      "#4FBF8B",
     fontWeight: "500",
     marginTop:  2,
   },
   cashDrawerValue: {
     fontSize:      18,
     fontWeight:    "900",
-    color:         "#16a34a",
+    color:         "#1F8A5B",
     letterSpacing: 0.5,
   },
 

@@ -4,14 +4,18 @@ export const TRACK_PAGE_HTML = `<!doctype html>
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<meta name="theme-color" content="#2B211B" />
+<meta name="theme-color" content="#141414" />
 <meta name="robots" content="noindex" />
 <title>تتبع الطلب</title>
 <style>
-  :root { --esp:#2B211B; --esp2:#1C1511; --gold:#B8955A; --gold2:#D9C08F; --ivory:#F6F2EC; --ink:#231B16; --muted:#8C7F72; --line:#E7DFD3; --ok:#4F8A68; --info:#4F6D8F; --bad:#B5544A; }
+  @font-face{font-family:"Laviviane Sans";src:url(/brand-fonts/PlexArabic-Regular.woff) format("woff");font-weight:100 449;font-display:swap}
+  @font-face{font-family:"Laviviane Sans";src:url(/brand-fonts/PlexArabic-Medium.woff) format("woff");font-weight:450 549;font-display:swap}
+  @font-face{font-family:"Laviviane Sans";src:url(/brand-fonts/PlexArabic-SemiBold.woff) format("woff");font-weight:550 649;font-display:swap}
+  @font-face{font-family:"Laviviane Sans";src:url(/brand-fonts/PlexArabic-Bold.woff) format("woff");font-weight:650 1000;font-display:swap}
+  :root { --esp:#141414; --esp2:#0D0D0D; --gold:#D9602B; --gold2:#F2A27A; --ivory:#F3F3F1; --ink:#141414; --muted:#7A7A75; --line:#E2E2DE; --ok:#1F8A5B; --info:#2D6E7E; --bad:#C8323F; }
   * { box-sizing: border-box; }
-  body { margin:0; background:var(--ivory); color:var(--ink); font-family: -apple-system, "Segoe UI", Tahoma, "Noto Kufi Arabic", sans-serif; }
-  .hero { background:linear-gradient(160deg,var(--esp),var(--esp2)); color:#fff; padding:28px 20px 64px; text-align:center; }
+  body { margin:0; background:var(--ivory); color:var(--ink); font-family:"Laviviane Sans",-apple-system,"Segoe UI",Tahoma,sans-serif; -webkit-font-smoothing:antialiased; }
+  .hero { background:var(--esp); color:#fff; padding:28px 20px 64px; text-align:center; }
   .brand { letter-spacing:.18em; font-size:13px; color:var(--gold2); font-weight:700; text-transform:uppercase; }
   .hello { margin:14px 0 4px; font-size:15px; color:rgba(255,255,255,.7); }
   .num { font-size:15px; color:rgba(255,255,255,.75); }
@@ -23,7 +27,7 @@ export const TRACK_PAGE_HTML = `<!doctype html>
   .step { flex:0 0 64px; text-align:center; font-size:11px; color:var(--muted); font-weight:600; }
   .dot { width:30px; height:30px; margin:0 auto 6px; border-radius:50%; border:2px solid var(--line); display:grid; place-items:center; background:#fff; font-size:13px; }
   .step.done .dot { background:var(--ok); border-color:var(--ok); color:#fff; }
-  .step.now .dot { border-color:var(--gold); background:#B8955A1A; color:var(--esp); }
+  .step.now .dot { border-color:var(--gold); background:#D9602B1A; color:var(--esp); }
   .step.done, .step.now { color:var(--ink); font-weight:800; }
   .bar { flex:1; height:2px; background:var(--line); margin-top:15px; }
   .bar.on { background:var(--ok); }

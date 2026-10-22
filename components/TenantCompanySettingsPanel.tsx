@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 18, fontWeight: "900", color: Colors.primary, textAlign: "right" },
   subtitle: { fontSize: 12, color: Colors.textMuted, textAlign: "right", lineHeight: 20 },
   grid: { flexDirection: "row-reverse", flexWrap: "wrap", gap: 10 },
-  card: { flexGrow: 1, minWidth: 140, padding: 12, borderRadius: 14, backgroundColor: "#f8fafc", gap: 5 },
+  card: { flexGrow: 1, minWidth: 140, padding: 12, borderRadius: 14, backgroundColor: "#FAFAF8", gap: 5 },
   iconBox: { width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center", backgroundColor: Colors.gold + "20", alignSelf: "flex-end" },
   cardTitle: { fontSize: 11, color: Colors.textMuted, textAlign: "right" },
   cardValue: { fontSize: 13, fontWeight: "900", color: Colors.primary, textAlign: "right" },

@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
   iconBox: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
   title: { fontSize: 17, fontWeight: "900", color: Colors.primary, textAlign: "right" },
   subtitle: { fontSize: 12, color: Colors.textMuted, textAlign: "right", marginTop: 2 },
-  checkCard: { gap: 6, padding: 11, borderRadius: 14, backgroundColor: "#f8fafc", borderWidth: 1, borderColor: Colors.border },
+  checkCard: { gap: 6, padding: 11, borderRadius: 14, backgroundColor: "#FAFAF8", borderWidth: 1, borderColor: Colors.border },
   checkHead: { flexDirection: "row-reverse", alignItems: "center", gap: 7 },
   checkTitle: { fontSize: 13, fontWeight: "900", color: Colors.text, textAlign: "right" },
   checkDesc: { fontSize: 11, color: Colors.textMuted, textAlign: "right", lineHeight: 17 },

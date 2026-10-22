@@ -39,9 +39,9 @@ export function OrderCard({ order, onStatusChange, onPress, compact = false }: O
   };
   const statusConfig: Record<OrderStatus, { label: string; color: string; bg: string; next?: OrderStatus; nextLabel?: string }> = {
     pending:     { label: t("waiting"),          color: Colors.statusPending,    bg: "#FEF9E7", next: "in_progress", nextLabel: t("startPreparing") },
-    in_progress: { label: t("preparing"),        color: Colors.statusInProgress, bg: "#EBF5FB", next: "done",        nextLabel: t("markDelivered") },
-    done:        { label: t("statusDone"),        color: Colors.statusDone,       bg: "#E9F7EF" },
-    cancelled:   { label: t("statusCancelled"),  color: Colors.statusCancelled,  bg: "#FDEDEC" },
+    in_progress: { label: t("preparing"),        color: Colors.statusInProgress, bg: "#E6F0F2", next: "done",        nextLabel: t("markDelivered") },
+    done:        { label: t("statusDone"),        color: Colors.statusDone,       bg: "#E5F3EC" },
+    cancelled:   { label: t("statusCancelled"),  color: Colors.statusCancelled,  bg: "#FBE9EA" },
   };
   // Derive an overall status from departmentStatuses
   const statusValues = Object.values(order.departmentStatuses) as OrderStatus[];

@@ -37,8 +37,8 @@ const ROLE_COLORS: Record<EmployeeRole, string> = {
   calligrapher: Colors.purple,
   driver: Colors.success,
   admin: Colors.gold,
-  branch_supervisor: "#0d9488",
-  dept_supervisor: "#0891b2",
+  branch_supervisor: "#2D6E7E",
+  dept_supervisor: "#2D6E7E",
   guest: Colors.textMuted,
 };
 

@@ -382,7 +382,7 @@ body{font-family:Arial,sans-serif;font-size:12px;direction:rtl;margin:20px}
 h2{text-align:center;margin-bottom:12px}
 table{width:100%;border-collapse:collapse}
 th,td{border:1px solid #ccc;padding:6px 8px;text-align:right;vertical-align:top}
-th{background:#2B211B;color:#fff}
+th{background:#161616;color:#fff}
 tr:nth-child(even){background:#f7f7f7}
 @media print{body{margin:0}}
 </style></head><body>
@@ -390,7 +390,7 @@ tr:nth-child(even){background:#f7f7f7}
 <table><thead><tr>
 <th>#</th><th>العميل</th><th>الأصناف</th><th>المبلغ</th><th>الدفع</th><th>الخصم</th><th>التاريخ</th>
 </tr></thead><tbody>${rows}</tbody>
-<tfoot><tr style="background:#2B211B;color:#fff">
+<tfoot><tr style="background:#161616;color:#fff">
 <td colspan="3" style="text-align:center;font-weight:700;padding:8px">الإجمالي</td>
 <td style="font-weight:700;font-size:13px">${grandTotal.toFixed(2)} ر.س</td>
 <td colspan="3"></td>

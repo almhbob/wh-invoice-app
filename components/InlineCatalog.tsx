@@ -24,15 +24,15 @@ import { useLang } from "@/context/LanguageContext";
 import { Product, useProducts } from "@/context/ProductsContext";
 
 const LAVI_CAT_COLORS: Record<string, string> = {
-  "New Cake Collection": "#c0392b",
-  "Laviviane Cakes": "#8e44ad",
-  "Celebration Bites": "#2f241d",
-  "Mousse Cake": "#16a085",
-  "Laviviane Bites": "#d35400",
-  Sandwich: "#27ae60",
-  "Luxury Chocolate": "#d6b56d",
-  "Occasion Chocolate": "#2980b9",
-  "Distributions and Gifts": "#7f8c8d",
+  "New Cake Collection": "#C8323F",
+  "Laviviane Cakes": "#8C4A5E",
+  "Celebration Bites": "#161616",
+  "Mousse Cake": "#2D6E7E",
+  "Laviviane Bites": "#D9602B",
+  Sandwich: "#1F8A5B",
+  "Luxury Chocolate": "#F2A27A",
+  "Occasion Chocolate": "#2D6E7E",
+  "Distributions and Gifts": "#5C5C59",
 };
 
 const DEPT_COLORS: Record<string, string> = {
@@ -284,9 +284,9 @@ export function InlineCatalog({ selected, onAdd, onRemove }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F5F3EF",
+    backgroundColor: "#F3F3F1",
     borderRightWidth: 1,
-    borderRightColor: "#E8DDD0",
+    borderRightColor: "#E2E2DE",
   },
   header: {
     flexDirection: "row",
@@ -295,7 +295,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#E8DDD0",
+    borderBottomColor: "#E2E2DE",
     backgroundColor: "#fff",
   },
   searchBox: {
@@ -303,12 +303,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "#F5F3EF",
+    backgroundColor: "#F3F3F1",
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: Platform.OS === "web" ? 9 : 10,
     borderWidth: 1,
-    borderColor: "#E8DDD0",
+    borderColor: "#E2E2DE",
   },
   searchInput: {
     flex: 1,
@@ -337,7 +337,7 @@ const styles = StyleSheet.create({
     maxHeight: 48,
     backgroundColor: "#fff",
     borderBottomWidth: 1,
-    borderBottomColor: "#E8DDD0",
+    borderBottomColor: "#E2E2DE",
   },
   catFilterRow: {
     flexDirection: "row",
@@ -388,7 +388,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     borderWidth: 1.5,
     borderColor: "#EDE5DC",
-    shadowColor: "#2f241d",
+    shadowColor: "#161616",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 4,

@@ -50,7 +50,7 @@ const styles = StyleSheet.create({
   container: { gap: 12, backgroundColor: "#fff", borderRadius: 18, padding: 16, borderWidth: 1, borderColor: "rgba(0,0,0,0.06)" },
   title: { fontSize: 18, fontWeight: "900", color: Colors.primary, textAlign: "right" },
   subtitle: { fontSize: 12, color: Colors.textMuted, textAlign: "right", lineHeight: 20 },
-  section: { gap: 8, padding: 12, borderRadius: 14, backgroundColor: "#f8fafc" },
+  section: { gap: 8, padding: 12, borderRadius: 14, backgroundColor: "#FAFAF8" },
   dangerSection: { gap: 8, padding: 12, borderRadius: 14, backgroundColor: Colors.accent + "08" },
   sectionTitle: { fontSize: 14, fontWeight: "900", color: Colors.text, textAlign: "right" },
   row: { flexDirection: "row-reverse", alignItems: "center", gap: 8 },
