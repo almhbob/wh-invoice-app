@@ -61,10 +61,10 @@ export function WritingEditor({ value, onChange, defaultOpen }: { value?: CakeWr
         <TextInput style={[st.input, { textAlign: align }]} value={w.surfaceOther ?? ""} onChangeText={(surfaceOther) => set({ surfaceOther })}
           placeholder={ar ? "حدّد مكان الكتابة" : "Describe the surface"} placeholderTextColor={Colors.textMuted} />
       )}
-      <View style={{ flexDirection: "row", gap: 8 }}>
-        <TextInput style={[st.input, { flex: 1, textAlign: align }]} value={w.color ?? ""} onChangeText={(color) => set({ color })}
+      <View style={{ gap: 8 }}>
+        <TextInput style={[st.input, { textAlign: align }]} value={w.color ?? ""} onChangeText={(color) => set({ color })}
           placeholder={ar ? "اللون (اختياري)" : "Color (optional)"} placeholderTextColor={Colors.textMuted} />
-        <TextInput style={[st.input, { flex: 2, textAlign: align }]} value={w.note ?? ""} onChangeText={(note) => set({ note })}
+        <TextInput style={[st.input, { textAlign: align }]} value={w.note ?? ""} onChangeText={(note) => set({ note })}
           placeholder={ar ? "ملاحظة للخطاط: الخط، المكان…" : "Note: font, placement…"} placeholderTextColor={Colors.textMuted} />
       </View>
     </View>
