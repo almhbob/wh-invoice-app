@@ -113,8 +113,10 @@ describe("pin helpers", () => {
 
 describe("status", () => {
   test("reports configuration", async () => {
-    expect(await (handleStatus({}) as Response).json()).toEqual({ configured: false, projectId: null });
-    expect((await (handleStatus(env) as Response).json()).configured).toBe(true);
+    expect(await (await handleStatus({})).json()).toEqual({ configured: false, projectId: null });
+    expect((await (await handleStatus(env)).json()).configured).toBe(true);
+    const deep = await (await handleStatus(env, new Request("https://x/api/auth/status?check=1"), deps())).json();
+    expect(deep.token).toBe("ok");
   });
 });
 

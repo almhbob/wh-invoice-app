@@ -1,5 +1,6 @@
 import {
   AuthEnv,
+  getAccessToken,
   canManagePinOf,
   checkThrottle,
   claimsFromIdToken,
@@ -92,9 +93,18 @@ function notConfigured() {
 
 // ── GET /api/auth/status ───────────────────────────────────────────────────────
 
-export function handleStatus(env: AuthEnv) {
+export async function handleStatus(env: AuthEnv, request?: Request, deps: Deps = {}) {
   const sa = readServiceAccount(env);
-  return json({ configured: Boolean(sa), projectId: sa?.project_id ?? null });
+  const base = { configured: Boolean(sa), projectId: sa?.project_id ?? null };
+  if (!sa || !request || new URL(request.url).searchParams.get("check") !== "1") return json(base);
+  // Health check: reports only coarse stage codes, never key material.
+  const stage = async (fn: () => Promise<unknown>) => {
+    try { await fn(); return "ok"; } catch (e) { return (e instanceof Error ? e.message : String(e)).slice(0, 80); }
+  };
+  const fs = new Firestore(sa, deps.fetchImpl);
+  const token = await stage(() => getAccessToken(sa, deps.fetchImpl));
+  const read = token === "ok" ? await stage(() => fs.get("companies/laviviane-trial")) : "skipped";
+  return json({ ...base, clientEmailDomain: sa.client_email.split("@")[1] ?? null, token, firestore: read });
 }
 
 // ── POST /api/auth/login ───────────────────────────────────────────────────────
