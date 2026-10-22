@@ -212,7 +212,12 @@ export function encodeFields(obj: Record<string, unknown>) {
 }
 
 export class Firestore {
-  constructor(private sa: ServiceAccount, private fetchImpl: typeof fetch = fetch) {}
+  // Calling a stored `fetch` as a method (this.fetchImpl(...)) throws "Illegal invocation"
+  // on Cloudflare Workers, so keep it wrapped in a plain closure.
+  private fetchImpl: typeof fetch;
+  constructor(private sa: ServiceAccount, fetchImpl: typeof fetch = fetch) {
+    this.fetchImpl = ((input: RequestInfo | URL, init?: RequestInit) => fetchImpl(input, init)) as typeof fetch;
+  }
 
   private get base() {
     return `https://firestore.googleapis.com/v1/projects/${this.sa.project_id}/databases/(default)/documents`;
