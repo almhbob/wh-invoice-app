@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
   metricBox: { flex: 1, backgroundColor: Colors.surfaceSecondary, borderRadius: 16, padding: 10, alignItems: "center", gap: 2 },
   metricValue: { fontSize: 18, fontWeight: "900" },
   metricLabel: { fontSize: 10, color: Colors.textMuted, fontWeight: "800" },
-  snapshotRow: { gap: 8, padding: 10, borderRadius: 16, backgroundColor: "#f8fafc", borderWidth: 1, borderColor: Colors.border },
+  snapshotRow: { gap: 8, padding: 10, borderRadius: 16, backgroundColor: "#FAFAF8", borderWidth: 1, borderColor: Colors.border },
   snapshotTitle: { fontSize: 13, fontWeight: "900", color: Colors.primary, textAlign: "right" },
   badgesRow: { flexDirection: "row-reverse", flexWrap: "wrap", gap: 6 },
   badge: { borderRadius: 12, paddingHorizontal: 9, paddingVertical: 5 },

@@ -309,7 +309,7 @@ export function PrinterProvider({ children }: { children: React.ReactNode }) {
       return b;
     };
 
-    const printBtn = mkBtn("🖨 طباعة", "#1A2744");
+    const printBtn = mkBtn("🖨 طباعة", "#141414");
     printBtn.onclick = () => frame.contentWindow?.print();
     const closeBtn = mkBtn("✕ إغلاق", "#e5e7eb", "#374151");
     closeBtn.onclick = () => overlay.remove();

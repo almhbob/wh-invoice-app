@@ -4,15 +4,19 @@ export const ORDER_PAGE_HTML = `<!doctype html>
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<meta name="theme-color" content="#2B211B" />
+<meta name="theme-color" content="#141414" />
 <title>اطلب أونلاين</title>
 <style>
-  :root { --esp:#2B211B; --esp2:#1C1511; --gold:#B8955A; --gold2:#D9C08F; --ivory:#F6F2EC; --ivory2:#F1EBE2; --ink:#231B16; --muted:#8C7F72; --line:#E7DFD3; --ok:#4F8A68; --bad:#B5544A; --plum:#7A6290; }
+  @font-face{font-family:"Laviviane Sans";src:url(/brand-fonts/PlexArabic-Regular.woff) format("woff");font-weight:100 449;font-display:swap}
+  @font-face{font-family:"Laviviane Sans";src:url(/brand-fonts/PlexArabic-Medium.woff) format("woff");font-weight:450 549;font-display:swap}
+  @font-face{font-family:"Laviviane Sans";src:url(/brand-fonts/PlexArabic-SemiBold.woff) format("woff");font-weight:550 649;font-display:swap}
+  @font-face{font-family:"Laviviane Sans";src:url(/brand-fonts/PlexArabic-Bold.woff) format("woff");font-weight:650 1000;font-display:swap}
+  :root { --esp:#141414; --esp2:#0D0D0D; --gold:#D9602B; --gold2:#F2A27A; --ivory:#F3F3F1; --ivory2:#ECECE9; --ink:#141414; --muted:#7A7A75; --line:#E2E2DE; --ok:#1F8A5B; --bad:#C8323F; --plum:#8C4A5E; }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   html, body { overflow-x:hidden; }
-  body { margin:0; background:var(--ivory); color:var(--ink); font-family:-apple-system,"Segoe UI",Tahoma,"Noto Kufi Arabic",sans-serif; }
+  body { margin:0; background:var(--ivory); color:var(--ink); font-family:"Laviviane Sans",-apple-system,"Segoe UI",Tahoma,sans-serif; -webkit-font-smoothing:antialiased; }
   button, input, select, textarea { font:inherit; }
-  .hero { background:linear-gradient(160deg,var(--esp),var(--esp2)); color:#fff; padding:26px 18px 22px; text-align:center; }
+  .hero { background:var(--esp); color:#fff; padding:26px 18px 22px; text-align:center; }
   .brand { letter-spacing:.2em; font-size:20px; font-weight:800; color:var(--gold2); text-transform:uppercase; }
   .tag { font-size:13px; color:rgba(255,255,255,.7); margin-top:6px; }
   .bar { position:sticky; top:0; z-index:5; background:var(--ivory); padding:12px 14px 8px; border-bottom:1px solid var(--line); }
@@ -31,7 +35,7 @@ export const ORDER_PAGE_HTML = `<!doctype html>
   .pn { font-size:13px; font-weight:800; line-height:1.45; min-height:38px; }
   .pr { color:var(--esp); font-weight:900; font-size:14px; }
   .pr small { color:var(--muted); font-weight:700; }
-  .add { margin-top:auto; border:0; background:var(--esp); color:#fff; border-radius:12px; padding:9px; font-weight:800; cursor:pointer; }
+  .add { margin-top:auto; border:0; background:var(--gold); color:#fff; border-radius:12px; padding:9px; font-weight:800; cursor:pointer; }
   .step { margin-top:auto; display:flex; align-items:center; justify-content:space-between; background:var(--ivory2); border-radius:12px; }
   .step button { border:0; background:transparent; width:40px; height:38px; font-size:20px; font-weight:900; color:var(--esp); cursor:pointer; }
   .step b { font-size:15px; }
@@ -49,8 +53,8 @@ export const ORDER_PAGE_HTML = `<!doctype html>
   .line .m { color:var(--muted); font-size:12px; }
   .mini { display:flex; align-items:center; background:var(--ivory2); border-radius:10px; }
   .mini button { border:0; background:transparent; width:32px; height:32px; font-weight:900; font-size:17px; cursor:pointer; color:var(--esp); }
-  .wbtn { border:0; background:#7A629014; color:var(--plum); border-radius:999px; padding:6px 12px; font-size:12px; font-weight:800; cursor:pointer; margin-top:6px; }
-  .wbox { margin-top:8px; background:#7A62900D; border:1px solid #7A629033; border-radius:12px; padding:10px; display:grid; gap:8px; }
+  .wbtn { border:0; background:#8C4A5E14; color:var(--plum); border-radius:999px; padding:6px 12px; font-size:12px; font-weight:800; cursor:pointer; margin-top:6px; }
+  .wbox { margin-top:8px; background:#8C4A5E0D; border:1px solid #8C4A5E33; border-radius:12px; padding:10px; display:grid; gap:8px; }
   label { display:block; font-size:12px; font-weight:800; color:var(--muted); margin:12px 2px 6px; }
   .in { width:100%; border:1px solid var(--line); background:var(--ivory); border-radius:12px; padding:12px; font-size:15px; color:var(--ink); }
   textarea.in { min-height:70px; resize:vertical; }
@@ -62,16 +66,16 @@ export const ORDER_PAGE_HTML = `<!doctype html>
   .tot { display:flex; justify-content:space-between; align-items:center; background:var(--esp); color:#fff; border-radius:14px; padding:12px 14px; margin-top:10px; }
   .tot b { color:var(--gold2); font-size:19px; }
   .note { font-size:12px; color:var(--muted); line-height:1.7; margin-top:10px; }
-  .primary { width:100%; border:0; background:var(--esp); color:#fff; border-radius:16px; padding:16px; font-size:16px; font-weight:900; cursor:pointer; }
+  .primary { width:100%; border:0; background:var(--gold); color:#fff; border-radius:16px; padding:16px; font-size:16px; font-weight:900; cursor:pointer; }
   .primary:disabled { opacity:.5; }
   .ghost { width:100%; border:1px solid var(--line); background:#fff; color:var(--esp); border-radius:16px; padding:14px; font-weight:800; cursor:pointer; margin-top:10px; }
   .err { color:var(--bad); font-weight:700; font-size:13px; margin-top:10px; min-height:18px; }
   .ok { text-align:center; padding:30px 10px; }
   .ok .big { font-size:46px; }
   .ok h2 { margin:10px 0 6px; }
-  .notice { display:none; background:#B8955A1F; color:var(--esp); font-weight:700; font-size:13px; text-align:center; padding:10px 16px; border-bottom:1px solid var(--line); line-height:1.7; }
+  .notice { display:none; background:#D9602B1F; color:var(--esp); font-weight:700; font-size:13px; text-align:center; padding:10px 16px; border-bottom:1px solid var(--line); line-height:1.7; }
   .notice.on { display:block; }
-  .hint { background:#4F6D8F14; color:#3d5672; border-radius:12px; padding:10px 12px; font-size:12px; font-weight:700; margin-top:10px; line-height:1.7; }
+  .hint { background:#2D6E7E14; color:#245863; border-radius:12px; padding:10px 12px; font-size:12px; font-weight:700; margin-top:10px; line-height:1.7; }
   .row { display:flex; justify-content:space-between; font-size:13px; color:var(--muted); padding:4px 2px; }
   .row b { color:var(--ink); }
   .hp { position:absolute; width:1px; height:1px; overflow:hidden; opacity:0; pointer-events:none; inset:0 auto auto 0; }

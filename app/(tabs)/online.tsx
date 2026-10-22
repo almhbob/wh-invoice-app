@@ -107,7 +107,7 @@ function ShareCard({ companyId }: { companyId: string }) {
   const link = orderLink(companyId);
   const [qr, setQr] = useState("");
   const [copied, setCopied] = useState(false);
-  useEffect(() => { QRCode.toDataURL(link, { width: 220, margin: 1, color: { dark: "#2B211B", light: "#ffffff" } }).then(setQr).catch(() => setQr("")); }, [link]);
+  useEffect(() => { QRCode.toDataURL(link, { width: 220, margin: 1, color: { dark: "#161616", light: "#ffffff" } }).then(setQr).catch(() => setQr("")); }, [link]);
   const copy = async () => {
     try {
       if (Platform.OS === "web" && navigator.clipboard) { await navigator.clipboard.writeText(link); setCopied(true); setTimeout(() => setCopied(false), 2000); }

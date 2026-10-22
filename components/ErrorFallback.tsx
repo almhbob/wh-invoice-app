@@ -28,7 +28,7 @@ export function ErrorFallback({ error, resetError }: ErrorFallbackProps) {
     backgroundSecondary: isDark ? "#1C1C1E" : "#F2F2F7",
     text: isDark ? "#FFFFFF" : "#000000",
     textSecondary: isDark ? "rgba(255, 255, 255, 0.7)" : "rgba(0, 0, 0, 0.7)",
-    link: "#007AFF",
+    link: "#D9602B",
     buttonText: "#FFFFFF",
   };
 

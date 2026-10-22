@@ -477,7 +477,7 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 17,
-    backgroundColor: "rgba(201,168,76,0.15)",
+    backgroundColor: "rgba(217,96,43,0.15)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -497,7 +497,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: "rgba(201,168,76,0.2)",
+    borderColor: "rgba(217,96,43,0.2)",
   },
   cashierLabel: {
     fontSize: 13,
@@ -605,7 +605,7 @@ const statStyles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   rowHighlight: {
-    backgroundColor: "rgba(201,168,76,0.08)",
+    backgroundColor: "rgba(217,96,43,0.08)",
     borderRadius: 8,
     paddingHorizontal: 8,
   },

@@ -50,7 +50,7 @@ const styles = StyleSheet.create({
   label: { fontSize: 12, color: Colors.textSecondary, textAlign: "right", lineHeight: 19, fontWeight: "700" },
   marker: { fontSize: 10, color: Colors.textMuted, textAlign: "right" },
   hint: { fontSize: 11, color: Colors.accent, textAlign: "right", lineHeight: 17, fontWeight: "800" },
-  routesBox: { gap: 4, padding: 10, borderRadius: 12, backgroundColor: "#f8fafc" },
+  routesBox: { gap: 4, padding: 10, borderRadius: 12, backgroundColor: "#FAFAF8" },
   sectionTitle: { fontSize: 12, fontWeight: "900", color: Colors.text, textAlign: "right" },
   routeText: { fontSize: 11, color: Colors.textMuted, textAlign: "right" },
   notesBox: { gap: 6 },

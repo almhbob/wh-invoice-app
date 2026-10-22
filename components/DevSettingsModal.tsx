@@ -48,13 +48,13 @@ const DEFAULT_PIN = "1234";
 
 // ─── Category config ──────────────────────────────────────────────────────
 const CAT_CONFIG: Record<LinkCategory, { label: string; icon: string; color: string }> = {
-  subscription: { label: "الاشتراك",    icon: "credit-card",  color: "#8E44AD" },
-  payment:      { label: "الدفع",        icon: "dollar-sign",  color: "#27AE60" },
-  firebase:     { label: "Firebase",     icon: "database",     color: "#F5A623" },
-  store:        { label: "المتجر",       icon: "shopping-bag", color: "#2980B9" },
-  hosting:      { label: "الاستضافة",    icon: "server",       color: "#1A5276" },
-  support:      { label: "الدعم",        icon: "life-buoy",    color: "#E74C3C" },
-  other:        { label: "أخرى",         icon: "link",         color: "#7F8C8D" },
+  subscription: { label: "الاشتراك",    icon: "credit-card",  color: "#8C4A5E" },
+  payment:      { label: "الدفع",        icon: "dollar-sign",  color: "#1F8A5B" },
+  firebase:     { label: "Firebase",     icon: "database",     color: "#D9971E" },
+  store:        { label: "المتجر",       icon: "shopping-bag", color: "#2D6E7E" },
+  hosting:      { label: "الاستضافة",    icon: "server",       color: "#245863" },
+  support:      { label: "الدعم",        icon: "life-buoy",    color: "#C8323F" },
+  other:        { label: "أخرى",         icon: "link",         color: "#5C5C59" },
 };
 
 const CAT_ORDER: LinkCategory[] = [
@@ -444,7 +444,7 @@ function DevPanel({ onClose }: { onClose: () => void }) {
           </View>
           <View style={panel.infoDivider} />
           <View style={panel.infoRow}>
-            <Feather name="database" size={14} color="#F5A623" />
+            <Feather name="database" size={14} color="#D9971E" />
             <Text style={panel.infoLabel}>Firebase</Text>
             <Text style={panel.infoVal} numberOfLines={1}>wh-cake-chocolate</Text>
           </View>
@@ -649,7 +649,7 @@ const pin = StyleSheet.create({
 });
 
 const form = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0F1C35" },
+  container: { flex: 1, backgroundColor: "#141414" },
   header: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     paddingHorizontal: 16, paddingVertical: 14,
@@ -698,12 +698,12 @@ const form = StyleSheet.create({
 });
 
 const panel = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0F1C35" },
+  container: { flex: 1, backgroundColor: "#141414" },
   header: {
     flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     paddingHorizontal: 16, paddingVertical: 14,
     borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.08)",
-    backgroundColor: "#0F1C35",
+    backgroundColor: "#141414",
   },
   closeBtn: {
     width: 36, height: 36, borderRadius: 18,

@@ -418,7 +418,7 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
 
             {/* Direct Entry */}
             <TouchableOpacity style={styles.laviEnterBtn} onPress={unlockLavivianeDirect}>
-              <Feather name="log-in" size={18} color="#d6b56d" />
+              <Feather name="log-in" size={18} color="#F2A27A" />
               <Text style={styles.laviEnterText}>{tx("laviEnterBtn")}</Text>
             </TouchableOpacity>
 
@@ -431,7 +431,7 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
 
             <View style={{ paddingHorizontal: 20, gap: 10, paddingBottom: 20 }}>
               <TextInput
-                style={[styles.input, { textAlign, backgroundColor: "#fefcf8" }]}
+                style={[styles.input, { textAlign, backgroundColor: "#FAFAF8" }]}
                 value={companyCode}
                 onChangeText={setCompanyCode}
                 placeholder={tx("companyCodePlaceholder")}
@@ -502,8 +502,8 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
               <Text style={styles.nukhbaBannerTitle}>🍽️ النخبة للمأكولات الراقية</Text>
               <Text style={styles.nukhbaBannerSub}>Nukhba Fine Foods · Starter Plan</Text>
               <View style={styles.nukhbaPillRow}>
-                <View style={[styles.nukhbaPill, { backgroundColor: "#0891B218" }]}><Text style={[styles.nukhbaPillTxt, { color: "#0891B2" }]}>5 مستخدمين</Text></View>
-                <View style={[styles.nukhbaPill, { backgroundColor: "#7C3AED18" }]}><Text style={[styles.nukhbaPillTxt, { color: "#7C3AED" }]}>800 فاتورة/شهر</Text></View>
+                <View style={[styles.nukhbaPill, { backgroundColor: "#2D6E7E18" }]}><Text style={[styles.nukhbaPillTxt, { color: "#2D6E7E" }]}>5 مستخدمين</Text></View>
+                <View style={[styles.nukhbaPill, { backgroundColor: "#8C4A5E18" }]}><Text style={[styles.nukhbaPillTxt, { color: "#8C4A5E" }]}>800 فاتورة/شهر</Text></View>
                 <View style={[styles.nukhbaPill, { backgroundColor: "#05966918" }]}><Text style={[styles.nukhbaPillTxt, { color: "#059669" }]}>نشط</Text></View>
               </View>
               {!isSecure && <Text style={styles.nukhbaCredLabel}>المستخدمون: NK001–NK004 · رمز: 5678</Text>}
@@ -559,7 +559,7 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
 
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 10, backgroundColor: Colors.background },
-  screen: { flexGrow: 1, justifyContent: "center", padding: 20, backgroundColor: "#faf7f2" },
+  screen: { flexGrow: 1, justifyContent: "center", padding: 20, backgroundColor: "#F3F3F1" },
   card: { gap: 12, backgroundColor: "#fff", borderRadius: 24, padding: 18, borderWidth: 1, borderColor: Colors.border },
 
   // Laviviane gate
@@ -570,15 +570,15 @@ const styles = StyleSheet.create({
     padding: 0,
     overflow: "hidden",
     borderWidth: 1.5,
-    borderColor: "#2f241d",
-    shadowColor: "#2f241d",
+    borderColor: "#161616",
+    shadowColor: "#161616",
     shadowOpacity: 0.12,
     shadowRadius: 20,
     shadowOffset: { width: 0, height: 6 },
     elevation: 8,
   },
   laviBanner: {
-    backgroundColor: "#2f241d",
+    backgroundColor: "#161616",
     alignItems: "center",
     paddingTop: 22,
     paddingBottom: 14,
@@ -586,7 +586,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   laviLogoImg: { width: 180, height: 68 },
-  laviSub: { color: "#d6b56d", fontSize: 11, fontWeight: "600", letterSpacing: 2, textTransform: "uppercase" as const },
+  laviSub: { color: "#F2A27A", fontSize: 11, fontWeight: "600", letterSpacing: 2, textTransform: "uppercase" as const },
 
   laviQrBox: {
     alignItems: "center",
@@ -599,7 +599,7 @@ const styles = StyleSheet.create({
     height: 190,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: "#e8ddd0",
+    borderColor: "#E2E2DE",
   },
   laviQrLabel: { color: "#7a6550", fontSize: 12, fontWeight: "700", textAlign: "center" },
 
@@ -609,14 +609,14 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: "#e8ddd0",
+    borderBottomColor: "#E2E2DE",
   },
   laviQrImgSmall: {
     width: 130,
     height: 130,
     borderRadius: 10,
     borderWidth: 1.5,
-    borderColor: "#e8ddd0",
+    borderColor: "#E2E2DE",
   },
 
   laviEnterBtn: {
@@ -625,11 +625,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
     marginHorizontal: 20,
-    backgroundColor: "#2f241d",
+    backgroundColor: "#161616",
     borderRadius: 14,
     paddingVertical: 14,
   },
-  laviEnterText: { color: "#d6b56d", fontSize: 16, fontWeight: "900" },
+  laviEnterText: { color: "#F2A27A", fontSize: 16, fontWeight: "900" },
 
   laviDividerRow: {
     flexDirection: "row",
@@ -637,14 +637,14 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 20,
   },
-  laviDividerLine: { flex: 1, height: 1, backgroundColor: "#e8ddd0" },
+  laviDividerLine: { flex: 1, height: 1, backgroundColor: "#E2E2DE" },
   laviDividerText: { color: "#b8a090", fontSize: 11, fontWeight: "600" },
   title: { fontSize: 22, fontWeight: "900", color: Colors.primary, textAlign: "center" },
   subtitle: { fontSize: 13, color: Colors.textMuted, textAlign: "center", lineHeight: 21 },
   muted: { fontSize: 12, color: Colors.textMuted, textAlign: "right" },
   hint: { fontSize: 11, color: Colors.info, textAlign: "center", lineHeight: 18, fontWeight: "700" },
   warningText: { fontSize: 11, color: Colors.accent, textAlign: "center", lineHeight: 18, fontWeight: "800" },
-  input: { minHeight: 48, borderRadius: 14, paddingHorizontal: 14, backgroundColor: "#f8fafc", borderWidth: 1, borderColor: Colors.border, color: Colors.text },
+  input: { minHeight: 48, borderRadius: 14, paddingHorizontal: 14, backgroundColor: "#FAFAF8", borderWidth: 1, borderColor: Colors.border, color: Colors.text },
   primaryBtn: { minHeight: 48, borderRadius: 14, backgroundColor: Colors.primary, alignItems: "center", justifyContent: "center", gap: 8 },
   primaryText: { color: "#fff", fontSize: 14, fontWeight: "900" },
   secondaryBtn: { minHeight: 48, borderRadius: 14, backgroundColor: Colors.gold + "18", alignItems: "center", justifyContent: "center", gap: 8 },
@@ -666,12 +666,12 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: "#0891B230",
-    backgroundColor: "#0891B208",
+    borderColor: "#2D6E7E30",
+    backgroundColor: "#2D6E7E08",
   },
   nukhbaIconBox: {
     width: 36, height: 36, borderRadius: 10,
-    backgroundColor: "#0891B218", alignItems: "center", justifyContent: "center",
+    backgroundColor: "#2D6E7E18", alignItems: "center", justifyContent: "center",
   },
   nukhbaIcon: { fontSize: 18 },
   nukhbaBtnTitle: { fontSize: 13, fontWeight: "800", color: Colors.text },
@@ -679,15 +679,15 @@ const styles = StyleSheet.create({
 
   // Nukhba banner (shown on employee login screen)
   nukhbaBanner: {
-    backgroundColor: "#0891B208",
+    backgroundColor: "#2D6E7E08",
     borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: "#0891B230",
+    borderColor: "#2D6E7E30",
     padding: 14,
     gap: 6,
   },
-  nukhbaBannerTitle: { fontSize: 15, fontWeight: "900", color: "#0891B2", textAlign: "center" },
-  nukhbaBannerSub: { fontSize: 11, color: "#0891B280", textAlign: "center", fontWeight: "600" },
+  nukhbaBannerTitle: { fontSize: 15, fontWeight: "900", color: "#2D6E7E", textAlign: "center" },
+  nukhbaBannerSub: { fontSize: 11, color: "#2D6E7E80", textAlign: "center", fontWeight: "600" },
   nukhbaPillRow: { flexDirection: "row", gap: 6, justifyContent: "center", flexWrap: "wrap" },
   nukhbaPill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
   nukhbaPillTxt: { fontSize: 10, fontWeight: "700" },

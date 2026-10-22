@@ -61,8 +61,8 @@ const ROLE_COLORS: Record<EmployeeRole, string> = {
   calligrapher: Colors.purple,
   driver: Colors.success,
   admin: Colors.primaryLight,
-  branch_supervisor: "#0d9488",
-  dept_supervisor: "#0891b2",
+  branch_supervisor: "#2D6E7E",
+  dept_supervisor: "#2D6E7E",
   guest: Colors.textMuted,
 };
 const ROLE_ICONS: Record<EmployeeRole, any> = {
@@ -250,7 +250,7 @@ function EmployeesSection() {
       <View style={styles.empFilterRow}>
         {STATUS_FILTERS.map((f) => {
           const isActive = statusFilter === f.key;
-          const color = f.key === "active" ? "#16a34a" : f.key === "suspended" ? "#dc2626" : Colors.primary;
+          const color = f.key === "active" ? "#1F8A5B" : f.key === "suspended" ? "#C8323F" : Colors.primary;
           return (
             <TouchableOpacity
               key={f.key}
@@ -1260,7 +1260,7 @@ function PriceRequestsSection() {
 
             <View style={styles.priceReqActions}>
               <TouchableOpacity
-                style={[styles.priceReqBtn, { backgroundColor: "#16a34a" }]}
+                style={[styles.priceReqBtn, { backgroundColor: "#1F8A5B" }]}
                 onPress={() => approveRequest(req.id)}
                 activeOpacity={0.8}
               >
@@ -1292,11 +1292,11 @@ function PriceRequestsSection() {
                 <View style={styles.priceReqHeader}>
                   <Text style={styles.priceReqProduct}>{req.productName}</Text>
                   <View style={[styles.priceReqBadge, {
-                    backgroundColor: req.status === "approved" ? "#16a34a20" : Colors.statusCancelled + "20",
-                    borderColor: req.status === "approved" ? "#16a34a40" : Colors.statusCancelled + "40",
+                    backgroundColor: req.status === "approved" ? "#1F8A5B20" : Colors.statusCancelled + "20",
+                    borderColor: req.status === "approved" ? "#1F8A5B40" : Colors.statusCancelled + "40",
                   }]}>
                     <Text style={[styles.priceReqBadgeText, {
-                      color: req.status === "approved" ? "#16a34a" : Colors.statusCancelled,
+                      color: req.status === "approved" ? "#1F8A5B" : Colors.statusCancelled,
                     }]}>
                       {req.status === "approved" ? t("adminApprovedStatus") : t("adminRejectedStatus")}
                     </Text>
@@ -1422,9 +1422,9 @@ function FeaturesSection() {
     { key: "chocolateEnabled", label: t("tabChocolate"),  icon: "gift",         color: Colors.chocolate },
     { key: "cakeEnabled",      label: t("tabCake"),       icon: "layers",       color: Colors.cake },
     { key: "packagingEnabled", label: t("tabPackaging"),  icon: "box",          color: Colors.packaging },
-    { key: "reportsEnabled",   label: t("tabReports"),    icon: "pie-chart",    color: "#8b5cf6" },
-    { key: "customersEnabled", label: t("tabCustomers"),  icon: "users",        color: "#0891b2" },
-    { key: "deliveryEnabled",  label: t("tabDelivery"),   icon: "truck",        color: "#0d9488" },
+    { key: "reportsEnabled",   label: t("tabReports"),    icon: "pie-chart",    color: "#8C4A5E" },
+    { key: "customersEnabled", label: t("tabCustomers"),  icon: "users",        color: "#2D6E7E" },
+    { key: "deliveryEnabled",  label: t("tabDelivery"),   icon: "truck",        color: "#2D6E7E" },
     { key: "traysEnabled",     label: t("tabTrays"),      icon: "layers",       color: Colors.gold },
   ];
 
@@ -1700,8 +1700,8 @@ const styles = StyleSheet.create({
   empAvatarLetter: { color: "#fff", fontSize: 16, fontWeight: "800" },
   empName: { fontSize: 14, fontWeight: "700", color: Colors.text },
   empIdText: { fontSize: 12, color: Colors.textMuted },
-  empStatusActive: { fontSize: 11, fontWeight: "700", color: "#16a34a" },
-  empStatusSuspended: { fontSize: 11, fontWeight: "700", color: "#dc2626" },
+  empStatusActive: { fontSize: 11, fontWeight: "700", color: "#1F8A5B" },
+  empStatusSuspended: { fontSize: 11, fontWeight: "700", color: "#C8323F" },
   empMenuBtn: {
     width: 34, height: 34, borderRadius: 17,
     backgroundColor: Colors.surfaceSecondary,

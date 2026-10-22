@@ -46,7 +46,7 @@ export default function NotFoundScreen() {
       <>
         <Stack.Screen options={{ title: "Laviviane" }} />
         <View style={styles.container}>
-          <ActivityIndicator color="#14213d" />
+          <ActivityIndicator color="#141414" />
           <Text style={styles.title}>جاري فتح شركة Laviviane...</Text>
           <Text style={styles.note}>سيتم اختيار الشركة فقط بدون تسجيل دخول تلقائي.</Text>
         </View>
@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   note: {
-    color: "#64748b",
+    color: "#6B6B67",
     fontSize: 13,
     fontWeight: "700",
     textAlign: "center",
@@ -93,6 +93,6 @@ const styles = StyleSheet.create({
   },
   linkText: {
     fontSize: 14,
-    color: "#2e78b7",
+    color: "#D9602B",
   },
 });

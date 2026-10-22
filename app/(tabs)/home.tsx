@@ -56,9 +56,9 @@ const DEPT_COLORS = {
 } as const;
 
 // On light surfaces use the base status tones; on dark espresso use the lifted ones.
-const HERO_WAIT = "#E0B56E";
-const HERO_PROG = "#9DB5D0";
-const HERO_DONE = "#93C6A6";
+const HERO_WAIT = "#F2C46B";
+const HERO_PROG = "#8FC9D2";
+const HERO_DONE = "#6FD0A0";
 
 const STATUS_COLORS = {
   pending:     Colors.textSecondary,
@@ -385,7 +385,8 @@ export default function HomeScreen() {
 
   // ── Shared blocks ────────────────────────────────────────────────────────────
   const heroCard = (
-    <LinearGradient colors={[Colors.espressoSoft, Colors.espressoDeep]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={m.hero}>
+    <LinearGradient colors={[Colors.espressoMid, Colors.espressoDeep]} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={m.hero}>
+      <View style={m.heroAccent} />
       <View style={m.heroTop}>
         <View style={{ flex: 1, gap: 3 }}>
           <Text style={m.heroGreet} numberOfLines={1}>
@@ -445,13 +446,13 @@ export default function HomeScreen() {
 
   const ctaButton = canInvoice && (
     <PressScale onPress={() => go("cashier")}>
-      <LinearGradient colors={[Colors.goldLight, Colors.gold]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={m.cta}>
+      <LinearGradient colors={[Colors.gold, Colors.gold]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={m.cta}>
         <View style={m.ctaIcon}><Feather name="plus" size={20} color={Colors.gold} /></View>
         <View style={{ flex: 1, gap: 1 }}>
           <Text style={m.ctaTxt}>{t("newInvoice")}</Text>
           <Text style={m.ctaSub}>{t("homeNewInvoiceSub")}</Text>
         </View>
-        <Feather name={isRTL ? "arrow-left" : "arrow-right"} size={20} color={Colors.primary} />
+        <Feather name={isRTL ? "arrow-left" : "arrow-right"} size={20} color="#fff" />
       </LinearGradient>
     </PressScale>
   );
@@ -634,8 +635,8 @@ export default function HomeScreen() {
 
 const CARD_SHADOW = {
   shadowColor: Colors.primary,
-  shadowOpacity: 0.06,
-  shadowRadius: 12,
+  shadowOpacity: 0.04,
+  shadowRadius: 16,
   shadowOffset: { width: 0, height: 4 },
   elevation: 2,
 } as const;
@@ -645,57 +646,58 @@ const m = StyleSheet.create({
   grid:   { flexDirection: "row", flexWrap: "wrap" },
 
   // Hero
-  hero:        { borderRadius: 22, padding: 18, gap: 16, overflow: "hidden" },
+  hero:        { borderRadius: 24, padding: 20, gap: 18, overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.06)" },
+  heroAccent:  { position: "absolute", top: 0, right: 24, width: 56, height: 3, borderBottomLeftRadius: 3, borderBottomRightRadius: 3, backgroundColor: Colors.gold },
   heroTop:     { flexDirection: "row", alignItems: "center", gap: 12 },
-  heroGreet:   { color: "#fff", fontSize: 18, fontWeight: "800" },
+  heroGreet:   { color: "#fff", fontSize: 19, fontWeight: "700", letterSpacing: -0.2 },
   heroDate:    { color: "rgba(255,255,255,0.5)", fontSize: 12, fontWeight: "600" },
   heroClock:   { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "rgba(255,255,255,0.08)", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999 },
   heroClockTxt:{ color: "#fff", fontSize: 12, fontWeight: "700", fontVariant: ["tabular-nums" as any] },
   heroMid:     { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between" },
   heroLbl:     { color: "rgba(255,255,255,0.5)", fontSize: 11, fontWeight: "600" },
-  heroRevenue: { color: Colors.goldLight, fontSize: 30, fontWeight: "900", fontVariant: ["tabular-nums" as any] },
-  heroCur:     { fontSize: 14, fontWeight: "700", color: Colors.gold },
+  heroRevenue: { color: "#fff", fontSize: 34, fontWeight: "700", letterSpacing: -0.8, fontVariant: ["tabular-nums" as any] },
+  heroCur:     { fontSize: 14, fontWeight: "600", color: Colors.goldLight, letterSpacing: 0 },
   heroOrders:  { alignItems: "center", gap: 2 },
-  heroOrdersNum:{ color: "#fff", fontSize: 24, fontWeight: "900", fontVariant: ["tabular-nums" as any] },
-  progress:    { height: 6, borderRadius: 3, overflow: "hidden", flexDirection: "row", backgroundColor: "rgba(255,255,255,0.08)", gap: 2 },
+  heroOrdersNum:{ color: "#fff", fontSize: 26, fontWeight: "700", letterSpacing: -0.5, fontVariant: ["tabular-nums" as any] },
+  progress:    { height: 4, borderRadius: 2, overflow: "hidden", flexDirection: "row", backgroundColor: "rgba(255,255,255,0.08)", gap: 2 },
   heroStats:   { flexDirection: "row", gap: 8 },
-  heroStat:    { flex: 1, flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "rgba(255,255,255,0.05)", borderRadius: 12, paddingHorizontal: 10, paddingVertical: 8 },
+  heroStat:    { flex: 1, flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 14, paddingHorizontal: 10, paddingVertical: 8 },
   heroStatDot: { width: 6, height: 6, borderRadius: 3 },
   heroStatNum: { fontSize: 15, fontWeight: "900", fontVariant: ["tabular-nums" as any] },
   heroStatLbl: { color: "rgba(255,255,255,0.55)", fontSize: 11, fontWeight: "600", flexShrink: 1 },
 
   // CTA
-  cta:     { flexDirection: "row", alignItems: "center", gap: 12, borderRadius: 18, paddingVertical: 14, paddingHorizontal: 16, ...CARD_SHADOW, shadowColor: Colors.gold, shadowOpacity: 0.3 },
-  ctaIcon: { width: 38, height: 38, borderRadius: 12, backgroundColor: Colors.primary, alignItems: "center", justifyContent: "center" },
-  ctaTxt:  { color: Colors.primary, fontSize: 16, fontWeight: "900" },
-  ctaSub:  { color: "rgba(43,33,27,0.62)", fontSize: 11, fontWeight: "600" },
+  cta:     { flexDirection: "row", alignItems: "center", gap: 12, borderRadius: 20, paddingVertical: 15, paddingHorizontal: 16, ...CARD_SHADOW, shadowColor: Colors.gold, shadowOpacity: 0.22 },
+  ctaIcon: { width: 40, height: 40, borderRadius: 14, backgroundColor: "#fff", alignItems: "center", justifyContent: "center" },
+  ctaTxt:  { color: "#fff", fontSize: 16, fontWeight: "700" },
+  ctaSub:  { color: "rgba(255,255,255,0.78)", fontSize: 11, fontWeight: "500" },
 
   // Section heading
   secHead:  { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 2 },
-  secTitle: { color: Colors.text, fontSize: 15, fontWeight: "800" },
+  secTitle: { color: Colors.text, fontSize: 16, fontWeight: "700", letterSpacing: -0.2 },
   secRight: { color: Colors.textSecondary, fontSize: 12, fontWeight: "600" },
 
   // Ops cards
-  opsCard:        { backgroundColor: Colors.surface, borderRadius: 18, padding: 14, gap: 12, borderWidth: 1, borderColor: Colors.borderLight, ...CARD_SHADOW },
-  opsCardPrimary: { backgroundColor: Colors.primary, borderColor: "rgba(184,149,90,0.45)" },
-  opsIcon:        { width: 42, height: 42, borderRadius: 13, alignItems: "center", justifyContent: "center" },
-  opsLabel:       { color: Colors.text, fontSize: 14, fontWeight: "800" },
+  opsCard:        { backgroundColor: Colors.surface, borderRadius: 20, padding: 14, gap: 12, borderWidth: 1, borderColor: Colors.borderLight, ...CARD_SHADOW },
+  opsCardPrimary: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  opsIcon:        { width: 42, height: 42, borderRadius: 14, alignItems: "center", justifyContent: "center" },
+  opsLabel:       { color: Colors.text, fontSize: 14, fontWeight: "700" },
   opsCap:         { color: Colors.textMuted, fontSize: 11, fontWeight: "600" },
 
   // Dept cards
-  deptCard:      { backgroundColor: Colors.surface, borderRadius: 16, padding: 12, paddingTop: 14, gap: 8, borderWidth: 1, borderColor: Colors.borderLight, overflow: "hidden", ...CARD_SHADOW },
+  deptCard:      { backgroundColor: Colors.surface, borderRadius: 18, padding: 12, paddingTop: 14, gap: 8, borderWidth: 1, borderColor: Colors.borderLight, overflow: "hidden", ...CARD_SHADOW },
   deptStrip:     { position: "absolute", top: 0, left: 0, right: 0, height: 3 },
   deptTop:       { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   deptIcon:      { width: 36, height: 36, borderRadius: 11, alignItems: "center", justifyContent: "center" },
   deptCount:     { minWidth: 22, height: 22, borderRadius: 11, paddingHorizontal: 6, alignItems: "center", justifyContent: "center" },
   deptCountTxt:  { color: "#fff", fontSize: 11, fontWeight: "900" },
-  deptLabel:     { color: Colors.text, fontSize: 13, fontWeight: "800" },
+  deptLabel:     { color: Colors.text, fontSize: 13, fontWeight: "700" },
   deptStatusRow: { flexDirection: "row", alignItems: "center", gap: 5 },
   deptDot:       { width: 6, height: 6, borderRadius: 3 },
   deptStatus:    { color: Colors.textSecondary, fontSize: 10.5, fontWeight: "600", flexShrink: 1 },
 
   // Admin row
-  adminRow:      { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: Colors.surface, borderRadius: 18, padding: 14, borderWidth: 1, borderColor: Colors.borderLight, ...CARD_SHADOW },
+  adminRow:      { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: Colors.surface, borderRadius: 20, padding: 14, borderWidth: 1, borderColor: Colors.borderLight, ...CARD_SHADOW },
   adminBadge:    { minWidth: 22, height: 22, borderRadius: 11, paddingHorizontal: 6, backgroundColor: Colors.accent, alignItems: "center", justifyContent: "center" },
   adminBadgeTxt: { color: "#fff", fontSize: 11, fontWeight: "900" },
 });

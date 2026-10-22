@@ -82,7 +82,7 @@ const styles = StyleSheet.create({
   title: { fontSize: 18, fontWeight: "900", color: Colors.primary, textAlign: "right" },
   subtitle: { fontSize: 12, fontWeight: "600", color: Colors.textMuted, textAlign: "right", lineHeight: 19 },
   stepsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  stepCard: { flexGrow: 1, flexBasis: 220, gap: 8, borderRadius: 18, padding: 12, backgroundColor: "#f8fafc", borderWidth: 1, borderColor: Colors.border },
+  stepCard: { flexGrow: 1, flexBasis: 220, gap: 8, borderRadius: 18, padding: 12, backgroundColor: "#FAFAF8", borderWidth: 1, borderColor: Colors.border },
   stepHeader: { flexDirection: "row-reverse", alignItems: "center", gap: 8 },
   stepIcon: { width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center", backgroundColor: Colors.primary + "10" },
   stepTitle: { flex: 1, fontSize: 13, fontWeight: "900", color: Colors.primary, textAlign: "right" },

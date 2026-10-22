@@ -634,7 +634,7 @@ export default function CashierScreen() {
     try {
       qrDataUrl = await QRCode.toDataURL(
         `فاتورة #${order.orderNumber}\n${order.customerName}\n${order.customerPhone}\n${order.receivedAt}${order.totalAmount ? `\nالإجمالي: ${order.totalAmount.toFixed(2)} ر.س` : ""}`,
-        { width: 140, margin: 1, color: { dark: "#2f241d", light: "#ffffff" } }
+        { width: 140, margin: 1, color: { dark: "#161616", light: "#ffffff" } }
       );
     } catch { /* skip QR on failure */ }
 
@@ -655,7 +655,7 @@ export default function CashierScreen() {
 
     const printBtn = document.createElement("button");
     printBtn.textContent = "🖨 طباعة";
-    printBtn.style.cssText = "background:#2f241d;color:#d6b56d;border:none;padding:8px 20px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:700;font-family:sans-serif;";
+    printBtn.style.cssText = "background:#161616;color:#F2A27A;border:none;padding:8px 20px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:700;font-family:sans-serif;";
     printBtn.onclick = () => frame.contentWindow?.print();
 
     const closeBtn = document.createElement("button");
@@ -720,7 +720,7 @@ export default function CashierScreen() {
       if (appliedOfferId) incrementUsage(appliedOfferId).catch(() => {});
       QRCode.toDataURL(
         `فاتورة #${created.orderNumber}\n${created.customerName}\n${created.customerPhone}\n${created.receivedAt}${created.totalAmount ? `\nالإجمالي: ${created.totalAmount.toFixed(2)} ر.س` : ""}`,
-        { width: 160, margin: 1, color: { dark: "#2f241d", light: "#ffffff" } }
+        { width: 160, margin: 1, color: { dark: "#161616", light: "#ffffff" } }
       ).then(setReceiptQr).catch(() => setReceiptQr(""));
       resetForm();
       setExpandedItems(new Set());
@@ -1742,16 +1742,16 @@ export default function CashierScreen() {
         {/* Employee badge */}
         {currentEmployee ? (
           <View style={styles.checkoutEmpRow}>
-            <Feather name="user-check" size={13} color="#4ade80" />
+            <Feather name="user-check" size={13} color="#4FBF8B" />
             <Text style={styles.checkoutEmpText}>{currentEmployee.name} · #{currentEmployee.employeeId}</Text>
             <TouchableOpacity onPress={() => setCurrentEmployee(null)} style={{ marginLeft: "auto" as any }}>
-              <Text style={{ color: "#f87171", fontSize: 11, fontWeight: "700" }}>{t("switchBtn")}</Text>
+              <Text style={{ color: "#E8737C", fontSize: 11, fontWeight: "700" }}>{t("switchBtn")}</Text>
             </TouchableOpacity>
           </View>
         ) : (
           <View style={[styles.checkoutEmpRow, { borderColor: "rgba(248,113,113,0.3)", backgroundColor: "rgba(248,113,113,0.08)" }]}>
-            <Feather name="alert-circle" size={13} color="#f87171" />
-            <Text style={[styles.checkoutEmpText, { color: "#f87171" }]}>{t("cashierLoginMsg")}</Text>
+            <Feather name="alert-circle" size={13} color="#E8737C" />
+            <Text style={[styles.checkoutEmpText, { color: "#E8737C" }]}>{t("cashierLoginMsg")}</Text>
           </View>
         )}
 
@@ -1774,7 +1774,7 @@ export default function CashierScreen() {
                       <View style={[styles.checkoutItemAccent, { backgroundColor: dc.color }]} />
                       <Text style={styles.checkoutItemName} numberOfLines={1}>{item.name}</Text>
                       <Text style={styles.checkoutItemQty}>×{item.quantity}</Text>
-                      <Text style={[styles.checkoutItemAmt, !item.price && { color: "#f87171" }]}>
+                      <Text style={[styles.checkoutItemAmt, !item.price && { color: "#E8737C" }]}>
                         {lt > 0 ? `${lt.toFixed(0)} ر.س` : "—"}
                       </Text>
                     </View>
@@ -1925,13 +1925,13 @@ export default function CashierScreen() {
                 <Feather
                   name={remainingAmount === 0 ? "check-circle" : "alert-circle"}
                   size={13}
-                  color={remainingAmount === 0 ? "#4ade80" : "#f87171"}
+                  color={remainingAmount === 0 ? "#4FBF8B" : "#E8737C"}
                 />
-                <Text style={[styles.checkoutTotalLabel, { color: remainingAmount === 0 ? "#4ade80" : "#f87171", flex: 1 }]}>
+                <Text style={[styles.checkoutTotalLabel, { color: remainingAmount === 0 ? "#4FBF8B" : "#E8737C", flex: 1 }]}>
                   {remainingAmount === 0 ? t("fullyPaid") : t("remaining")}
                 </Text>
                 {remainingAmount > 0 && (
-                  <Text style={[styles.checkoutTotalValue, { color: "#f87171", fontWeight: "800" }]}>
+                  <Text style={[styles.checkoutTotalValue, { color: "#E8737C", fontWeight: "800" }]}>
                     {remainingAmount.toFixed(2)} {t("sar")}
                   </Text>
                 )}
@@ -2067,9 +2067,9 @@ export default function CashierScreen() {
             )}
 
             {/* Success banner */}
-            <View style={[styles.receiptBanner, isLaviviane && { backgroundColor: "#2f241d" }]}>
+            <View style={[styles.receiptBanner, isLaviviane && { backgroundColor: "#161616" }]}>
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 16, width: "100%" }}>
-                <View style={[styles.receiptCheckCircle, isLaviviane && { backgroundColor: "#d6b56d" }]}>
+                <View style={[styles.receiptCheckCircle, isLaviviane && { backgroundColor: "#F2A27A" }]}>
                   <Feather name="check" size={28} color="#fff" />
                 </View>
                 {receiptQr ? (
@@ -2643,11 +2643,11 @@ const styles = StyleSheet.create({
     alignSelf: "center", marginTop: 10, marginBottom: 6,
   },
   receiptLogoHeader: {
-    backgroundColor: "#2f241d", alignItems: "center", justifyContent: "center",
+    backgroundColor: "#161616", alignItems: "center", justifyContent: "center",
     paddingTop: 18, paddingBottom: 10, paddingHorizontal: 20, gap: 4,
   },
   receiptLogoImg: { width: 160, height: 60 },
-  receiptLogoSub: { color: "#d6b56d", fontSize: 10, fontWeight: "600", letterSpacing: 1.5 },
+  receiptLogoSub: { color: "#F2A27A", fontSize: 10, fontWeight: "600", letterSpacing: 1.5 },
   receiptBanner: {
     backgroundColor: Colors.primary, paddingVertical: 20, paddingHorizontal: 24,
     alignItems: "center", gap: 6,
@@ -2684,7 +2684,7 @@ const styles = StyleSheet.create({
   },
   printBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
-    backgroundColor: "#1f2937", borderRadius: 14, paddingVertical: 13, paddingHorizontal: 18,
+    backgroundColor: "#1F1F1E", borderRadius: 14, paddingVertical: 13, paddingHorizontal: 18,
   },
   printBtnText: { color: "#fff", fontSize: 14, fontWeight: "800" },
   whatsappBtn: {
@@ -2702,8 +2702,8 @@ const styles = StyleSheet.create({
   shareBtnText: { color: Colors.primary, fontSize: 14, fontWeight: "600" },
   aiBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
-    backgroundColor: "#6C3FC5", borderRadius: 14, paddingVertical: 12,
-    shadowColor: "#6C3FC5", shadowOffset: { width: 0, height: 3 },
+    backgroundColor: "#8C4A5E", borderRadius: 14, paddingVertical: 12,
+    shadowColor: "#8C4A5E", shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.25, shadowRadius: 6, elevation: 4,
   },
   aiBtnText: { color: "#fff", fontSize: 14, fontWeight: "700" },
@@ -3000,7 +3000,7 @@ const styles = StyleSheet.create({
   },
   checkoutCloseShiftBtn: {
     width: 36, height: 36, borderRadius: 18,
-    backgroundColor: "rgba(201,168,76,0.15)",
+    backgroundColor: "rgba(217,96,43,0.15)",
     alignItems: "center" as const, justifyContent: "center" as const,
   },
   checkoutEmpRow: {
@@ -3010,7 +3010,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(74,222,128,0.08)",
     borderWidth: 1, borderColor: "rgba(74,222,128,0.18)",
   },
-  checkoutEmpText: { fontSize: 12, color: "#4ade80", fontWeight: "600" as const, flex: 1 },
+  checkoutEmpText: { fontSize: 12, color: "#4FBF8B", fontWeight: "600" as const, flex: 1 },
   checkoutItemsList: { padding: 12, gap: 6, paddingBottom: 16 },
   checkoutItem: {
     flexDirection: "row" as const, alignItems: "center" as const, gap: 10,
@@ -3117,7 +3117,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: "rgba(255,255,255,0.12)",
     backgroundColor: "rgba(255,255,255,0.04)",
   },
-  checkoutTimeChipActive: { backgroundColor: "rgba(201,168,76,0.25)", borderColor: Colors.gold },
+  checkoutTimeChipActive: { backgroundColor: "rgba(217,96,43,0.25)", borderColor: Colors.gold },
   checkoutTimeText: { fontSize: 11, fontWeight: "600" as const, color: "rgba(255,255,255,0.6)" },
   checkoutTimeTextActive: { color: Colors.gold, fontWeight: "800" as const },
 

@@ -5,11 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Laviviane — رمز الدخول</title>
   <style>
+    @font-face{font-family:"Laviviane Sans";src:url(/brand-fonts/PlexArabic-Regular.woff) format("woff");font-weight:100 549;font-display:swap}
+    @font-face{font-family:"Laviviane Sans";src:url(/brand-fonts/PlexArabic-Bold.woff) format("woff");font-weight:550 1000;font-display:swap}
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
-      font-family: 'Georgia', 'Times New Roman', serif;
-      background: #fefcf8;
+      font-family: "Laviviane Sans", -apple-system, 'Segoe UI', Tahoma, sans-serif;
+      background: #F3F3F1;
       min-height: 100vh;
       display: flex;
       align-items: center;
@@ -19,7 +21,7 @@
 
     .card {
       background: #fff;
-      border: 2px solid #2f241d;
+      border: 2px solid #141414;
       border-radius: 20px;
       padding: 40px 50px;
       max-width: 420px;
@@ -29,7 +31,7 @@
     }
 
     .logo-area {
-      background: #2f241d;
+      background: #141414;
       border-radius: 14px;
       padding: 18px 24px 14px;
       margin-bottom: 28px;
@@ -44,7 +46,7 @@
     }
 
     .logo-sub {
-      color: #d6b56d;
+      color: #D9602B;
       font-size: 11px;
       letter-spacing: 2px;
       font-weight: 600;
@@ -52,14 +54,14 @@
     }
 
     .title-ar {
-      color: #2f241d;
+      color: #141414;
       font-size: 22px;
       font-weight: 700;
       margin-bottom: 6px;
     }
 
     .title-en {
-      color: #a08060;
+      color: #7A7A75;
       font-size: 12px;
       letter-spacing: 1.5px;
       text-transform: uppercase;
@@ -67,8 +69,8 @@
     }
 
     .qr-wrapper {
-      background: #fefcf8;
-      border: 1.5px solid #e8ddd0;
+      background: #F3F3F1;
+      border: 1.5px solid #E2E2DE;
       border-radius: 16px;
       padding: 20px;
       margin-bottom: 24px;
@@ -82,7 +84,7 @@
     }
 
     .instruction {
-      color: #5c4a36;
+      color: #3A3A38;
       font-size: 14px;
       line-height: 1.7;
       margin-bottom: 20px;
@@ -91,17 +93,17 @@
     .divider {
       width: 60px;
       height: 2px;
-      background: linear-gradient(90deg, #d6b56d, #2f241d);
+      background: linear-gradient(90deg, #D9602B, #D9602B);
       border-radius: 2px;
       margin: 0 auto 20px;
     }
 
     .url-box {
-      background: #f5f0ea;
+      background: #ECECE9;
       border-radius: 10px;
       padding: 12px 16px;
       font-size: 11px;
-      color: #7a6550;
+      color: #5C5C59;
       word-break: break-all;
       direction: ltr;
       text-align: center;
@@ -110,7 +112,7 @@
 
     .footer {
       margin-top: 24px;
-      color: #b8a090;
+      color: #9A9A95;
       font-size: 11px;
       letter-spacing: 0.5px;
     }
@@ -119,7 +121,7 @@
       body { background: #fff; padding: 0; }
       .card {
         box-shadow: none;
-        border-color: #2f241d;
+        border-color: #141414;
         max-width: 100%;
         margin: 0;
         border-radius: 0;
@@ -133,8 +135,8 @@
       align-items: center;
       gap: 8px;
       margin-top: 20px;
-      background: #2f241d;
-      color: #d6b56d;
+      background: #141414;
+      color: #D9602B;
       border: none;
       border-radius: 12px;
       padding: 12px 28px;
@@ -153,7 +155,7 @@
   <div class="card">
     <div class="logo-area">
       <img class="logo-img" src="/laviviane-logo.png" alt="Laviviane" onerror="this.style.display='none';this.nextElementSibling.style.display='block'" />
-      <div style="display:none;color:#d6b56d;font-size:22px;font-weight:700;letter-spacing:3px;font-family:Georgia,serif">LAVIVIANE</div>
+      <div style="display:none;color:#D9602B;font-size:22px;font-weight:700;letter-spacing:3px;font-family:inherit">LAVIVIANE</div>
       <div class="logo-sub">Maison de Pâtisserie</div>
     </div>
 

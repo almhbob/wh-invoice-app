@@ -31,9 +31,9 @@ type Tab = "revenue" | "products" | "cashier" | "delivery" | "export" | "shifts"
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const PAYMENT_COLORS: Record<string, string> = {
-  cash: "#16a34a",
-  card: "#2563eb",
-  transfer: "#d97706",
+  cash: "#1F8A5B",
+  card: "#2D6E7E",
+  transfer: "#D9971E",
 };
 
 const DEPT_COLORS: Record<string, string> = {
@@ -189,7 +189,7 @@ function PaymentRow({
   );
 }
 
-const MEDAL_COLORS = ["#F59E0B", "#9CA3AF", "#CD7F32"];
+const MEDAL_COLORS = ["#D9971E", "#9CA3AF", "#CD7F32"];
 
 function CashierRow({
   rank,
@@ -208,7 +208,7 @@ function CashierRow({
 }) {
   const medalColor = rank <= 3 ? MEDAL_COLORS[rank - 1] : Colors.textMuted;
   return (
-    <View style={[styles.cashierRow, rank === 1 && { backgroundColor: "#F59E0B08", borderRadius: 12 }]}>
+    <View style={[styles.cashierRow, rank === 1 && { backgroundColor: "#D9971E08", borderRadius: 12 }]}>
       <View style={[styles.cashierRankBadge, { backgroundColor: medalColor + "20", borderColor: medalColor + "40" }]}>
         <Text style={[styles.cashierRank, { color: medalColor }]}>{rank}</Text>
       </View>
@@ -218,7 +218,7 @@ function CashierRow({
           {orderCount} {tFn("custOrderSingular")} · {tFn("repAvgOrder")} {fmtCurrency(avg)}
         </Text>
       </View>
-      <Text style={[styles.cashierRevenue, { color: rank === 1 ? "#F59E0B" : Colors.primary }]}>{fmtCurrency(revenue)}</Text>
+      <Text style={[styles.cashierRevenue, { color: rank === 1 ? "#D9971E" : Colors.primary }]}>{fmtCurrency(revenue)}</Text>
     </View>
   );
 }
@@ -992,11 +992,11 @@ function DeliveryTab({
 
 // ─── Tab: Shifts ──────────────────────────────────────────────────────────────
 
-const SHIFT_CASH_COLOR    = "#16a34a";
-const SHIFT_CARD_COLOR    = "#2563eb";
-const SHIFT_TRANSFER_COLOR = "#7c3aed";
-const SHIFT_DELIVERY_COLOR = "#ea580c";
-const SHIFT_PICKUP_COLOR   = "#0d9488";
+const SHIFT_CASH_COLOR    = "#1F8A5B";
+const SHIFT_CARD_COLOR    = "#2D6E7E";
+const SHIFT_TRANSFER_COLOR = "#8C4A5E";
+const SHIFT_DELIVERY_COLOR = "#D9602B";
+const SHIFT_PICKUP_COLOR   = "#2D6E7E";
 
 function PaymentPill({ label, value, color }: { label: string; value: number; color: string }) {
   if (value <= 0) return null;
@@ -1294,12 +1294,12 @@ export default function ReportsScreen() {
         <Text style={styles.screenTitle}>{t("titleReports")}</Text>
         <View style={{ flexDirection: "row", gap: 8 }}>
           <TouchableOpacity
-            style={[styles.shareBtn, { backgroundColor: "#16a34a12", borderColor: "#16a34a30" }]}
+            style={[styles.shareBtn, { backgroundColor: "#1F8A5B12", borderColor: "#1F8A5B30" }]}
             onPress={() => { Haptics.selectionAsync(); setShowShiftClose(true); }}
             activeOpacity={0.75}
           >
-            <Feather name="lock" size={14} color="#16a34a" />
-            <Text style={{ fontSize: 11, fontWeight: "700", color: "#16a34a" }}>{t("shiftClose")}</Text>
+            <Feather name="lock" size={14} color="#1F8A5B" />
+            <Text style={{ fontSize: 11, fontWeight: "700", color: "#1F8A5B" }}>{t("shiftClose")}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.shareBtn, { backgroundColor: Colors.primary + "12" }]}
