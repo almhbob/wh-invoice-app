@@ -28,6 +28,7 @@ import {
   verifyIdToken,
   verifyPin,
 } from "./core";
+import { BOOTSTRAP_ACCOUNTS } from "./bootstrap";
 
 export interface Deps {
   fetchImpl?: typeof fetch;
@@ -42,8 +43,9 @@ function randomHex(n = 16) {
 }
 
 function legacyPinOf(e: EmployeeRecord): string | null {
-  // Employees created after the secure rollout have no plaintext PIN at all: they need a PIN set via /set-pin.
-  if (e.legacyPin === undefined || e.legacyPin === "") return null;
+  // The old app treated a missing PIN as "1234". Such accounts keep working once,
+  // but 1234 is weak so the employee is forced to choose a new PIN right away.
+  if (e.legacyPin === undefined || e.legacyPin === "") return "1234";
   if (e.legacyPin.startsWith(DISABLED_PREFIX)) return null;
   return e.legacyPin;
 }
@@ -132,7 +134,25 @@ export async function handleLogin(request: Request, env: AuthEnv, deps: Deps = {
 
     const docs = await fs.list(`companies/${companyId}/employees`);
     const employees = docs.map((d) => toEmployeeRecord(companyId, d.id, d.data));
-    const emp = matchEmployee(employees, login);
+    let emp = matchEmployee(employees, login);
+
+    // Owner account that only existed in the old app code: create it once with the private setup code.
+    if (!emp) {
+      const boot = (BOOTSTRAP_ACCOUNTS[companyId] ?? []).find((b) => [b.employeeId.toLowerCase(), b.username].includes(login.toLowerCase()));
+      const taken = boot && employees.some((e) => e.employeeId.toLowerCase() === boot.employeeId.toLowerCase());
+      if (boot && !taken && (await sha256Hex(`${boot.salt}|${pin}`)) === boot.codeHash) {
+        const now = new Date().toISOString();
+        const id = await fs.create(`companies/${companyId}/employees`, {
+          name: boot.name, employeeId: boot.employeeId, username: boot.username, role: boot.role, status: "active",
+          companyId, permissions: ["*"], createdAt: now, createdBy: "bootstrap",
+        });
+        await writeSecret(fs, companyId, id, pin, true, "bootstrap");
+        emp = { docId: id, companyId, name: boot.name, employeeId: boot.employeeId, username: boot.username, role: boot.role, status: "active", permissions: ["*"] };
+        await clearThrottle(fs, loginKey);
+        const token = await createCustomToken(sa, employeeUid(companyId, id), { companyId, role: boot.role, eid: id, employeeId: boot.employeeId });
+        return json({ token, employee: publicEmployee(emp), mustChangePin: true });
+      }
+    }
 
     const result = emp && emp.status !== "suspended" ? await checkPin(fs, emp, pin) : { ok: false, mustChange: false };
     if (!emp || !result.ok) {

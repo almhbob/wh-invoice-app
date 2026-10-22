@@ -6,6 +6,8 @@ import { describe, expect, test, beforeEach } from "bun:test";
 
 import { b64url, b64urlDecode, decodeFields, encodeFields, signJwt, hashPin, verifyPin, pinPolicyError } from "./core";
 import { handleLogin, handleSetPin, handleStatus } from "./handlers";
+import { BOOTSTRAP_ACCOUNTS } from "./bootstrap";
+import { sha256Hex } from "./core";
 
 const PROJECT = "test-proj";
 const COMPANY = "laviviane-trial";
@@ -41,6 +43,11 @@ const fetchMock = (async (input: RequestInfo | URL, init?: RequestInit) => {
   const [pathPart, query = ""] = url.slice(BASE.length).split("?");
   const path = decodeURIComponent(pathPart);
   const method = init?.method ?? "GET";
+  if (method === "POST") {
+    const id = `auto${store.size + 1}`;
+    store.set(`${path}/${id}`, decodeFields((JSON.parse(String(init!.body)) as { fields: Record<string, never> }).fields));
+    return new Response(JSON.stringify({ name: `projects/x/databases/(default)/documents/${path}/${id}` }), { status: 200 });
+  }
   if (method === "PATCH") {
     const body = JSON.parse(String(init!.body)) as { fields: Record<string, never> };
     const data = decodeFields(body.fields);
@@ -152,11 +159,36 @@ describe("login", () => {
   });
 
   test("wrong PIN, suspended, unknown and PIN-less accounts are rejected identically", async () => {
-    for (const [login, pin] of [["LAVI001", "9999"], ["S01", "5555"], ["ghost", "1234"], ["N01", "1234"]]) {
+    for (const [login, pin] of [["LAVI001", "9999"], ["S01", "5555"], ["ghost", "1234"], ["N01", "0000"]]) {
       const r = await handleLogin(req("/api/auth/login", { companyId: COMPANY, login, pin }), env, deps());
       expect(r.status).toBe(401);
       expect(await r.json()).toEqual({ error: "invalid_credentials" });
     }
+  });
+
+  test("employee without a stored PIN uses the old default once and must change it", async () => {
+    const r = await handleLogin(req("/api/auth/login", { companyId: COMPANY, login: "N01", pin: "1234" }), env, deps());
+    expect(r.status).toBe(200);
+    expect(((await r.json()) as { mustChangePin: boolean }).mustChangePin).toBe(true);
+  });
+
+  test("one-time owner bootstrap creates the account once", async () => {
+    const salt = "testsalt";
+    const codeHash = await sha256Hex(`${salt}|7395014826`);
+    BOOTSTRAP_ACCOUNTS[COMPANY] = [{ employeeId: "BOOT9", username: "boot9", name: "Owner", role: "admin", salt, codeHash }];
+    expect((await handleLogin(req("/api/auth/login", { companyId: COMPANY, login: "BOOT9", pin: "1234" }), env, deps())).status).toBe(401);
+    const ok = await handleLogin(req("/api/auth/login", { companyId: COMPANY, login: "boot9", pin: "7395014826" }), env, deps());
+    expect(ok.status).toBe(200);
+    const body = (await ok.json()) as { mustChangePin: boolean; employee: { role: string; id: string } };
+    expect(body.mustChangePin).toBe(true);
+    expect(body.employee.role).toBe("admin");
+    const created = [...store.entries()].filter(([k, v]) => k.startsWith(`companies/${COMPANY}/employees/`) && (v as { employeeId?: string }).employeeId === "BOOT9");
+    expect(created).toHaveLength(1);
+    // Second time: the account exists, so the normal (hashed) path is used — no duplicate.
+    const again = await handleLogin(req("/api/auth/login", { companyId: COMPANY, login: "BOOT9", pin: "7395014826" }), env, deps());
+    expect(again.status).toBe(200);
+    expect([...store.entries()].filter(([k, v]) => k.startsWith(`companies/${COMPANY}/employees/`) && (v as { employeeId?: string }).employeeId === "BOOT9")).toHaveLength(1);
+    BOOTSTRAP_ACCOUNTS[COMPANY] = [];
   });
 
   test("locks after repeated failures", async () => {
