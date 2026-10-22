@@ -306,13 +306,23 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
       (snapshot) => {
         if (!mounted) return;
         const loaded: Order[] = snapshot.docs.map((d) => ({ ...(d.data() as Omit<Order, "id">), id: d.id, companyId }));
-        setServerOrders(loaded);
+        if (snapshot.metadata.fromCache) {
+          // Offline/local view: merge over what we already show, never wipe the cache with it.
+          setServerOrders((prev) => {
+            const byId = new Map(prev.map((o) => [o.id, o]));
+            loaded.forEach((o) => byId.set(o.id, o));
+            return [...byId.values()].sort((x, y) => y.createdAt.localeCompare(x.createdAt));
+          });
+        } else {
+          setServerOrders(loaded);
+          void writeJson(localOrdersKey(companyId), loaded);
+        }
         setIsLoading(false);
-        void writeJson(localOrdersKey(companyId), loaded);
-        // Anything the server now has can leave the outbox.
-        const serverIds = new Set(loaded.map((o) => o.id));
-        if (outboxRef.current.some((o) => serverIds.has(o.id))) {
-          saveOutbox(outboxRef.current.filter((o) => !serverIds.has(o.id)));
+        // Only writes the server has acknowledged may leave the outbox
+        // (a pending local write is lost if the page is closed).
+        const confirmed = new Set(snapshot.docs.filter((d) => !d.metadata.hasPendingWrites && !snapshot.metadata.fromCache).map((d) => d.id));
+        if (outboxRef.current.some((o) => confirmed.has(o.id))) {
+          saveOutbox(outboxRef.current.filter((o) => !confirmed.has(o.id)));
         }
       },
       (err) => {
