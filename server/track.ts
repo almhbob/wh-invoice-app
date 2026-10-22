@@ -55,6 +55,25 @@ export function publicView(o: Rec, brand: string) {
   };
 }
 
+export function onlineView(o: Rec, brand: string) {
+  const items = (Array.isArray(o.items) ? o.items : []) as Rec[];
+  const status = String(o.status ?? "new");
+  return {
+    brand,
+    orderNumber: null,
+    customerFirstName: String(o.customerName ?? "").trim().split(/\s+/)[0] || null,
+    orderType: o.orderType === "delivery" ? "delivery" : "pickup",
+    stage: status === "rejected" ? "rejected" : "awaiting_confirmation",
+    rejectReason: status === "rejected" ? (o.rejectReason ?? null) : null,
+    scheduledFor: o.deliveryTime ?? null,
+    driverName: null,
+    items: items.map((i) => ({ name: String(i.name ?? ""), quantity: Number(i.quantity ?? 1) })),
+    events: [{ type: "online_received", at: o.createdAt }],
+    createdAt: o.createdAt ?? null,
+    updatedAt: o.updatedAt ?? null,
+  };
+}
+
 export async function handleTrack(request: Request, env: AuthEnv, fetchImpl: typeof fetch = fetch) {
   const sa = readServiceAccount(env);
   if (!sa) return json({ error: "not_configured" }, 503);
@@ -70,10 +89,17 @@ export async function handleTrack(request: Request, env: AuthEnv, fetchImpl: typ
       where: { fieldFilter: { field: { fieldPath: "trackingCode" }, op: "EQUAL", value: { stringValue: code } } },
       limit: 1,
     });
-    if (!rows.length) return json({ error: "not_found" }, 404);
     const company = await fs.get(`companies/${companyId}`).catch(() => null);
     const brand = String(company?.name ?? (companyId === "laviviane-trial" ? "Laviviane" : ""));
-    return json(publicView(rows[0].data, brand), 200, { "Cache-Control": "no-store" });
+    if (rows.length) return json(publicView(rows[0].data, brand), 200, { "Cache-Control": "no-store" });
+    // Not an order yet: maybe an online request still waiting for the branch.
+    const pending = await fs.runQuery(`companies/${companyId}`, {
+      from: [{ collectionId: "onlineOrders" }],
+      where: { fieldFilter: { field: { fieldPath: "trackingCode" }, op: "EQUAL", value: { stringValue: code } } },
+      limit: 1,
+    });
+    if (!pending.length) return json({ error: "not_found" }, 404);
+    return json(onlineView(pending[0].data, brand), 200, { "Cache-Control": "no-store" });
   } catch (err) {
     console.error("track_error", err instanceof Error ? err.message : err);
     return json({ error: "server_error" }, 500);

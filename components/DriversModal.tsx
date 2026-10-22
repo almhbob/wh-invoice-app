@@ -4,8 +4,12 @@ import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, Swi
 
 import { Colors } from "@/constants/colors";
 import { useLang } from "@/context/LanguageContext";
+import { useEmployee } from "@/context/EmployeeContext";
+import { useOrders } from "@/context/OrdersContext";
 import { Driver, useDrivers } from "@/hooks/useDrivers";
-import { callPhone } from "@/utils/orderFlow";
+import { callPhone, driverStats } from "@/utils/orderFlow";
+
+type Entry = Driver & { account?: boolean };
 
 interface Props {
   visible: boolean;
@@ -22,6 +26,12 @@ export function DriversModal({ visible, onClose, onPick, currentDriverId, onUnas
   const { lang, isRTL } = useLang();
   const ar = lang === "ar";
   const { drivers, loading, addDriver, updateDriver, removeDriver } = useDrivers();
+  const { employees } = useEmployee();
+  const { orders } = useOrders();
+  // Drivers with an app account (role "driver") come first; they see their deliveries in the app.
+  const accountDrivers: Entry[] = employees
+    .filter((e) => e.role === "driver")
+    .map((e) => ({ id: e.employeeId, name: e.name, phone: e.phone ?? "", active: e.status !== "suspended", createdAt: e.createdAt, account: true }));
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -29,7 +39,8 @@ export function DriversModal({ visible, onClose, onPick, currentDriverId, onUnas
   const [saving, setSaving] = useState(false);
   const align = isRTL ? "right" : "left";
   const picker = !!onPick;
-  const list = picker ? drivers.filter((d) => d.active) : drivers;
+  const all: Entry[] = [...accountDrivers, ...drivers];
+  const list = picker ? all.filter((d) => d.active) : all;
 
   const save = async () => {
     if (!name.trim() || phone.replace(/\D/g, "").length < 9) {
@@ -89,7 +100,21 @@ export function DriversModal({ visible, onClose, onPick, currentDriverId, onUnas
                   <View style={st.avatar}><Text style={st.avatarTxt}>{d.name.charAt(0)}</Text></View>
                   <View style={{ flex: 1, gap: 2 }}>
                     <Text style={st.name}>{d.name}</Text>
-                    <Text style={st.sub}>{d.phone}{d.vehicle ? ` · ${d.vehicle}` : ""}</Text>
+                    <Text style={st.sub}>{d.phone || (ar ? "بدون رقم" : "No phone")}{d.vehicle ? ` · ${d.vehicle}` : ""}</Text>
+                    {d.account ? <Text style={st.account}>{ar ? "● حساب في التطبيق" : "● App account"}</Text> : null}
+                    {!picker && (() => {
+                      const s = driverStats(orders, d.id);
+                      return (
+                        <View style={st.stats}>
+                          {[[ar ? "اليوم" : "Today", s.today], [ar ? "الشهر" : "Month", s.month], [ar ? "السنة" : "Year", s.year]].map(([l, v]) => (
+                            <View key={String(l)} style={st.stat}>
+                              <Text style={st.statNum}>{(v as { assigned: number }).assigned}</Text>
+                              <Text style={st.statLbl}>{String(l)}</Text>
+                            </View>
+                          ))}
+                        </View>
+                      );
+                    })()}
                   </View>
                   {picker ? (
                     <View style={[st.load, load > 0 && { backgroundColor: Colors.gold + "22" }]}>
@@ -97,9 +122,11 @@ export function DriversModal({ visible, onClose, onPick, currentDriverId, onUnas
                     </View>
                   ) : (
                     <View style={st.actions}>
-                      <Pressable hitSlop={8} onPress={() => callPhone(d.phone)}><Feather name="phone" size={18} color={Colors.success} /></Pressable>
+                      {d.phone ? <Pressable hitSlop={8} onPress={() => callPhone(d.phone)}><Feather name="phone" size={18} color={Colors.success} /></Pressable> : null}
+                      {d.account ? null : <>
                       <Switch value={d.active} onValueChange={(v) => void updateDriver(d.id, { active: v })} trackColor={{ true: Colors.success, false: Colors.border }} />
                       <Pressable hitSlop={8} onPress={() => confirmRemove(d)}><Feather name="trash-2" size={18} color={Colors.accent} /></Pressable>
+                      </>}
                     </View>
                   )}
                   {selected && <Feather name="check-circle" size={18} color={Colors.success} />}
@@ -120,10 +147,15 @@ export function DriversModal({ visible, onClose, onPick, currentDriverId, onUnas
                 </View>
               </View>
             ) : (
+              <>
+              {!picker && (
+                <Text style={st.hint}>{ar ? "لإنشاء سائق يدخل التطبيق بحسابه: المشرف ← إضافة موظف ← الدور «سائق». أو أضف سائقاً خارجياً هنا (بدون حساب):" : "For a driver with an app login: Admin → Add employee → role “Driver”. Or add an external driver here (no login):"}</Text>
+              )}
               <Pressable style={st.addBtn} onPress={() => setAdding(true)}>
                 <Feather name="user-plus" size={16} color={Colors.primary} />
                 <Text style={st.addTxt}>{ar ? "إضافة سائق" : "Add driver"}</Text>
               </Pressable>
+              </>
             )}
           </ScrollView>
         </View>
@@ -144,6 +176,11 @@ const st = StyleSheet.create({
   avatarTxt: { color: Colors.goldLight, fontWeight: "900", fontSize: 16 },
   name: { fontSize: 14, fontWeight: "800", color: Colors.text },
   sub: { fontSize: 12, color: Colors.textSecondary },
+  account: { fontSize: 11, color: Colors.success, fontWeight: "700", marginTop: 2 },
+  stats: { flexDirection: "row", gap: 6, marginTop: 6 },
+  stat: { alignItems: "center", backgroundColor: Colors.surfaceSecondary, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4, minWidth: 54 },
+  statNum: { fontSize: 14, fontWeight: "900", color: Colors.primary },
+  statLbl: { fontSize: 10, color: Colors.textMuted, fontWeight: "700" },
   load: { backgroundColor: Colors.success + "18", borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
   loadTxt: { fontSize: 11, fontWeight: "800", color: Colors.success },
   actions: { flexDirection: "row", alignItems: "center", gap: 14 },
@@ -158,6 +195,7 @@ const st = StyleSheet.create({
   btnGhostTxt: { color: Colors.textSecondary, fontWeight: "700" },
   btnPrimary: { backgroundColor: Colors.primary },
   btnPrimaryTxt: { color: "#fff", fontWeight: "800" },
+  hint: { fontSize: 12, color: Colors.textSecondary, lineHeight: 18 },
   addBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, borderWidth: 1.5, borderStyle: "dashed", borderColor: Colors.gold, borderRadius: 14, paddingVertical: 12 },
   addTxt: { color: Colors.primary, fontWeight: "800" },
 });

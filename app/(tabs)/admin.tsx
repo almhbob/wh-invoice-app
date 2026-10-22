@@ -59,6 +59,7 @@ const ROLE_COLORS: Record<EmployeeRole, string> = {
   cake: Colors.cake,
   packaging: Colors.packaging,
   calligrapher: Colors.purple,
+  driver: Colors.success,
   admin: Colors.primaryLight,
   branch_supervisor: "#0d9488",
   dept_supervisor: "#0891b2",
@@ -72,12 +73,13 @@ const ROLE_ICONS: Record<EmployeeRole, any> = {
   cake: "layers",
   packaging: "box",
   calligrapher: "edit-3",
+  driver: "truck",
   admin: "shield",
   branch_supervisor: "git-branch",
   dept_supervisor: "users",
   guest: "user",
 };
-const ALL_ROLES: EmployeeRole[] = ["cashier", "halwa", "mawali", "chocolate", "cake", "packaging", "calligrapher", "branch_supervisor", "admin"];
+const ALL_ROLES: EmployeeRole[] = ["cashier", "halwa", "mawali", "chocolate", "cake", "packaging", "calligrapher", "driver", "branch_supervisor", "admin"];
 
 // ─── sub-components ────────────────────────────────────────────────────────
 function StatCard({
@@ -118,6 +120,7 @@ function EmployeesSection() {
   const { t, lang } = useLang();
   const isSecure = authMode === "secure";
   const [pin, setPin] = useState("");
+  const [phone, setPhone] = useState("");
   const [pinTarget, setPinTarget] = useState<Employee | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [name, setName] = useState("");
@@ -137,9 +140,13 @@ function EmployeesSection() {
     }
     setSaving(true);
     try {
-      await addEmployee({ name: name.trim(), employeeId: empId.trim().toUpperCase(), role, ...(isSecure ? { pinCode: pin.trim() } : {}) });
+      if (role === "driver" && phone.replace(/\D/g, "").length < 9) {
+        Alert.alert(t("errTitle"), lang === "ar" ? "أدخل رقم جوال السائق." : "Enter the driver's phone.");
+        return;
+      }
+      await addEmployee({ name: name.trim(), employeeId: empId.trim().toUpperCase(), role, ...(phone.trim() ? { phone: phone.trim() } : {}), ...(isSecure ? { pinCode: pin.trim() } : {}) });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setName(""); setEmpId(""); setPin(""); setRole("cashier"); setShowAdd(false);
+      setName(""); setEmpId(""); setPin(""); setPhone(""); setRole("cashier"); setShowAdd(false);
     } catch (e) {
       const f = e instanceof SecureAuthFailure ? e : null;
       Alert.alert(t("errTitle"), f ? secureAuthErrorText(f.code, lang, f.retryAfter) : employeeCredentialErrorMessage(e));
@@ -335,6 +342,13 @@ function EmployeesSection() {
               <TextInput style={styles.formInput} value={pin} onChangeText={setPin}
                 placeholder="••••" placeholderTextColor={Colors.textMuted}
                 textAlign="right" secureTextEntry keyboardType="number-pad" maxLength={8} />
+            </>
+          )}
+          {role === "driver" && (
+            <>
+              <Text style={styles.formLabel}>{lang === "ar" ? "جوال السائق *" : "Driver phone *"}</Text>
+              <TextInput style={styles.formInput} value={phone} onChangeText={setPhone}
+                placeholder="05XXXXXXXX" placeholderTextColor={Colors.textMuted} textAlign="right" keyboardType="phone-pad" />
             </>
           )}
           <Text style={styles.formLabel}>{t("adminEmpRoleLabel")}</Text>

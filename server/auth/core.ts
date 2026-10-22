@@ -248,6 +248,14 @@ export class Firestore {
     return out;
   }
 
+  /** Create a document with an auto-generated id; returns the id. */
+  async create(collectionPath: string, data: Record<string, unknown>): Promise<string> {
+    const res = await this.req(collectionPath, { method: "POST", body: JSON.stringify({ fields: encodeFields(data) }) });
+    if (!res.ok) throw new Error(`firestore_create_failed:${res.status}`);
+    const doc = (await res.json()) as { name: string };
+    return doc.name.split("/").pop() as string;
+  }
+
   /** Run a structured query under a parent document path ("" for root). */
   async runQuery(parentPath: string, structuredQuery: Record<string, unknown>): Promise<{ id: string; data: Record<string, unknown> }[]> {
     const res = await this.req(`${parentPath}:runQuery`, { method: "POST", body: JSON.stringify({ structuredQuery }) });

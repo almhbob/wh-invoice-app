@@ -55,7 +55,7 @@ function fmtTime(iso: string, lang: string) {
 }
 
 export function OrderDetailsSheet({ orderId, visible, onClose }: { orderId: string | null; visible: boolean; onClose: () => void }) {
-  const { orders, assignDeliveryDriver, dispatchOrder, markDelivered, markDeliveryFailed, markPickedUp, ensureTrackingCode } = useOrders();
+  const { orders, assignDeliveryDriver, dispatchOrder, markDelivered, markDeliveryFailed, markPickedUp, ensureTrackingCode, resolveDriverRequest } = useOrders();
   const { currentEmployee } = useEmployee();
   const { company } = useCompany();
   const { t, lang } = useLang();
@@ -63,6 +63,7 @@ export function OrderDetailsSheet({ orderId, visible, onClose }: { orderId: stri
   const [pickDriver, setPickDriver] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [failReason, setFailReason] = useState<string | null>(null);
+  const [reply, setReply] = useState("");
 
   const order = useMemo(() => orders.find((o) => o.id === orderId) ?? null, [orders, orderId]);
   if (!order) return null;
@@ -155,6 +156,34 @@ export function OrderDetailsSheet({ orderId, visible, onClose }: { orderId: stri
                 <View style={st.alert}><Feather name="alert-triangle" size={14} color={Colors.statusCancelled} /><Text style={st.alertTxt}>{order.deliveryFailedReason}</Text></View>
               ) : null}
             </View>
+
+            {/* Driver request (support / transfer) */}
+            {order.driverRequest && (
+              <View style={[st.card, order.driverRequest.status === "open" && { borderColor: Colors.warning + "88", backgroundColor: Colors.warning + "0C" }]}>
+                <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                  <Feather name={order.driverRequest.type === "transfer" ? "repeat" : "life-buoy"} size={16} color={order.driverRequest.status === "open" ? Colors.warning : Colors.success} />
+                  <Text style={[st.cardTitle, { flex: 1, color: Colors.text }]}>
+                    {order.driverRequest.type === "transfer" ? (ar ? "طلب تحويل لمندوب آخر" : "Transfer request") : (ar ? "طلب دعم من السائق" : "Driver support request")}
+                    {" · "}{order.driverRequest.status === "open" ? (ar ? "مفتوح" : "Open") : (ar ? "تمت المعالجة" : "Resolved")}
+                  </Text>
+                </View>
+                <Text style={st.line}>{order.driverRequest.reason}</Text>
+                {order.driverRequest.note ? <Text style={st.itemNote}>{order.driverRequest.note}</Text> : null}
+                <Text style={st.tlSub}>{order.driverRequest.by.name} · {fmtTime(order.driverRequest.at, lang)}</Text>
+                {order.driverRequest.response ? <Text style={st.itemNote}>↩ {order.driverRequest.response}{order.driverRequest.resolvedBy ? ` — ${order.driverRequest.resolvedBy.name}` : ""}</Text> : null}
+                {order.driverRequest.status === "open" && canFulfil && (
+                  <View style={{ gap: 8 }}>
+                    {order.driverRequest.type === "transfer" && (
+                      <ActionBtn icon="user-check" primary label={ar ? "إسناد لسائق آخر" : "Reassign to another driver"} onPress={() => setPickDriver(true)} />
+                    )}
+                    <TextInput style={st.input} value={reply} onChangeText={setReply} placeholder={ar ? "رد للسائق (اختياري)" : "Reply to driver (optional)"} placeholderTextColor={Colors.textMuted} />
+                    <ActionBtn icon="check-square" loading={busy === "resolve"} label={ar ? "تمت المعالجة" : "Mark resolved"}
+                      onPress={() => void run("resolve", async () => { if (by) await resolveDriverRequest(order.id, by, reply); setReply(""); })} />
+                    {order.deliveryDriver?.phone ? <ActionBtn icon="phone" label={ar ? "اتصال بالسائق" : "Call driver"} onPress={() => callPhone(order.deliveryDriver!.phone!)} /> : null}
+                  </View>
+                )}
+              </View>
+            )}
 
             {/* Fulfilment actions */}
             {canFulfil && isOrderOpen(order) && (

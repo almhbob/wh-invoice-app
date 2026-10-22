@@ -25,6 +25,10 @@ export type OrderEventType =
   | "created"
   | "dept_started"
   | "dept_done"
+  | "online_received"
+  | "support_requested"
+  | "transfer_requested"
+  | "request_resolved"
   | "writing_started"
   | "writing_done"
   | "ready"
@@ -146,6 +150,10 @@ export const EVENT_META: Record<OrderEventType, { ar: string; en: string; icon: 
   created:          { ar: "استُلم الطلب وأُرسل للأقسام", en: "Order received", icon: "file-plus" },
   dept_started:     { ar: "بدأ التحضير",                 en: "Preparation started", icon: "play" },
   dept_done:        { ar: "انتهى التحضير",               en: "Preparation done", icon: "check" },
+  online_received:    { ar: "وصل الطلب من الرابط الأونلاين", en: "Online order received", icon: "globe" },
+  support_requested:  { ar: "طلب السائق الدعم",          en: "Driver asked for support", icon: "life-buoy" },
+  transfer_requested: { ar: "طلب السائق تحويل الطلب",    en: "Driver asked to transfer", icon: "repeat" },
+  request_resolved:   { ar: "تمت معالجة طلب السائق",     en: "Driver request resolved", icon: "check-square" },
   writing_started:  { ar: "بدأ الخطاط الكتابة",          en: "Writing started", icon: "edit-3" },
   writing_done:     { ar: "انتهت الكتابة",               en: "Writing done", icon: "check-square" },
   ready:            { ar: "الطلب جاهز بالكامل",          en: "Order ready", icon: "check-circle" },
@@ -317,4 +325,48 @@ export function driverDispatchMessage(order: Order, brand: string) {
 export function remainingAmount(order: Order) {
   if (!order.totalAmount) return 0;
   return Math.max(0, order.totalAmount - (order.amountPaid ?? order.totalAmount));
+}
+
+// ── Driver requests ────────────────────────────────────────────────────────────
+
+export const SUPPORT_REASONS = [
+  "العميل لا يرد",
+  "العنوان غير واضح",
+  "العميل غير موجود بالموقع",
+  "مشكلة في التحصيل",
+  "الطلب ناقص أو تالف",
+  "عطل في المركبة",
+  "أخرى",
+];
+
+export const TRANSFER_REASONS = [
+  "ضغط طلبات",
+  "بعد المسافة",
+  "عطل في المركبة",
+  "ظرف طارئ",
+  "انتهاء الدوام",
+  "أخرى",
+];
+
+export function hasOpenDriverRequest(order: Order) {
+  return order.driverRequest?.status === "open";
+}
+
+/** Counts of deliveries assigned to a driver: today, this month, this year (+ delivered). */
+export function driverStats(orders: Order[], driverId: string, now = new Date()) {
+  const mine = orders.filter((o) => o.deliveryDriver?.employeeId === driverId && !o.deleted);
+  const when = (o: Order) => new Date(o.deliveryDriver?.assignedAt ?? o.createdAt);
+  const sameDay = (d: Date) => d.toDateString() === now.toDateString();
+  const sameMonth = (d: Date) => d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+  const sameYear = (d: Date) => d.getFullYear() === now.getFullYear();
+  const pack = (pred: (d: Date) => boolean) => {
+    const list = mine.filter((o) => pred(when(o)));
+    return { assigned: list.length, delivered: list.filter((o) => o.deliveryStatus === "delivered").length };
+  };
+  return {
+    today: pack(sameDay),
+    month: pack(sameMonth),
+    year: pack(sameYear),
+    open: mine.filter((o) => o.deliveryStatus !== "delivered").length,
+  };
 }

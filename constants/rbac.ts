@@ -44,6 +44,12 @@ export const ROLE_CAN_VIEW_CUSTOMERS = new Set<EmployeeRole>([
   "admin", "branch_supervisor", "cashier",
 ]);
 
+export const ROLE_IS_DRIVER = new Set<EmployeeRole>(["driver"]);
+
+export const ROLE_CAN_VIEW_ONLINE_ORDERS = new Set<EmployeeRole>([
+  "admin", "branch_supervisor", "cashier",
+]);
+
 export const ROLE_CAN_VIEW_DELIVERY = new Set<EmployeeRole>([
   "admin", "branch_supervisor", "cashier",
 ]);

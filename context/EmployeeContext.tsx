@@ -50,7 +50,7 @@ function getOrCreateDeviceId(): string {
 }
 const MY_DEVICE_ID = getOrCreateDeviceId();
 
-export type EmployeeRole = "cashier" | "halwa" | "mawali" | "chocolate" | "cake" | "packaging" | "calligrapher" | "admin" | "branch_supervisor" | "dept_supervisor" | "guest";
+export type EmployeeRole = "cashier" | "halwa" | "mawali" | "chocolate" | "cake" | "packaging" | "calligrapher" | "driver" | "admin" | "branch_supervisor" | "dept_supervisor" | "guest";
 
 export interface Employee {
   id: string;
@@ -58,6 +58,8 @@ export interface Employee {
   name: string;
   employeeId: string;
   username?: string;
+  /** Contact number (used for drivers). */
+  phone?: string;
   pinCode?: string;
   status?: "active" | "suspended";
   role: EmployeeRole;
@@ -75,7 +77,7 @@ interface EmployeeContextType {
   setCurrentEmployee: (emp: Employee | null) => void;
   addEmployee: (data: Omit<Employee, "id" | "createdAt" | "companyId">) => Promise<Employee>;
   removeEmployee: (id: string) => Promise<void>;
-  updateEmployee: (id: string, changes: Partial<Pick<Employee, "name" | "role" | "status" | "pinCode">>) => Promise<void>;
+  updateEmployee: (id: string, changes: Partial<Pick<Employee, "name" | "role" | "status" | "pinCode" | "phone">>) => Promise<void>;
   checkAndLogin: (emp: Employee, forceKick?: boolean) => Promise<"ok" | "conflict">;
   /** Sets an employee's login PIN through the server (secure mode only). */
   setEmployeePin: (id: string, pin: string) => Promise<void>;
@@ -97,6 +99,7 @@ const ROLE_LABELS: Record<EmployeeRole, string> = {
   cake: "قسم الكيك",
   packaging: "قسم التغليف",
   calligrapher: "الخطاط",
+  driver: "سائق توصيل",
   admin: "مشرف",
   branch_supervisor: "مشرف فرع",
   dept_supervisor: "مشرف قسم",
@@ -414,7 +417,7 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
   );
 
   const updateEmployee = useCallback(
-    async (id: string, rawChanges: Partial<Pick<Employee, "name" | "role" | "status" | "pinCode">>) => {
+    async (id: string, rawChanges: Partial<Pick<Employee, "name" | "role" | "status" | "pinCode" | "phone">>) => {
       let changes = rawChanges;
       if (isSecure && rawChanges.pinCode !== undefined) {
         const { pinCode, ...rest } = rawChanges;
