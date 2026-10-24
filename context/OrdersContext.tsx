@@ -234,6 +234,8 @@ interface OrdersContextType {
   getOrdersForDepartment: (department: Department) => Order[];
   refreshOrders: () => void;
   purgeAllOrders: () => Promise<void>;
+  /** Forget orders kept on this device (after an admin reset on the server). */
+  clearLocalOrders: () => Promise<void>;
   /** Orders saved on this device but not yet on the server. */
   pendingSyncCount: number;
   /** Widen the live window to at least `days` days (archive, reports, stats). */
@@ -860,6 +862,12 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
     [orders]
   );
 
+  const clearLocalOrders = useCallback(async () => {
+    setServerOrders([]);
+    saveOutbox([]);
+    await writeJson(localOrdersKey(companyId), []);
+  }, [companyId, saveOutbox]);
+
   const purgeAllOrders = useCallback(async () => {
     try {
       const snap = await getDocs(query(ordersCollection()));
@@ -903,6 +911,7 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
         getOrdersForDepartment,
         refreshOrders,
         purgeAllOrders,
+        clearLocalOrders,
         pendingSyncCount: outbox.length,
         requestHistory,
         windowDays,
