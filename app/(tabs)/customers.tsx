@@ -32,7 +32,66 @@ interface Customer {
   lastOrderAt: string;
 }
 
-type TabKey = "all" | "frequent" | "vip";
+type TabKey = "all" | "frequent" | "vip" | "occasions";
+
+interface Occasion {
+  customer: Customer;
+  kind: string;
+  text: string;
+  lastDate: Date;
+  next: Date;
+  daysLeft: number;
+}
+
+const OCCASION_WORDS: [RegExp, string][] = [
+  [/ميلاد|birthday|بيرث/i, "عيد ميلاد"],
+  [/زواج|زفاف|anniversary|wedding/i, "ذكرى زواج"],
+  [/تخرج|graduat/i, "تخرج"],
+  [/مولود|newborn|baby/i, "مولود"],
+];
+
+/** Same customer whatever way the number was typed (05…, 9665…, +966 5…). */
+function phoneKey(raw: string | undefined) {
+  let d = String(raw ?? "").replace(/\D/g, "");
+  if (d.startsWith("00")) d = d.slice(2);
+  if (d.startsWith("966")) d = d.slice(3);
+  if (d.startsWith("0")) d = d.slice(1);
+  return d.length >= 8 ? d : "";
+}
+
+function orderDate(o: Order) {
+  const d = new Date((o.deliveryTime || o.createdAt || "").replace(" ", "T"));
+  return isNaN(d.getTime()) ? new Date(o.createdAt) : d;
+}
+
+/** Yearly occasions (from cake writing) coming up in the next `days` days. */
+function upcomingOccasions(customers: Customer[], days = 21): Occasion[] {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const out: Occasion[] = [];
+  for (const c of customers) {
+    const seen = new Set<string>();
+    for (const o of c.orders) {
+      for (const item of o.items ?? []) {
+        const text = item.writing?.text?.trim();
+        if (!text) continue;
+        const kind = OCCASION_WORDS.find(([re]) => re.test(text))?.[1];
+        if (!kind || kind === "مولود" || kind === "تخرج") continue;
+        const last = orderDate(o);
+        const next = new Date(today.getFullYear(), last.getMonth(), last.getDate());
+        if (next < today) next.setFullYear(next.getFullYear() + 1);
+        const daysLeft = Math.round((next.getTime() - today.getTime()) / 86400000);
+        if (daysLeft > days || last.getFullYear() === today.getFullYear() && daysLeft > 300) continue;
+        // Only past years count (an order placed this week is not a reminder).
+        if (today.getTime() - last.getTime() < 200 * 86400000) continue;
+        const key = `${kind}|${next.toDateString()}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push({ customer: c, kind, text, lastDate: last, next, daysLeft });
+      }
+    }
+  }
+  return out.sort((a, b) => a.daysLeft - b.daysLeft);
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -289,10 +348,12 @@ export default function CustomersScreen() {
   const customers = useMemo<Customer[]>(() => {
     const map = new Map<string, Customer>();
     orders.forEach((o) => {
-      const phone = o.customerPhone;
+      if (o.deleted) return;
+      const phone = phoneKey(o.customerPhone);
+      if (!phone) return;
       if (!map.has(phone)) {
         map.set(phone, {
-          phone,
+          phone: o.customerPhone,
           name: o.customerName,
           orders: [],
           totalSpent: 0,
@@ -323,6 +384,8 @@ export default function CustomersScreen() {
     [customers]
   );
 
+  const occasions = useMemo(() => upcomingOccasions(customers), [customers]);
+
   // Filtered list
   const filtered = useMemo(() => {
     let list = customers;
@@ -342,6 +405,7 @@ export default function CustomersScreen() {
     { key: "all", label: t("custAll") },
     { key: "frequent", label: t("custFrequent") },
     { key: "vip", label: "⭐ VIP" },
+    { key: "occasions", label: lang === "ar" ? `مناسبات قادمة${occasions.length ? ` (${occasions.length})` : ""}` : `Upcoming${occasions.length ? ` (${occasions.length})` : ""}` },
   ];
 
   if (!currentEmployee || !canDo(currentEmployee.role, ROLE_CAN_VIEW_CUSTOMERS)) {
@@ -423,7 +487,44 @@ export default function CustomersScreen() {
         ))}
       </View>
 
-      {/* ── Customer List ── */}
+      {tab === "occasions" ? (
+        <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 100, paddingHorizontal: 16, gap: 10 }}>
+          {occasions.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Feather name="calendar" size={48} color={Colors.textMuted} />
+              <Text style={styles.emptyText}>
+                {lang === "ar" ? "لا توجد مناسبات متكررة خلال الأسابيع الثلاثة القادمة" : "No recurring occasions in the next three weeks"}
+              </Text>
+            </View>
+          ) : occasions.map((oc) => (
+            <View key={`${oc.customer.phone}-${oc.kind}-${oc.next.toDateString()}`} style={styles.occCard}>
+              <View style={styles.occDays}>
+                <Text style={styles.occDaysNum}>{oc.daysLeft}</Text>
+                <Text style={styles.occDaysLbl}>{lang === "ar" ? "يوم" : "days"}</Text>
+              </View>
+              <View style={{ flex: 1, gap: 3 }}>
+                <Text style={styles.occName} numberOfLines={1}>{oc.customer.name} · {oc.kind}</Text>
+                <Text style={styles.occText} numberOfLines={1}>«{oc.text}»</Text>
+                <Text style={styles.occMeta}>
+                  {lang === "ar" ? "آخر مرة: " : "Last: "}{fmtDate(oc.lastDate.toISOString())}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={styles.occWa}
+                onPress={() =>
+                  openWhatsApp(
+                    oc.customer.phone,
+                    `مرحباً ${oc.customer.name} 🌸\nنتذكر مناسبتكم السعيدة (${oc.kind}) العام الماضي، ويسعدنا أن نكون جزءاً منها هذا العام أيضاً. هل تودون حجز طلبكم من لافيفيان؟`
+                  )
+                }
+              >
+                <Feather name="message-circle" size={16} color="#fff" />
+                <Text style={styles.occWaTxt}>{lang === "ar" ? "تذكير" : "Remind"}</Text>
+              </TouchableOpacity>
+            </View>
+          ))}
+        </ScrollView>
+      ) : (
       <FlatList
         data={filtered}
         keyExtractor={(c) => c.phone}
@@ -586,6 +687,7 @@ export default function CustomersScreen() {
           );
         }}
       />
+      )}
 
       {/* ── History Modal ── */}
       {selected && (
@@ -601,6 +703,15 @@ export default function CustomersScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
+  occCard: { flexDirection: "row-reverse", alignItems: "center", gap: 12, backgroundColor: Colors.surface, borderRadius: 18, padding: 14, borderWidth: 1, borderColor: Colors.borderLight },
+  occDays: { width: 52, height: 52, borderRadius: 16, backgroundColor: Colors.gold + "18", alignItems: "center", justifyContent: "center" },
+  occDaysNum: { color: Colors.gold, fontSize: 18, fontWeight: "700" },
+  occDaysLbl: { color: Colors.gold, fontSize: 10, fontWeight: "600" },
+  occName: { color: Colors.text, fontSize: 14, fontWeight: "700", textAlign: "right" },
+  occText: { color: Colors.purple, fontSize: 12, fontWeight: "600", textAlign: "right" },
+  occMeta: { color: Colors.textMuted, fontSize: 11, textAlign: "right" },
+  occWa: { flexDirection: "row-reverse", alignItems: "center", gap: 6, backgroundColor: "#25D366", borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8 },
+  occWaTxt: { color: "#fff", fontSize: 12, fontWeight: "700" },
   container: { flex: 1, backgroundColor: Colors.background },
 
   // Stats
@@ -650,12 +761,13 @@ const styles = StyleSheet.create({
   // Tabs
   tabRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 8,
     paddingHorizontal: 16,
     marginBottom: 10,
   },
   tabBtn: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 20,
     backgroundColor: Colors.surface,

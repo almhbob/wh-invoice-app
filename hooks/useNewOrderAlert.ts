@@ -2,17 +2,27 @@ import * as Haptics from "expo-haptics";
 import { useEffect, useRef } from "react";
 import { Platform, Vibration } from "react-native";
 
-function showBrowserNotification(count: number) {
-  if (Platform.OS !== "web" || typeof Notification === "undefined") return;
-  if (Notification.permission !== "granted") return;
+let lastBellAt = 0;
+
+/**
+ * One shared bell for the whole app: sound + system notification + haptics.
+ * Throttled so the global watcher and a screen's own alert never double-ring.
+ */
+export function ringAlert(title: string, body: string, tag = "new-order") {
+  const now = Date.now();
+  if (now - lastBellAt < 2500) return;
+  lastBellAt = now;
+  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
+  if (Platform.OS !== "web") Vibration.vibrate([0, 120, 80, 120]);
+  playWebBeep();
+  if (Platform.OS !== "web" || typeof Notification === "undefined" || Notification.permission !== "granted") return;
   try {
-    new Notification("طلب جديد! 🔔", {
-      body: `${count} طلب${count > 1 ? " جديدة" : " جديد"} بانتظار المعالجة`,
-      icon: "/laviviane-logo.png",
-      tag: "new-order",
-      renotify: true,
-    } as NotificationOptions);
+    new Notification(title, { body, icon: "/laviviane-logo.png", tag, renotify: true } as NotificationOptions);
   } catch (_) {}
+}
+
+function showBrowserNotification(count: number) {
+  ringAlert("طلب جديد! 🔔", `${count} طلب${count > 1 ? " جديدة" : " جديد"} بانتظار المعالجة`);
 }
 
 function playWebBeep() {
@@ -25,12 +35,15 @@ function playWebBeep() {
     const gain = ctx.createGain();
     osc.connect(gain);
     gain.connect(ctx.destination);
-    osc.frequency.value = 880;
     osc.type = "sine";
-    gain.gain.setValueAtTime(0.25, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.setValueAtTime(1320, ctx.currentTime + 0.18);
+    gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
     osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + 0.5);
+    osc.stop(ctx.currentTime + 0.62);
+    setTimeout(() => ctx.close().catch(() => undefined), 800);
   } catch (_) {}
 }
 
@@ -63,9 +76,6 @@ export function useNewOrderAlert(
     }
 
     if (pendingCount > prevRef.current) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      if (Platform.OS !== "web") Vibration.vibrate([0, 120, 80, 120]);
-      playWebBeep();
       showBrowserNotification(pendingCount - prevRef.current);
       onNew?.();
     }

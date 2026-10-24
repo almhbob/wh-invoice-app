@@ -47,12 +47,13 @@ export interface OnlineOrder {
 }
 
 /** Live inbox of orders customers placed through the public link. */
-export function useOnlineOrders() {
+export function useOnlineOrders(enabled = true) {
   const { companyId } = useCompany();
   const [list, setList] = useState<OnlineOrder[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!enabled) { setList([]); setLoading(false); return; }
     setLoading(true);
     const q = query(collection(db, "companies", companyId, "onlineOrders"), orderBy("createdAt", "desc"), limit(150));
     return onSnapshot(
@@ -63,7 +64,7 @@ export function useOnlineOrders() {
       },
       () => setLoading(false)
     );
-  }, [companyId]);
+  }, [companyId, enabled]);
 
   const pending = useMemo(() => list.filter((o) => o.status === "new").sort((a, b) => a.createdAt.localeCompare(b.createdAt)), [list]);
   const decidedToday = useMemo(

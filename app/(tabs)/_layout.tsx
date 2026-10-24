@@ -1,3 +1,4 @@
+import { LiveAlertsHost } from "@/components/LiveAlertsHost";
 import { Feather } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { Image } from "expo-image";
@@ -582,6 +583,7 @@ export default function TabLayout() {
         <DesktopSidebar activePath={pathname} navigate={navigate} isRTL={isRTL} />
         <View style={ds.content}>
           <OfflineBanner />
+          <LiveAlertsHost />
           <View style={[ds.contentHeader, isRTL ? ds.rowRTL : ds.rowLTR]}>
             <View style={[ds.contentBadge, { backgroundColor: screenAccent }]}>
               <Text style={ds.contentBadgeText}>{screenTitle}</Text>
@@ -599,6 +601,7 @@ export default function TabLayout() {
     <View style={{ flex: 1 }}>
       <LogoHeader titleKey={screenTitle} accentColor={screenAccent} isDesktop={false} />
       <OfflineBanner />
+      <LiveAlertsHost />
       <Tabs tabBar={() => <CustomTabBar />} screenOptions={{ headerShown: false }}>
         {screens}
       </Tabs>

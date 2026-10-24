@@ -167,6 +167,7 @@ const MODULE_DEFS: ModuleDef[] = [
   { route: "driver",    icon: "truck",       accent: Colors.success,  labelKey: "tabMyDeliveries",    capKey: "homeCapDriver",   group: "ops" },
   { route: "tracking",  icon: "navigation",  accent: Colors.gold,     labelKey: "tabTracking",        capKey: "homeCapTracking", group: "ops" },
   { route: "delivery",  icon: "truck",       accent: Colors.success,  labelKey: "tabDelivery",        capKey: "homeCapDelivery", group: "ops" },
+  { route: "customers", icon: "users",       accent: Colors.packaging, labelKey: "tabCustomers",      capKey: "homeCapCustomers", group: "ops" },
   { route: "halwa",     icon: "coffee",      accent: Colors.halwa,    labelKey: "deptHalwaShort",     group: "dept" },
   { route: "mawali",    icon: "package",     accent: Colors.mawali,   labelKey: "deptMawaliShort",    group: "dept" },
   { route: "chocolate", icon: "gift",        accent: Colors.chocolate,labelKey: "deptChocolateShort", group: "dept" },
@@ -355,9 +356,10 @@ export default function HomeScreen() {
   const visible = useMemo(() => {
     const base = MODULE_DEFS.filter(d => d.group !== "admin" && d.route !== "driver");
     if (!role || role === "admin" || role === "branch_supervisor" || role === "dept_supervisor") {
-      return isAdmin ? MODULE_DEFS : base;
+      const all = isAdmin ? MODULE_DEFS : base;
+      return role === "dept_supervisor" ? all.filter(d => d.route !== "customers") : all;
     }
-    if (role === "cashier") return base.filter(d => ["cashier", "online", "tracking", "delivery", "archive"].includes(d.route));
+    if (role === "cashier") return base.filter(d => ["cashier", "online", "tracking", "delivery", "customers", "archive"].includes(d.route));
     if (role === "driver") return MODULE_DEFS.filter(d => d.route === "driver");
     const own = role === "calligrapher" ? "writing" : role;
     return base.filter(d => d.route === own || (role === "cake" && d.route === "writing"));

@@ -939,6 +939,7 @@ const translations = {
   homeCapReports:      { ar: "المبيعات والأداء", en: "Sales & performance", ur: "فروخت اور کارکردگی", hi: "बिक्री व प्रदर्शन", bn: "বিক্রয় ও কর্মক্ষমতা" },
   homeCapOnline:       { ar: "قبول طلبات العملاء", en: "Accept customer orders", ur: "گاہکوں کے آرڈر قبول کریں", hi: "ग्राहक ऑर्डर स्वीकारें", bn: "গ্রাহকের অর্ডার গ্রহণ" },
   homeCapDriver:       { ar: "الطلبات المسندة إليّ", en: "Deliveries assigned to me", ur: "میرے سپرد ڈیلیوریز", hi: "मुझे सौंपी गई डिलीवरी", bn: "আমার ডেলিভারি" },
+  homeCapCustomers:    { ar: "السجل والمناسبات", en: "History & occasions", ur: "ریکارڈ اور مواقع", hi: "रिकॉर्ड और अवसर", bn: "রেকর্ড ও উপলক্ষ" },
   homeCapTracking:     { ar: "من الطلب حتى التسليم", en: "From order to delivery", ur: "آرڈر سے ڈیلیوری تک", hi: "ऑर्डर से डिलीवरी तक", bn: "অর্ডার থেকে ডেলিভারি" },
   homeCapDelivery:     { ar: "متابعة الطلبات",  en: "Track orders",     ur: "آرڈر ٹریک کریں",  hi: "ऑर्डर ट्रैक करें",  bn: "অর্ডার ট্র্যাক" },
   homeCapAdmin:        { ar: "الموظفون والأسعار والإعدادات", en: "Staff, prices & settings", ur: "عملہ، قیمتیں اور سیٹنگز", hi: "स्टाफ, कीमतें और सेटिंग्स", bn: "কর্মী, মূল্য ও সেটিংস" },

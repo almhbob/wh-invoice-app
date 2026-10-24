@@ -1,3 +1,4 @@
+import { PerformanceReport } from "@/components/PerformanceReport";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import React, { useMemo, useState } from "react";
@@ -26,7 +27,7 @@ import { ShiftCloseModal } from "@/components/ShiftCloseModal";
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type Filter = "today" | "week" | "month" | "all";
-type Tab = "revenue" | "products" | "cashier" | "delivery" | "export" | "shifts";
+type Tab = "revenue" | "performance" | "products" | "cashier" | "delivery" | "export" | "shifts";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -1180,7 +1181,7 @@ function ShiftsTab() {
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 
 export default function ReportsScreen() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const { orders } = useOrders();
   useOrderHistory(730);
   const insets = useSafeAreaInsets();
@@ -1207,6 +1208,7 @@ export default function ReportsScreen() {
 
   const TAB_ITEMS: { key: Tab; label: string; icon: string }[] = [
     { key: "revenue",  label: t("repTabRevenue"),  icon: "trending-up" },
+    { key: "performance", label: lang === "ar" ? "الأداء" : "Performance", icon: "activity" },
     { key: "products", label: t("repTabProducts"), icon: "package" },
     { key: "cashier",  label: t("repTabCashier"),  icon: "user-check" },
     { key: "delivery", label: t("repTabDelivery"), icon: "truck" },
@@ -1345,6 +1347,7 @@ export default function ReportsScreen() {
 
       {/* Tab bar */}
       <View style={styles.tabBar}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1, gap: 2 }}>
         {TAB_ITEMS.map((tab) => (
           <TouchableOpacity
             key={tab.key}
@@ -1372,6 +1375,7 @@ export default function ReportsScreen() {
             </Text>
           </TouchableOpacity>
         ))}
+        </ScrollView>
       </View>
 
       {/* Tab content */}
@@ -1412,6 +1416,9 @@ export default function ReportsScreen() {
 
         {filtered.length > 0 && activeTab === "revenue" && (
           <RevenueTab filtered={filtered} />
+        )}
+        {filtered.length > 0 && activeTab === "performance" && (
+          <PerformanceReport filtered={filtered} />
         )}
         {filtered.length > 0 && activeTab === "products" && (
           <ProductsTab filtered={filtered} />
@@ -1511,7 +1518,9 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   tabItem: {
-    flex: 1,
+    flexGrow: 1,
+    minWidth: 62,
+    paddingHorizontal: 6,
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",

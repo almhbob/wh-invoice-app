@@ -351,8 +351,12 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
     }
     if (!forceKick) {
       try {
-        const snap = await getDoc(activeSessionRef(emp.employeeId));
-        if (snap.exists() && (snap.data() as { deviceId?: string }).deviceId !== MY_DEVICE_ID) {
+        // A slow or offline connection must never hold the login screen hostage.
+        const snap = await Promise.race([
+          getDoc(activeSessionRef(emp.employeeId)),
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), 3500)),
+        ]);
+        if (snap && snap.exists() && (snap.data() as { deviceId?: string }).deviceId !== MY_DEVICE_ID) {
           return "conflict";
         }
       } catch {
