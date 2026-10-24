@@ -315,6 +315,13 @@ export default function HomeScreen() {
   const todayStr = now.toDateString();
 
   const todayOrders   = useMemo(() => orders.filter(o => !o.deleted && new Date(o.createdAt).toDateString() === todayStr), [orders, todayStr]);
+  // Revenue is hidden by default (screens face customers) and re-hides on its own.
+  const [showRevenue, setShowRevenue] = useState(false);
+  useEffect(() => {
+    if (!showRevenue) return;
+    const timer = setTimeout(() => setShowRevenue(false), 15000);
+    return () => clearTimeout(timer);
+  }, [showRevenue]);
   const todayRevenue  = useMemo(() => todayOrders.reduce((s, o) => s + (o.totalAmount ?? 0), 0), [todayOrders]);
   const pendingCnt    = useMemo(() => todayOrders.filter(o => overallStatus(o) === "pending").length,     [todayOrders]);
   const inProgressCnt = useMemo(() => todayOrders.filter(o => overallStatus(o) === "in_progress").length, [todayOrders]);
@@ -402,12 +409,26 @@ export default function HomeScreen() {
 
       <View style={m.heroMid}>
         {canSeeMoney ? (
-        <View style={{ gap: 2 }}>
-          <Text style={m.heroLbl}>{t("revenueToday")}</Text>
-          <Text style={m.heroRevenue}>
-            {fmtNum(todayRevenue)} <Text style={m.heroCur}>{t("sarCurrency")}</Text>
-          </Text>
-        </View>
+        <Pressable
+          style={{ gap: 2 }}
+          onPress={() => setShowRevenue((v) => !v)}
+          accessibilityRole="button"
+          accessibilityLabel={showRevenue ? (isRTL ? "إخفاء الإيراد" : "Hide revenue") : (isRTL ? "إظهار الإيراد" : "Show revenue")}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <Text style={m.heroLbl}>{t("revenueToday")}</Text>
+            <Feather name={showRevenue ? "eye-off" : "eye"} size={13} color="rgba(255,255,255,0.55)" />
+          </View>
+          {showRevenue ? (
+            <Text style={m.heroRevenue}>
+              {fmtNum(todayRevenue)} <Text style={m.heroCur}>{t("sarCurrency")}</Text>
+            </Text>
+          ) : (
+            <Text style={[m.heroRevenue, { letterSpacing: 4 }]}>
+              •••• <Text style={[m.heroCur, { letterSpacing: 0 }]}>{isRTL ? "اضغط للعرض" : "Tap to show"}</Text>
+            </Text>
+          )}
+        </Pressable>
         ) : <View />}
         <View style={m.heroOrders}>
           <Text style={m.heroOrdersNum}>{fmtNum(todayOrders.length)}</Text>
