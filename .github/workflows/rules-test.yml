@@ -2,10 +2,10 @@ name: Security tests
 
 on:
   pull_request:
-    paths: ["firestore.rules", "tests/rules/**", "server/**", "functions/**", ".github/workflows/rules-test.yml"]
+    paths: ["firestore.rules", "tests/**", "server/**", "functions/**", "utils/deepClean.ts", "context/**", ".github/workflows/rules-test.yml"]
   push:
     branches: [main]
-    paths: ["firestore.rules", "tests/rules/**", "server/**", "functions/**"]
+    paths: ["firestore.rules", "tests/**", "server/**", "functions/**", "utils/deepClean.ts", "context/**"]
   workflow_dispatch:
 
 jobs:
@@ -27,13 +27,15 @@ jobs:
         with: { node-version: 20 }
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: 21 }
+      - uses: oven-sh/setup-bun@v2
       - name: Prepare isolated test workspace
         run: |
-          mkdir -p /tmp/rt && cp firestore.rules tests/rules/firestore.rules.test.mjs /tmp/rt/
+          mkdir -p /tmp/rt && cp firestore.rules tests/rules/firestore.rules.test.mjs tests/rules/flows.test.mjs /tmp/rt/
+          bun build utils/deepClean.ts --format esm --outfile /tmp/rt/deepClean.mjs
           cd /tmp/rt
           echo '{"type":"module"}' > package.json
           echo '{"firestore":{"rules":"firestore.rules"},"emulators":{"firestore":{"port":8080},"ui":{"enabled":false}}}' > firebase.json
           npm i firebase-tools@14 @firebase/rules-unit-testing@4 firebase@11 >/dev/null
       - name: Run rules tests against the emulator
         working-directory: /tmp/rt
-        run: npx firebase emulators:exec --only firestore --project rules-test "node firestore.rules.test.mjs"
+        run: npx firebase emulators:exec --only firestore --project rules-test "node firestore.rules.test.mjs && node flows.test.mjs"

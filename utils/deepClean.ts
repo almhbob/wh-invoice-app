@@ -22,3 +22,15 @@ export function isPlainObject(v: unknown): v is Record<string, unknown> {
   const proto = Object.getPrototypeOf(v);
   return proto === Object.prototype || proto === null;
 }
+
+/** Repairs an `events` timeline that an older build stored as a map instead of an array. */
+export function normalizeEvents<E extends { at: string }>(raw: unknown): E[] | undefined {
+  if (raw == null) return undefined;
+  if (Array.isArray(raw)) return raw.filter((e) => e && typeof e === "object" && typeof (e as E).at === "string") as E[];
+  if (typeof raw === "object") {
+    for (const v of Object.values(raw as Record<string, unknown>)) {
+      if (Array.isArray(v)) return normalizeEvents<E>(v);
+    }
+  }
+  return [];
+}

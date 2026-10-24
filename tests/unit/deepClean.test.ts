@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { deepClean } from "../../utils/deepClean";
+import { deepClean, normalizeEvents } from "../../utils/deepClean";
 
 class Sentinel { constructor(public _methodName: string, public elements: unknown[]) {} }
 
@@ -12,5 +12,13 @@ describe("deepClean", () => {
     expect(out.when).toBe(d);
     expect("x" in out).toBe(false);
     expect(out.nested).toEqual({ z: [1, 2] });
+  });
+
+  test("normalizeEvents recovers a map-shaped timeline", () => {
+    const ev = { type: "dept_started", at: "2026-10-24T10:00:00Z" };
+    expect(normalizeEvents({ _methodName: "arrayUnion", Ac: [ev] })).toEqual([ev]);
+    expect(normalizeEvents([ev, null, { bad: 1 }])).toEqual([ev]);
+    expect(normalizeEvents(undefined)).toBeUndefined();
+    expect(normalizeEvents({ junk: 1 })).toEqual([]);
   });
 });

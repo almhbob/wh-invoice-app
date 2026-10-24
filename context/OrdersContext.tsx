@@ -29,7 +29,9 @@ import { Alert } from "react-native";
 import { t as t_ } from "@/constants/translations";
 import { uploadUriToFirebaseStorage } from "@/lib/uploadFiles";
 import { isProductionDone, newTrackingCode, OrderEvent } from "@/utils/orderFlow";
-import { deepClean } from "@/utils/deepClean";
+import { deepClean, normalizeEvents as normalizeEventList } from "@/utils/deepClean";
+
+const normalizeEvents = (raw: unknown) => normalizeEventList<OrderEvent>(raw);
 
 export type Department = "halwa" | "mawali" | "chocolate" | "cake" | "packaging";
 export type OrderStatus = "pending" | "in_progress" | "done" | "cancelled";
@@ -251,18 +253,6 @@ const outboxKey = (companyId: string) => `${OUTBOX_KEY}_${companyId}`;
 
 export { deepClean };
 
-/** Repairs `events` that an older build stored as a map instead of an array. */
-function normalizeEvents(raw: unknown): OrderEvent[] | undefined {
-  if (raw == null) return undefined;
-  if (Array.isArray(raw)) return raw.filter((e) => e && typeof e === "object" && typeof (e as OrderEvent).at === "string") as OrderEvent[];
-  if (typeof raw === "object") {
-    for (const v of Object.values(raw as Record<string, unknown>)) {
-      if (Array.isArray(v)) return normalizeEvents(v);
-    }
-  }
-  return [];
-}
-
 /** Firestore-compatible random document id, generated on the device so retries are idempotent. */
 function newDocId() {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -352,8 +342,11 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
     Promise.all([
       readJson<Order[]>(localOrdersKey(companyId), []),
       readJson<Order[]>(outboxKey(companyId), []),
-    ]).then(([cached, pending]) => {
+    ]).then(([cachedRaw, pendingRaw]) => {
       if (!mounted) return;
+      const fix = (o: Order): Order => ({ ...o, events: normalizeEvents((o as { events?: unknown }).events) });
+      const cached = (Array.isArray(cachedRaw) ? cachedRaw : []).filter((o) => o && typeof o.id === "string").map(fix);
+      const pending = (Array.isArray(pendingRaw) ? pendingRaw : []).filter((o) => o && typeof o.id === "string").map(fix);
       // Migrate orders saved by older versions with a "local-" id and never synced.
       const legacyLocal = cached.filter((o) => o.id.startsWith("local-"));
       const migrated = legacyLocal.map((o) => ({ ...o, id: newDocId(), syncState: "pending" as const }));
