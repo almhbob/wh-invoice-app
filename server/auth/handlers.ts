@@ -205,6 +205,15 @@ async function actorFrom(request: Request, sa: ServiceAccount, deps: Deps) {
   }
 }
 
+async function activeActorRecord(fs: Firestore, actor: NonNullable<Awaited<ReturnType<typeof actorFrom>>>) {
+  if (!isValidCompanyId(actor.companyId) || !isValidDocId(actor.eid)) return null;
+  const doc = await fs.get(`companies/${actor.companyId}/employees/${actor.eid}`);
+  if (!doc) return null;
+  const current = toEmployeeRecord(actor.companyId, actor.eid, doc);
+  if (current.status === "suspended" || current.role !== actor.role) return null;
+  return current;
+}
+
 export async function handleSetPin(request: Request, env: AuthEnv, deps: Deps = {}) {
   const sa = readServiceAccount(env);
   if (!sa) return notConfigured();
@@ -223,6 +232,9 @@ export async function handleSetPin(request: Request, env: AuthEnv, deps: Deps = 
 
   const fs = new Firestore(sa, deps.fetchImpl);
   try {
+    const liveActor = await activeActorRecord(fs, actor);
+    if (!liveActor) return json({ error: "forbidden" }, 403);
+
     const doc = await fs.get(`companies/${actor.companyId}/employees/${targetId}`);
     if (!doc) return json({ error: "not_found" }, 404);
     const target = toEmployeeRecord(actor.companyId, targetId, doc);
@@ -232,8 +244,11 @@ export async function handleSetPin(request: Request, env: AuthEnv, deps: Deps = 
       const check = currentPin ? await checkPin(fs, target, currentPin) : { ok: false };
       if (!check.ok) return json({ error: "invalid_current_pin" }, 403);
       if (currentPin === newPin) return json({ error: "pin_same" }, 400);
-    } else if (!canManagePinOf(actor, target.role)) {
-      return json({ error: "forbidden" }, 403);
+    } else {
+      const platformOwner = await fs.get(`platformOwners/${actor.companyId}__${targetId}`);
+      if (platformOwner?.active === true || !canManagePinOf(actor, target.role)) {
+        return json({ error: "forbidden" }, 403);
+      }
     }
 
     // A PIN set by a manager is temporary: the employee must choose their own at next login.
@@ -241,6 +256,45 @@ export async function handleSetPin(request: Request, env: AuthEnv, deps: Deps = 
     return json({ ok: true });
   } catch (err) {
     console.error("set_pin_error", err instanceof Error ? err.message : err);
+    return json({ error: "server_error" }, 500);
+  }
+}
+
+// ── POST /api/auth/reset-pin ────────────────────────────────────────────────────
+
+/** A company admin assigns a temporary employee PIN; the employee must change it at next login. */
+export async function handleResetPin(request: Request, env: AuthEnv, deps: Deps = {}) {
+  const sa = readServiceAccount(env);
+  if (!sa) return notConfigured();
+
+  const actor = await actorFrom(request, sa, deps);
+  if (!actor) return json({ error: "unauthenticated" }, 401);
+  if (actor.role !== "admin") return json({ error: "forbidden" }, 403);
+
+  const body = await readJson<{ employeeDocId?: unknown; newPin?: unknown }>(request);
+  const targetId = body?.employeeDocId;
+  const newPin = typeof body?.newPin === "string" ? body.newPin.trim() : "";
+  if (!isValidDocId(targetId) || !newPin) return json({ error: "bad_request" }, 400);
+
+  const policy = pinPolicyError(newPin);
+  if (policy) return json({ error: policy }, 400);
+
+  const fs = new Firestore(sa, deps.fetchImpl);
+  try {
+    const liveActor = await activeActorRecord(fs, actor);
+    if (!liveActor || liveActor.role !== "admin") return json({ error: "forbidden" }, 403);
+    if (targetId === actor.eid) return json({ error: "forbidden" }, 403);
+
+    // The target path is always derived from the signed-in admin's company claim.
+    const doc = await fs.get(`companies/${actor.companyId}/employees/${targetId}`);
+    if (!doc) return json({ error: "not_found" }, 404);
+    const platformOwner = await fs.get(`platformOwners/${actor.companyId}__${targetId}`);
+    if (platformOwner?.active === true) return json({ error: "forbidden" }, 403);
+
+    await writeSecret(fs, actor.companyId, targetId, newPin, true, actor.eid);
+    return json({ ok: true, mustChangePin: true });
+  } catch (err) {
+    console.error("reset_pin_error", err instanceof Error ? err.message : err);
     return json({ error: "server_error" }, 500);
   }
 }

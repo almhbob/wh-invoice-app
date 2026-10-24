@@ -3,7 +3,7 @@ import type { Lang } from "@/constants/translations";
 const TEXT = {
   changePinTitle:      { ar: "اختر رمز دخول جديداً",            en: "Choose a new PIN" },
   changePinForced:     { ar: "لحماية حسابك يجب تغيير الرمز الحالي قبل المتابعة.", en: "To protect your account, you must change your current PIN before continuing." },
-  setPinTitle:         { ar: "تعيين رمز الدخول",                en: "Set login PIN" },
+  setPinTitle:         { ar: "إعادة تعيين رمز الدخول",          en: "Reset login PIN" },
   setPinFor:           { ar: "رمز مؤقت للموظف",                 en: "Temporary PIN for" },
   setPinTempNote:      { ar: "سيُطلب من الموظف تغييره عند أول دخول.", en: "The employee will be asked to change it at first login." },
   currentPin:          { ar: "الرمز الحالي",                    en: "Current PIN" },
@@ -25,9 +25,12 @@ const TEXT = {
   authUnavailableTitle:{ ar: "تسجيل الدخول الآمن غير متاح",     en: "Secure sign-in is unavailable" },
   authUnavailableMessage: { ar: "أوقفنا الدخول المحلي لحماية البيانات. تحقّق من إعداد Pages Function /api/auth/status وسر FIREBASE_SERVICE_ACCOUNT لبيئة staging، ثم أعد تحميل التطبيق.", en: "Local sign-in is disabled to protect your data. Verify the /api/auth/status Pages Function and the staging FIREBASE_SERVICE_ACCOUNT secret, then reload the app." },
   pinRequiredForNew:   { ar: "رمز الدخول (٤–٨ أرقام)",           en: "Login PIN (4–8 digits)" },
-  setPinAction:        { ar: "تعيين رمز الدخول",                en: "Set login PIN" },
-  pinSaved:            { ar: "تم حفظ رمز الدخول.",               en: "PIN saved." },
+  setPinAction:        { ar: "تعيين رمز دخول مؤقت",             en: "Set temporary login PIN" },
+  pinSaved:            { ar: "تم تعيين رمز مؤقت. سيُطلب من الموظف تغييره عند أول دخول.", en: "Temporary PIN set. The employee must change it at next sign-in." },
   switchNeedsLogin:    { ar: "للتبديل إلى موظف آخر سجّل الخروج ثم ادخل بحسابه.", en: "To switch employee, sign out and sign in with their account." },
+  resetPinAction:      { ar: "إعادة تعيين رمز دخول الموظف",     en: "Reset employee login PIN" },
+  resetPinActionShort: { ar: "إعادة تعيين الرمز",               en: "Reset PIN" },
+  forgotPin:           { ar: "نسيت رمز الدخول؟ اطلب من مسؤول الشركة إعادة تعيينه لك.", en: "Forgot your PIN? Ask your company admin to reset it." },
 } as const;
 
 export type SecureAuthTextKey = keyof typeof TEXT;

@@ -116,7 +116,7 @@ function SectionHeader({ title, icon }: { title: string; icon: any }) {
 type EmpStatusFilter = "all" | "active" | "suspended";
 
 function EmployeesSection() {
-  const { employees, addEmployee, removeEmployee, updateEmployee, setEmployeePin, authMode, currentEmployee } = useEmployee();
+  const { employees, addEmployee, removeEmployee, updateEmployee, setEmployeePin, resetEmployeePin, authMode, currentEmployee } = useEmployee();
   const { t, lang } = useLang();
   const isSecure = authMode !== "legacy";
   const [pin, setPin] = useState("");
@@ -191,13 +191,15 @@ function EmployeesSection() {
   const handleEmpMenu = (emp: Employee) => {
     Haptics.selectionAsync();
     const isSuspended = emp.status === "suspended";
+    const isCompanyAdmin = currentEmployee?.role === "admin";
+    const canManagePin = isCompanyAdmin || currentEmployee?.role === "branch_supervisor";
     Alert.alert(
       emp.name,
       `#${emp.employeeId} · ${ROLE_LABELS[emp.role]}`,
       [
         { text: t("adminChangeRole"), onPress: () => handleChangeRole(emp) },
-        ...(isSecure && emp.id !== currentEmployee?.id
-          ? [{ text: secureAuthText("setPinAction", lang), onPress: () => setPinTarget(emp) }]
+        ...(isSecure && canManagePin && emp.id !== currentEmployee?.id
+          ? [{ text: secureAuthText(isCompanyAdmin ? "resetPinAction" : "setPinAction", lang), onPress: () => setPinTarget(emp) }]
           : []),
         {
           text: isSuspended ? t("adminActivateAcc") : t("adminSuspendAcc"),
@@ -301,6 +303,17 @@ function EmployeesSection() {
                         </Text>
                       </View>
                       <Text style={styles.empIdText}>#{emp.employeeId}</Text>
+                      {isSecure && currentEmployee?.role === "admin" && emp.id !== currentEmployee.id && (
+                        <TouchableOpacity
+                          style={styles.empResetPinBtn}
+                          accessibilityRole="button"
+                          accessibilityLabel={secureAuthText("resetPinAction", lang)}
+                          onPress={(event) => { event.stopPropagation(); setPinTarget(emp); }}
+                        >
+                          <Feather name="key" size={12} color={Colors.primary} />
+                          <Text style={styles.empResetPinText}>{secureAuthText("resetPinActionShort", lang)}</Text>
+                        </TouchableOpacity>
+                      )}
                     </View>
                     <TouchableOpacity style={styles.empMenuBtn} onPress={() => handleEmpMenu(emp)} hitSlop={10}>
                       <Text style={styles.empMenuDots}>⋮</Text>
@@ -318,7 +331,8 @@ function EmployeesSection() {
         mode="other"
         employeeName={pinTarget?.name}
         onSubmit={async (newPin) => {
-          await setEmployeePin(pinTarget!.id, newPin);
+          if (currentEmployee?.role === "admin") await resetEmployeePin(pinTarget!.id, newPin);
+          else await setEmployeePin(pinTarget!.id, newPin);
           setPinTarget(null);
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           Alert.alert(t("successTitle"), secureAuthText("pinSaved", lang));
@@ -1700,6 +1714,8 @@ const styles = StyleSheet.create({
   empAvatarLetter: { color: "#fff", fontSize: 16, fontWeight: "800" },
   empName: { fontSize: 14, fontWeight: "700", color: Colors.text },
   empIdText: { fontSize: 12, color: Colors.textMuted },
+  empResetPinBtn: { alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 5, marginTop: 5, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, backgroundColor: Colors.primary + "10" },
+  empResetPinText: { fontSize: 11, fontWeight: "700", color: Colors.primary },
   empStatusActive: { fontSize: 11, fontWeight: "700", color: "#1F8A5B" },
   empStatusSuspended: { fontSize: 11, fontWeight: "700", color: "#C8323F" },
   empMenuBtn: {

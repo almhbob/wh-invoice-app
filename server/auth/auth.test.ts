@@ -5,7 +5,7 @@
 import { describe, expect, test, beforeEach } from "bun:test";
 
 import { b64url, b64urlDecode, decodeFields, encodeFields, signJwt, hashPin, verifyPin, pinPolicyError } from "./core";
-import { handleLogin, handleSetPin, handleStatus } from "./handlers";
+import { handleLogin, handleResetPin, handleSetPin, handleStatus } from "./handlers";
 import { BOOTSTRAP_ACCOUNTS } from "./bootstrap";
 import { sha256Hex } from "./core";
 import { PRODUCTION_API_BASE, STAGING_API_BASE, resolveApiBase } from "../../lib/apiBase";
@@ -265,5 +265,64 @@ describe("set-pin", () => {
     const login = await handleLogin(req("/api/auth/login", { companyId: COMPANY, login: "N01", pin: "4826" }), env, deps());
     expect(login.status).toBe(200);
     expect(((await login.json()) as { mustChangePin: boolean }).mustChangePin).toBe(true);
+  });
+});
+
+describe("reset-pin", () => {
+  const adminClaims = { companyId: COMPANY, role: "admin", eid: "e1", employeeId: "LAVI001" };
+  const cashierClaims = { companyId: COMPANY, role: "cashier", eid: "e2", employeeId: "C01" };
+
+  test("company admin assigns a hashed temporary PIN and employee must change it", async () => {
+    const token = await idTokenFor(adminClaims);
+    const auth = { Authorization: `Bearer ${token}` };
+    const reset = await handleResetPin(req("/api/auth/reset-pin", { employeeDocId: "e2", newPin: "4826" }, auth), env, deps());
+    expect(reset.status).toBe(200);
+    expect(await reset.json()).toEqual({ ok: true, mustChangePin: true });
+
+    const secret = store.get(`companies/${COMPANY}/employeeSecrets/e2`)!;
+    expect(typeof secret.pinHash).toBe("string");
+    expect(secret.pinHash).not.toBe("4826");
+    expect(secret.mustChange).toBe(true);
+    expect(secret.updatedBy).toBe("e1");
+    expect(String(store.get(`companies/${COMPANY}/employees/e2`)!.pinCode)).toStartWith("!migrated-");
+
+    const login = await handleLogin(req("/api/auth/login", { companyId: COMPANY, login: "cash", pin: "4826" }), env, deps());
+    expect(login.status).toBe(200);
+    expect(((await login.json()) as { mustChangePin: boolean }).mustChangePin).toBe(true);
+    expect((await handleLogin(req("/api/auth/login", { companyId: COMPANY, login: "cash", pin: "7391" }), env, deps())).status).toBe(401);
+  });
+
+  test("non-admins and self-reset are rejected", async () => {
+    const cashier = await idTokenFor(cashierClaims);
+    expect((await handleResetPin(req("/api/auth/reset-pin", { employeeDocId: "e1", newPin: "4826" }, { Authorization: `Bearer ${cashier}` }), env, deps())).status).toBe(403);
+
+    const admin = await idTokenFor(adminClaims);
+    expect((await handleResetPin(req("/api/auth/reset-pin", { employeeDocId: "e1", newPin: "4826" }, { Authorization: `Bearer ${admin}` }), env, deps())).status).toBe(403);
+    expect(store.has(`companies/${COMPANY}/employeeSecrets/e1`)).toBe(false);
+  });
+
+  test("a stale or suspended admin session cannot reset PINs", async () => {
+    const admin = await idTokenFor(adminClaims);
+    const auth = { Authorization: `Bearer ${admin}` };
+
+    store.set(`companies/${COMPANY}/employees/e1`, { ...store.get(`companies/${COMPANY}/employees/e1`), role: "cashier" });
+    expect((await handleResetPin(req("/api/auth/reset-pin", { employeeDocId: "e2", newPin: "4826" }, auth), env, deps())).status).toBe(403);
+    expect(store.has(`companies/${COMPANY}/employeeSecrets/e2`)).toBe(false);
+
+    store.set(`companies/${COMPANY}/employees/e1`, { name: "مسؤول", employeeId: "LAVI001", username: "lavi001", pinCode: "1234", role: "admin", status: "suspended" });
+    expect((await handleResetPin(req("/api/auth/reset-pin", { employeeDocId: "e2", newPin: "4826" }, auth), env, deps())).status).toBe(403);
+    expect(store.has(`companies/${COMPANY}/employeeSecrets/e2`)).toBe(false);
+  });
+
+  test("cannot reset platform-owner accounts or reach another company", async () => {
+    const admin = await idTokenFor(adminClaims);
+    const auth = { Authorization: `Bearer ${admin}` };
+    store.set(`platformOwners/${COMPANY}__e2`, { active: true, platformRole: "owner" });
+    expect((await handleResetPin(req("/api/auth/reset-pin", { employeeDocId: "e2", newPin: "4826" }, auth), env, deps())).status).toBe(403);
+    expect(store.has(`companies/${COMPANY}/employeeSecrets/e2`)).toBe(false);
+
+    store.set("companies/other-company/employees/external", { name: "External", employeeId: "X01", role: "cashier", pinCode: "1111", status: "active" });
+    expect((await handleResetPin(req("/api/auth/reset-pin", { employeeDocId: "external", newPin: "4826" }, auth), env, deps())).status).toBe(404);
+    expect(store.get("companies/other-company/employees/external")?.pinCode).toBe("1111");
   });
 });

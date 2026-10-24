@@ -140,6 +140,11 @@ export async function secureSetPin(params: { newPin: string; currentPin?: string
   await post<{ ok: true }>("/api/auth/set-pin", params, true);
 }
 
+/** Company-admin-only reset; the employee is forced to choose a new PIN at next login. */
+export async function secureResetEmployeePin(params: { employeeDocId: string; newPin: string }) {
+  await post<{ ok: true; mustChangePin: true }>("/api/auth/reset-pin", params, true);
+}
+
 export async function secureLogout() {
   try { await signOut(auth); } catch {}
 }
