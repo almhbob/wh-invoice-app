@@ -23,7 +23,7 @@ export function ProductionReadinessPanel() {
         ? "كل متغيرات Firebase الأساسية موجودة."
         : `متغيرات ناقصة: ${firebaseConfigDiagnostics.missingKeys.join(", ")}`,
       ok: isFirebaseConfigured,
-      actionAr: "أكمل متغيرات EXPO_PUBLIC_FIREBASE_* في Vercel ثم أعد النشر بدون كاش.",
+      actionAr: "اضبط متغيرات Firebase الخاصة بالبيئة في Cloudflare Pages ثم أعد النشر؛ لا تستخدم مفاتيح حساب الخدمة الإنتاجي في staging.",
     },
     {
       id: "auth_claims",
@@ -42,9 +42,9 @@ export function ProductionReadinessPanel() {
     {
       id: "storage_rules",
       titleAr: "قواعد Storage",
-      descriptionAr: "تمت إضافة قواعد لعقود وصور الشركات، لكنها تحتاج نشرًا في Firebase Console.",
-      ok: true,
-      actionAr: "انشر storage.rules وتأكد من Storage Bucket.",
+      descriptionAr: "قواعد Storage موجودة في المستودع؛ حالة نشرها على مشروع Firebase الجاري لا يمكن تأكيدها من التطبيق.",
+      ok: false,
+      actionAr: "انشر storage.rules على مشروع Firebase الخاص بهذه البيئة وتحقق من صلاحيات bucket قبل الإنتاج.",
     },
   ];
 

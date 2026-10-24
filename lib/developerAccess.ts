@@ -1,37 +1,14 @@
-export interface DeveloperAccessEmployee {
-  role?: string;
-  employeeId?: string;
-  permissions?: string[];
-  username?: string;
+export interface DeveloperAccessClaims {
+  platformRole?: string;
 }
 
-const DEVELOPER_EMPLOYEE_IDS = new Set([
-  "ALMHB0B",
-  "ALMHB0B.III",
-  "ALMHB0B-III",
-  "ASIM",
-]);
+const PLATFORM_ROLES = new Set(["owner", "developer", "super_admin"]);
 
-const DEVELOPER_USERNAMES = new Set([
-  "almhbob",
-  "almhbob.iii",
-  "asim",
-]);
-
-export function canAccessDeveloperDashboard(employee: DeveloperAccessEmployee | null | undefined) {
-  if (!employee) return false;
-  const role = employee.role ?? "";
-  const employeeId = String(employee.employeeId ?? "").trim().toUpperCase();
-  const username = String(employee.username ?? "").trim().toLowerCase();
-  const permissions = employee.permissions ?? [];
-
-  return (
-    role === "admin" ||
-    role === "developer" ||
-    role === "super_admin" ||
-    permissions.includes("developer:access") ||
-    permissions.includes("*") ||
-    DEVELOPER_EMPLOYEE_IDS.has(employeeId) ||
-    DEVELOPER_USERNAMES.has(username)
-  );
+/**
+ * Developer access is based only on server-issued Firebase custom claims.
+ * Employee fields such as role, username, employeeId, or permissions are not
+ * trusted here because tenant administrators can edit employee documents.
+ */
+export function canAccessDeveloperDashboard(claims: DeveloperAccessClaims | null | undefined) {
+  return PLATFORM_ROLES.has(String(claims?.platformRole ?? ""));
 }

@@ -8,6 +8,7 @@ import { b64url, b64urlDecode, decodeFields, encodeFields, signJwt, hashPin, ver
 import { handleLogin, handleSetPin, handleStatus } from "./handlers";
 import { BOOTSTRAP_ACCOUNTS } from "./bootstrap";
 import { sha256Hex } from "./core";
+import { PRODUCTION_API_BASE, STAGING_API_BASE, resolveApiBase } from "../../lib/apiBase";
 
 const PROJECT = "test-proj";
 const COMPANY = "laviviane-trial";
@@ -33,6 +34,19 @@ let store: Map<string, Record<string, unknown>>;
 let env: { FIREBASE_SERVICE_ACCOUNT: string };
 
 const BASE = `https://firestore.googleapis.com/v1/projects/${PROJECT}/databases/(default)/documents/`;
+
+describe("API environment routing", () => {
+  test("native staging ignores the default production URL", () => {
+    expect(resolveApiBase({ platform: "android", appEnv: "staging", apiBase: PRODUCTION_API_BASE })).toBe(STAGING_API_BASE);
+  });
+  test("web stays on the current origin", () => {
+    expect(resolveApiBase({ platform: "web", appEnv: "staging", webOrigin: "https://preview.fotra-staging.pages.dev" }))
+      .toBe("https://preview.fotra-staging.pages.dev");
+  });
+  test("production retains its default endpoint", () => {
+    expect(resolveApiBase({ platform: "android", appEnv: "production" })).toBe(PRODUCTION_API_BASE);
+  });
+});
 
 const fetchMock = (async (input: RequestInfo | URL, init?: RequestInit) => {
   const url = String(input);
@@ -156,6 +170,20 @@ describe("login", () => {
   test("strong legacy PIN does not force change", async () => {
     const r = await handleLogin(req("/api/auth/login", { companyId: COMPANY, login: "cash", pin: "7391" }), env, deps());
     expect(((await r.json()) as { mustChangePin: boolean }).mustChangePin).toBe(false);
+  });
+
+  test("platformRole is minted only from a server-managed platform owner marker", async () => {
+    store.set(`platformOwners/${COMPANY}__e1`, { active: true, platformRole: "owner" });
+    const r = await handleLogin(req("/api/auth/login", { companyId: COMPANY, login: "LAVI001", pin: "1234" }), env, deps());
+    expect(r.status).toBe(200);
+    const body = (await r.json()) as { token: string };
+    const payload = JSON.parse(new TextDecoder().decode(b64urlDecode(body.token.split(".")[1])));
+    expect(payload.claims.platformRole).toBe("owner");
+
+    const regular = await handleLogin(req("/api/auth/login", { companyId: COMPANY, login: "cash", pin: "7391" }), env, deps());
+    const regularBody = (await regular.json()) as { token: string };
+    const regularPayload = JSON.parse(new TextDecoder().decode(b64urlDecode(regularBody.token.split(".")[1])));
+    expect(regularPayload.claims.platformRole).toBeUndefined();
   });
 
   test("wrong PIN, suspended, unknown and PIN-less accounts are rejected identically", async () => {

@@ -3,6 +3,7 @@ import { Platform } from "react-native";
 import { signInWithCustomToken, signOut } from "firebase/auth";
 
 import { auth } from "@/lib/firebase";
+import { resolveApiBase } from "@/lib/apiBase";
 
 /**
  * Secure (server-verified) login.
@@ -50,8 +51,13 @@ export class SecureAuthFailure extends Error {
 }
 
 function apiBase() {
-  if (Platform.OS === "web") return "";
-  return process.env.EXPO_PUBLIC_API_BASE || "https://fotra-dv1.pages.dev";
+  return resolveApiBase({
+    platform: Platform.OS,
+    appEnv: process.env.EXPO_PUBLIC_APP_ENV,
+    apiBase: process.env.EXPO_PUBLIC_API_BASE,
+    legacyApiUrl: process.env.EXPO_PUBLIC_API_URL,
+    webOrigin: typeof window !== "undefined" ? window.location.origin : "",
+  });
 }
 
 let modePromise: Promise<SecureAuthMode> | null = null;
@@ -139,14 +145,14 @@ export async function secureLogout() {
 }
 
 /** Claims of the signed-in Firebase user (null when anonymous / signed out). */
-export async function readSessionClaims(): Promise<{ companyId: string; role: string; eid: string } | null> {
+export async function readSessionClaims(): Promise<{ companyId: string; role: string; eid: string; platformRole?: string } | null> {
   await auth.authStateReady();
   const user = auth.currentUser;
   if (!user || user.isAnonymous) return null;
   const res = await user.getIdTokenResult();
-  const { companyId, role, eid } = res.claims as Record<string, unknown>;
+  const { companyId, role, eid, platformRole } = res.claims as Record<string, unknown>;
   if (typeof companyId !== "string" || typeof role !== "string" || typeof eid !== "string") return null;
-  return { companyId, role, eid };
+  return { companyId, role, eid, ...(typeof platformRole === "string" ? { platformRole } : {}) };
 }
 
 /** Client-side mirror of the server PIN policy, for instant feedback. */
