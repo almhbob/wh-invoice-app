@@ -30,6 +30,23 @@
   @media (min-width:720px) { .grid { grid-template-columns:repeat(4,minmax(0,1fr)); } }
   .p { background:#fff; border:1px solid var(--line); border-radius:18px; overflow:hidden; display:flex; flex-direction:column; }
   .p img { width:100%; aspect-ratio:1/1; object-fit:cover; background:var(--ivory2); display:block; }
+  .pimg { position:relative; cursor:zoom-in; }
+  .pimg .zoomhint { position:absolute; bottom:8px; left:8px; width:30px; height:30px; border-radius:999px; background:rgba(20,20,20,.55); color:#fff; display:flex; align-items:center; justify-content:center; font-size:15px; pointer-events:none; backdrop-filter:blur(4px); }
+  .lb { position:fixed; inset:0; z-index:50; background:rgba(10,10,10,.96); display:none; flex-direction:column; touch-action:none; }
+  .lb.on { display:flex; }
+  .lb-top { display:flex; align-items:center; justify-content:space-between; padding:12px 14px; padding-top:max(12px, env(safe-area-inset-top)); color:#fff; gap:10px; }
+  .lb-btn { width:42px; height:42px; border-radius:999px; border:0; background:rgba(255,255,255,.12); color:#fff; font-size:20px; cursor:pointer; display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
+  .lb-count { font-size:13px; color:rgba(255,255,255,.6); }
+  .lb-stage { flex:1; position:relative; overflow:hidden; display:flex; align-items:center; justify-content:center; }
+  .lb-stage img { max-width:100%; max-height:100%; object-fit:contain; transform-origin:0 0; will-change:transform; user-select:none; -webkit-user-drag:none; touch-action:none; }
+  .lb-nav { position:absolute; top:50%; transform:translateY(-50%); }
+  .lb-prev { right:10px; } .lb-next { left:10px; }
+  .lb-bottom { padding:14px 16px; padding-bottom:max(16px, env(safe-area-inset-bottom)); display:flex; align-items:center; gap:12px; color:#fff; }
+  .lb-info { flex:1; min-width:0; }
+  .lb-name { font-weight:700; font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .lb-price { color:var(--gold2); font-weight:700; font-size:14px; margin-top:2px; }
+  .lb-hint { font-size:11px; color:rgba(255,255,255,.45); margin-top:4px; }
+  .lb-add { border:0; background:var(--gold); color:#fff; border-radius:14px; padding:12px 18px; font-weight:800; font-size:14px; cursor:pointer; flex:0 0 auto; }
   .pb { padding:10px; display:flex; flex-direction:column; gap:6px; flex:1; }
   .pn { font-size:13px; font-weight:800; line-height:1.45; min-height:38px; }
   .pr { color:var(--esp); font-weight:900; font-size:14px; }
@@ -139,6 +156,22 @@
   </div></div>
 </div>
 
+<div class="lb" id="lb" role="dialog" aria-modal="true" aria-label="صورة المنتج">
+  <div class="lb-top">
+    <button class="lb-btn" id="lbClose" aria-label="إغلاق">✕</button>
+    <span class="lb-count" id="lbCount"></span>
+    <button class="lb-btn" id="lbZoom" aria-label="تكبير">＋</button>
+  </div>
+  <div class="lb-stage" id="lbStage">
+    <img id="lbImg" alt="" draggable="false" />
+    <button class="lb-btn lb-nav lb-prev" id="lbPrev" aria-label="السابق">›</button>
+    <button class="lb-btn lb-nav lb-next" id="lbNext" aria-label="التالي">‹</button>
+  </div>
+  <div class="lb-bottom">
+    <div class="lb-info"><div class="lb-name" id="lbName"></div><div class="lb-price" id="lbPrice"></div><div class="lb-hint">اضغط مرتين أو باصبعين للتكبير</div></div>
+    <button class="lb-add" id="lbAdd">أضف للسلة</button>
+  </div>
+</div>
 <button class="cart" id="cart"><span class="c" id="cCount">0</span><span class="t">عرض السلة وإتمام الطلب</span><span class="s" id="cSum">0</span></button>
 
 <script>
@@ -209,7 +242,7 @@
       h += '<div class="sec">' + esc(catName(c)) + '</div><div class="grid">';
       groups[c].forEach(function (p) {
         var n = cart[p.id] || 0;
-        h += '<div class="p">' + (p.imageUri ? '<img loading="lazy" src="' + esc(p.imageUri) + '" alt="" onerror="this.style.visibility=\'hidden\'" />' : "") +
+        h += '<div class="p">' + (p.imageUri ? '<div class="pimg" data-zoom="' + esc(p.id) + '" role="button" tabindex="0" aria-label="تكبير صورة ' + esc(p.name) + '"><img loading="lazy" src="' + esc(p.imageUri) + '" alt="' + esc(p.name) + '" onerror="this.style.visibility=\'hidden\'" /><span class="zoomhint">⤢</span></div>' : "") +
           '<div class="pb"><div class="pn">' + esc(p.name) + '</div><div class="pr">' + esc(p.price) + " <small>ر.س</small></div>" +
           (n ? '<div class="step"><button data-plus="' + esc(p.id) + '">+</button><b>' + n + '</b><button data-minus="' + esc(p.id) + '">−</button></div>'
              : '<button class="add" data-plus="' + esc(p.id) + '">أضف للسلة</button>') + "</div></div>";
@@ -271,7 +304,148 @@
     renderTimes();
   }
 
+  // ── Product image viewer: tap to open, pinch / double-tap / wheel to zoom, drag to pan,
+  // swipe sideways for the next photo, swipe down or Back to close.
+  var LB = { list: [], i: 0, s: 1, x: 0, y: 0, ptrs: {}, start: null, lastTap: 0, open: false };
+  function lbVisible() {
+    var shown = [].map.call(document.querySelectorAll("#menu [data-zoom]"), function (el) { return el.dataset.zoom; });
+    return shown.map(prod).filter(function (p) { return p && p.imageUri; });
+  }
+  function lbApply(anim) {
+    var img = $("lbImg");
+    img.style.transition = anim ? "transform .2s ease" : "none";
+    img.style.transform = "translate(" + LB.x + "px," + LB.y + "px) scale(" + LB.s + ")";
+    $("lbZoom").textContent = LB.s > 1.01 ? "－" : "＋";
+  }
+  function lbBase() {
+    var img = $("lbImg"), st = $("lbStage").getBoundingClientRect();
+    var w = img.offsetWidth, h = img.offsetHeight;
+    return { w: w, h: h, ox: (st.width - w) / 2, oy: (st.height - h) / 2, sw: st.width, sh: st.height, left: st.left, top: st.top };
+  }
+  function lbReset(anim) {
+    var b = lbBase(); LB.s = 1; LB.x = b.ox; LB.y = b.oy; lbApply(anim);
+  }
+  function lbClamp() {
+    var b = lbBase(), w = b.w * LB.s, h = b.h * LB.s;
+    LB.x = w <= b.sw ? (b.sw - w) / 2 : Math.min(0, Math.max(b.sw - w, LB.x));
+    LB.y = h <= b.sh ? (b.sh - h) / 2 : Math.min(0, Math.max(b.sh - h, LB.y));
+  }
+  function lbZoomAt(ns, cx, cy, anim) {
+    var b = lbBase();
+    ns = Math.max(1, Math.min(5, ns));
+    var px = cx - b.left, py = cy - b.top;
+    LB.x = px - (px - LB.x) * (ns / LB.s);
+    LB.y = py - (py - LB.y) * (ns / LB.s);
+    LB.s = ns; lbClamp(); lbApply(anim);
+  }
+  function lbShow() {
+    var p = LB.list[LB.i]; if (!p) return;
+    var img = $("lbImg");
+    img.style.position = "absolute"; img.style.left = "0"; img.style.top = "0"; img.style.maxWidth = "100%"; img.style.maxHeight = "100%";
+    img.onload = function () { lbReset(false); };
+    img.src = p.imageUri; img.alt = p.name;
+    $("lbName").textContent = p.name;
+    $("lbPrice").textContent = money(p.price);
+    $("lbCount").textContent = LB.list.length > 1 ? (LB.i + 1) + " / " + LB.list.length : "";
+    $("lbPrev").style.display = $("lbNext").style.display = LB.list.length > 1 ? "flex" : "none";
+    var n = cart[p.id] || 0;
+    $("lbAdd").textContent = n ? "في السلة (" + n + ") ＋" : "أضف للسلة";
+    if (img.complete && img.naturalWidth) lbReset(false);
+  }
+  function lbOpen(id) {
+    LB.list = lbVisible();
+    LB.i = Math.max(0, LB.list.findIndex(function (p) { return p.id === id; }));
+    LB.open = true;
+    $("lb").classList.add("on");
+    document.body.style.overflow = "hidden";
+    try { history.pushState({ lb: 1 }, ""); } catch (_) {}
+    lbShow();
+    $("lbClose").focus();
+  }
+  function lbClose(fromHistory) {
+    if (!LB.open) return;
+    LB.open = false;
+    $("lb").classList.remove("on");
+    document.body.style.overflow = "";
+    if (!fromHistory) { try { history.back(); } catch (_) {} }
+  }
+  function lbGo(d) {
+    if (LB.list.length < 2) return;
+    LB.i = (LB.i + d + LB.list.length) % LB.list.length; lbShow();
+  }
+  window.addEventListener("popstate", function () { if (LB.open) lbClose(true); });
+  window.addEventListener("resize", function () { if (LB.open) lbReset(false); });
+  document.addEventListener("keydown", function (e) {
+    if (LB.open) {
+      if (e.key === "Escape") lbClose();
+      else if (e.key === "ArrowLeft") lbGo(1);
+      else if (e.key === "ArrowRight") lbGo(-1);
+      return;
+    }
+    var z = e.target.closest && e.target.closest("[data-zoom]");
+    if (z && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); lbOpen(z.dataset.zoom); }
+  });
+  $("lbClose").onclick = function () { lbClose(); };
+  $("lbPrev").onclick = function () { lbGo(-1); };
+  $("lbNext").onclick = function () { lbGo(1); };
+  $("lbZoom").onclick = function () {
+    var b = lbBase();
+    if (LB.s > 1.01) lbReset(true); else lbZoomAt(2.5, b.left + b.sw / 2, b.top + b.sh / 2, true);
+  };
+  $("lbAdd").onclick = function () { var p = LB.list[LB.i]; if (p) { setQty(p.id, (cart[p.id] || 0) + 1); lbShow(); } };
+  var stage = $("lbStage");
+  stage.addEventListener("wheel", function (e) { e.preventDefault(); lbZoomAt(LB.s * (e.deltaY < 0 ? 1.15 : 0.87), e.clientX, e.clientY, false); }, { passive: false });
+  stage.addEventListener("pointerdown", function (e) {
+    if (e.target.closest("button")) return;
+    stage.setPointerCapture(e.pointerId);
+    LB.ptrs[e.pointerId] = { x: e.clientX, y: e.clientY };
+    var ids = Object.keys(LB.ptrs);
+    if (ids.length === 1) {
+      LB.start = { x: e.clientX, y: e.clientY, tx: LB.x, ty: LB.y, t: Date.now() };
+    } else if (ids.length === 2) {
+      var a = LB.ptrs[ids[0]], c = LB.ptrs[ids[1]];
+      LB.start = { pinch: Math.hypot(a.x - c.x, a.y - c.y), s: LB.s, cx: (a.x + c.x) / 2, cy: (a.y + c.y) / 2 };
+    }
+  });
+  stage.addEventListener("pointermove", function (e) {
+    if (!LB.ptrs[e.pointerId] || !LB.start) return;
+    LB.ptrs[e.pointerId] = { x: e.clientX, y: e.clientY };
+    var ids = Object.keys(LB.ptrs);
+    if (ids.length >= 2 && LB.start.pinch) {
+      var a = LB.ptrs[ids[0]], c = LB.ptrs[ids[1]];
+      lbZoomAt(LB.start.s * Math.hypot(a.x - c.x, a.y - c.y) / LB.start.pinch, LB.start.cx, LB.start.cy, false);
+    } else if (ids.length === 1 && LB.start.tx !== undefined) {
+      var dx = e.clientX - LB.start.x, dy = e.clientY - LB.start.y;
+      if (LB.s > 1.01) { LB.x = LB.start.tx + dx; LB.y = LB.start.ty + dy; lbClamp(); lbApply(false); }
+      else { LB.y = LB.start.ty + Math.max(0, dy); LB.x = LB.start.tx + dx * 0.4; lbApply(false); $("lb").style.background = "rgba(10,10,10," + Math.max(0.5, 0.96 - dy / 600) + ")"; }
+    }
+  });
+  function lbEnd(e) {
+    if (!LB.ptrs[e.pointerId]) return;
+    var st = LB.start; delete LB.ptrs[e.pointerId];
+    $("lb").style.background = "";
+    if (Object.keys(LB.ptrs).length) { var r = Object.values(LB.ptrs)[0]; LB.start = { x: r.x, y: r.y, tx: LB.x, ty: LB.y, t: Date.now() }; return; }
+    LB.start = null;
+    if (!st || st.tx === undefined) { if (LB.s < 1.01) lbReset(true); return; }
+    var dx = e.clientX - st.x, dy = e.clientY - st.y, quick = Date.now() - st.t < 300;
+    if (Math.abs(dx) < 8 && Math.abs(dy) < 8 && quick) {
+      var now = Date.now();
+      if (now - LB.lastTap < 300) { LB.lastTap = 0; if (LB.s > 1.01) lbReset(true); else lbZoomAt(2.5, e.clientX, e.clientY, true); }
+      else LB.lastTap = now;
+      return;
+    }
+    if (LB.s <= 1.01) {
+      if (dy > 110 && Math.abs(dy) > Math.abs(dx)) { lbClose(); return; }
+      if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)) { lbGo(dx < 0 ? 1 : -1); return; }
+      lbReset(true);
+    }
+  }
+  stage.addEventListener("pointerup", lbEnd);
+  stage.addEventListener("pointercancel", lbEnd);
+
   document.addEventListener("click", function (e) {
+    var z = e.target.closest("[data-zoom]");
+    if (z) { lbOpen(z.dataset.zoom); return; }
     var t = e.target.closest("button"); if (!t) return;
     if (t.dataset.plus) setQty(t.dataset.plus, (cart[t.dataset.plus] || 0) + 1);
     else if (t.dataset.minus) setQty(t.dataset.minus, (cart[t.dataset.minus] || 0) - 1);
