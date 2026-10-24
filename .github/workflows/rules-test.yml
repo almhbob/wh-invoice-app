@@ -38,4 +38,10 @@ jobs:
           npm i firebase-tools@14 @firebase/rules-unit-testing@4 firebase@11 >/dev/null
       - name: Run rules tests against the emulator
         working-directory: /tmp/rt
-        run: npx firebase emulators:exec --only firestore --project rules-test "node firestore.rules.test.mjs && node flows.test.mjs"
+        run: |
+          set -o pipefail
+          npx firebase emulators:exec --only firestore --project rules-test "node firestore.rules.test.mjs && node flows.test.mjs" 2>&1 | tee out.txt || {
+            # Surface the failure as an annotation (readable without downloading logs).
+            echo "::error title=Emulator tests::$(grep -vE '^\s*$|^i  |emulators' out.txt | tail -n 25 | sed 's/%/%25/g' | tr '\n' '|' | sed 's/|/%0A/g')"
+            exit 1
+          }
