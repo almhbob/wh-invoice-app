@@ -1,3 +1,4 @@
+import { tr } from "@/lib/i18n";
 import { LoyaltyCashierCard } from "@/components/LoyaltyCashierCard";
 import { maxRedeemable, pointsValue } from "@/constants/loyalty";
 import { useLoyaltyAccount, useLoyaltySettings } from "@/hooks/useLoyalty";
@@ -1342,7 +1343,7 @@ export default function CashierScreen() {
             {referenceImages.length < 3 && (
               <TouchableOpacity style={styles.refImgAdd} onPress={addReferenceImage} activeOpacity={0.8}>
                 <Feather name="camera" size={20} color={Colors.cake} />
-                <Text style={styles.refImgAddText}>إضافة{"\n"}صورة</Text>
+                <Text style={styles.refImgAddText}>{tr("إضافة", "Add")}{"\n"}{tr("صورة", "photo")}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -1459,7 +1460,7 @@ export default function CashierScreen() {
               style={styles.input}
               value={discountReason}
               onChangeText={setDiscountReason}
-              placeholder="أو اكتب سبباً مخصصاً..."
+              placeholder={tr("أو اكتب سبباً مخصصاً...", "Or type a custom reason...")}
               placeholderTextColor={Colors.textMuted}
               textAlign="right"
             />
@@ -1522,7 +1523,7 @@ export default function CashierScreen() {
             <View style={styles.totalRow}>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
                 <Feather name="award" size={12} color={Colors.success} />
-                <Text style={[styles.totalLabel, { color: Colors.success }]}>نقاط الولاء ({loyaltyRedeemPts})</Text>
+                <Text style={[styles.totalLabel, { color: Colors.success }]}>{tr("نقاط الولاء", "Loyalty points")} ({loyaltyRedeemPts})</Text>
               </View>
               <Text style={[styles.totalValue, { color: Colors.success }]}>-{loyaltyDiscount.toFixed(2)} {t("sar")}</Text>
             </View>
@@ -1952,7 +1953,7 @@ export default function CashierScreen() {
                 )}
                 {loyaltyDiscount > 0 && (
                   <View style={styles.checkoutTotalRow}>
-                    <Text style={[styles.checkoutTotalLabel, { color: "#6FD0A0" }]}>نقاط الولاء</Text>
+                    <Text style={[styles.checkoutTotalLabel, { color: "#6FD0A0" }]}>{tr("نقاط الولاء", "Loyalty points")}</Text>
                     <Text style={[styles.checkoutTotalValue, { color: "#6FD0A0" }]}>-{loyaltyDiscount.toFixed(2)} {t("sar")}</Text>
                   </View>
                 )}
@@ -2144,9 +2145,9 @@ export default function CashierScreen() {
                 ) : null}
               </View>
               <Text style={styles.receiptBannerTitle}>
-                {liveReceipt?.syncState ? (lang === "ar" ? "حُفظ على الجهاز — جارٍ الإرسال للأقسام" : "Saved — sending to departments…") : t("sentSuccess")}
+                {liveReceipt?.syncState ? (tr("حُفظ على الجهاز — جارٍ الإرسال للأقسام", "Saved — sending to departments…")) : t("sentSuccess")}
               </Text>
-              <Text style={styles.receiptBannerSub}>{t("invoiceNum")}{liveReceipt?.orderNumber ?? receiptOrder.orderNumber}{liveReceipt?.provisionalNumber ? (lang === "ar" ? " (رقم مؤقت حتى يعود الاتصال)" : " (provisional)") : ""}</Text>
+              <Text style={styles.receiptBannerSub}>{t("invoiceNum")}{liveReceipt?.orderNumber ?? receiptOrder.orderNumber}{liveReceipt?.provisionalNumber ? (tr(" (رقم مؤقت حتى يعود الاتصال)", " (provisional)")) : ""}</Text>
             </View>
 
             <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, gap: 12 }}>
@@ -2162,7 +2163,7 @@ export default function CashierScreen() {
                     activeOpacity={0.85}
                   >
                     <Feather name="send" size={15} color={Colors.goldLight} />
-                    <Text style={{ color: "#fff", fontWeight: "800" }}>{lang === "ar" ? "إرسال رابط تتبع الطلب للعميل" : "Send tracking link to customer"}</Text>
+                    <Text style={{ color: "#fff", fontWeight: "800" }}>{tr("إرسال رابط تتبع الطلب للعميل", "Send tracking link to customer")}</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -2362,7 +2363,7 @@ export default function CashierScreen() {
                 onPress={() => shareViaWhatsApp(receiptOrder)}
                 activeOpacity={0.85}
               >
-                <Text style={styles.whatsappBtnText}>📱 واتساب</Text>
+                <Text style={styles.whatsappBtnText}>{tr("📱 واتساب", "📱 WhatsApp")}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.shareBtn}

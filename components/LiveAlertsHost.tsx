@@ -8,6 +8,8 @@ import { ROLE_CAN_VIEW_ONLINE_ORDERS, canDo } from "@/constants/rbac";
 import { useEmployee } from "@/context/EmployeeContext";
 import { Department, Order, useOrders } from "@/context/OrdersContext";
 import { ringAlert } from "@/hooks/useNewOrderAlert";
+import { useLang } from "@/context/LanguageContext";
+import { tr, trf } from "@/lib/i18n";
 import { useOnlineOrders } from "@/hooks/useOnlineOrders";
 import { hasOpenDriverRequest, hasWriting, isProductionDone } from "@/utils/orderFlow";
 
@@ -20,7 +22,7 @@ import { hasOpenDriverRequest, hasWriting, isProductionDone } from "@/utils/orde
 type Alert = { key: string; title: string; body: string; route: string; icon: keyof typeof Feather.glyphMap };
 
 const DEPTS: Department[] = ["halwa", "mawali", "chocolate", "cake"];
-const DEPT_AR: Record<Department, string> = { halwa: "الحلا", mawali: "المعجنات", chocolate: "الشوكولاتة", cake: "الكيك", packaging: "التغليف" };
+const DEPT_AR: Record<Department, [string, string]> = { halwa: ["الحلا", "Sweets"], mawali: ["المعجنات", "Pastry"], chocolate: ["الشوكولاتة", "Chocolate"], cake: ["الكيك", "Cake"], packaging: ["التغليف", "Packaging"] };
 const COUNTER_ROLES = new Set(["admin", "branch_supervisor", "cashier"]);
 const DISMISS_KEY = "@alerts_permission_dismissed";
 
@@ -36,24 +38,24 @@ function alertsFor(role: string, me: string, orders: Order[]): Alert[] {
     if ((DEPTS as string[]).includes(role)) {
       const d = role as Department;
       if (st[d] === "pending" && o.items.some((i) => i.department === d)) {
-        out.push({ key: `dept:${o.id}`, title: `طلب جديد لقسم ${DEPT_AR[d]}`, body: orderLabel(o), route: `/${d}`, icon: "inbox" });
+        out.push({ key: `dept:${o.id}`, title: trf("طلب جديد لقسم {d}", "New order for {d}", { d: tr(...DEPT_AR[d]) }), body: orderLabel(o), route: `/${d}`, icon: "inbox" });
       }
     }
     if (role === "packaging" && st.packaging === "pending" && isProductionDone(o)) {
-      out.push({ key: `pack:${o.id}`, title: "طلب جاهز للتغليف", body: orderLabel(o), route: "/packaging", icon: "package" });
+      out.push({ key: `pack:${o.id}`, title: tr("طلب جاهز للتغليف", "Order ready to pack"), body: orderLabel(o), route: "/packaging", icon: "package" });
     }
     if (role === "calligrapher" && hasWriting(o) && (o.writingStatus ?? "pending") === "pending") {
-      out.push({ key: `w:${o.id}`, title: "عبارة جديدة للكتابة", body: orderLabel(o), route: "/writing", icon: "edit-3" });
+      out.push({ key: `w:${o.id}`, title: tr("عبارة جديدة للكتابة", "New cake writing"), body: orderLabel(o), route: "/writing", icon: "edit-3" });
     }
     if (role === "driver" && o.deliveryDriver?.employeeId === me && o.deliveryStatus === "assigned") {
-      out.push({ key: `drv:${o.id}`, title: "أُسند إليك طلب توصيل", body: orderLabel(o), route: "/driver", icon: "truck" });
+      out.push({ key: `drv:${o.id}`, title: tr("أُسند إليك طلب توصيل", "A delivery was assigned to you"), body: orderLabel(o), route: "/driver", icon: "truck" });
     }
     if (COUNTER_ROLES.has(role) && hasOpenDriverRequest(o)) {
       const req = o.driverRequest!;
       out.push({
         key: `req:${o.id}:${req.at}`,
-        title: req.type === "transfer" ? "سائق يطلب تحويل طلب" : "سائق يطلب دعماً",
-        body: `${orderLabel(o)} — ${req.reason}`,
+        title: req.type === "transfer" ? tr("سائق يطلب تحويل طلب", "Driver asks to transfer an order") : tr("سائق يطلب دعماً", "Driver asks for support"),
+        body: `${orderLabel(o)} — ${tr(req.reason)}`,
         route: "/delivery",
         icon: "life-buoy",
       });
@@ -65,6 +67,7 @@ function alertsFor(role: string, me: string, orders: Order[]): Alert[] {
 export function LiveAlertsHost() {
   const router = useRouter();
   const { currentEmployee } = useEmployee();
+  useLang(); // re-render on language change
   const { orders } = useOrders();
   const role = currentEmployee?.role ?? "";
   const me = currentEmployee?.employeeId ?? "";
@@ -76,7 +79,7 @@ export function LiveAlertsHost() {
     const list = alertsFor(role, me, orders);
     if (counter) {
       for (const o of online) {
-        list.push({ key: `on:${o.id}`, title: "طلب أونلاين جديد", body: `${o.customerName} · ${Math.round(o.total ?? o.subtotal)} ر.س`, route: "/online", icon: "globe" });
+        list.push({ key: `on:${o.id}`, title: tr("طلب أونلاين جديد", "New online order"), body: `${o.customerName} · ${Math.round(o.total ?? o.subtotal)} ${tr("ر.س", "SAR")}`, route: "/online", icon: "globe" });
       }
     }
     return list;
@@ -156,8 +159,8 @@ export function LiveAlertsHost() {
               <Text style={s.toastTitle} numberOfLines={1}>{toast.title}{toast.more > 0 ? `  +${toast.more}` : ""}</Text>
               <Text style={s.toastBody} numberOfLines={1}>{toast.body}</Text>
             </View>
-            <Text style={s.toastOpen}>فتح</Text>
-            <Pressable hitSlop={10} onPress={() => setToast(null)} accessibilityLabel="إغلاق">
+            <Text style={s.toastOpen}>{tr("فتح", "Open")}</Text>
+            <Pressable hitSlop={10} onPress={() => setToast(null)} accessibilityLabel={tr("إغلاق", "Close")}>
               <Feather name="x" size={16} color="rgba(255,255,255,0.6)" />
             </Pressable>
           </Pressable>
@@ -167,16 +170,16 @@ export function LiveAlertsHost() {
       {askPermission && (
         <View style={s.permBar}>
           <Feather name="bell" size={16} color={Colors.gold} />
-          <Text style={s.permTxt}>فعّل الإشعارات ليصلك تنبيه بالطلبات حتى لو كانت الشاشة في الخلفية</Text>
+          <Text style={s.permTxt}>{tr("فعّل الإشعارات ليصلك تنبيه بالطلبات حتى لو كانت الشاشة في الخلفية", "Turn on notifications to hear about new orders even when this screen is in the background")}</Text>
           <Pressable
             style={s.permBtn}
             onPress={() => {
               Notification.requestPermission().finally(() => setAskPermission(false));
             }}
           >
-            <Text style={s.permBtnTxt}>تفعيل</Text>
+            <Text style={s.permBtnTxt}>{tr("تفعيل", "Enable")}</Text>
           </Pressable>
-          <Pressable hitSlop={10} onPress={dismissPermission} accessibilityLabel="لاحقاً">
+          <Pressable hitSlop={10} onPress={dismissPermission} accessibilityLabel={tr("لاحقاً", "Later")}>
             <Feather name="x" size={16} color={Colors.textMuted} />
           </Pressable>
         </View>

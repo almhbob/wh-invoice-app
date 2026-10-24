@@ -1,3 +1,4 @@
+import { tr } from "@/lib/i18n";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import React, { useMemo } from "react";
@@ -50,9 +51,9 @@ function formatTimeAr(): string {
 // ─── Payment method config ────────────────────────────────────────────────────
 
 const PAYMENT_CONFIG = {
-  cash:     { label: "💵 نقداً",  color: "#1F8A5B" },
-  card:     { label: "💳 بطاقة",  color: "#2D6E7E" },
-  transfer: { label: "📲 تحويل", color: "#D9971E" },
+  cash:     { get label() { return tr("💵 نقداً", "💵 Cash"); },  color: "#1F8A5B" },
+  card:     { get label() { return tr("💳 بطاقة", "💳 Card"); },  color: "#2D6E7E" },
+  transfer: { get label() { return tr("📲 تحويل", "📲 Transfer"); }, color: "#D9971E" },
 } as const;
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -231,7 +232,7 @@ export function ShiftCloseModal({ visible, onClose }: Props) {
           <View style={styles.headerCenter}>
             <View style={styles.headerTitleRow}>
               <Feather name="lock" size={16} color={Colors.primary} />
-              <Text style={styles.headerTitle}>إغلاق الوردية</Text>
+              <Text style={styles.headerTitle}>{tr("إغلاق الوردية", "Close shift")}</Text>
             </View>
             <Text style={styles.headerDate}>{formatDateAr()}</Text>
           </View>
@@ -249,33 +250,33 @@ export function ShiftCloseModal({ visible, onClose }: Props) {
           <View style={styles.cardsGrid}>
             <SummaryCard
               icon="hash"
-              label="عدد الطلبات"
+              label={tr("عدد الطلبات", "Orders")}
               value={`${summary.orderCount}`}
-              unit="طلب"
+              unit={tr("طلب", "orders")}
               accent={Colors.primary}
             />
             <SummaryCard
               icon="trending-up"
-              label="إجمالي الإيرادات"
+              label={tr("إجمالي الإيرادات", "Total revenue")}
               value={fmtCurrency(summary.totalRevenue)}
               accent={Colors.success}
             />
             <SummaryCard
               icon="bar-chart-2"
-              label="متوسط الطلب"
+              label={tr("متوسط الطلب", "Average order")}
               value={fmtCurrency(summary.avgOrderValue)}
               accent={Colors.info}
             />
             <SummaryCard
               icon="tag"
-              label="إجمالي الخصومات"
+              label={tr("إجمالي الخصومات", "Total discounts")}
               value={fmtCurrency(summary.totalDiscounts)}
               accent={Colors.gold}
             />
           </View>
 
           {/* ── Payment Breakdown ── */}
-          <SectionCard title="توزيع طرق الدفع" icon="pie-chart">
+          <SectionCard title={tr("توزيع طرق الدفع", "Payment methods")} icon="pie-chart">
             {(["cash", "card", "transfer"] as const).map((method) => {
               const cfg    = PAYMENT_CONFIG[method];
               const amount = method === "cash"
@@ -336,8 +337,8 @@ export function ShiftCloseModal({ visible, onClose }: Props) {
                 <Feather name="archive" size={22} color="#1F8A5B" />
               </View>
               <View>
-                <Text style={styles.cashDrawerTitle}>الصندوق المتوقع</Text>
-                <Text style={styles.cashDrawerLabel}>المبلغ المتوقع في الصندوق</Text>
+                <Text style={styles.cashDrawerTitle}>{tr("الصندوق المتوقع", "Expected cash drawer")}</Text>
+                <Text style={styles.cashDrawerLabel}>{tr("المبلغ المتوقع في الصندوق", "Expected amount in the drawer")}</Text>
               </View>
             </View>
             <Text style={styles.cashDrawerValue}>
@@ -347,7 +348,7 @@ export function ShiftCloseModal({ visible, onClose }: Props) {
 
           {/* ── Cashier Breakdown (only when multiple cashiers worked today) ── */}
           {cashierBreakdown.length > 1 && (
-            <SectionCard title="توزيع الكاشيرين" icon="users">
+            <SectionCard title={tr("توزيع الكاشيرين", "By cashier")} icon="users">
               {cashierBreakdown.map((c, idx) => (
                 <View
                   key={c.name + idx}
@@ -378,7 +379,7 @@ export function ShiftCloseModal({ visible, onClose }: Props) {
             activeOpacity={0.85}
           >
             <Feather name="share-2" size={18} color="#fff" />
-            <Text style={styles.shareBtnText}>مشاركة تقرير الوردية</Text>
+            <Text style={styles.shareBtnText}>{tr("مشاركة تقرير الوردية", "Share shift report")}</Text>
           </TouchableOpacity>
         </ScrollView>
       </View>

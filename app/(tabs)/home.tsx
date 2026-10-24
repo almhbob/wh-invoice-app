@@ -1,3 +1,4 @@
+import { tr } from "@/lib/i18n";
 import { Feather } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
@@ -415,7 +416,7 @@ export default function HomeScreen() {
           style={{ gap: 2 }}
           onPress={() => setShowRevenue((v) => !v)}
           accessibilityRole="button"
-          accessibilityLabel={showRevenue ? (isRTL ? "إخفاء الإيراد" : "Hide revenue") : (isRTL ? "إظهار الإيراد" : "Show revenue")}
+          accessibilityLabel={showRevenue ? tr("إخفاء الإيراد", "Hide revenue") : tr("إظهار الإيراد", "Show revenue")}
         >
           <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
             <Text style={m.heroLbl}>{t("revenueToday")}</Text>
@@ -427,7 +428,7 @@ export default function HomeScreen() {
             </Text>
           ) : (
             <Text style={[m.heroRevenue, { letterSpacing: 4 }]}>
-              •••• <Text style={[m.heroCur, { letterSpacing: 0 }]}>{isRTL ? "اضغط للعرض" : "Tap to show"}</Text>
+              •••• <Text style={[m.heroCur, { letterSpacing: 0 }]}>{tr("اضغط للعرض", "Tap to show")}</Text>
             </Text>
           )}
         </Pressable>

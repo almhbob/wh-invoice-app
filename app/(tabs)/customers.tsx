@@ -1,3 +1,4 @@
+import { tr, trf } from "@/lib/i18n";
 import { AdjustPointsModal, LoyaltySettingsModal } from "@/components/LoyaltyAdminModal";
 import { loyaltyKey, pointsValue, tierFor } from "@/constants/loyalty";
 import { useLoyaltyAccounts, useLoyaltySettings } from "@/hooks/useLoyalty";
@@ -103,7 +104,7 @@ function fmtCurrency(n: number) {
     n.toLocaleString("ar-SA", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
-    }) + " ر.س"
+    }) + " " + tr("ر.س", "SAR")
   );
 }
 
@@ -416,7 +417,7 @@ export default function CustomersScreen() {
     { key: "all", label: t("custAll") },
     { key: "frequent", label: t("custFrequent") },
     { key: "vip", label: "⭐ VIP" },
-    { key: "occasions", label: lang === "ar" ? `مناسبات قادمة${occasions.length ? ` (${occasions.length})` : ""}` : `Upcoming${occasions.length ? ` (${occasions.length})` : ""}` },
+    { key: "occasions", label: tr("مناسبات قادمة", "Upcoming occasions") + (occasions.length ? ` (${occasions.length})` : "") },
   ];
 
   if (!currentEmployee || !canDo(currentEmployee.role, ROLE_CAN_VIEW_CUSTOMERS)) {
@@ -441,18 +442,16 @@ export default function CustomersScreen() {
         <View style={styles.loyaltyIcon}><Feather name="award" size={16} color={Colors.gold} /></View>
         <View style={{ flex: 1, gap: 1 }}>
           <Text style={styles.loyaltyTitle}>
-            {loyalty.enabled ? (lang === "ar" ? "برنامج الولاء مفعّل" : "Loyalty program on") : (lang === "ar" ? "برنامج الولاء متوقف" : "Loyalty program off")}
+            {loyalty.enabled ? (tr("برنامج الولاء مفعّل", "Loyalty program on")) : (tr("برنامج الولاء متوقف", "Loyalty program off"))}
           </Text>
           <Text style={styles.loyaltySub} numberOfLines={1}>
-            {lang === "ar"
-              ? `${loyaltyAccounts.length} عضو · نقاط قائمة ${outstanding.toLocaleString("ar-SA")} (${pointsValue(outstanding, loyalty).toFixed(0)} ر.س)`
-              : `${loyaltyAccounts.length} members · ${outstanding} points outstanding`}
+            {trf("{m} عضو · نقاط قائمة {p} ({v} ر.س)", "{m} members · {p} points outstanding ({v} SAR)", { m: loyaltyAccounts.length, p: outstanding, v: pointsValue(outstanding, loyalty).toFixed(0) })}
           </Text>
         </View>
         {isAdminRole && (
           <TouchableOpacity style={styles.loyaltyBtn} onPress={() => setShowLoyaltySettings(true)}>
             <Feather name="sliders" size={14} color={Colors.text} />
-            <Text style={styles.loyaltyBtnTxt}>{lang === "ar" ? "الإعدادات" : "Settings"}</Text>
+            <Text style={styles.loyaltyBtnTxt}>{tr("الإعدادات", "Settings")}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -525,20 +524,20 @@ export default function CustomersScreen() {
             <View style={styles.emptyState}>
               <Feather name="calendar" size={48} color={Colors.textMuted} />
               <Text style={styles.emptyText}>
-                {lang === "ar" ? "لا توجد مناسبات متكررة خلال الأسابيع الثلاثة القادمة" : "No recurring occasions in the next three weeks"}
+                {tr("لا توجد مناسبات متكررة خلال الأسابيع الثلاثة القادمة", "No recurring occasions in the next three weeks")}
               </Text>
             </View>
           ) : occasions.map((oc) => (
             <View key={`${oc.customer.phone}-${oc.kind}-${oc.next.toDateString()}`} style={styles.occCard}>
               <View style={styles.occDays}>
                 <Text style={styles.occDaysNum}>{oc.daysLeft}</Text>
-                <Text style={styles.occDaysLbl}>{lang === "ar" ? "يوم" : "days"}</Text>
+                <Text style={styles.occDaysLbl}>{tr("يوم", "days")}</Text>
               </View>
               <View style={{ flex: 1, gap: 3 }}>
-                <Text style={styles.occName} numberOfLines={1}>{oc.customer.name} · {oc.kind}</Text>
+                <Text style={styles.occName} numberOfLines={1}>{oc.customer.name} · {tr(oc.kind)}</Text>
                 <Text style={styles.occText} numberOfLines={1}>«{oc.text}»</Text>
                 <Text style={styles.occMeta}>
-                  {lang === "ar" ? "آخر مرة: " : "Last: "}{fmtDate(oc.lastDate.toISOString())}
+                  {tr("آخر مرة: ", "Last: ")}{fmtDate(oc.lastDate.toISOString())}
                 </Text>
               </View>
               <TouchableOpacity
@@ -551,7 +550,7 @@ export default function CustomersScreen() {
                 }
               >
                 <Feather name="message-circle" size={16} color="#fff" />
-                <Text style={styles.occWaTxt}>{lang === "ar" ? "تذكير" : "Remind"}</Text>
+                <Text style={styles.occWaTxt}>{tr("تذكير", "Remind")}</Text>
               </TouchableOpacity>
             </View>
           ))}
@@ -627,7 +626,7 @@ export default function CustomersScreen() {
                     const tier = tierFor(acc.lifetimeSpent ?? 0, loyalty);
                     return (
                       <Text style={styles.custPoints}>
-                        ★ {Math.max(0, Math.floor(acc.points ?? 0)).toLocaleString("ar-SA")} {lang === "ar" ? "نقطة" : "pts"} · {tier.name}
+                        ★ {Math.max(0, Math.floor(acc.points ?? 0)).toLocaleString("ar-SA")} {tr("نقطة", "pts")} · {tier.name}
                       </Text>
                     );
                   })()}
@@ -680,7 +679,7 @@ export default function CustomersScreen() {
                       activeOpacity={0.75}
                     >
                       <Feather name="award" size={14} color={Colors.gold} />
-                      <Text style={[styles.quickBtnText, { color: Colors.gold }]}>{lang === "ar" ? "نقاط" : "Points"}</Text>
+                      <Text style={[styles.quickBtnText, { color: Colors.gold }]}>{tr("نقاط", "Points")}</Text>
                     </TouchableOpacity>
                   )}
                   {/* Call */}

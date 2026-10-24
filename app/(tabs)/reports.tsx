@@ -1,3 +1,4 @@
+import { tr } from "@/lib/i18n";
 import { PerformanceReport } from "@/components/PerformanceReport";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -1208,7 +1209,7 @@ export default function ReportsScreen() {
 
   const TAB_ITEMS: { key: Tab; label: string; icon: string }[] = [
     { key: "revenue",  label: t("repTabRevenue"),  icon: "trending-up" },
-    { key: "performance", label: lang === "ar" ? "الأداء" : "Performance", icon: "activity" },
+    { key: "performance", label: tr("الأداء", "Performance"), icon: "activity" },
     { key: "products", label: t("repTabProducts"), icon: "package" },
     { key: "cashier",  label: t("repTabCashier"),  icon: "user-check" },
     { key: "delivery", label: t("repTabDelivery"), icon: "truck" },

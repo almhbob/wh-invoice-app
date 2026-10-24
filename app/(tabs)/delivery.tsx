@@ -1,3 +1,4 @@
+import { tr } from "@/lib/i18n";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as Linking from "expo-linking";
@@ -64,7 +65,7 @@ const DEPT_COLORS: Record<string, string> = {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function fmtCurrency(n: number) {
-  return n.toLocaleString("ar-SA", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ر.س";
+  return n.toLocaleString("ar-SA", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " " + tr("ر.س", "SAR");
 }
 function isDelivered(o: Order) { return o.deliveryStatus === "delivered"; }
 function isUnassigned(o: Order) { return !o.deliveryDriver?.employeeId && !isDelivered(o); }
@@ -375,7 +376,7 @@ function DeliveryCard({
         </View>
         <TouchableOpacity onPress={() => onOpenDetails(order)} style={{ alignItems: "flex-end", gap: 6 }} activeOpacity={0.7}>
           <StageBadge order={order} size="sm" />
-          <Text style={{ fontSize: 11, color: Colors.primary, fontWeight: "800" }}>{lang === "ar" ? "التفاصيل ‹" : "Details ›"}</Text>
+          <Text style={{ fontSize: 11, color: Colors.primary, fontWeight: "800" }}>{tr("التفاصيل ‹", "Details ›")}</Text>
         </TouchableOpacity>
       </View>
 
@@ -516,7 +517,7 @@ function DeliveryCard({
           activeOpacity={0.8}
         >
           <Feather name="truck" size={16} color={Colors.goldLight} />
-          <Text style={styles.deliverBtnText}>{lang === "ar" ? "خرج للتوصيل · إرسال التفاصيل للسائق" : "Out for delivery · send to driver"}</Text>
+          <Text style={styles.deliverBtnText}>{tr("خرج للتوصيل · إرسال التفاصيل للسائق", "Out for delivery · send to driver")}</Text>
         </TouchableOpacity>
       )}
       {!delivered && (outForDelivery || !hasDriver) && (
@@ -639,7 +640,7 @@ export default function DeliveryScreen() {
               <SyncStatusBanner />
               <TouchableOpacity style={styles.manageDriversBtn} onPress={() => setManageDrivers(true)} activeOpacity={0.8}>
                 <Feather name="users" size={16} color={Colors.primary} />
-                <Text style={styles.manageDriversTxt}>{lang === "ar" ? "إدارة السائقين" : "Manage drivers"}</Text>
+                <Text style={styles.manageDriversTxt}>{tr("إدارة السائقين", "Manage drivers")}</Text>
                 <Feather name={lang === "ar" ? "chevron-left" : "chevron-right"} size={16} color={Colors.textMuted} />
               </TouchableOpacity>
             </View>
@@ -740,9 +741,9 @@ export default function DeliveryScreen() {
               };
               if (isProductionDone(o)) return send();
               Alert.alert(
-                lang === "ar" ? "التحضير لم يكتمل" : "Not ready yet",
-                lang === "ar" ? "بعض الأقسام لم تُنهِ الطلب. إخراجه للتوصيل الآن؟" : "Some departments are not done. Dispatch anyway?",
-                [{ text: lang === "ar" ? "إلغاء" : "Cancel", style: "cancel" }, { text: lang === "ar" ? "نعم" : "Yes", onPress: send }]
+                tr("التحضير لم يكتمل", "Not ready yet"),
+                tr("بعض الأقسام لم تُنهِ الطلب. إخراجه للتوصيل الآن؟", "Some departments are not done. Dispatch anyway?"),
+                [{ text: tr("إلغاء", "Cancel"), style: "cancel" }, { text: tr("نعم", "Yes"), onPress: send }]
               );
             }}
           />

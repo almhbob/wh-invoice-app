@@ -1,3 +1,4 @@
+import { tr } from "@/lib/i18n";
 import { Feather } from "@expo/vector-icons";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
@@ -37,7 +38,7 @@ export function OrderTracker({ order, compact }: { order: Order; compact?: boole
                 </View>
                 {!compact && (
                   <Text style={[st.label, (done || active) && { color: Colors.text, fontWeight: "700" }]} numberOfLines={2}>
-                    {lang === "ar" ? meta.ar : meta.en}
+                    {tr(meta.ar, meta.en)}
                   </Text>
                 )}
               </View>
@@ -56,7 +57,7 @@ export function StageBadge({ order, size = "md" }: { order: Order; size?: "sm" |
   return (
     <View style={[st.badge, size === "sm" && st.badgeSm, { backgroundColor: meta.color + "16", borderColor: meta.color + "40" }]}>
       <Feather name={meta.icon as never} size={size === "sm" ? 10 : 12} color={meta.color} />
-      <Text style={[st.badgeTxt, size === "sm" && { fontSize: 10 }, { color: meta.color }]}>{lang === "ar" ? meta.ar : meta.en}</Text>
+      <Text style={[st.badgeTxt, size === "sm" && { fontSize: 10 }, { color: meta.color }]}>{tr(meta.ar, meta.en)}</Text>
     </View>
   );
 }

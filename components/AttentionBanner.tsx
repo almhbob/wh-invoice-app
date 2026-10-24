@@ -1,3 +1,4 @@
+import { tr, trf } from "@/lib/i18n";
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useMemo } from "react";
@@ -32,14 +33,14 @@ function Inner({ showRequests }: { showRequests: boolean }) {
       {pending.length > 0 && (
         <Pressable style={[st.bar, { borderColor: Colors.info + "66", backgroundColor: Colors.info + "12" }]} onPress={() => router.navigate("/(tabs)/online" as never)}>
           <Feather name="globe" size={17} color={Colors.info} />
-          <Text style={st.txt}>{ar ? `${pending.length} طلب أونلاين بانتظار القبول` : `${pending.length} online order(s) awaiting acceptance`}</Text>
+          <Text style={st.txt}>{trf("{p0} طلب أونلاين بانتظار القبول", "{p0} online order(s) awaiting acceptance", { p0: pending.length })}</Text>
           <Feather name={ar ? "chevron-left" : "chevron-right"} size={17} color={Colors.info} />
         </Pressable>
       )}
       {showRequests && requests > 0 && (
         <Pressable style={[st.bar, { borderColor: Colors.warning + "66", backgroundColor: Colors.warning + "12" }]} onPress={() => router.navigate("/(tabs)/tracking" as never)}>
           <Feather name="life-buoy" size={17} color={Colors.warning} />
-          <Text style={st.txt}>{ar ? `${requests} طلب من السائقين (دعم / تحويل)` : `${requests} driver request(s)`}</Text>
+          <Text style={st.txt}>{trf("{p0} طلب من السائقين (دعم / تحويل)", "{p0} driver request(s)", { p0: requests })}</Text>
           <Feather name={ar ? "chevron-left" : "chevron-right"} size={17} color={Colors.warning} />
         </Pressable>
       )}

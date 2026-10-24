@@ -1,3 +1,4 @@
+import { tr } from "@/lib/i18n";
 import { Feather } from "@expo/vector-icons";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
@@ -15,7 +16,7 @@ export function RoleGate({ allow, children }: { allow: Set<EmployeeRole>; childr
     return (
       <View style={st.wrap}>
         <View style={st.icon}><Feather name="lock" size={30} color={Colors.accent} /></View>
-        <Text style={st.title}>{lang === "ar" ? "لا تملك صلاحية لهذه الشاشة" : "You don't have access to this screen"}</Text>
+        <Text style={st.title}>{tr("لا تملك صلاحية لهذه الشاشة", "You don't have access to this screen")}</Text>
       </View>
     );
   }

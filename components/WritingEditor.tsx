@@ -1,3 +1,4 @@
+import { tr } from "@/lib/i18n";
 import { Feather } from "@expo/vector-icons";
 import React, { useState } from "react";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
@@ -23,7 +24,7 @@ export function WritingEditor({ value, onChange, defaultOpen }: { value?: CakeWr
     return (
       <Pressable style={st.add} onPress={() => setOpen(true)}>
         <Feather name="edit-3" size={14} color={Colors.purple} />
-        <Text style={st.addTxt}>{ar ? "إضافة عبارة للخطاط" : "Add writing for calligrapher"}</Text>
+        <Text style={st.addTxt}>{tr("إضافة عبارة للخطاط", "Add writing for calligrapher")}</Text>
       </Pressable>
     );
   }
@@ -32,7 +33,7 @@ export function WritingEditor({ value, onChange, defaultOpen }: { value?: CakeWr
     <View style={st.box}>
       <View style={st.head}>
         <Feather name="edit-3" size={14} color={Colors.purple} />
-        <Text style={st.title}>{ar ? "عبارة الخطاط" : "Calligraphy"}</Text>
+        <Text style={st.title}>{tr("عبارة الخطاط", "Calligraphy")}</Text>
         <Pressable hitSlop={8} onPress={() => { onChange(undefined); setOpen(false); }}>
           <Feather name="trash-2" size={15} color={Colors.textMuted} />
         </Pressable>
@@ -41,31 +42,31 @@ export function WritingEditor({ value, onChange, defaultOpen }: { value?: CakeWr
         style={[st.input, st.text, { textAlign: align }]}
         value={w.text}
         onChangeText={(text) => set({ text })}
-        placeholder={ar ? "العبارة كما تُكتب بالضبط…" : "Exact phrase to write…"}
+        placeholder={tr("العبارة كما تُكتب بالضبط…", "Exact phrase to write…")}
         placeholderTextColor={Colors.textMuted}
         multiline
       />
-      <Text style={st.label}>{ar ? "تُكتب على" : "Written on"}</Text>
+      <Text style={st.label}>{tr("تُكتب على", "Written on")}</Text>
       <View style={st.chips}>
         {WRITING_SURFACES.map((s) => {
           const on = w.surface === s.key;
           return (
             <Pressable key={s.key} style={[st.chip, on && st.chipOn]} onPress={() => set({ surface: s.key })}>
               <Feather name={s.icon as never} size={12} color={on ? "#fff" : Colors.textSecondary} />
-              <Text style={[st.chipTxt, on && { color: "#fff" }]}>{ar ? s.ar : s.en}</Text>
+              <Text style={[st.chipTxt, on && { color: "#fff" }]}>{tr(s.ar, s.en)}</Text>
             </Pressable>
           );
         })}
       </View>
       {w.surface === "other" && (
         <TextInput style={[st.input, { textAlign: align }]} value={w.surfaceOther ?? ""} onChangeText={(surfaceOther) => set({ surfaceOther })}
-          placeholder={ar ? "حدّد مكان الكتابة" : "Describe the surface"} placeholderTextColor={Colors.textMuted} />
+          placeholder={tr("حدّد مكان الكتابة", "Describe the surface")} placeholderTextColor={Colors.textMuted} />
       )}
       <View style={{ gap: 8 }}>
         <TextInput style={[st.input, { textAlign: align }]} value={w.color ?? ""} onChangeText={(color) => set({ color })}
-          placeholder={ar ? "اللون (اختياري)" : "Color (optional)"} placeholderTextColor={Colors.textMuted} />
+          placeholder={tr("اللون (اختياري)", "Color (optional)")} placeholderTextColor={Colors.textMuted} />
         <TextInput style={[st.input, { textAlign: align }]} value={w.note ?? ""} onChangeText={(note) => set({ note })}
-          placeholder={ar ? "ملاحظة للخطاط: الخط، المكان…" : "Note: font, placement…"} placeholderTextColor={Colors.textMuted} />
+          placeholder={tr("ملاحظة للخطاط: الخط، المكان…", "Note: font, placement…")} placeholderTextColor={Colors.textMuted} />
       </View>
     </View>
   );

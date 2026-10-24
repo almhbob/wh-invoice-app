@@ -1,3 +1,4 @@
+import { tr, trf } from "@/lib/i18n";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { Image } from "expo-image";
@@ -65,15 +66,15 @@ export function DeptOrderCard({ order, department, onStatusChange }: DeptOrderCa
   const packagingBlocked = isPackaging && prodDone < prodDepts.length;
 
   const statusMeta = {
-    pending: { label: ar ? "جديد" : "New", color: Colors.statusPending },
-    in_progress: { label: ar ? "قيد التحضير" : "Preparing", color: Colors.statusInProgress },
-    done: { label: ar ? "منجز" : "Done", color: Colors.statusDone },
-    cancelled: { label: ar ? "ملغي" : "Cancelled", color: Colors.statusCancelled },
+    pending: { label: tr("جديد", "New"), color: Colors.statusPending },
+    in_progress: { label: tr("قيد التحضير", "Preparing"), color: Colors.statusInProgress },
+    done: { label: tr("منجز", "Done"), color: Colors.statusDone },
+    cancelled: { label: tr("ملغي", "Cancelled"), color: Colors.statusCancelled },
   }[status];
 
   const actionLabel = status === "pending"
-    ? (ar ? "استلام وبدء التحضير" : "Accept & start")
-    : (isPackaging ? (ar ? "تم التغليف — جاهز للتسليم" : "Packed — ready") : (ar ? "تم التحضير" : "Mark prepared"));
+    ? (tr("استلام وبدء التحضير", "Accept & start"))
+    : (isPackaging ? (tr("تم التغليف — جاهز للتسليم", "Packed — ready")) : (tr("تم التحضير", "Mark prepared")));
 
   const advance = async () => {
     if (!next) return;
@@ -94,9 +95,9 @@ export function DeptOrderCard({ order, department, onStatusChange }: DeptOrderCa
     };
     if (next === "done" && packagingBlocked) {
       Alert.alert(
-        ar ? "الأقسام لم تنتهِ" : "Departments not finished",
-        ar ? `${prodDone} من ${prodDepts.length} أقسام أنهت التحضير. تأكيد التغليف الآن؟` : `${prodDone}/${prodDepts.length} departments done. Mark packed anyway?`,
-        [{ text: ar ? "إلغاء" : "Cancel", style: "cancel" }, { text: ar ? "تأكيد" : "Confirm", onPress: () => void go() }]
+        tr("الأقسام لم تنتهِ", "Departments not finished"),
+        trf("{p0} من {p1} أقسام أنهت التحضير. تأكيد التغليف الآن؟", "{p0}/{p1} departments done. Mark packed anyway?", { p0: prodDone, p1: prodDepts.length }),
+        [{ text: tr("إلغاء", "Cancel"), style: "cancel" }, { text: tr("تأكيد", "Confirm"), onPress: () => void go() }]
       );
       return;
     }
@@ -120,11 +121,11 @@ export function DeptOrderCard({ order, department, onStatusChange }: DeptOrderCa
               <Text style={[st.statusTxt, { color: statusMeta.color }]}>{statusMeta.label}</Text>
             </View>
             {order.orderType === "delivery" && (
-              <View style={st.tag}><Feather name="truck" size={10} color={Colors.textSecondary} /><Text style={st.tagTxt}>{ar ? "توصيل" : "Delivery"}</Text></View>
+              <View style={st.tag}><Feather name="truck" size={10} color={Colors.textSecondary} /><Text style={st.tagTxt}>{tr("توصيل", "Delivery")}</Text></View>
             )}
           </View>
           <Text style={st.sub} numberOfLines={1}>
-            {order.customerName} · {ar ? "استُلم" : "In"} {clock(order.createdAt, lang)}
+            {order.customerName} · {tr("استُلم", "In")} {clock(order.createdAt, lang)}
           </Text>
         </View>
         {order.deliveryTime ? (
@@ -139,7 +140,7 @@ export function DeptOrderCard({ order, department, onStatusChange }: DeptOrderCa
         <View style={[st.banner, { backgroundColor: color + "12" }]}>
           <Feather name="share-2" size={13} color={color} />
           <Text style={[st.bannerTxt, { color }]}>
-            {ar ? "محوَّل من" : "Transferred from"} {deptName[transfer!.fromDept]} · {transfer!.reason}
+            {tr("محوَّل من", "Transferred from")} {deptName[transfer!.fromDept]} · {transfer!.reason}
           </Text>
         </View>
       )}
@@ -196,7 +197,7 @@ export function DeptOrderCard({ order, department, onStatusChange }: DeptOrderCa
 
       {receiver ? (
         <Text style={st.trail}>
-          <Feather name="user-check" size={11} color={Colors.textMuted} /> {ar ? "المسؤول:" : "By:"} {receiver.name} · {clock(receiver.timestamp, lang)}
+          <Feather name="user-check" size={11} color={Colors.textMuted} /> {tr("المسؤول:", "By:")} {receiver.name} · {clock(receiver.timestamp, lang)}
         </Text>
       ) : null}
 
@@ -214,7 +215,7 @@ export function DeptOrderCard({ order, department, onStatusChange }: DeptOrderCa
         ) : (
           <View style={[st.doneBox]}>
             <Feather name="check-circle" size={16} color={Colors.statusDone} />
-            <Text style={st.doneTxt}>{isPackaging ? (ar ? "جاهز للتسليم" : "Ready for handover") : (ar ? "أُنجز في هذا القسم" : "Done here")}</Text>
+            <Text style={st.doneTxt}>{isPackaging ? (tr("جاهز للتسليم", "Ready for handover")) : (tr("أُنجز في هذا القسم", "Done here"))}</Text>
           </View>
         )}
         {!isPackaging && status !== "done" && status !== "cancelled" && transfer?.fromDept !== department && (

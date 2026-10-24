@@ -1,3 +1,4 @@
+import { tr } from "@/lib/i18n";
 import { Feather } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import React, { useMemo, useState } from "react";
@@ -90,9 +91,9 @@ export function OrderDetailsSheet({ orderId, visible, onClose }: { orderId: stri
   const confirmIfNotReady = (action: () => void) => {
     if (ready) return action();
     Alert.alert(
-      ar ? "التحضير لم يكتمل" : "Not ready yet",
-      ar ? "بعض الأقسام لم تُنهِ هذا الطلب بعد. هل تريد المتابعة؟" : "Some departments have not finished this order. Continue anyway?",
-      [{ text: ar ? "إلغاء" : "Cancel", style: "cancel" }, { text: ar ? "متابعة" : "Continue", onPress: action }]
+      tr("التحضير لم يكتمل", "Not ready yet"),
+      tr("بعض الأقسام لم تُنهِ هذا الطلب بعد. هل تريد المتابعة؟", "Some departments have not finished this order. Continue anyway?"),
+      [{ text: tr("إلغاء", "Cancel"), style: "cancel" }, { text: tr("متابعة", "Continue"), onPress: action }]
     );
   };
 
@@ -108,7 +109,7 @@ export function OrderDetailsSheet({ orderId, visible, onClose }: { orderId: stri
 
   const sendToDriver = () => {
     const phone = order.deliveryDriver?.phone;
-    if (!phone) { Alert.alert(ar ? "لا يوجد رقم" : "No phone", ar ? "أضف رقم جوال السائق من إدارة السائقين." : "Add the driver's phone in Manage drivers."); return; }
+    if (!phone) { Alert.alert(tr("لا يوجد رقم", "No phone"), tr("أضف رقم جوال السائق من إدارة السائقين.", "Add the driver's phone in Manage drivers.")); return; }
     openWhatsApp(phone, driverDispatchMessage(order, brand));
   };
 
@@ -128,7 +129,7 @@ export function OrderDetailsSheet({ orderId, visible, onClose }: { orderId: stri
                 <Text style={st.num}>#{order.orderNumber}</Text>
                 <StageBadge order={order} />
                 {order.syncState && (
-                  <View style={st.syncPill}><Feather name="upload-cloud" size={11} color={Colors.warning} /><Text style={st.syncTxt}>{ar ? "لم يُرسل بعد" : "Not sent yet"}</Text></View>
+                  <View style={st.syncPill}><Feather name="upload-cloud" size={11} color={Colors.warning} /><Text style={st.syncTxt}>{tr("لم يُرسل بعد", "Not sent yet")}</Text></View>
                 )}
               </View>
               <Text style={st.customer} numberOfLines={1}>{order.customerName}</Text>
@@ -143,7 +144,7 @@ export function OrderDetailsSheet({ orderId, visible, onClose }: { orderId: stri
               <View style={st.metaRow}>
                 <View style={st.meta}>
                   <Feather name={isDelivery ? "truck" : "shopping-bag"} size={13} color={Colors.textSecondary} />
-                  <Text style={st.metaTxt}>{isDelivery ? (ar ? "توصيل" : "Delivery") : (ar ? "استلام من الفرع" : "Pickup")}</Text>
+                  <Text style={st.metaTxt}>{isDelivery ? (tr("توصيل", "Delivery")) : (tr("استلام من الفرع", "Pickup"))}</Text>
                 </View>
                 {order.deliveryTime ? (
                   <View style={[st.meta, { backgroundColor: URGENCY_COLOR[urg] + "14" }]}>
@@ -163,23 +164,23 @@ export function OrderDetailsSheet({ orderId, visible, onClose }: { orderId: stri
                 <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
                   <Feather name={order.driverRequest.type === "transfer" ? "repeat" : "life-buoy"} size={16} color={order.driverRequest.status === "open" ? Colors.warning : Colors.success} />
                   <Text style={[st.cardTitle, { flex: 1, color: Colors.text }]}>
-                    {order.driverRequest.type === "transfer" ? (ar ? "طلب تحويل لمندوب آخر" : "Transfer request") : (ar ? "طلب دعم من السائق" : "Driver support request")}
-                    {" · "}{order.driverRequest.status === "open" ? (ar ? "مفتوح" : "Open") : (ar ? "تمت المعالجة" : "Resolved")}
+                    {order.driverRequest.type === "transfer" ? (tr("طلب تحويل لمندوب آخر", "Transfer request")) : (tr("طلب دعم من السائق", "Driver support request"))}
+                    {" · "}{order.driverRequest.status === "open" ? (tr("مفتوح", "Open")) : (tr("تمت المعالجة", "Resolved"))}
                   </Text>
                 </View>
-                <Text style={st.line}>{order.driverRequest.reason}</Text>
+                <Text style={st.line}>{tr(order.driverRequest.reason)}</Text>
                 {order.driverRequest.note ? <Text style={st.itemNote}>{order.driverRequest.note}</Text> : null}
                 <Text style={st.tlSub}>{order.driverRequest.by.name} · {fmtTime(order.driverRequest.at, lang)}</Text>
                 {order.driverRequest.response ? <Text style={st.itemNote}>↩ {order.driverRequest.response}{order.driverRequest.resolvedBy ? ` — ${order.driverRequest.resolvedBy.name}` : ""}</Text> : null}
                 {order.driverRequest.status === "open" && canFulfil && (
                   <View style={{ gap: 8 }}>
                     {order.driverRequest.type === "transfer" && (
-                      <ActionBtn icon="user-check" primary label={ar ? "إسناد لسائق آخر" : "Reassign to another driver"} onPress={() => setPickDriver(true)} />
+                      <ActionBtn icon="user-check" primary label={tr("إسناد لسائق آخر", "Reassign to another driver")} onPress={() => setPickDriver(true)} />
                     )}
-                    <TextInput style={st.input} value={reply} onChangeText={setReply} placeholder={ar ? "رد للسائق (اختياري)" : "Reply to driver (optional)"} placeholderTextColor={Colors.textMuted} />
-                    <ActionBtn icon="check-square" loading={busy === "resolve"} label={ar ? "تمت المعالجة" : "Mark resolved"}
+                    <TextInput style={st.input} value={reply} onChangeText={setReply} placeholder={tr("رد للسائق (اختياري)", "Reply to driver (optional)")} placeholderTextColor={Colors.textMuted} />
+                    <ActionBtn icon="check-square" loading={busy === "resolve"} label={tr("تمت المعالجة", "Mark resolved")}
                       onPress={() => void run("resolve", async () => { if (by) await resolveDriverRequest(order.id, by, reply); setReply(""); })} />
-                    {order.deliveryDriver?.phone ? <ActionBtn icon="phone" label={ar ? "اتصال بالسائق" : "Call driver"} onPress={() => callPhone(order.deliveryDriver!.phone!)} /> : null}
+                    {order.deliveryDriver?.phone ? <ActionBtn icon="phone" label={tr("اتصال بالسائق", "Call driver")} onPress={() => callPhone(order.deliveryDriver!.phone!)} /> : null}
                   </View>
                 )}
               </View>
@@ -188,12 +189,12 @@ export function OrderDetailsSheet({ orderId, visible, onClose }: { orderId: stri
             {/* Fulfilment actions */}
             {canFulfil && isOrderOpen(order) && (
               <View style={st.card}>
-                <Text style={st.cardTitle}>{ar ? "الإجراء التالي" : "Next step"}</Text>
+                <Text style={st.cardTitle}>{tr("الإجراء التالي", "Next step")}</Text>
                 {!isDelivery && (
                   <ActionBtn
                     icon="shopping-bag" primary loading={busy === "pickup"}
-                    label={ar ? "تسليم الطلب للعميل" : "Hand over to customer"}
-                    hint={ready ? undefined : (ar ? "التحضير لم يكتمل بعد" : "Production not finished")}
+                    label={tr("تسليم الطلب للعميل", "Hand over to customer")}
+                    hint={ready ? undefined : (tr("التحضير لم يكتمل بعد", "Production not finished"))}
                     onPress={() => confirmIfNotReady(() => void run("pickup", () => markPickedUp(order.id, by)))}
                   />
                 )}
@@ -201,26 +202,26 @@ export function OrderDetailsSheet({ orderId, visible, onClose }: { orderId: stri
                   <>
                     <ActionBtn
                       icon="user-check" loading={busy === "driver"}
-                      label={order.deliveryDriver?.name ? `${ar ? "السائق:" : "Driver:"} ${order.deliveryDriver.name}` : (ar ? "تعيين سائق" : "Assign driver")}
-                      hint={order.deliveryDriver?.name ? (ar ? "اضغط للتغيير" : "Tap to change") : undefined}
+                      label={order.deliveryDriver?.name ? `${tr("السائق:", "Driver:")} ${order.deliveryDriver.name}` : (tr("تعيين سائق", "Assign driver"))}
+                      hint={order.deliveryDriver?.name ? (tr("اضغط للتغيير", "Tap to change")) : undefined}
                       primary={!order.deliveryDriver?.name}
                       onPress={() => setPickDriver(true)}
                     />
                     {order.deliveryDriver?.name && stage !== "out_for_delivery" && (
                       <ActionBtn
                         icon="truck" primary loading={busy === "dispatch"}
-                        label={ar ? "خرج للتوصيل" : "Out for delivery"}
-                        hint={ar ? "سيُرسل للسائق تفاصيل الطلب عبر واتساب" : "Driver gets the details on WhatsApp"}
+                        label={tr("خرج للتوصيل", "Out for delivery")}
+                        hint={tr("سيُرسل للسائق تفاصيل الطلب عبر واتساب", "Driver gets the details on WhatsApp")}
                         onPress={() => confirmIfNotReady(() => void run("dispatch", async () => { await dispatchOrder(order.id, by); sendToDriver(); }))}
                       />
                     )}
                     {stage === "out_for_delivery" && (
                       <View style={{ flexDirection: "row", gap: 10 }}>
                         <View style={{ flex: 1 }}>
-                          <ActionBtn icon="check-circle" primary loading={busy === "delivered"} label={ar ? "تم التسليم" : "Delivered"} onPress={() => void run("delivered", () => markDelivered(order.id, by))} />
+                          <ActionBtn icon="check-circle" primary loading={busy === "delivered"} label={tr("تم التسليم", "Delivered")} onPress={() => void run("delivered", () => markDelivered(order.id, by))} />
                         </View>
                         <View style={{ flex: 1 }}>
-                          <ActionBtn icon="alert-triangle" danger label={ar ? "تعذّر التسليم" : "Failed"} onPress={() => setFailReason("")} />
+                          <ActionBtn icon="alert-triangle" danger label={tr("تعذّر التسليم", "Failed")} onPress={() => setFailReason("")} />
                         </View>
                       </View>
                     )}
@@ -228,11 +229,11 @@ export function OrderDetailsSheet({ orderId, visible, onClose }: { orderId: stri
                       <View style={{ gap: 8 }}>
                         <TextInput
                           style={st.input} value={failReason} onChangeText={setFailReason}
-                          placeholder={ar ? "السبب: العميل لا يرد، العنوان غير صحيح…" : "Reason: no answer, wrong address…"}
+                          placeholder={tr("السبب: العميل لا يرد، العنوان غير صحيح…", "Reason: no answer, wrong address…")}
                           placeholderTextColor={Colors.textMuted}
                         />
-                        <ActionBtn icon="save" danger loading={busy === "fail"} label={ar ? "حفظ وإرجاع للفرع" : "Save & return to branch"}
-                          onPress={() => void run("fail", async () => { await markDeliveryFailed(order.id, failReason.trim() || (ar ? "بدون سبب" : "No reason"), by); setFailReason(null); })} />
+                        <ActionBtn icon="save" danger loading={busy === "fail"} label={tr("حفظ وإرجاع للفرع", "Save & return to branch")}
+                          onPress={() => void run("fail", async () => { await markDeliveryFailed(order.id, failReason.trim() || (tr("بدون سبب", "No reason")), by); setFailReason(null); })} />
                       </View>
                     )}
                   </>
@@ -242,20 +243,20 @@ export function OrderDetailsSheet({ orderId, visible, onClose }: { orderId: stri
 
             {/* Contact */}
             <View style={st.card}>
-              <Text style={st.cardTitle}>{ar ? "العميل" : "Customer"}</Text>
+              <Text style={st.cardTitle}>{tr("العميل", "Customer")}</Text>
               <Text style={st.line}>{order.customerPhone}{order.customerPhone2 ? ` · ${order.customerPhone2}` : ""}</Text>
               {isDelivery && order.deliveryAddress ? <Text style={st.line}>📍 {order.deliveryAddress}</Text> : null}
               <View style={st.chips}>
-                <Chip icon="phone" label={ar ? "اتصال" : "Call"} onPress={() => callPhone(order.customerPhone)} />
-                <Chip icon="send" label={ar ? "رابط التتبع واتساب" : "Send tracking"} onPress={() => void shareTracking()} />
-                {isDelivery && order.deliveryAddress ? <Chip icon="map-pin" label={ar ? "الخريطة" : "Map"} onPress={() => openMaps(order.deliveryAddress!)} /> : null}
-                {order.deliveryDriver?.phone ? <Chip icon="message-circle" label={ar ? "مراسلة السائق" : "Message driver"} onPress={sendToDriver} /> : null}
+                <Chip icon="phone" label={tr("اتصال", "Call")} onPress={() => callPhone(order.customerPhone)} />
+                <Chip icon="send" label={tr("رابط التتبع واتساب", "Send tracking")} onPress={() => void shareTracking()} />
+                {isDelivery && order.deliveryAddress ? <Chip icon="map-pin" label={tr("الخريطة", "Map")} onPress={() => openMaps(order.deliveryAddress!)} /> : null}
+                {order.deliveryDriver?.phone ? <Chip icon="message-circle" label={tr("مراسلة السائق", "Message driver")} onPress={sendToDriver} /> : null}
               </View>
             </View>
 
             {/* Departments */}
             <View style={st.card}>
-              <Text style={st.cardTitle}>{ar ? "الأقسام والأصناف" : "Departments & items"}</Text>
+              <Text style={st.cardTitle}>{tr("الأقسام والأصناف", "Departments & items")}</Text>
               {depts.map((d) => {
                 const status = order.departmentStatuses?.[d] ?? "pending";
                 const meta = STATUS_TXT[status];
@@ -270,10 +271,10 @@ export function OrderDetailsSheet({ orderId, visible, onClose }: { orderId: stri
                       <Text style={st.deptName}>{t(DEPT_KEY[d])}</Text>
                       <View style={[st.statusPill, { backgroundColor: meta.color + "16" }]}>
                         <View style={[st.statusDot, { backgroundColor: meta.color }]} />
-                        <Text style={[st.statusTxt, { color: meta.color }]}>{ar ? meta.ar : meta.en}</Text>
+                        <Text style={[st.statusTxt, { color: meta.color }]}>{tr(meta.ar, meta.en)}</Text>
                       </View>
                     </View>
-                    {rec ? <Text style={st.deptBy}>{ar ? "استلمه:" : "Taken by:"} {rec.name}</Text> : null}
+                    {rec ? <Text style={st.deptBy}>{tr("استلمه:", "Taken by:")} {rec.name}</Text> : null}
                     {items.map((i) => (
                       <View key={i.id} style={st.item}>
                         <Text style={st.itemQty}>{i.quantity}×</Text>
@@ -294,7 +295,7 @@ export function OrderDetailsSheet({ orderId, visible, onClose }: { orderId: stri
             {/* Notes & images */}
             {(order.notes || order.imageUri || order.referenceImages?.length) ? (
               <View style={st.card}>
-                {order.notes ? (<><Text style={st.cardTitle}>{ar ? "ملاحظات" : "Notes"}</Text><Text style={st.notes}>{order.notes}</Text></>) : null}
+                {order.notes ? (<><Text style={st.cardTitle}>{tr("ملاحظات", "Notes")}</Text><Text style={st.notes}>{order.notes}</Text></>) : null}
                 {(order.imageUri || order.referenceImages?.length) ? (
                   <View style={st.imgs}>
                     {[order.imageUri, ...(order.referenceImages ?? [])].filter(Boolean).map((u, i) => (
@@ -307,21 +308,21 @@ export function OrderDetailsSheet({ orderId, visible, onClose }: { orderId: stri
 
             {/* Payment */}
             <View style={st.card}>
-              <Text style={st.cardTitle}>{ar ? "الحساب" : "Payment"}</Text>
-              {order.totalAmount ? <Row label={ar ? "الإجمالي" : "Total"} value={`${order.totalAmount.toFixed(2)} ${t("sar")}`} bold /> : null}
-              {order.paymentMethod ? <Row label={ar ? "طريقة الدفع" : "Method"} value={t(PAYMENT_LABEL_KEYS[order.paymentMethod])} /> : null}
-              {order.amountPaid != null ? <Row label={ar ? "المدفوع" : "Paid"} value={`${order.amountPaid.toFixed(2)} ${t("sar")}`} /> : null}
+              <Text style={st.cardTitle}>{tr("الحساب", "Payment")}</Text>
+              {order.totalAmount ? <Row label={tr("الإجمالي", "Total")} value={`${order.totalAmount.toFixed(2)} ${t("sar")}`} bold /> : null}
+              {order.paymentMethod ? <Row label={tr("طريقة الدفع", "Method")} value={t(PAYMENT_LABEL_KEYS[order.paymentMethod])} /> : null}
+              {order.amountPaid != null ? <Row label={tr("المدفوع", "Paid")} value={`${order.amountPaid.toFixed(2)} ${t("sar")}`} /> : null}
               <Row
-                label={remaining > 0 ? (ar ? "المتبقي للتحصيل" : "To collect") : (ar ? "الحالة" : "Status")}
-                value={remaining > 0 ? `${remaining.toFixed(2)} ${t("sar")}` : (ar ? "مدفوع بالكامل ✓" : "Fully paid ✓")}
+                label={remaining > 0 ? (tr("المتبقي للتحصيل", "To collect")) : (tr("الحالة", "Status"))}
+                value={remaining > 0 ? `${remaining.toFixed(2)} ${t("sar")}` : (tr("مدفوع بالكامل ✓", "Fully paid ✓"))}
                 color={remaining > 0 ? Colors.accent : Colors.success}
               />
-              {order.insuranceAmount ? <Row label={ar ? "تأمين الصواني" : "Tray deposit"} value={`${order.insuranceAmount} ${t("sar")}${order.trayReturned ? (ar ? " · أُعيدت" : " · returned") : ""}`} /> : null}
+              {order.insuranceAmount ? <Row label={tr("تأمين الصواني", "Tray deposit")} value={`${order.insuranceAmount} ${t("sar")}${order.trayReturned ? (tr(" · أُعيدت", " · returned")) : ""}`} /> : null}
             </View>
 
             {/* Timeline */}
             <View style={st.card}>
-              <Text style={st.cardTitle}>{ar ? "سجل الطلب" : "Timeline"}</Text>
+              <Text style={st.cardTitle}>{tr("سجل الطلب", "Timeline")}</Text>
               {timeline.map((e, i) => {
                 const meta = EVENT_META[e.type];
                 return (
@@ -332,7 +333,7 @@ export function OrderDetailsSheet({ orderId, visible, onClose }: { orderId: stri
                     </View>
                     <View style={{ flex: 1, paddingBottom: 12 }}>
                       <Text style={st.tlTitle}>
-                        {ar ? meta.ar : meta.en}{e.dept ? ` — ${t(DEPT_KEY[e.dept])}` : ""}
+                        {tr(meta.ar, meta.en)}{e.dept ? ` — ${t(DEPT_KEY[e.dept])}` : ""}
                       </Text>
                       <Text style={st.tlSub}>
                         {fmtTime(e.at, lang)}{e.by?.name ? ` · ${e.by.name}` : ""}{e.note ? ` · ${e.note}` : ""}

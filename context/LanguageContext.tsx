@@ -9,6 +9,7 @@ import React, {
 import { I18nManager, Platform } from "react-native";
 
 import { Lang, TranslationKey, roleLabel, t as translate } from "@/constants/translations";
+import { setCurrentLang } from "@/lib/i18n";
 
 const LANGS: Lang[] = ["ar", "en", "ur", "hi", "bn"];
 const LANG_LABELS: Record<Lang, string> = {
@@ -48,6 +49,8 @@ function applyWebDirection(lang: Lang, isRTL: boolean) {
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [lang, setLangState] = useState<Lang>("ar");
   const isRTL = isRTLForLang(lang);
+  // Set before children render so tr() in any screen uses the active language.
+  setCurrentLang(lang);
 
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY)

@@ -1,3 +1,4 @@
+import { tr } from "@/lib/i18n";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
@@ -102,11 +103,11 @@ export function ProductManagerModal({ visible, product, onClose }: Props) {
       return;
     }
     Alert.alert(
-      lang === "ar" ? "اختر مصدر الصورة" : "Choose Photo Source",
+      tr("اختر مصدر الصورة", "Choose Photo Source"),
       "",
       [
         {
-          text: lang === "ar" ? "الكاميرا" : "Camera",
+          text: tr("الكاميرا", "Camera"),
           onPress: async () => {
             const { status } = await ImagePicker.requestCameraPermissionsAsync();
             if (status !== "granted") return;
@@ -115,7 +116,7 @@ export function ProductManagerModal({ visible, product, onClose }: Props) {
           },
         },
         {
-          text: lang === "ar" ? "معرض الصور" : "Gallery",
+          text: tr("معرض الصور", "Gallery"),
           onPress: async () => {
             const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
             if (status !== "granted") return;
@@ -123,26 +124,26 @@ export function ProductManagerModal({ visible, product, onClose }: Props) {
             if (!res.canceled) setImageUri(res.assets[0].uri);
           },
         },
-        { text: lang === "ar" ? "إلغاء" : "Cancel", style: "cancel" },
+        { text: tr("إلغاء", "Cancel"), style: "cancel" },
       ]
     );
   };
 
   const handleSave = async () => {
     if (!name.trim()) {
-      Alert.alert(lang === "ar" ? "خطأ" : "Error",
-        lang === "ar" ? "أدخل اسم المنتج" : "Enter product name");
+      Alert.alert(tr("خطأ", "Error"),
+        tr("أدخل اسم المنتج", "Enter product name"));
       return;
     }
     const priceNum = parseFloat(price);
     if (!price || isNaN(priceNum) || priceNum < 0) {
-      Alert.alert(lang === "ar" ? "خطأ" : "Error",
-        lang === "ar" ? "أدخل سعراً صحيحاً" : "Enter a valid price");
+      Alert.alert(tr("خطأ", "Error"),
+        tr("أدخل سعراً صحيحاً", "Enter a valid price"));
       return;
     }
     if (!category.trim()) {
-      Alert.alert(lang === "ar" ? "خطأ" : "Error",
-        lang === "ar" ? "أدخل التصنيف (الفئة)" : "Enter a category");
+      Alert.alert(tr("خطأ", "Error"),
+        tr("أدخل التصنيف (الفئة)", "Enter a category"));
       return;
     }
     setSaving(true);
@@ -191,14 +192,14 @@ export function ProductManagerModal({ visible, product, onClose }: Props) {
           </TouchableOpacity>
           <Text style={styles.title}>
             {isEdit
-              ? (lang === "ar" ? "تعديل المنتج" : "Edit Product")
-              : (lang === "ar" ? "إضافة منتج جديد" : "Add New Product")}
+              ? (tr("تعديل المنتج", "Edit Product"))
+              : (tr("إضافة منتج جديد", "Add New Product"))}
           </Text>
           <TouchableOpacity
             style={[styles.saveHdrBtn, saving && { opacity: 0.6 }]}
             onPress={handleSave} disabled={saving}
           >
-            <Text style={styles.saveHdrText}>{saving ? "..." : (lang === "ar" ? "حفظ" : "Save")}</Text>
+            <Text style={styles.saveHdrText}>{saving ? "..." : (tr("حفظ", "Save"))}</Text>
           </TouchableOpacity>
         </View>
 
@@ -210,7 +211,7 @@ export function ProductManagerModal({ visible, product, onClose }: Props) {
                 <Image source={{ uri: imageUri }} style={styles.imagePreview} contentFit="cover" />
                 <View style={styles.imageEditOverlay}>
                   <Feather name="camera" size={22} color="#fff" />
-                  <Text style={styles.imageEditText}>{lang === "ar" ? "تغيير الصورة" : "Change Photo"}</Text>
+                  <Text style={styles.imageEditText}>{tr("تغيير الصورة", "Change Photo")}</Text>
                 </View>
                 <Pressable style={styles.removeImageBtn} onPress={() => setImageUri(null)} hitSlop={10}>
                   <Feather name="x" size={14} color="#fff" />
@@ -222,10 +223,10 @@ export function ProductManagerModal({ visible, product, onClose }: Props) {
                   <Feather name="camera" size={28} color={deptColor} />
                 </View>
                 <Text style={styles.imagePlaceholderText}>
-                  {lang === "ar" ? "اضغط لإضافة صورة المنتج" : "Tap to add product photo"}
+                  {tr("اضغط لإضافة صورة المنتج", "Tap to add product photo")}
                 </Text>
                 <Text style={styles.imagePlaceholderSub}>
-                  {lang === "ar" ? "يُفضَّل صورة مربعة (1:1)" : "Square image preferred (1:1)"}
+                  {tr("يُفضَّل صورة مربعة (1:1)", "Square image preferred (1:1)")}
                 </Text>
               </View>
             )}
@@ -233,7 +234,7 @@ export function ProductManagerModal({ visible, product, onClose }: Props) {
 
           {/* Department */}
           <View style={styles.field}>
-            <Text style={styles.label}>{lang === "ar" ? "القسم *" : "Department *"}</Text>
+            <Text style={styles.label}>{tr("القسم *", "Department *")}</Text>
             <View style={styles.deptGrid}>
               {DEPT_OPTIONS.map((opt) => (
                 <TouchableOpacity
@@ -262,12 +263,12 @@ export function ProductManagerModal({ visible, product, onClose }: Props) {
 
           {/* Name AR */}
           <View style={styles.field}>
-            <Text style={styles.label}>{lang === "ar" ? "اسم المنتج (عربي) *" : "Product Name (Arabic) *"}</Text>
+            <Text style={styles.label}>{tr("اسم المنتج (عربي) *", "Product Name (Arabic) *")}</Text>
             <TextInput
               style={styles.input}
               value={name}
               onChangeText={setName}
-              placeholder={lang === "ar" ? "مثال: كيك شوكولاتة" : "e.g. كيك شوكولاتة"}
+              placeholder={tr("مثال: كيك شوكولاتة", "e.g. كيك شوكولاتة")}
               placeholderTextColor={Colors.textMuted}
               textAlign="right"
             />
@@ -275,7 +276,7 @@ export function ProductManagerModal({ visible, product, onClose }: Props) {
 
           {/* Name EN */}
           <View style={styles.field}>
-            <Text style={styles.label}>{lang === "ar" ? "اسم المنتج (إنجليزي)" : "Product Name (English)"}</Text>
+            <Text style={styles.label}>{tr("اسم المنتج (إنجليزي)", "Product Name (English)")}</Text>
             <TextInput
               style={styles.input}
               value={nameEn}
@@ -288,13 +289,13 @@ export function ProductManagerModal({ visible, product, onClose }: Props) {
 
           {/* Category */}
           <View style={styles.field}>
-            <Text style={styles.label}>{lang === "ar" ? "التصنيف *" : "Category *"}</Text>
+            <Text style={styles.label}>{tr("التصنيف *", "Category *")}</Text>
             <TextInput
               style={styles.input}
               value={category}
               onChangeText={(t) => { setCategory(t); setShowCatSug(true); }}
               onFocus={() => setShowCatSug(true)}
-              placeholder={lang === "ar" ? "مثال: مقاس 15 سم" : "e.g. Size 15cm"}
+              placeholder={tr("مثال: مقاس 15 سم", "e.g. Size 15cm")}
               placeholderTextColor={Colors.textMuted}
               textAlign="right"
             />
@@ -315,9 +316,9 @@ export function ProductManagerModal({ visible, product, onClose }: Props) {
 
           {/* Price */}
           <View style={styles.field}>
-            <Text style={styles.label}>{lang === "ar" ? "السعر (ر.س) *" : "Price (SAR) *"}</Text>
+            <Text style={styles.label}>{tr("السعر (ر.س) *", "Price (SAR) *")}</Text>
             <View style={styles.priceRow}>
-              <Text style={styles.currency}>{lang === "ar" ? "ر.س" : "SAR"}</Text>
+              <Text style={styles.currency}>{tr("ر.س", "SAR")}</Text>
               <TextInput
                 style={[styles.input, { flex: 1, borderRightWidth: 0, borderRadius: 0, borderTopRightRadius: 0, borderBottomRightRadius: 0 }]}
                 value={price}
@@ -332,7 +333,7 @@ export function ProductManagerModal({ visible, product, onClose }: Props) {
 
           {/* Sort Order */}
           <View style={styles.field}>
-            <Text style={styles.label}>{lang === "ar" ? "الترتيب في القائمة" : "Display Order"}</Text>
+            <Text style={styles.label}>{tr("الترتيب في القائمة", "Display Order")}</Text>
             <TextInput
               style={styles.input}
               value={sortOrder}
@@ -344,12 +345,12 @@ export function ProductManagerModal({ visible, product, onClose }: Props) {
 
           {/* Description */}
           <View style={styles.field}>
-            <Text style={styles.label}>{lang === "ar" ? "وصف مختصر (اختياري)" : "Short Description (optional)"}</Text>
+            <Text style={styles.label}>{tr("وصف مختصر (اختياري)", "Short Description (optional)")}</Text>
             <TextInput
               style={[styles.input, { height: 70, textAlignVertical: "top" }]}
               value={description}
               onChangeText={setDescription}
-              placeholder={lang === "ar" ? "وصف المنتج..." : "Product description..."}
+              placeholder={tr("وصف المنتج...", "Product description...")}
               placeholderTextColor={Colors.textMuted}
               multiline
               textAlign={lang === "ar" ? "right" : "left"}
@@ -360,9 +361,9 @@ export function ProductManagerModal({ visible, product, onClose }: Props) {
           {/* Availability toggle */}
           <View style={styles.availRow}>
             <View style={styles.availInfo}>
-              <Text style={styles.availTitle}>{lang === "ar" ? "متوفر للطلب" : "Available for Order"}</Text>
+              <Text style={styles.availTitle}>{tr("متوفر للطلب", "Available for Order")}</Text>
               <Text style={styles.availSub}>
-                {lang === "ar" ? "إيقاف التوفر يخفي المنتج من الكاشير" : "Disabling hides it from cashier"}
+                {tr("إيقاف التوفر يخفي المنتج من الكاشير", "Disabling hides it from cashier")}
               </Text>
             </View>
             <Switch
@@ -383,10 +384,10 @@ export function ProductManagerModal({ visible, product, onClose }: Props) {
             <Feather name={isEdit ? "save" : "plus-circle"} size={18} color="#fff" />
             <Text style={styles.saveBtnText}>
               {saving
-                ? (lang === "ar" ? "جاري الحفظ..." : "Saving...")
+                ? (tr("جاري الحفظ...", "Saving..."))
                 : isEdit
-                  ? (lang === "ar" ? "حفظ التعديلات" : "Save Changes")
-                  : (lang === "ar" ? "إضافة المنتج" : "Add Product")}
+                  ? (tr("حفظ التعديلات", "Save Changes"))
+                  : (tr("إضافة المنتج", "Add Product"))}
             </Text>
           </TouchableOpacity>
         </ScrollView>
