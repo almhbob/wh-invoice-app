@@ -626,9 +626,12 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
       await patchOrder(id, apply, (o) => {
         const next = apply(o);
         const added = (next.events ?? []).slice((o.events ?? []).length);
+        const receiver = next.departmentReceivers?.[department];
         return {
           [`departmentStatuses.${department}`]: status,
-          departmentReceivers: next.departmentReceivers,
+          // Field path, not the whole map: two departments starting at once must not
+          // overwrite each other's receiver.
+          ...(receiver ? { [`departmentReceivers.${department}`]: receiver } : {}),
           ...(added.length ? { events: arrayUnion(...deepClean(added)) } : {}),
         };
       });

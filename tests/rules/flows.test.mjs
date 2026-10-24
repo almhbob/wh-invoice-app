@@ -91,7 +91,7 @@ for (const d of ["cake", "halwa"]) {
     const receiver = { name: "موظف " + d, employeeId: d.toUpperCase() + "1", timestamp: now() };
     await assertSucceeds(patch(dept[d], "o1", {
       [`departmentStatuses.${d}`]: "in_progress",
-      departmentReceivers: { [d]: receiver },
+      [`departmentReceivers.${d}`]: receiver,
       events: arrayUnion(...deepClean([ev("dept_started", { dept: d, by: { name: receiver.name, employeeId: receiver.employeeId } })])),
     }));
     await assertSucceeds(patch(dept[d], "o1", {
@@ -120,6 +120,7 @@ await t("the order timeline is a real array with every step", async () => {
   assert.deepEqual(o.events.map((e) => e.type), ["created", "dept_started", "dept_done", "dept_started", "dept_done", "writing_done", "dept_done", "driver_assigned", "driver_request", "dispatched", "delivered"]);
   assert.equal(o.departmentStatuses.cake, "done");
   assert.equal(o.departmentReceivers.cake.employeeId, "CAKE1");
+  assert.equal(o.departmentReceivers.halwa.employeeId, "HALWA1", "concurrent departments keep their receivers");
   assert.ok(!("price" in o.items[1]), "undefined fields are stripped");
 });
 
