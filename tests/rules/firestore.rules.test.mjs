@@ -75,6 +75,7 @@ await t("only managers manage employees; no plaintext PINs", async () => {
 await t("branch supervisor cannot create or promote protected roles", async () => {
   await assertFails(setDoc(doc(sup, `companies/${C}/employees/n4`), { name: "x", role: "admin" }));
   await assertFails(updateDoc(doc(sup, `companies/${C}/employees/e2`), { role: "admin" }));
+  await assertFails(updateDoc(doc(sup, `companies/${C}/employees/e2`), { role: "cake" }));
   await assertFails(deleteDoc(doc(sup, `companies/${C}/employees/e1`)));
   await assertSucceeds(setDoc(doc(sup, `companies/${C}/employees/n5`), { name: "x", role: "cashier" }));
   await assertFails(setDoc(doc(admin, `companies/${C}/employees/n6`), { name: "x", role: "developer" }));
@@ -83,6 +84,10 @@ await t("branch supervisor cannot create or promote protected roles", async () =
   await assertFails(updateDoc(doc(admin, `companies/${C}/employees/e4`), { name: "Overwritten" }));
   await assertFails(deleteDoc(doc(admin, `companies/${C}/employees/e4`)));
   await assertFails(getDoc(doc(admin, `platformOwners/${C}__e4`)));
+});
+await t("only company admin can change an existing employee role", async () => {
+  await assertSucceeds(updateDoc(doc(admin, `companies/${C}/employees/e2`), { role: "dept_supervisor" }));
+  await assertSucceeds(updateDoc(doc(admin, `companies/${C}/employees/e2`), { role: "guest" }));
 });
 await t("company document: members read, only admin writes", async () => {
   await assertSucceeds(getDoc(doc(cashier, `companies/${C}`)));
@@ -107,5 +112,5 @@ await t("audit logs are tenant-scoped, actor-bound and append-only", async () =>
 });
 
 await env.cleanup();
-assert.equal(n, 8);
+assert.equal(n, 9);
 console.log(`All ${n} rule suites passed`);

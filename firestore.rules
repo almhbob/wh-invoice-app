@@ -64,6 +64,7 @@ service cloud.firestore {
         && noPlaintextPin()
         && supervisorMayAssign(request.resource.data);
       allow update: if isManager(companyId)
+        && (role() == 'admin' || request.resource.data.role == resource.data.role)
         && !isPlatformProtectedEmployee(companyId, id, resource.data)
         && !isPlatformProtectedEmployee(companyId, id, request.resource.data)
         && noPlaintextPin()

@@ -79,7 +79,7 @@ const ROLE_ICONS: Record<EmployeeRole, any> = {
   dept_supervisor: "users",
   guest: "user",
 };
-const ALL_ROLES: EmployeeRole[] = ["cashier", "halwa", "mawali", "chocolate", "cake", "packaging", "calligrapher", "driver", "branch_supervisor", "admin"];
+const ALL_ROLES: EmployeeRole[] = ["cashier", "halwa", "mawali", "chocolate", "cake", "packaging", "calligrapher", "driver", "dept_supervisor", "guest", "branch_supervisor", "admin"];
 
 // ─── sub-components ────────────────────────────────────────────────────────
 function StatCard({
@@ -167,17 +167,25 @@ function EmployeesSection() {
       : `${t("adminEmpActivateMsg")} "${emp.name}"`;
     Alert.alert(t("confirm"), msg, [
       { text: t("cancel"), style: "cancel" },
-      { text: t("confirm"), onPress: () => updateEmployee(emp.id, { status: newStatus }) },
+      { text: t("confirm"), onPress: () => {
+        void updateEmployee(emp.id, { status: newStatus }).catch(() => {
+          Alert.alert(t("errTitle"), lang === "ar" ? "تعذر حفظ التغيير. تحقق من الاتصال والصلاحيات ثم أعد المحاولة." : "Could not save the change. Check your connection and permissions, then try again.");
+        });
+      } },
     ]);
   };
 
   const handleChangeRole = (emp: Employee) => {
+    if (currentEmployee?.role !== "admin") return;
     const options = ALL_ROLES.map((r) => ({
       text: ROLE_LABELS[r],
       onPress: () => {
         if (r !== emp.role) {
-          updateEmployee(emp.id, { role: r });
-          Haptics.selectionAsync();
+          void updateEmployee(emp.id, { role: r }).then(() => {
+            Haptics.selectionAsync();
+          }).catch(() => {
+            Alert.alert(t("errTitle"), lang === "ar" ? "تعذر تحديث المسمى الوظيفي. تحقق من الاتصال والصلاحيات ثم أعد المحاولة." : "Could not update the employee role. Check your connection and permissions, then try again.");
+          });
         }
       },
     }));
@@ -197,7 +205,7 @@ function EmployeesSection() {
       emp.name,
       `#${emp.employeeId} · ${ROLE_LABELS[emp.role]}`,
       [
-        { text: t("adminChangeRole"), onPress: () => handleChangeRole(emp) },
+        ...(isCompanyAdmin ? [{ text: t("adminChangeRole"), onPress: () => handleChangeRole(emp) }] : []),
         ...(isSecure && canManagePin && emp.id !== currentEmployee?.id
           ? [{ text: secureAuthText(isCompanyAdmin ? "resetPinAction" : "setPinAction", lang), onPress: () => setPinTarget(emp) }]
           : []),

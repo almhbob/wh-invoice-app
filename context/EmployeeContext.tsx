@@ -433,7 +433,12 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
         changes = rest;
         if (!Object.keys(rest).length) return;
       }
-      // Update local state immediately
+      // Persist remote employee changes before presenting them as saved locally.
+      const target = employees.find((e) => e.id === id);
+      if (!target?.isLocalFallback) {
+        await updateDoc(employeeDoc(id), changes as Record<string, unknown>);
+      }
+
       setEmployees((current) =>
         current.map((e) => (e.id === id ? { ...e, ...changes } : e))
       );
@@ -449,12 +454,6 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
           }
         }
       } catch {}
-
-      // Update Firestore (non-blocking; skip for local-fallback employees)
-      const target = employees.find((e) => e.id === id);
-      if (!target?.isLocalFallback) {
-        updateDoc(employeeDoc(id), changes as Record<string, unknown>).catch(() => {});
-      }
 
       // If the updated employee is the current employee and status becomes "suspended", log them out
       if (currentEmployee?.id === id && changes.status === "suspended") {
