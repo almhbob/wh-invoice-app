@@ -31,7 +31,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { useCompany } from "@/context/CompanyContext";
 import { useLang } from "@/context/LanguageContext";
 import { auth } from "@/lib/firebase";
-import { readSessionClaims, secureLogout, secureSetPin, useSecureAuthMode } from "@/lib/secureAuth";
+import { readSessionClaims, secureLogout, secureResetEmployeePin, secureSetPin, useSecureAuthMode } from "@/lib/secureAuth";
 import { db } from "@/lib/firebase";
 import { t as t_ } from "@/constants/translations";
 
@@ -81,6 +81,8 @@ interface EmployeeContextType {
   checkAndLogin: (emp: Employee, forceKick?: boolean) => Promise<"ok" | "conflict">;
   /** Sets an employee's login PIN through the server (secure mode only). */
   setEmployeePin: (id: string, pin: string) => Promise<void>;
+  /** Resets another employee's PIN through the admin-only server endpoint. */
+  resetEmployeePin: (id: string, pin: string) => Promise<void>;
   /** Legacy access requires explicit local opt-in; production may fail closed. */
   authMode: "checking" | "secure" | "legacy" | "unavailable";
   isLoading: boolean;
@@ -466,8 +468,12 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
     await secureSetPin({ employeeDocId: id, newPin: pin });
   }, []);
 
+  const resetEmployeePin = useCallback(async (id: string, pin: string) => {
+    await secureResetEmployeePin({ employeeDocId: id, newPin: pin });
+  }, []);
+
   return (
-    <EmployeeContext.Provider value={{ employees, currentEmployee, setCurrentEmployee, addEmployee, removeEmployee, updateEmployee, checkAndLogin, setEmployeePin, authMode, isLoading }}>
+    <EmployeeContext.Provider value={{ employees, currentEmployee, setCurrentEmployee, addEmployee, removeEmployee, updateEmployee, checkAndLogin, setEmployeePin, resetEmployeePin, authMode, isLoading }}>
       {children}
     </EmployeeContext.Provider>
   );

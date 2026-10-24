@@ -536,7 +536,9 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
               <TextInput style={[styles.input, { textAlign }]} value={loginId} onChangeText={setLoginId} placeholder={tx("employeeLoginPlaceholder")} placeholderTextColor={Colors.textMuted} autoCapitalize="none" />
               <TextInput style={[styles.input, { textAlign }]} value={loginPin} onChangeText={setLoginPin} placeholder={tx("pinPlaceholder")} placeholderTextColor={Colors.textMuted} secureTextEntry keyboardType="number-pad" />
               <TouchableOpacity style={[styles.primaryBtn, { flexDirection: rowDirection }, loggingIn && { opacity: 0.6 }]} onPress={loginEmployee} disabled={loggingIn}>{loggingIn ? <ActivityIndicator color="#fff" /> : <Feather name="unlock" size={16} color="#fff" />}<Text style={styles.primaryText}>{tx("employeeLoginButton")}</Text></TouchableOpacity>
-              {!isSecure && <Text style={styles.hint}>{tx("employeeLoginHint")}</Text>}
+              {isSecure
+                ? <Text style={styles.hint}>{secureAuthText("forgotPin", lang)}</Text>
+                : <Text style={styles.hint}>{tx("employeeLoginHint")}</Text>}
             </View>
           ) : (
             <View style={styles.list}>
