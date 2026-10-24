@@ -1,3 +1,4 @@
+import { tr } from "@/lib/i18n";
 import { Feather } from "@expo/vector-icons";
 import React, { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from "react-native";
@@ -41,9 +42,9 @@ export function StoreSettingsModal({ visible, onClose }: { visible: boolean; onC
   const submit = async () => {
     const dates = closed.split(/[\s,،]+/).map((x) => x.trim()).filter(Boolean);
     const bad = dates.filter((d) => !/^\d{4}-\d{2}-\d{2}$/.test(d));
-    if (bad.length) { Alert.alert(ar ? "تاريخ غير صحيح" : "Bad date", `${bad.join(", ")}\n${ar ? "الصيغة: 2026-12-31" : "Format: 2026-12-31"}`); return; }
+    if (bad.length) { Alert.alert(tr("تاريخ غير صحيح", "Bad date"), `${bad.join(", ")}\n${tr("الصيغة: 2026-12-31", "Format: 2026-12-31")}`); return; }
     if (!/^\d{2}:\d{2}$/.test(s.openFrom) || !/^\d{2}:\d{2}$/.test(s.openTo) || s.openFrom >= s.openTo) {
-      Alert.alert(ar ? "ساعات العمل" : "Hours", ar ? "اكتب الوقت بصيغة 24 ساعة مثل 10:00 و 23:00" : "Use 24h format like 10:00 and 23:00");
+      Alert.alert(tr("ساعات العمل", "Hours"), tr("اكتب الوقت بصيغة 24 ساعة مثل 10:00 و 23:00", "Use 24h format like 10:00 and 23:00"));
       return;
     }
     setBusy(true);
@@ -51,7 +52,7 @@ export function StoreSettingsModal({ visible, onClose }: { visible: boolean; onC
       await save({ ...s, closedDates: dates });
       onClose();
     } catch {
-      Alert.alert(ar ? "تعذّر الحفظ" : "Save failed", ar ? "تحقق من الاتصال والصلاحيات." : "Check connection and permissions.");
+      Alert.alert(tr("تعذّر الحفظ", "Save failed"), tr("تحقق من الاتصال والصلاحيات.", "Check connection and permissions."));
     } finally {
       setBusy(false);
     }
@@ -62,76 +63,76 @@ export function StoreSettingsModal({ visible, onClose }: { visible: boolean; onC
       <View style={st.backdrop}>
         <View style={st.sheet}>
           <View style={st.head}>
-            <Text style={st.title}>{ar ? "إعدادات المتجر الأونلاين" : "Online store settings"}</Text>
+            <Text style={st.title}>{tr("إعدادات المتجر الأونلاين", "Online store settings")}</Text>
             <Pressable onPress={onClose} hitSlop={10}><Feather name="x" size={22} color={Colors.textSecondary} /></Pressable>
           </View>
           <ScrollView contentContainerStyle={{ gap: 12, paddingBottom: 20 }}>
             <Card>
-              <Row label={ar ? "استقبال الطلبات الأونلاين" : "Accept online orders"}>
+              <Row label={tr("استقبال الطلبات الأونلاين", "Accept online orders")}>
                 <Switch value={s.enabled} onValueChange={(v) => set({ enabled: v })} trackColor={{ true: Colors.success, false: Colors.border }} />
               </Row>
-              <Text style={st.lbl}>{ar ? "رسالة تظهر للعملاء أعلى الصفحة (اختياري)" : "Notice shown to customers"}</Text>
-              <TextInput style={[st.in, { textAlign: align }]} value={s.notice} onChangeText={(notice) => set({ notice })} placeholder={ar ? "مثال: نستقبل طلبات الكيك قبل 24 ساعة" : "e.g. cakes need 24h notice"} placeholderTextColor={Colors.textMuted} maxLength={200} />
+              <Text style={st.lbl}>{tr("رسالة تظهر للعملاء أعلى الصفحة (اختياري)", "Notice shown to customers")}</Text>
+              <TextInput style={[st.in, { textAlign: align }]} value={s.notice} onChangeText={(notice) => set({ notice })} placeholder={tr("مثال: نستقبل طلبات الكيك قبل 24 ساعة", "e.g. cakes need 24h notice")} placeholderTextColor={Colors.textMuted} maxLength={200} />
             </Card>
 
-            <Card title={ar ? "أيام وساعات العمل" : "Days & hours"}>
+            <Card title={tr("أيام وساعات العمل", "Days & hours")}>
               <View style={st.chips}>
                 {DAYS.map(([d, l]) => {
                   const on = s.openDays.includes(d);
                   return (
                     <Pressable key={d} style={[st.chip, on && st.chipOn]} onPress={() => set({ openDays: on ? s.openDays.filter((x) => x !== d) : [...s.openDays, d].sort() })}>
-                      <Text style={[st.chipTxt, on && { color: "#fff" }]}>{l}</Text>
+                      <Text style={[st.chipTxt, on && { color: "#fff" }]}>{tr(l)}</Text>
                     </Pressable>
                   );
                 })}
               </View>
               <View style={st.two}>
-                <Field label={ar ? "من" : "From"} value={s.openFrom} onChange={(openFrom) => set({ openFrom })} placeholder="10:00" />
-                <Field label={ar ? "آخر موعد" : "Last slot"} value={s.openTo} onChange={(openTo) => set({ openTo })} placeholder="23:00" />
+                <Field label={tr("من", "From")} value={s.openFrom} onChange={(openFrom) => set({ openFrom })} placeholder="10:00" />
+                <Field label={tr("آخر موعد", "Last slot")} value={s.openTo} onChange={(openTo) => set({ openTo })} placeholder="23:00" />
               </View>
-              <Text style={st.lbl}>{ar ? "مدة كل موعد" : "Slot length"}</Text>
+              <Text style={st.lbl}>{tr("مدة كل موعد", "Slot length")}</Text>
               <View style={st.chips}>
                 {[15, 30, 60].map((m) => (
                   <Pressable key={m} style={[st.chip, s.slotMinutes === m && st.chipOn]} onPress={() => set({ slotMinutes: m })}>
-                    <Text style={[st.chipTxt, s.slotMinutes === m && { color: "#fff" }]}>{m} {ar ? "دقيقة" : "min"}</Text>
+                    <Text style={[st.chipTxt, s.slotMinutes === m && { color: "#fff" }]}>{m} {tr("دقيقة", "min")}</Text>
                   </Pressable>
                 ))}
               </View>
-              <Text style={st.lbl}>{ar ? "أيام مغلقة (إجازات) — مثال: 2026-12-31، 2027-01-01" : "Closed dates"}</Text>
+              <Text style={st.lbl}>{tr("أيام مغلقة (إجازات) — مثال: 2026-12-31، 2027-01-01", "Closed dates")}</Text>
               <TextInput style={[st.in, { textAlign: align }]} value={closed} onChangeText={setClosed} placeholder="2026-12-31" placeholderTextColor={Colors.textMuted} />
             </Card>
 
-            <Card title={ar ? "مدة التحضير (بالساعات)" : "Preparation lead time (hours)"}>
-              <Field label={ar ? "الحد الأدنى لكل الطلبات" : "Default"} value={String(s.defaultLeadHours)} onChange={(v) => set({ defaultLeadHours: numIn(v) })} numeric />
+            <Card title={tr("مدة التحضير (بالساعات)", "Preparation lead time (hours)")}>
+              <Field label={tr("الحد الأدنى لكل الطلبات", "Default")} value={String(s.defaultLeadHours)} onChange={(v) => set({ defaultLeadHours: numIn(v) })} numeric />
               {categories.map((c) => (
-                <Field key={c} label={CAT_AR[c] ?? c} value={String(s.categoryLeadHours[c] ?? "")} placeholder={String(s.defaultLeadHours)}
+                <Field key={c} label={tr(CAT_AR[c] ?? c, c)} value={String(s.categoryLeadHours[c] ?? "")} placeholder={String(s.defaultLeadHours)}
                   onChange={(v) => set({ categoryLeadHours: { ...s.categoryLeadHours, [c]: numIn(v) } })} numeric />
               ))}
-              <Field label={ar ? "أقصى عدد أيام للحجز مقدماً" : "Max days ahead"} value={String(s.maxDaysAhead)} onChange={(v) => set({ maxDaysAhead: Math.max(1, numIn(v)) })} numeric />
+              <Field label={tr("أقصى عدد أيام للحجز مقدماً", "Max days ahead")} value={String(s.maxDaysAhead)} onChange={(v) => set({ maxDaysAhead: Math.max(1, numIn(v)) })} numeric />
             </Card>
 
-            <Card title={ar ? "الطاقة الاستيعابية (0 = بلا حد)" : "Capacity (0 = unlimited)"}>
+            <Card title={tr("الطاقة الاستيعابية (0 = بلا حد)", "Capacity (0 = unlimited)")}>
               <View style={st.two}>
-                <Field label={ar ? "طلبات أونلاين في اليوم" : "Orders per day"} value={String(s.maxOrdersPerDay)} onChange={(v) => set({ maxOrdersPerDay: numIn(v) })} numeric />
-                <Field label={ar ? "طلبات في الموعد الواحد" : "Orders per slot"} value={String(s.maxOrdersPerSlot)} onChange={(v) => set({ maxOrdersPerSlot: numIn(v) })} numeric />
+                <Field label={tr("طلبات أونلاين في اليوم", "Orders per day")} value={String(s.maxOrdersPerDay)} onChange={(v) => set({ maxOrdersPerDay: numIn(v) })} numeric />
+                <Field label={tr("طلبات في الموعد الواحد", "Orders per slot")} value={String(s.maxOrdersPerSlot)} onChange={(v) => set({ maxOrdersPerSlot: numIn(v) })} numeric />
               </View>
-              <Field label={ar ? "الحد الأدنى للطلب (ر.س)" : "Minimum order (SAR)"} value={String(s.minOrder)} onChange={(v) => set({ minOrder: numIn(v) })} numeric />
+              <Field label={tr("الحد الأدنى للطلب (ر.س)", "Minimum order (SAR)")} value={String(s.minOrder)} onChange={(v) => set({ minOrder: numIn(v) })} numeric />
             </Card>
 
-            <Card title={ar ? "التوصيل" : "Delivery"}>
-              <Row label={ar ? "متاح التوصيل" : "Delivery available"}>
+            <Card title={tr("التوصيل", "Delivery")}>
+              <Row label={tr("متاح التوصيل", "Delivery available")}>
                 <Switch value={s.delivery.enabled} onValueChange={(v) => set({ delivery: { ...s.delivery, enabled: v } })} trackColor={{ true: Colors.success, false: Colors.border }} />
               </Row>
               {s.delivery.enabled && (
                 <View style={st.two}>
-                  <Field label={ar ? "رسوم التوصيل (ر.س)" : "Fee (SAR)"} value={String(s.delivery.fee)} onChange={(v) => set({ delivery: { ...s.delivery, fee: numIn(v) } })} numeric />
-                  <Field label={ar ? "مجاني فوق (ر.س، 0 = لا)" : "Free over (SAR)"} value={String(s.delivery.freeOver)} onChange={(v) => set({ delivery: { ...s.delivery, freeOver: numIn(v) } })} numeric />
+                  <Field label={tr("رسوم التوصيل (ر.س)", "Fee (SAR)")} value={String(s.delivery.fee)} onChange={(v) => set({ delivery: { ...s.delivery, fee: numIn(v) } })} numeric />
+                  <Field label={tr("مجاني فوق (ر.س، 0 = لا)", "Free over (SAR)")} value={String(s.delivery.freeOver)} onChange={(v) => set({ delivery: { ...s.delivery, freeOver: numIn(v) } })} numeric />
                 </View>
               )}
             </Card>
 
-            <Card title={ar ? "الفروع (للاستلام)" : "Pickup branches"}>
-              {s.branches.length === 0 && <Text style={st.muted}>{ar ? "بدون فروع: يُستلم الطلب من الفرع الرئيسي." : "No branches: single location."}</Text>}
+            <Card title={tr("الفروع (للاستلام)", "Pickup branches")}>
+              {s.branches.length === 0 && <Text style={st.muted}>{tr("بدون فروع: يُستلم الطلب من الفرع الرئيسي.", "No branches: single location.")}</Text>}
               {s.branches.map((b) => (
                 <View key={b.id} style={st.branch}>
                   <Feather name="map-pin" size={14} color={Colors.primary} />
@@ -140,7 +141,7 @@ export function StoreSettingsModal({ visible, onClose }: { visible: boolean; onC
                 </View>
               ))}
               <View style={{ flexDirection: "row", gap: 8 }}>
-                <TextInput style={[st.in, { flex: 1, textAlign: align }]} value={branchName} onChangeText={setBranchName} placeholder={ar ? "اسم الفرع، مثل: فرع الملقا" : "Branch name"} placeholderTextColor={Colors.textMuted} />
+                <TextInput style={[st.in, { flex: 1, textAlign: align }]} value={branchName} onChangeText={setBranchName} placeholder={tr("اسم الفرع، مثل: فرع الملقا", "Branch name")} placeholderTextColor={Colors.textMuted} />
                 <Pressable style={st.add} onPress={() => {
                   const n = branchName.trim();
                   if (!n) return;
@@ -152,7 +153,7 @@ export function StoreSettingsModal({ visible, onClose }: { visible: boolean; onC
           </ScrollView>
           <Pressable style={[st.save, busy && { opacity: 0.6 }]} onPress={() => void submit()} disabled={busy}>
             {busy ? <ActivityIndicator color="#fff" /> : <Feather name="save" size={18} color={Colors.goldLight} />}
-            <Text style={st.saveTxt}>{ar ? "حفظ الإعدادات" : "Save settings"}</Text>
+            <Text style={st.saveTxt}>{tr("حفظ الإعدادات", "Save settings")}</Text>
           </Pressable>
         </View>
       </View>

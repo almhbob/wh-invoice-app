@@ -1,3 +1,4 @@
+import { tr, trf } from "@/lib/i18n";
 import { Feather } from "@expo/vector-icons";
 import React, { useState } from "react";
 import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from "react-native";
@@ -45,7 +46,7 @@ export function DriversModal({ visible, onClose, onPick, currentDriverId, onUnas
 
   const save = async () => {
     if (!name.trim() || phone.replace(/\D/g, "").length < 9) {
-      Alert.alert(ar ? "بيانات ناقصة" : "Missing data", ar ? "أدخل اسم السائق ورقم جوال صحيح." : "Enter the driver's name and a valid phone.");
+      Alert.alert(tr("بيانات ناقصة", "Missing data"), tr("أدخل اسم السائق ورقم جوال صحيح.", "Enter the driver's name and a valid phone."));
       return;
     }
     setSaving(true);
@@ -54,16 +55,16 @@ export function DriversModal({ visible, onClose, onPick, currentDriverId, onUnas
       setName(""); setPhone(""); setVehicle(""); setAdding(false);
       if (picker) onPick!(d);
     } catch {
-      Alert.alert(ar ? "تعذّر الحفظ" : "Save failed", ar ? "تحقق من الاتصال وحاول مجدداً." : "Check your connection and try again.");
+      Alert.alert(tr("تعذّر الحفظ", "Save failed"), tr("تحقق من الاتصال وحاول مجدداً.", "Check your connection and try again."));
     } finally {
       setSaving(false);
     }
   };
 
   const confirmRemove = (d: Driver) => {
-    Alert.alert(ar ? "حذف السائق" : "Remove driver", `${d.name}?`, [
-      { text: ar ? "إلغاء" : "Cancel", style: "cancel" },
-      { text: ar ? "حذف" : "Remove", style: "destructive", onPress: () => void removeDriver(d.id) },
+    Alert.alert(tr("حذف السائق", "Remove driver"), `${d.name}?`, [
+      { text: tr("إلغاء", "Cancel"), style: "cancel" },
+      { text: tr("حذف", "Remove"), style: "destructive", onPress: () => void removeDriver(d.id) },
     ]);
   };
 
@@ -73,7 +74,7 @@ export function DriversModal({ visible, onClose, onPick, currentDriverId, onUnas
         <View style={st.sheet}>
           <View style={st.handle} />
           <View style={st.head}>
-            <Text style={st.title}>{picker ? (ar ? "اختر السائق" : "Choose driver") : (ar ? "إدارة السائقين" : "Manage drivers")}</Text>
+            <Text style={st.title}>{picker ? (tr("اختر السائق", "Choose driver")) : (tr("إدارة السائقين", "Manage drivers"))}</Text>
             <Pressable onPress={onClose} hitSlop={10}><Feather name="x" size={22} color={Colors.textSecondary} /></Pressable>
           </View>
 
@@ -81,7 +82,7 @@ export function DriversModal({ visible, onClose, onPick, currentDriverId, onUnas
             {picker && currentDriverId && onUnassign && (
               <Pressable style={st.unassign} onPress={onUnassign}>
                 <Feather name="user-x" size={16} color={Colors.accent} />
-                <Text style={[st.unassignTxt]}>{ar ? "إلغاء تعيين السائق الحالي" : "Unassign current driver"}</Text>
+                <Text style={[st.unassignTxt]}>{tr("إلغاء تعيين السائق الحالي", "Unassign current driver")}</Text>
               </Pressable>
             )}
 
@@ -89,7 +90,7 @@ export function DriversModal({ visible, onClose, onPick, currentDriverId, onUnas
             {!loading && list.length === 0 && !adding && (
               <View style={st.empty}>
                 <Feather name="truck" size={28} color={Colors.textMuted} />
-                <Text style={st.emptyTxt}>{ar ? "لا يوجد سائقون بعد. أضف أول سائق." : "No drivers yet. Add your first driver."}</Text>
+                <Text style={st.emptyTxt}>{tr("لا يوجد سائقون بعد. أضف أول سائق.", "No drivers yet. Add your first driver.")}</Text>
               </View>
             )}
 
@@ -101,13 +102,13 @@ export function DriversModal({ visible, onClose, onPick, currentDriverId, onUnas
                   <View style={st.avatar}><Text style={st.avatarTxt}>{d.name.charAt(0)}</Text></View>
                   <View style={{ flex: 1, gap: 2 }}>
                     <Text style={st.name}>{d.name}</Text>
-                    <Text style={st.sub}>{d.phone || (ar ? "بدون رقم" : "No phone")}{d.vehicle ? ` · ${d.vehicle}` : ""}</Text>
-                    {d.account ? <Text style={st.account}>{ar ? "● حساب في التطبيق" : "● App account"}</Text> : null}
+                    <Text style={st.sub}>{d.phone || (tr("بدون رقم", "No phone"))}{d.vehicle ? ` · ${d.vehicle}` : ""}</Text>
+                    {d.account ? <Text style={st.account}>{tr("● حساب في التطبيق", "● App account")}</Text> : null}
                     {!picker && (() => {
                       const s = driverStats(orders, d.id);
                       return (
                         <View style={st.stats}>
-                          {[[ar ? "اليوم" : "Today", s.today], [ar ? "الشهر" : "Month", s.month], [ar ? "السنة" : "Year", s.year]].map(([l, v]) => (
+                          {[[tr("اليوم", "Today"), s.today], [tr("الشهر", "Month"), s.month], [tr("السنة", "Year"), s.year]].map(([l, v]) => (
                             <View key={String(l)} style={st.stat}>
                               <Text style={st.statNum}>{(v as { assigned: number }).assigned}</Text>
                               <Text style={st.statLbl}>{String(l)}</Text>
@@ -119,7 +120,7 @@ export function DriversModal({ visible, onClose, onPick, currentDriverId, onUnas
                   </View>
                   {picker ? (
                     <View style={[st.load, load > 0 && { backgroundColor: Colors.gold + "22" }]}>
-                      <Text style={[st.loadTxt, load > 0 && { color: Colors.primary }]}>{load > 0 ? (ar ? `${load} طلب` : `${load} open`) : (ar ? "متاح" : "Free")}</Text>
+                      <Text style={[st.loadTxt, load > 0 && { color: Colors.primary }]}>{load > 0 ? (trf("{p0} طلب", "{p0} open", { p0: load })) : (tr("متاح", "Free"))}</Text>
                     </View>
                   ) : (
                     <View style={st.actions}>
@@ -137,24 +138,24 @@ export function DriversModal({ visible, onClose, onPick, currentDriverId, onUnas
 
             {adding ? (
               <View style={st.form}>
-                <TextInput style={[st.input, { textAlign: align }]} value={name} onChangeText={setName} placeholder={ar ? "اسم السائق" : "Driver name"} placeholderTextColor={Colors.textMuted} />
-                <TextInput style={[st.input, { textAlign: align }]} value={phone} onChangeText={setPhone} placeholder={ar ? "رقم الجوال 05xxxxxxxx" : "Phone 05xxxxxxxx"} placeholderTextColor={Colors.textMuted} keyboardType="phone-pad" />
-                <TextInput style={[st.input, { textAlign: align }]} value={vehicle} onChangeText={setVehicle} placeholder={ar ? "المركبة (اختياري)" : "Vehicle (optional)"} placeholderTextColor={Colors.textMuted} />
+                <TextInput style={[st.input, { textAlign: align }]} value={name} onChangeText={setName} placeholder={tr("اسم السائق", "Driver name")} placeholderTextColor={Colors.textMuted} />
+                <TextInput style={[st.input, { textAlign: align }]} value={phone} onChangeText={setPhone} placeholder={tr("رقم الجوال 05xxxxxxxx", "Phone 05xxxxxxxx")} placeholderTextColor={Colors.textMuted} keyboardType="phone-pad" />
+                <TextInput style={[st.input, { textAlign: align }]} value={vehicle} onChangeText={setVehicle} placeholder={tr("المركبة (اختياري)", "Vehicle (optional)")} placeholderTextColor={Colors.textMuted} />
                 <View style={{ flexDirection: "row", gap: 10 }}>
-                  <Pressable style={[st.btn, st.btnGhost]} onPress={() => setAdding(false)}><Text style={st.btnGhostTxt}>{ar ? "إلغاء" : "Cancel"}</Text></Pressable>
+                  <Pressable style={[st.btn, st.btnGhost]} onPress={() => setAdding(false)}><Text style={st.btnGhostTxt}>{tr("إلغاء", "Cancel")}</Text></Pressable>
                   <Pressable style={[st.btn, st.btnPrimary, saving && { opacity: 0.6 }]} onPress={save} disabled={saving}>
-                    {saving ? <ActivityIndicator color="#fff" /> : <Text style={st.btnPrimaryTxt}>{picker ? (ar ? "حفظ واختيار" : "Save & choose") : (ar ? "حفظ" : "Save")}</Text>}
+                    {saving ? <ActivityIndicator color="#fff" /> : <Text style={st.btnPrimaryTxt}>{picker ? (tr("حفظ واختيار", "Save & choose")) : (tr("حفظ", "Save"))}</Text>}
                   </Pressable>
                 </View>
               </View>
             ) : (
               <>
               {!picker && (
-                <Text style={st.hint}>{ar ? "لإنشاء سائق يدخل التطبيق بحسابه: المشرف ← إضافة موظف ← الدور «سائق». أو أضف سائقاً خارجياً هنا (بدون حساب):" : "For a driver with an app login: Admin → Add employee → role “Driver”. Or add an external driver here (no login):"}</Text>
+                <Text style={st.hint}>{tr("لإنشاء سائق يدخل التطبيق بحسابه: المشرف ← إضافة موظف ← الدور «سائق». أو أضف سائقاً خارجياً هنا (بدون حساب):", "For a driver with an app login: Admin → Add employee → role “Driver”. Or add an external driver here (no login):")}</Text>
               )}
               <Pressable style={st.addBtn} onPress={() => setAdding(true)}>
                 <Feather name="user-plus" size={16} color={Colors.primary} />
-                <Text style={st.addTxt}>{ar ? "إضافة سائق" : "Add driver"}</Text>
+                <Text style={st.addTxt}>{tr("إضافة سائق", "Add driver")}</Text>
               </Pressable>
               </>
             )}

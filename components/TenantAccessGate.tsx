@@ -1,3 +1,4 @@
+import { tr } from "@/lib/i18n";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Feather } from "@expo/vector-icons";
 import { Image } from "expo-image";
@@ -473,7 +474,7 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
           {/* Demo divider */}
           <View style={styles.demoSectionRow}>
             <View style={styles.laviDividerLine} />
-            <Text style={styles.demoSectionLabel}>نماذج حية</Text>
+            <Text style={styles.demoSectionLabel}>{tr("نماذج حية", "Live demos")}</Text>
             <View style={styles.laviDividerLine} />
           </View>
 

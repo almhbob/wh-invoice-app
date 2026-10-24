@@ -1,3 +1,4 @@
+import { tr, trf } from "@/lib/i18n";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { Image } from "expo-image";
@@ -31,10 +32,10 @@ function orderLink(companyId: string) {
 
 function ago(iso: string, ar: boolean) {
   const m = Math.max(0, Math.round((Date.now() - new Date(iso).getTime()) / 60000));
-  if (m < 1) return ar ? "الآن" : "now";
-  if (m < 60) return ar ? `منذ ${m} د` : `${m}m ago`;
+  if (m < 1) return tr("الآن", "now");
+  if (m < 60) return trf("منذ {p0} د", "{p0}m ago", { p0: m });
   const h = Math.round(m / 60);
-  return ar ? `منذ ${h} س` : `${h}h ago`;
+  return trf("منذ {p0} س", "{p0}h ago", { p0: h });
 }
 
 function wallClock(iso: string) {
@@ -73,13 +74,13 @@ function OnlineInner() {
         {canManage && (
           <Pressable style={st.settingsBtn} onPress={() => setShowSettings(true)}>
             <Feather name="sliders" size={16} color={Colors.primary} />
-            <Text style={st.settingsTxt}>{ar ? "إعدادات المتجر: الساعات، مدة التحضير، الطاقة، التوصيل، الفروع" : "Store settings: hours, lead time, capacity, delivery, branches"}</Text>
+            <Text style={st.settingsTxt}>{tr("إعدادات المتجر: الساعات، مدة التحضير، الطاقة، التوصيل، الفروع", "Store settings: hours, lead time, capacity, delivery, branches")}</Text>
             <Feather name={ar ? "chevron-left" : "chevron-right"} size={16} color={Colors.textMuted} />
           </Pressable>
         )}
 
         <View style={st.tabs}>
-          {([["new", ar ? "بانتظار القبول" : "Awaiting", pending.length], ["done", ar ? "عولجت اليوم" : "Handled today", decidedToday.length]] as const).map(([k, l, n]) => (
+          {([["new", tr("بانتظار القبول", "Awaiting"), pending.length], ["done", tr("عولجت اليوم", "Handled today"), decidedToday.length]] as const).map(([k, l, n]) => (
             <Pressable key={k} style={[st.tab, tab === k && { backgroundColor: Colors.surface }]} onPress={() => setTab(k)}>
               <Text style={[st.tabTxt, tab === k && { color: Colors.text, fontWeight: "900" }]}>{l}</Text>
               {n > 0 && <View style={[st.badge, tab === k && k === "new" && { backgroundColor: Colors.accent }]}><Text style={st.badgeTxt}>{n}</Text></View>}
@@ -91,7 +92,7 @@ function OnlineInner() {
         {!loading && list.length === 0 && (
           <View style={st.empty}>
             <Feather name="inbox" size={30} color={Colors.textMuted} />
-            <Text style={st.emptyTxt}>{tab === "new" ? (ar ? "لا توجد طلبات أونلاين جديدة" : "No new online orders") : (ar ? "لا شيء اليوم بعد" : "Nothing yet today")}</Text>
+            <Text style={st.emptyTxt}>{tab === "new" ? (tr("لا توجد طلبات أونلاين جديدة", "No new online orders")) : (tr("لا شيء اليوم بعد", "Nothing yet today"))}</Text>
           </View>
         )}
         {list.map((o) => <OnlineCard key={o.id} order={o} decide={decide} />)}
@@ -116,12 +117,12 @@ function ShareCard({ companyId }: { companyId: string }) {
   return (
     <View style={st.share}>
       <View style={{ flex: 1, gap: 8 }}>
-        <Text style={st.shareTitle}>{ar ? "رابط الطلب الأونلاين لعملائك" : "Your customer ordering link"}</Text>
+        <Text style={st.shareTitle}>{tr("رابط الطلب الأونلاين لعملائك", "Your customer ordering link")}</Text>
         <Text style={st.shareLink} selectable numberOfLines={1}>{link}</Text>
         <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
-          <Pressable style={st.shareBtn} onPress={() => void copy()}><Feather name={copied ? "check" : "copy"} size={13} color={Colors.primary} /><Text style={st.shareBtnTxt}>{copied ? (ar ? "نُسخ" : "Copied") : (ar ? "نسخ" : "Copy")}</Text></Pressable>
-          <Pressable style={st.shareBtn} onPress={() => Linking.openURL(`https://wa.me/?text=${encodeURIComponent((ar ? "اطلب الآن أونلاين: " : "Order online: ") + link)}`)}><Feather name="send" size={13} color={Colors.primary} /><Text style={st.shareBtnTxt}>{ar ? "مشاركة" : "Share"}</Text></Pressable>
-          <Pressable style={st.shareBtn} onPress={() => Linking.openURL(link)}><Feather name="external-link" size={13} color={Colors.primary} /><Text style={st.shareBtnTxt}>{ar ? "فتح" : "Open"}</Text></Pressable>
+          <Pressable style={st.shareBtn} onPress={() => void copy()}><Feather name={copied ? "check" : "copy"} size={13} color={Colors.primary} /><Text style={st.shareBtnTxt}>{copied ? (tr("نُسخ", "Copied")) : (tr("نسخ", "Copy"))}</Text></Pressable>
+          <Pressable style={st.shareBtn} onPress={() => Linking.openURL(`https://wa.me/?text=${encodeURIComponent((tr("اطلب الآن أونلاين: ", "Order online: ")) + link)}`)}><Feather name="send" size={13} color={Colors.primary} /><Text style={st.shareBtnTxt}>{tr("مشاركة", "Share")}</Text></Pressable>
+          <Pressable style={st.shareBtn} onPress={() => Linking.openURL(link)}><Feather name="external-link" size={13} color={Colors.primary} /><Text style={st.shareBtnTxt}>{tr("فتح", "Open")}</Text></Pressable>
         </View>
       </View>
       {qr ? <Image source={{ uri: qr }} style={st.qr} contentFit="contain" /> : null}
@@ -175,7 +176,7 @@ function OnlineCard({ order, decide }: { order: OnlineOrder; decide: (id: string
   };
 
   const accept = async () => {
-    if (!items.length) { Alert.alert(ar ? "لا أصناف" : "No items", ar ? "لا يمكن قبول طلب فارغ — ارفضه بدلاً من ذلك." : "Reject it instead."); return; }
+    if (!items.length) { Alert.alert(tr("لا أصناف", "No items"), tr("لا يمكن قبول طلب فارغ — ارفضه بدلاً من ذلك.", "Reject it instead.")); return; }
     setBusy(true);
     try {
       const orderItems: OrderItem[] = items.map((i) => ({ id: i.id, name: i.name, quantity: i.quantity, price: i.price, department: i.department, ...(i.writing ? { writing: i.writing } : {}) }));
@@ -211,7 +212,7 @@ function OnlineCard({ order, decide }: { order: OnlineOrder; decide: (id: string
       ].filter(Boolean).join("\n");
       openWhatsApp(order.customerPhone, msg);
     } catch {
-      Alert.alert(ar ? "تعذّر القبول" : "Could not accept", ar ? "تحقق من الاتصال وأعد المحاولة." : "Check the connection and retry.");
+      Alert.alert(tr("تعذّر القبول", "Could not accept"), tr("تحقق من الاتصال وأعد المحاولة.", "Check the connection and retry."));
     } finally {
       setBusy(false);
     }
@@ -226,7 +227,7 @@ function OnlineCard({ order, decide }: { order: OnlineOrder; decide: (id: string
       openWhatsApp(order.customerPhone, `مرحباً ${order.customerName}،\nنعتذر، لم نتمكن من قبول طلبك من ${brand}.\nالسبب: ${r}\nيسعدنا خدمتك بموعد أو أصناف أخرى 🌸`);
       setRejecting(false);
     } catch {
-      Alert.alert(ar ? "تعذّر الحفظ" : "Save failed");
+      Alert.alert(tr("تعذّر الحفظ", "Save failed"));
     } finally {
       setBusy(false);
     }
@@ -248,19 +249,19 @@ function OnlineCard({ order, decide }: { order: OnlineOrder; decide: (id: string
         {!isNew && (
           <View style={[st.status, { backgroundColor: (order.status === "accepted" ? Colors.success : Colors.accent) + "18" }]}>
             <Text style={[st.statusTxt, { color: order.status === "accepted" ? Colors.success : Colors.accent }]}>
-              {order.status === "accepted" ? `${ar ? "قُبل" : "Accepted"}${order.orderNumber ? ` #${order.orderNumber}` : ""}` : (ar ? "مرفوض" : "Rejected")}
+              {order.status === "accepted" ? `${tr("قُبل", "Accepted")}${order.orderNumber ? ` #${order.orderNumber}` : ""}` : (tr("مرفوض", "Rejected"))}
             </Text>
           </View>
         )}
       </View>
 
       <View style={st.metaRow}>
-        <View style={st.meta}><Feather name={order.orderType === "delivery" ? "truck" : "shopping-bag"} size={12} color={Colors.textSecondary} /><Text style={st.metaTxt}>{order.orderType === "delivery" ? (ar ? "توصيل" : "Delivery") : (ar ? "استلام" : "Pickup")}</Text></View>
+        <View style={st.meta}><Feather name={order.orderType === "delivery" ? "truck" : "shopping-bag"} size={12} color={Colors.textSecondary} /><Text style={st.metaTxt}>{order.orderType === "delivery" ? (tr("توصيل", "Delivery")) : (tr("استلام", "Pickup"))}</Text></View>
         <View style={[st.meta, { backgroundColor: Colors.gold + "1A" }]}><Feather name="calendar" size={12} color={Colors.primary} /><Text style={[st.metaTxt, { color: Colors.primary }]}>{order.deliveryTime}</Text></View>
       </View>
       {order.branchName ? <Text style={st.addr}>🏬 {order.branchName}</Text> : null}
       {order.deliveryAddress ? <Text style={st.addr}>📍 {order.deliveryAddress}</Text> : null}
-      {order.locationUrl ? <Pressable onPress={() => Linking.openURL(order.locationUrl!)}><Text style={st.loc}>🗺️ {ar ? "موقع العميل على الخريطة" : "Customer location"}</Text></Pressable> : null}
+      {order.locationUrl ? <Pressable onPress={() => Linking.openURL(order.locationUrl!)}><Text style={st.loc}>🗺️ {tr("موقع العميل على الخريطة", "Customer location")}</Text></Pressable> : null}
 
       <View style={st.items}>
         {items.map((i) => (
@@ -279,8 +280,8 @@ function OnlineCard({ order, decide }: { order: OnlineOrder; decide: (id: string
                   <Pressable onPress={() => setQty(i.id, i.quantity - 1)} style={st.qtyBtn}><Text style={st.qtyTxt}>−</Text></Pressable>
                 </View>
                 <View style={{ flexDirection: "row", gap: 10 }}>
-                  <Pressable onPress={() => setReplaceFor(i.id)}><Text style={st.link}>{ar ? "استبدال" : "Replace"}</Text></Pressable>
-                  <Pressable onPress={() => setQty(i.id, 0)}><Text style={[st.link, { color: Colors.accent }]}>{ar ? "غير متوفر" : "Unavailable"}</Text></Pressable>
+                  <Pressable onPress={() => setReplaceFor(i.id)}><Text style={st.link}>{tr("استبدال", "Replace")}</Text></Pressable>
+                  <Pressable onPress={() => setQty(i.id, 0)}><Text style={[st.link, { color: Colors.accent }]}>{tr("غير متوفر", "Unavailable")}</Text></Pressable>
                 </View>
               </View>
             ) : (
@@ -290,47 +291,47 @@ function OnlineCard({ order, decide }: { order: OnlineOrder; decide: (id: string
         ))}
       </View>
       {order.notes ? <Text style={st.notes}>📝 {order.notes}</Text> : null}
-      {order.rejectReason ? <Text style={[st.notes, { backgroundColor: Colors.accent + "12" }]}>{ar ? "سبب الرفض:" : "Reason:"} {order.rejectReason}</Text> : null}
-      {order.changeNote ? <Text style={st.notes}>{ar ? "ملاحظة التعديل:" : "Change note:"} {order.changeNote}</Text> : null}
+      {order.rejectReason ? <Text style={[st.notes, { backgroundColor: Colors.accent + "12" }]}>{tr("سبب الرفض:", "Reason:")} {order.rejectReason}</Text> : null}
+      {order.changeNote ? <Text style={st.notes}>{tr("ملاحظة التعديل:", "Change note:")} {order.changeNote}</Text> : null}
 
-      {fee > 0 ? <View style={[st.total, { paddingVertical: 6 }]}><Text style={st.totalLbl}>{ar ? "رسوم التوصيل" : "Delivery fee"}</Text><Text style={[st.totalVal, { fontSize: 13 }]}>{fee.toFixed(2)} ر.س</Text></View> : null}
-      <View style={st.total}><Text style={st.totalLbl}>{ar ? "الإجمالي" : "Total"}{modified ? (ar ? " (بعد التعديل)" : " (modified)") : ""}</Text><Text style={st.totalVal}>{total.toFixed(2)} ر.س</Text></View>
+      {fee > 0 ? <View style={[st.total, { paddingVertical: 6 }]}><Text style={st.totalLbl}>{tr("رسوم التوصيل", "Delivery fee")}</Text><Text style={[st.totalVal, { fontSize: 13 }]}>{fee.toFixed(2)} ر.س</Text></View> : null}
+      <View style={st.total}><Text style={st.totalLbl}>{tr("الإجمالي", "Total")}{modified ? (tr(" (بعد التعديل)", " (modified)")) : ""}</Text><Text style={st.totalVal}>{total.toFixed(2)} ر.س</Text></View>
 
       {isNew && !rejecting && (
         <>
           {editing && (
-            <TextInput style={st.input} value={changeNote} onChangeText={setChangeNote} placeholder={ar ? "توضيح للعميل عن التعديل (اختياري)" : "Note to customer about the change"} placeholderTextColor={Colors.textMuted} />
+            <TextInput style={st.input} value={changeNote} onChangeText={setChangeNote} placeholder={tr("توضيح للعميل عن التعديل (اختياري)", "Note to customer about the change")} placeholderTextColor={Colors.textMuted} />
           )}
           <View style={st.payRow}>
-            {([["cash", ar ? "نقداً عند الاستلام" : "Cash"], ["card", ar ? "شبكة" : "Card"], ["transfer", ar ? "تحويل" : "Transfer"]] as const).map(([k, l]) => (
+            {([["cash", tr("نقداً عند الاستلام", "Cash")], ["card", tr("شبكة", "Card")], ["transfer", tr("تحويل", "Transfer")]] as const).map(([k, l]) => (
               <Pressable key={k} style={[st.pay, payment === k && st.payOn]} onPress={() => setPayment(k)}><Text style={[st.payTxt, payment === k && { color: "#fff" }]}>{l}</Text></Pressable>
             ))}
           </View>
           <Pressable style={[st.primary, busy && { opacity: 0.6 }]} onPress={() => void accept()} disabled={busy}>
             {busy ? <ActivityIndicator color="#fff" /> : <Feather name="check-circle" size={18} color={Colors.goldLight} />}
-            <Text style={st.primaryTxt}>{modified ? (ar ? "قبول مع التعديلات وإرسال للأقسام" : "Accept with changes") : (ar ? "قبول وإرسال للأقسام" : "Accept & send to production")}</Text>
+            <Text style={st.primaryTxt}>{modified ? (tr("قبول مع التعديلات وإرسال للأقسام", "Accept with changes")) : (tr("قبول وإرسال للأقسام", "Accept & send to production"))}</Text>
           </Pressable>
           <View style={{ flexDirection: "row", gap: 8 }}>
-            <Pressable style={st.secondary} onPress={() => setEditing((v) => !v)}><Feather name="edit-2" size={14} color={Colors.primary} /><Text style={st.secondaryTxt}>{editing ? (ar ? "إنهاء التعديل" : "Done editing") : (ar ? "تعديل (صنف غير متوفر)" : "Modify")}</Text></Pressable>
-            <Pressable style={st.secondary} onPress={() => callPhone(order.customerPhone)}><Feather name="phone" size={14} color={Colors.primary} /><Text style={st.secondaryTxt}>{ar ? "اتصال" : "Call"}</Text></Pressable>
-            <Pressable style={[st.secondary, { backgroundColor: Colors.accent + "12" }]} onPress={() => setRejecting(true)}><Feather name="x-circle" size={14} color={Colors.accent} /><Text style={[st.secondaryTxt, { color: Colors.accent }]}>{ar ? "رفض" : "Reject"}</Text></Pressable>
+            <Pressable style={st.secondary} onPress={() => setEditing((v) => !v)}><Feather name="edit-2" size={14} color={Colors.primary} /><Text style={st.secondaryTxt}>{editing ? (tr("إنهاء التعديل", "Done editing")) : (tr("تعديل (صنف غير متوفر)", "Modify"))}</Text></Pressable>
+            <Pressable style={st.secondary} onPress={() => callPhone(order.customerPhone)}><Feather name="phone" size={14} color={Colors.primary} /><Text style={st.secondaryTxt}>{tr("اتصال", "Call")}</Text></Pressable>
+            <Pressable style={[st.secondary, { backgroundColor: Colors.accent + "12" }]} onPress={() => setRejecting(true)}><Feather name="x-circle" size={14} color={Colors.accent} /><Text style={[st.secondaryTxt, { color: Colors.accent }]}>{tr("رفض", "Reject")}</Text></Pressable>
           </View>
         </>
       )}
 
       {isNew && rejecting && (
         <View style={{ gap: 8 }}>
-          <Text style={st.lbl}>{ar ? "سبب الرفض" : "Reason"}</Text>
+          <Text style={st.lbl}>{tr("سبب الرفض", "Reason")}</Text>
           <View style={st.chips}>
             {REJECT_REASONS.map((r) => (
-              <Pressable key={r} style={[st.chip, reason === r && st.chipOn]} onPress={() => setReason(r)}><Text style={[st.chipTxt, reason === r && { color: "#fff" }]}>{r}</Text></Pressable>
+              <Pressable key={r} style={[st.chip, reason === r && st.chipOn]} onPress={() => setReason(r)}><Text style={[st.chipTxt, reason === r && { color: "#fff" }]}>{tr(r)}</Text></Pressable>
             ))}
           </View>
-          <TextInput style={st.input} value={reasonNote} onChangeText={setReasonNote} placeholder={ar ? "توضيح للعميل" : "Details for the customer"} placeholderTextColor={Colors.textMuted} />
+          <TextInput style={st.input} value={reasonNote} onChangeText={setReasonNote} placeholder={tr("توضيح للعميل", "Details for the customer")} placeholderTextColor={Colors.textMuted} />
           <View style={{ flexDirection: "row", gap: 8 }}>
-            <Pressable style={st.secondary} onPress={() => setRejecting(false)}><Text style={st.secondaryTxt}>{ar ? "رجوع" : "Back"}</Text></Pressable>
+            <Pressable style={st.secondary} onPress={() => setRejecting(false)}><Text style={st.secondaryTxt}>{tr("رجوع", "Back")}</Text></Pressable>
             <Pressable style={[st.secondary, { backgroundColor: Colors.accent, flex: 2 }, (!reason || (reason === "أخرى" && !reasonNote.trim())) && { opacity: 0.5 }]} disabled={!reason || busy} onPress={() => void reject()}>
-              <Text style={[st.secondaryTxt, { color: "#fff" }]}>{ar ? "تأكيد الرفض وإبلاغ العميل" : "Reject & notify"}</Text>
+              <Text style={[st.secondaryTxt, { color: "#fff" }]}>{tr("تأكيد الرفض وإبلاغ العميل", "Reject & notify")}</Text>
             </Pressable>
           </View>
         </View>
@@ -339,8 +340,8 @@ function OnlineCard({ order, decide }: { order: OnlineOrder; decide: (id: string
       <Modal visible={!!replaceFor} transparent animationType="slide" onRequestClose={() => setReplaceFor(null)}>
         <View style={st.backdrop}>
           <View style={st.sheet}>
-            <Text style={st.sheetTitle}>{ar ? "اختر صنفاً بديلاً" : "Choose a replacement"}</Text>
-            <TextInput style={st.input} value={search} onChangeText={setSearch} placeholder={ar ? "ابحث…" : "Search…"} placeholderTextColor={Colors.textMuted} />
+            <Text style={st.sheetTitle}>{tr("اختر صنفاً بديلاً", "Choose a replacement")}</Text>
+            <TextInput style={st.input} value={search} onChangeText={setSearch} placeholder={tr("ابحث…", "Search…")} placeholderTextColor={Colors.textMuted} />
             <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ gap: 6 }}>
               {matches.map((p) => (
                 <Pressable key={p.id} style={st.pick} onPress={() => replace(replaceFor!, p)}>
@@ -349,7 +350,7 @@ function OnlineCard({ order, decide }: { order: OnlineOrder; decide: (id: string
                 </Pressable>
               ))}
             </ScrollView>
-            <Pressable style={st.secondary} onPress={() => setReplaceFor(null)}><Text style={st.secondaryTxt}>{ar ? "إلغاء" : "Cancel"}</Text></Pressable>
+            <Pressable style={st.secondary} onPress={() => setReplaceFor(null)}><Text style={st.secondaryTxt}>{tr("إلغاء", "Cancel")}</Text></Pressable>
           </View>
         </View>
       </Modal>

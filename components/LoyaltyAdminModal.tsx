@@ -6,6 +6,7 @@ import { Colors } from "@/constants/colors";
 import { LoyaltySettings, pointsValue } from "@/constants/loyalty";
 import { useCompany } from "@/context/CompanyContext";
 import { adjustPoints, saveLoyaltySettings } from "@/lib/loyalty";
+import { tr, trf } from "@/lib/i18n";
 
 function Field({ label, hint, value, onChange, suffix }: { label: string; hint?: string; value: string; onChange: (v: string) => void; suffix?: string }) {
   return (
@@ -37,7 +38,7 @@ export function LoyaltySettingsModal({ visible, settings, onClose }: { visible: 
       await saveLoyaltySettings(companyId, draft);
       onClose();
     } catch {
-      Alert.alert("تعذّر الحفظ", "تحقق من الاتصال ثم أعد المحاولة.");
+      Alert.alert(tr("تعذّر الحفظ", "Could not save"), tr("تحقق من الاتصال ثم أعد المحاولة.", "Check the connection and try again."));
     } finally {
       setSaving(false);
     }
@@ -48,30 +49,30 @@ export function LoyaltySettingsModal({ visible, settings, onClose }: { visible: 
       <View style={s.backdrop}>
         <View style={s.sheet}>
           <View style={s.head}>
-            <Text style={s.title}>إعدادات برنامج الولاء</Text>
+            <Text style={s.title}>{tr("إعدادات برنامج الولاء", "Loyalty program settings")}</Text>
             <Pressable onPress={onClose} hitSlop={10}><Feather name="x" size={20} color={Colors.textSecondary} /></Pressable>
           </View>
           <ScrollView contentContainerStyle={{ gap: 12, paddingBottom: 12 }}>
             <View style={s.field}>
-              <Text style={[s.label, { flex: 1 }]}>تفعيل البرنامج</Text>
+              <Text style={[s.label, { flex: 1 }]}>{tr("تفعيل البرنامج", "Program enabled")}</Text>
               <Switch value={draft.enabled} onValueChange={(v) => setDraft((d) => ({ ...d, enabled: v, startAt: v && !d.enabled ? new Date().toISOString() : d.startAt }))} trackColor={{ true: Colors.gold }} />
             </View>
-            <Field label="نقاط لكل 1 ريال" value={String(draft.pointsPerRiyal)} onChange={setNum("pointsPerRiyal")} suffix="نقطة" />
-            <Field label="قيمة النقطة عند الاستبدال" hint={`100 نقطة = ${pointsValue(100, draft).toFixed(2)} ر.س`} value={String(draft.pointValue)} onChange={setNum("pointValue")} suffix="ر.س" />
-            <Field label="أقل عدد نقاط للاستبدال" value={String(draft.minRedeemPoints)} onChange={setNum("minRedeemPoints")} suffix="نقطة" />
-            <Field label="أقصى نسبة تُدفع بالنقاط" hint="من قيمة الفاتورة" value={String(draft.maxRedeemPercent)} onChange={setNum("maxRedeemPercent")} suffix="%" />
+            <Field label={tr("نقاط لكل 1 ريال", "Points per 1 SAR")} value={String(draft.pointsPerRiyal)} onChange={setNum("pointsPerRiyal")} suffix={tr("نقطة", "pts")} />
+            <Field label={tr("قيمة النقطة عند الاستبدال", "Value of a point when redeemed")} hint={trf("100 نقطة = {v} ر.س", "100 pts = {v} SAR", { v: pointsValue(100, draft).toFixed(2) })} value={String(draft.pointValue)} onChange={setNum("pointValue")} suffix={tr("ر.س", "SAR")} />
+            <Field label={tr("أقل عدد نقاط للاستبدال", "Minimum points to redeem")} value={String(draft.minRedeemPoints)} onChange={setNum("minRedeemPoints")} suffix={tr("نقطة", "pts")} />
+            <Field label={tr("أقصى نسبة تُدفع بالنقاط", "Max share paid with points")} hint={tr("من قيمة الفاتورة", "of the invoice")} value={String(draft.maxRedeemPercent)} onChange={setNum("maxRedeemPercent")} suffix="%" />
             <View style={s.summary}>
               <Feather name="info" size={14} color={Colors.info} />
-              <Text style={s.summaryTxt}>يسترد العميل {cashback}% من مشترياته كنقاط في الفئة الأساسية، وأكثر في الفئات الأعلى.</Text>
+              <Text style={s.summaryTxt}>{trf("يسترد العميل {c}% من مشترياته كنقاط في الفئة الأساسية، وأكثر في الفئات الأعلى.", "Customers get {c}% back in points at the base tier, more in higher tiers.", { c: cashback })}</Text>
             </View>
-            <Text style={s.section}>الفئات (حسب إجمالي المشتريات)</Text>
+            <Text style={s.section}>{tr("الفئات (حسب إجمالي المشتريات)", "Tiers (by lifetime spend)")}</Text>
             {draft.tiers.map((t, i) => (
               <View key={t.id} style={s.tier}>
                 <TextInput style={[s.input, { flex: 1 }]} value={t.name} onChangeText={(v) => setDraft((d) => ({ ...d, tiers: d.tiers.map((x, j) => (j === i ? { ...x, name: v } : x)) }))} textAlign="right" />
                 <View style={s.inputWrap}>
                   <TextInput style={s.input} editable={i > 0} value={String(t.minSpent)} keyboardType="number-pad" textAlign="center"
                     onChangeText={(v) => setDraft((d) => ({ ...d, tiers: d.tiers.map((x, j) => (j === i ? { ...x, minSpent: Number(v.replace(/\D/g, "")) || 0 } : x)) }))} />
-                  <Text style={s.suffix}>ر.س</Text>
+                  <Text style={s.suffix}>{tr("ر.س", "SAR")}</Text>
                 </View>
                 <View style={s.inputWrap}>
                   <TextInput style={s.input} value={String(t.multiplier)} keyboardType="decimal-pad" textAlign="center"
@@ -82,7 +83,7 @@ export function LoyaltySettingsModal({ visible, settings, onClose }: { visible: 
             ))}
           </ScrollView>
           <Pressable style={[s.save, saving && { opacity: 0.6 }]} onPress={save} disabled={saving}>
-            {saving ? <ActivityIndicator color="#fff" /> : <Text style={s.saveTxt}>حفظ الإعدادات</Text>}
+            {saving ? <ActivityIndicator color="#fff" /> : <Text style={s.saveTxt}>{tr("حفظ الإعدادات", "Save settings")}</Text>}
           </Pressable>
         </View>
       </View>
@@ -103,14 +104,14 @@ export function AdjustPointsModal({
 
   const submit = async () => {
     const n = Math.round(Number(amount));
-    if (!n || n < 0) { Alert.alert("تنبيه", "أدخل عدد النقاط."); return; }
-    if (!reason.trim()) { Alert.alert("تنبيه", "اكتب سبب التعديل."); return; }
+    if (!n || n < 0) { Alert.alert(tr("تنبيه", "Notice"), tr("أدخل عدد النقاط.", "Enter the number of points.")); return; }
+    if (!reason.trim()) { Alert.alert(tr("تنبيه", "Notice"), tr("اكتب سبب التعديل.", "Write the reason for the change.")); return; }
     setSaving(true);
     try {
       await adjustPoints(companyId, phone, name, sign * n, reason.trim(), by);
       onClose();
     } catch {
-      Alert.alert("تعذّر الحفظ", "تحقق من الاتصال ثم أعد المحاولة.");
+      Alert.alert(tr("تعذّر الحفظ", "Could not save"), tr("تحقق من الاتصال ثم أعد المحاولة.", "Check the connection and try again."));
     } finally {
       setSaving(false);
     }
@@ -121,21 +122,21 @@ export function AdjustPointsModal({
       <View style={[s.backdrop, { justifyContent: "center", padding: 20 }]}>
         <View style={[s.sheet, { borderRadius: 24 }]}>
           <View style={s.head}>
-            <Text style={s.title}>تعديل نقاط {name}</Text>
+            <Text style={s.title}>{trf("تعديل نقاط {n}", "Adjust points: {n}", { n: name })}</Text>
             <Pressable onPress={onClose} hitSlop={10}><Feather name="x" size={20} color={Colors.textSecondary} /></Pressable>
           </View>
-          <Text style={s.hint}>الرصيد الحالي: {balance.toLocaleString("ar-SA")} نقطة</Text>
+          <Text style={s.hint}>{trf("الرصيد الحالي: {b} نقطة", "Current balance: {b} pts", { b: balance })}</Text>
           <View style={s.segment}>
             {([1, -1] as const).map((v) => (
               <Pressable key={v} style={[s.segBtn, sign === v && { backgroundColor: v === 1 ? Colors.success : Colors.accent }]} onPress={() => setSign(v)}>
-                <Text style={[s.segTxt, sign === v && { color: "#fff" }]}>{v === 1 ? "إضافة" : "خصم"}</Text>
+                <Text style={[s.segTxt, sign === v && { color: "#fff" }]}>{v === 1 ? tr("إضافة", "Add") : tr("خصم", "Deduct")}</Text>
               </Pressable>
             ))}
           </View>
-          <TextInput style={[s.input, s.big]} value={amount} onChangeText={(v) => setAmount(v.replace(/\D/g, ""))} placeholder="عدد النقاط" placeholderTextColor={Colors.textMuted} keyboardType="number-pad" textAlign="center" />
-          <TextInput style={[s.input, s.big, { textAlign: "right" }]} value={reason} onChangeText={setReason} placeholder="السبب (مثال: تعويض عن تأخير)" placeholderTextColor={Colors.textMuted} />
+          <TextInput style={[s.input, s.big]} value={amount} onChangeText={(v) => setAmount(v.replace(/\D/g, ""))} placeholder={tr("عدد النقاط", "Points")} placeholderTextColor={Colors.textMuted} keyboardType="number-pad" textAlign="center" />
+          <TextInput style={[s.input, s.big, { textAlign: "right" }]} value={reason} onChangeText={setReason} placeholder={tr("السبب (مثال: تعويض عن تأخير)", "Reason (e.g. delay compensation)")} placeholderTextColor={Colors.textMuted} />
           <Pressable style={[s.save, saving && { opacity: 0.6 }]} onPress={submit} disabled={saving}>
-            {saving ? <ActivityIndicator color="#fff" /> : <Text style={s.saveTxt}>حفظ</Text>}
+            {saving ? <ActivityIndicator color="#fff" /> : <Text style={s.saveTxt}>{tr("حفظ", "Save")}</Text>}
           </Pressable>
         </View>
       </View>

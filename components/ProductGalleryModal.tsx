@@ -1,3 +1,4 @@
+import { tr } from "@/lib/i18n";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { Image } from "expo-image";
@@ -55,7 +56,7 @@ function makeOrderItemId() {
 }
 
 function formatPrice(value: number, lang: string) {
-  return `${value.toFixed(2)} ${lang === "ar" ? "ر.س" : "SAR"}`;
+  return `${value.toFixed(2)} ${tr("ر.س", "SAR")}`;
 }
 
 function ProductCard({
@@ -145,7 +146,7 @@ function ProductCard({
 
         {!product.isAvailable && (
           <View style={styles.unavailableOverlay}>
-            <Text style={styles.unavailableText}>{lang === "ar" ? "غير متوفر" : "Unavailable"}</Text>
+            <Text style={styles.unavailableText}>{tr("غير متوفر", "Unavailable")}</Text>
           </View>
         )}
       </TouchableOpacity>
@@ -172,7 +173,7 @@ function ProductCard({
         ) : (
           <TouchableOpacity style={[styles.addToOrderBtn, { backgroundColor: deptColor }]} onPress={onAdd} activeOpacity={0.86}>
             <Feather name="plus" size={14} color="#fff" />
-            <Text style={styles.addToOrderText}>{lang === "ar" ? "إضافة" : "Add"}</Text>
+            <Text style={styles.addToOrderText}>{tr("إضافة", "Add")}</Text>
           </TouchableOpacity>
         )
       ) : null}
@@ -309,8 +310,8 @@ export function ProductGalleryModal({ visible, onClose, onConfirm }: Props) {
               </>
             ) : (
               <>
-                <Text style={styles.headerTitle}>{lang === "ar" ? "اختيار المنتجات" : "Choose Products"}</Text>
-                <Text style={styles.headerSubtitle}>{lang === "ar" ? "بطاقات مرئية بالصور والسعر والكمية" : "Visual cards with image, price, and quantity"}</Text>
+                <Text style={styles.headerTitle}>{tr("اختيار المنتجات", "Choose Products")}</Text>
+                <Text style={styles.headerSubtitle}>{tr("بطاقات مرئية بالصور والسعر والكمية", "Visual cards with image, price, and quantity")}</Text>
               </>
             )}
           </View>
@@ -328,7 +329,7 @@ export function ProductGalleryModal({ visible, onClose, onConfirm }: Props) {
             style={styles.searchInput}
             value={search}
             onChangeText={setSearch}
-            placeholder={lang === "ar" ? "بحث بالاسم أو الفئة..." : "Search name or category..."}
+            placeholder={tr("بحث بالاسم أو الفئة...", "Search name or category...")}
             placeholderTextColor={Colors.textMuted}
             textAlign={lang === "ar" ? "right" : "left"}
           />
@@ -388,7 +389,7 @@ export function ProductGalleryModal({ visible, onClose, onConfirm }: Props) {
                 </TouchableOpacity>
               );
             })}
-            <Text style={styles.productCount}>{filtered.length} {lang === "ar" ? "منتج" : "products"}</Text>
+            <Text style={styles.productCount}>{filtered.length} {tr("منتج", "products")}</Text>
           </View>
         )}
 
@@ -457,7 +458,7 @@ export function ProductGalleryModal({ visible, onClose, onConfirm }: Props) {
             ListEmptyComponent={
               <View style={styles.emptyBox}>
                 <Feather name="shopping-bag" size={40} color={Colors.textMuted} />
-                <Text style={styles.emptyText}>{lang === "ar" ? "لا توجد منتجات" : "No products found"}</Text>
+                <Text style={styles.emptyText}>{tr("لا توجد منتجات", "No products found")}</Text>
               </View>
             }
             showsVerticalScrollIndicator={false}
@@ -493,12 +494,12 @@ export function ProductGalleryModal({ visible, onClose, onConfirm }: Props) {
         {totalSelected > 0 && (
           <View style={[styles.confirmBar, { paddingBottom: insets.bottom + 12 }]}>
             <View style={styles.confirmLeft}>
-              <Text style={styles.confirmCount}>{totalSelected} {lang === "ar" ? "صنف مختار" : "selected"}</Text>
+              <Text style={styles.confirmCount}>{totalSelected} {tr("صنف مختار", "selected")}</Text>
               <Text style={styles.confirmTotal}>{formatPrice(totalValue, lang)}</Text>
             </View>
             <TouchableOpacity style={styles.confirmBtn} onPress={handleConfirm} activeOpacity={0.85}>
               <Feather name="check" size={18} color="#fff" />
-              <Text style={styles.confirmBtnText}>{lang === "ar" ? "إضافة للفاتورة" : "Add to Invoice"}</Text>
+              <Text style={styles.confirmBtnText}>{tr("إضافة للفاتورة", "Add to Invoice")}</Text>
             </TouchableOpacity>
           </View>
         )}

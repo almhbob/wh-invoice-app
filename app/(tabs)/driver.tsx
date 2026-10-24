@@ -1,3 +1,4 @@
+import { tr, trf } from "@/lib/i18n";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import React, { useMemo, useState } from "react";
@@ -52,7 +53,7 @@ export default function DriverScreen() {
   if (!currentEmployee) return null;
   if (currentEmployee.role !== "driver" && currentEmployee.role !== "admin" && currentEmployee.role !== "branch_supervisor") {
     return (
-      <View style={st.locked}><Feather name="lock" size={30} color={Colors.accent} /><Text style={st.lockedTxt}>{ar ? "هذه الشاشة لسائقي التوصيل" : "For delivery drivers"}</Text></View>
+      <View style={st.locked}><Feather name="lock" size={30} color={Colors.accent} /><Text style={st.lockedTxt}>{tr("هذه الشاشة لسائقي التوصيل", "For delivery drivers")}</Text></View>
     );
   }
 
@@ -69,23 +70,23 @@ export default function DriverScreen() {
           <View style={st.heroTop}>
             <View style={st.heroIcon}><Feather name="truck" size={20} color={Colors.primary} /></View>
             <View style={{ flex: 1 }}>
-              <Text style={st.heroTitle}>{ar ? `أهلاً ${currentEmployee.name.split(" ")[0]}` : `Hi ${currentEmployee.name.split(" ")[0]}`}</Text>
-              <Text style={st.heroSub}>{ar ? `${active.length} طلب بانتظارك` : `${active.length} deliveries waiting`}{toCollect > 0 ? (ar ? ` · للتحصيل ${toCollect.toFixed(0)} ر.س` : ` · collect ${toCollect.toFixed(0)} SAR`) : ""}</Text>
+              <Text style={st.heroTitle}>{trf("أهلاً {p0}", "Hi {p0}", { p0: currentEmployee.name.split(" ")[0] })}</Text>
+              <Text style={st.heroSub}>{trf("{p0} طلب بانتظارك", "{p0} deliveries waiting", { p0: active.length })}{toCollect > 0 ? (trf(" · للتحصيل {p0} ر.س", " · collect {p0} SAR", { p0: toCollect.toFixed(0) })) : ""}</Text>
             </View>
           </View>
           <View style={st.statsRow}>
-            {([[ar ? "اليوم" : "Today", stats.today], [ar ? "هذا الشهر" : "This month", stats.month], [ar ? "هذه السنة" : "This year", stats.year]] as const).map(([l, v]) => (
+            {([[tr("اليوم", "Today"), stats.today], [tr("هذا الشهر", "This month"), stats.month], [tr("هذه السنة", "This year"), stats.year]] as const).map(([l, v]) => (
               <View key={l} style={st.stat}>
                 <Text style={st.statNum}>{v.assigned}</Text>
                 <Text style={st.statLbl}>{l}</Text>
-                <Text style={st.statSub}>{ar ? `سُلّم ${v.delivered}` : `${v.delivered} delivered`}</Text>
+                <Text style={st.statSub}>{trf("سُلّم {p0}", "{p0} delivered", { p0: v.delivered })}</Text>
               </View>
             ))}
           </View>
         </View>
 
         <View style={st.tabs}>
-          {([["active", ar ? "طلباتي الحالية" : "Current", active.length], ["done", ar ? "سلّمتها اليوم" : "Delivered today", doneToday.length]] as const).map(([k, l, n]) => (
+          {([["active", tr("طلباتي الحالية", "Current"), active.length], ["done", tr("سلّمتها اليوم", "Delivered today"), doneToday.length]] as const).map(([k, l, n]) => (
             <Pressable key={k} style={[st.tab, tab === k && { backgroundColor: Colors.surface }]} onPress={() => setTab(k)}>
               <Text style={[st.tabTxt, tab === k && { color: Colors.text, fontWeight: "900" }]}>{l}</Text>
               {n > 0 && <View style={[st.badge, tab === k && { backgroundColor: Colors.primary }]}><Text style={st.badgeTxt}>{n}</Text></View>}
@@ -94,7 +95,7 @@ export default function DriverScreen() {
         </View>
 
         {list.length === 0 ? (
-          <EmptyState icon="truck" title={tab === "active" ? (ar ? "لا توجد طلبات مسندة إليك" : "No deliveries assigned") : (ar ? "لم تُسلّم طلبات اليوم بعد" : "Nothing delivered yet today")} subtitle={ar ? "ستظهر هنا الطلبات التي يسندها لك الفرع" : "Orders assigned to you appear here"} />
+          <EmptyState icon="truck" title={tab === "active" ? (tr("لا توجد طلبات مسندة إليك", "No deliveries assigned")) : (tr("لم تُسلّم طلبات اليوم بعد", "Nothing delivered yet today"))} subtitle={tr("ستظهر هنا الطلبات التي يسندها لك الفرع", "Orders assigned to you appear here")} />
         ) : (
           list.map((o) => <DriverCard key={o.id} order={o} />)
         )}
@@ -128,16 +129,14 @@ function DriverCard({ order }: { order: Order }) {
   const pickUp = () => {
     const go = () => void run("dispatch", () => dispatchOrder(order.id, by));
     if (ready) return go();
-    Alert.alert(ar ? "الطلب لم يجهز بعد" : "Not ready yet", ar ? "الأقسام لم تُنهِ الطلب. هل استلمته فعلاً؟" : "Production not finished. Did you actually pick it up?", [
-      { text: ar ? "لا" : "No", style: "cancel" },
-      { text: ar ? "نعم، استلمته" : "Yes, picked up", onPress: go },
+    Alert.alert(tr("الطلب لم يجهز بعد", "Not ready yet"), tr("الأقسام لم تُنهِ الطلب. هل استلمته فعلاً؟", "Production not finished. Did you actually pick it up?"), [
+      { text: tr("لا", "No"), style: "cancel" },
+      { text: tr("نعم، استلمته", "Yes, picked up"), onPress: go },
     ]);
   };
 
   const notifyCustomer = () =>
-    openWhatsApp(order.customerPhone, ar
-      ? `مرحباً ${order.customerName}، أنا ${by.name} مندوب التوصيل لطلبك #${order.orderNumber}. أنا في الطريق إليك 🚚`
-      : `Hello ${order.customerName}, I'm ${by.name}, delivering your order #${order.orderNumber}. On my way 🚚`);
+    openWhatsApp(order.customerPhone, `مرحباً ${order.customerName}، أنا ${by.name} مندوب التوصيل لطلبك #${order.orderNumber}. أنا في الطريق إليك 🚚`);
 
   return (
     <View style={[st.card, urg === "overdue" && !delivered && { borderColor: Colors.statusCancelled + "80" }]}>
@@ -166,18 +165,18 @@ function DriverCard({ order }: { order: Order }) {
         <Pressable style={st.address} onPress={() => openMaps(order.deliveryAddress!)}>
           <Feather name="map-pin" size={16} color={Colors.primary} />
           <Text style={st.addressTxt}>{order.deliveryAddress}</Text>
-          <View style={st.mapBtn}><Feather name="navigation" size={12} color="#fff" /><Text style={st.mapTxt}>{ar ? "الخريطة" : "Map"}</Text></View>
+          <View style={st.mapBtn}><Feather name="navigation" size={12} color="#fff" /><Text style={st.mapTxt}>{tr("الخريطة", "Map")}</Text></View>
         </Pressable>
       ) : null}
 
       <View style={st.metaRow}>
-        <View style={st.meta}><Feather name="package" size={12} color={Colors.textSecondary} /><Text style={st.metaTxt}>{pieces} {ar ? "قطعة" : "pcs"}</Text></View>
+        <View style={st.meta}><Feather name="package" size={12} color={Colors.textSecondary} /><Text style={st.metaTxt}>{pieces} {tr("قطعة", "pcs")}</Text></View>
         <View style={[st.meta, { backgroundColor: remaining > 0 ? Colors.accent + "14" : Colors.success + "14" }]}>
           <Feather name="dollar-sign" size={12} color={remaining > 0 ? Colors.accent : Colors.success} />
-          <Text style={[st.metaTxt, { color: remaining > 0 ? Colors.accent : Colors.success }]}>{remaining > 0 ? (ar ? `حصّل ${remaining.toFixed(2)} ر.س` : `Collect ${remaining.toFixed(2)}`) : (ar ? "مدفوع" : "Paid")}</Text>
+          <Text style={[st.metaTxt, { color: remaining > 0 ? Colors.accent : Colors.success }]}>{remaining > 0 ? (trf("حصّل {p0} ر.س", "Collect {p0}", { p0: remaining.toFixed(2) })) : (tr("مدفوع", "Paid"))}</Text>
         </View>
-        {order.insuranceAmount ? <View style={st.meta}><Feather name="shield" size={12} color={Colors.gold} /><Text style={st.metaTxt}>{ar ? "صواني بتأمين" : "Trays w/ deposit"}</Text></View> : null}
-        {!ready && !delivered ? <View style={[st.meta, { backgroundColor: Colors.warning + "16" }]}><Feather name="loader" size={12} color={Colors.warning} /><Text style={[st.metaTxt, { color: Colors.warning }]}>{ar ? "قيد التحضير" : "Preparing"}</Text></View> : null}
+        {order.insuranceAmount ? <View style={st.meta}><Feather name="shield" size={12} color={Colors.gold} /><Text style={st.metaTxt}>{tr("صواني بتأمين", "Trays w/ deposit")}</Text></View> : null}
+        {!ready && !delivered ? <View style={[st.meta, { backgroundColor: Colors.warning + "16" }]}><Feather name="loader" size={12} color={Colors.warning} /><Text style={[st.metaTxt, { color: Colors.warning }]}>{tr("قيد التحضير", "Preparing")}</Text></View> : null}
       </View>
 
       <View style={st.items}>
@@ -190,9 +189,9 @@ function DriverCard({ order }: { order: Order }) {
           <Feather name={req.type === "transfer" ? "repeat" : "life-buoy"} size={14} color={req.status === "open" ? Colors.warning : Colors.success} />
           <View style={{ flex: 1 }}>
             <Text style={st.reqTitle}>
-              {req.type === "transfer" ? (ar ? "طلب تحويل" : "Transfer request") : (ar ? "طلب دعم" : "Support request")} · {req.status === "open" ? (ar ? "بانتظار الفرع" : "Waiting for branch") : (ar ? "تمت المعالجة" : "Resolved")}
+              {req.type === "transfer" ? (tr("طلب تحويل", "Transfer request")) : (tr("طلب دعم", "Support request"))} · {req.status === "open" ? (tr("بانتظار الفرع", "Waiting for branch")) : (tr("تمت المعالجة", "Resolved"))}
             </Text>
-            <Text style={st.reqTxt}>{req.reason}{req.note ? ` — ${req.note}` : ""}</Text>
+            <Text style={st.reqTxt}>{tr(req.reason)}{req.note ? ` — ${req.note}` : ""}</Text>
             {req.response ? <Text style={st.reqTxt}>↩ {req.response}</Text> : null}
           </View>
         </View>
@@ -203,27 +202,27 @@ function DriverCard({ order }: { order: Order }) {
           {stage !== "out_for_delivery" ? (
             <Pressable style={[st.primary, busy === "dispatch" && { opacity: 0.6 }]} onPress={pickUp} disabled={!!busy}>
               {busy === "dispatch" ? <ActivityIndicator color="#fff" /> : <Feather name="truck" size={18} color={Colors.goldLight} />}
-              <Text style={st.primaryTxt}>{ar ? "استلمت الطلب وخرجت للتوصيل" : "Picked up — on my way"}</Text>
+              <Text style={st.primaryTxt}>{tr("استلمت الطلب وخرجت للتوصيل", "Picked up — on my way")}</Text>
             </Pressable>
           ) : (
             <View style={{ flexDirection: "row", gap: 8 }}>
               <Pressable style={[st.primary, { flex: 2, backgroundColor: Colors.statusDone }]} onPress={() => setSheet("delivered")} disabled={!!busy}>
                 <Feather name="check-circle" size={18} color="#fff" />
-                <Text style={st.primaryTxt}>{ar ? "تم التسليم" : "Delivered"}</Text>
+                <Text style={st.primaryTxt}>{tr("تم التسليم", "Delivered")}</Text>
               </Pressable>
               <Pressable style={[st.primary, { flex: 1, backgroundColor: Colors.statusCancelled + "16" }]} onPress={() => setSheet("failed")} disabled={!!busy}>
-                <Text style={[st.primaryTxt, { color: Colors.statusCancelled }]}>{ar ? "تعذّر" : "Failed"}</Text>
+                <Text style={[st.primaryTxt, { color: Colors.statusCancelled }]}>{tr("تعذّر", "Failed")}</Text>
               </Pressable>
             </View>
           )}
           <View style={{ flexDirection: "row", gap: 8 }}>
             <Pressable style={st.secondary} onPress={() => setSheet("support")}>
               <Feather name="life-buoy" size={15} color={Colors.primary} />
-              <Text style={st.secondaryTxt}>{ar ? "طلب دعم" : "Ask for support"}</Text>
+              <Text style={st.secondaryTxt}>{tr("طلب دعم", "Ask for support")}</Text>
             </Pressable>
             <Pressable style={st.secondary} onPress={() => setSheet("transfer")}>
               <Feather name="repeat" size={15} color={Colors.primary} />
-              <Text style={st.secondaryTxt}>{ar ? "تحويل لمندوب آخر" : "Transfer to another driver"}</Text>
+              <Text style={st.secondaryTxt}>{tr("تحويل لمندوب آخر", "Transfer to another driver")}</Text>
             </Pressable>
           </View>
         </>
@@ -254,10 +253,10 @@ function ReasonSheet({ visible, mode, onClose, onSubmit }: { visible: boolean; m
   if (!mode) return null;
   const reasons = mode === "transfer" ? TRANSFER_REASONS : mode === "delivered" ? [] : SUPPORT_REASONS;
   const title = {
-    support: ar ? "طلب دعم من الفرع" : "Ask the branch for support",
-    transfer: ar ? "طلب تحويل الطلب لمندوب آخر" : "Ask to transfer this delivery",
-    failed: ar ? "تعذّر التسليم" : "Delivery failed",
-    delivered: ar ? "تأكيد التسليم" : "Confirm delivery",
+    support: tr("طلب دعم من الفرع", "Ask the branch for support"),
+    transfer: tr("طلب تحويل الطلب لمندوب آخر", "Ask to transfer this delivery"),
+    failed: tr("تعذّر التسليم", "Delivery failed"),
+    delivered: tr("تأكيد التسليم", "Confirm delivery"),
   }[mode];
   const needReason = mode !== "delivered";
   const canSend = !needReason || (reason && (reason !== "أخرى" || note.trim()));
@@ -268,11 +267,11 @@ function ReasonSheet({ visible, mode, onClose, onSubmit }: { visible: boolean; m
           <Text style={st.sheetTitle}>{title}</Text>
           {needReason && (
             <>
-              <Text style={st.sheetLbl}>{ar ? "السبب" : "Reason"}</Text>
+              <Text style={st.sheetLbl}>{tr("السبب", "Reason")}</Text>
               <View style={st.chips}>
                 {reasons.map((r) => (
                   <Pressable key={r} style={[st.chip, reason === r && st.chipOn]} onPress={() => setReason(r)}>
-                    <Text style={[st.chipTxt, reason === r && { color: "#fff" }]}>{r}</Text>
+                    <Text style={[st.chipTxt, reason === r && { color: "#fff" }]}>{tr(r)}</Text>
                   </Pressable>
                 ))}
               </View>
@@ -282,14 +281,14 @@ function ReasonSheet({ visible, mode, onClose, onSubmit }: { visible: boolean; m
             style={[st.input, { textAlign: isRTL ? "right" : "left" }]}
             value={note}
             onChangeText={setNote}
-            placeholder={mode === "delivered" ? (ar ? "اسم المستلم (اختياري)" : "Received by (optional)") : (ar ? "توضيح إضافي…" : "Details…")}
+            placeholder={mode === "delivered" ? (tr("اسم المستلم (اختياري)", "Received by (optional)")) : (tr("توضيح إضافي…", "Details…"))}
             placeholderTextColor={Colors.textMuted}
             multiline={mode !== "delivered"}
           />
           <View style={{ flexDirection: "row", gap: 10 }}>
-            <Pressable style={[st.secondary, { flex: 1 }]} onPress={onClose}><Text style={st.secondaryTxt}>{ar ? "إلغاء" : "Cancel"}</Text></Pressable>
+            <Pressable style={[st.secondary, { flex: 1 }]} onPress={onClose}><Text style={st.secondaryTxt}>{tr("إلغاء", "Cancel")}</Text></Pressable>
             <Pressable style={[st.primary, { flex: 2 }, !canSend && { opacity: 0.5 }]} disabled={!canSend} onPress={() => onSubmit(reason, note.trim() || undefined)}>
-              <Text style={st.primaryTxt}>{mode === "delivered" ? (ar ? "تأكيد" : "Confirm") : (ar ? "إرسال" : "Send")}</Text>
+              <Text style={st.primaryTxt}>{mode === "delivered" ? (tr("تأكيد", "Confirm")) : (tr("إرسال", "Send"))}</Text>
             </Pressable>
           </View>
         </View>

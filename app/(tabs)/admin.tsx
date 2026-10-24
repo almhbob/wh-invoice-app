@@ -1,3 +1,4 @@
+import { tr } from "@/lib/i18n";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as FileSystem from "expo-file-system/legacy";
@@ -141,7 +142,7 @@ function EmployeesSection() {
     setSaving(true);
     try {
       if (role === "driver" && phone.replace(/\D/g, "").length < 9) {
-        Alert.alert(t("errTitle"), lang === "ar" ? "أدخل رقم جوال السائق." : "Enter the driver's phone.");
+        Alert.alert(t("errTitle"), tr("أدخل رقم جوال السائق.", "Enter the driver's phone."));
         return;
       }
       await addEmployee({ name: name.trim(), employeeId: empId.trim().toUpperCase(), role, ...(phone.trim() ? { phone: phone.trim() } : {}), ...(isSecure ? { pinCode: pin.trim() } : {}) });
@@ -169,7 +170,7 @@ function EmployeesSection() {
       { text: t("cancel"), style: "cancel" },
       { text: t("confirm"), onPress: () => {
         void updateEmployee(emp.id, { status: newStatus }).catch(() => {
-          Alert.alert(t("errTitle"), lang === "ar" ? "تعذر حفظ التغيير. تحقق من الاتصال والصلاحيات ثم أعد المحاولة." : "Could not save the change. Check your connection and permissions, then try again.");
+          Alert.alert(t("errTitle"), tr("تعذر حفظ التغيير. تحقق من الاتصال والصلاحيات ثم أعد المحاولة.", "Could not save the change. Check your connection and permissions, then try again."));
         });
       } },
     ]);
@@ -184,7 +185,7 @@ function EmployeesSection() {
           void updateEmployee(emp.id, { role: r }).then(() => {
             Haptics.selectionAsync();
           }).catch(() => {
-            Alert.alert(t("errTitle"), lang === "ar" ? "تعذر تحديث المسمى الوظيفي. تحقق من الاتصال والصلاحيات ثم أعد المحاولة." : "Could not update the employee role. Check your connection and permissions, then try again.");
+            Alert.alert(t("errTitle"), tr("تعذر تحديث المسمى الوظيفي. تحقق من الاتصال والصلاحيات ثم أعد المحاولة.", "Could not update the employee role. Check your connection and permissions, then try again."));
           });
         }
       },
@@ -368,7 +369,7 @@ function EmployeesSection() {
           )}
           {role === "driver" && (
             <>
-              <Text style={styles.formLabel}>{lang === "ar" ? "جوال السائق *" : "Driver phone *"}</Text>
+              <Text style={styles.formLabel}>{tr("جوال السائق *", "Driver phone *")}</Text>
               <TextInput style={styles.formInput} value={phone} onChangeText={setPhone}
                 placeholder="05XXXXXXXX" placeholderTextColor={Colors.textMuted} textAlign="right" keyboardType="phone-pad" />
             </>

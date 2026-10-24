@@ -1,3 +1,4 @@
+import { tr, trf } from "@/lib/i18n";
 import { Linking, Platform } from "react-native";
 
 import { Colors } from "@/constants/colors";
@@ -107,7 +108,7 @@ export function surfaceLabel(item: OrderItem, lang: string) {
   if (!w) return "";
   if (w.surface === "other" && w.surfaceOther?.trim()) return w.surfaceOther.trim();
   const m = WRITING_SURFACES.find((s) => s.key === w.surface);
-  return m ? (lang === "ar" ? m.ar : m.en) : w.surface;
+  return m ? tr(m.ar, m.en) : w.surface;
 }
 
 export function isProductionDone(order: Order) {
@@ -237,10 +238,10 @@ export function dueLabel(order: Order, lang: string): string | null {
   const ar = lang === "ar";
   const diffMin = Math.round((due.getTime() - Date.now()) / 60000);
   const abs = Math.abs(diffMin);
-  const span = abs < 60 ? `${abs} ${ar ? "د" : "min"}` : abs < 48 * 60 ? `${Math.round(abs / 60)} ${ar ? "س" : "h"}` : `${Math.round(abs / 1440)} ${ar ? "يوم" : "d"}`;
+  const span = abs < 60 ? `${abs} ${tr("د", "min")}` : abs < 48 * 60 ? `${Math.round(abs / 60)} ${tr("س", "h")}` : `${Math.round(abs / 1440)} ${tr("يوم", "d")}`;
   if (!isOrderOpen(order)) return null;
-  if (diffMin < 0) return ar ? `متأخر ${span}` : `${span} late`;
-  return ar ? `بعد ${span}` : `in ${span}`;
+  if (diffMin < 0) return trf("متأخر {p0}", "{p0} late", { p0: span });
+  return trf("بعد {p0}", "in {p0}", { p0: span });
 }
 
 /** Sort: overdue/soonest due first, then newest. */

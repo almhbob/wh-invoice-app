@@ -1,3 +1,4 @@
+import { tr, trf } from "@/lib/i18n";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import React, { useMemo, useState } from "react";
@@ -34,7 +35,7 @@ export default function WritingScreen() {
     return (
       <View style={st.locked}>
         <Feather name="lock" size={32} color={Colors.purple} />
-        <Text style={st.lockedTxt}>{ar ? "هذه المساحة للخطاط وقسم الكيك" : "For the calligrapher and cake team"}</Text>
+        <Text style={st.lockedTxt}>{tr("هذه المساحة للخطاط وقسم الكيك", "For the calligrapher and cake team")}</Text>
       </View>
     );
   }
@@ -53,14 +54,14 @@ export default function WritingScreen() {
             <View style={st.hero}>
               <View style={st.heroIcon}><Feather name="edit-3" size={20} color={Colors.purple} /></View>
               <View style={{ flex: 1 }}>
-                <Text style={st.heroTitle}>{ar ? "مساحة الخطاط" : "Calligraphy"}</Text>
-                <Text style={st.heroSub}>{ar ? `${todo.length} عبارة للكتابة · ${done.length} أُنجزت اليوم` : `${todo.length} to write · ${done.length} done today`}</Text>
+                <Text style={st.heroTitle}>{tr("مساحة الخطاط", "Calligraphy")}</Text>
+                <Text style={st.heroSub}>{trf("{p0} عبارة للكتابة · {p1} أُنجزت اليوم", "{p0} to write · {p1} done today", { p0: todo.length, p1: done.length })}</Text>
               </View>
-              {late > 0 && <View style={st.late}><Text style={st.lateTxt}>{late} {ar ? "متأخر" : "late"}</Text></View>}
+              {late > 0 && <View style={st.late}><Text style={st.lateTxt}>{late} {tr("متأخر", "late")}</Text></View>}
             </View>
             <SyncStatusBanner />
             <View style={st.tabs}>
-              {([["todo", ar ? "للكتابة" : "To write", todo.length], ["done", ar ? "أُنجزت اليوم" : "Done today", done.length]] as const).map(([k, l, n]) => (
+              {([["todo", tr("للكتابة", "To write"), todo.length], ["done", tr("أُنجزت اليوم", "Done today"), done.length]] as const).map(([k, l, n]) => (
                 <Pressable key={k} style={[st.tab, tab === k && { backgroundColor: Colors.surface }]} onPress={() => setTab(k)}>
                   <Text style={[st.tabTxt, tab === k && { color: Colors.text, fontWeight: "900" }]}>{l}</Text>
                   {n > 0 && <View style={[st.badge, tab === k && { backgroundColor: Colors.purple }]}><Text style={st.badgeTxt}>{n}</Text></View>}
@@ -75,7 +76,7 @@ export default function WritingScreen() {
             onAdvance={(status) => updateWritingStatus(item.id, status, currentEmployee ? { name: currentEmployee.name, employeeId: currentEmployee.employeeId, timestamp: new Date().toISOString() } : undefined)}
           />
         )}
-        ListEmptyComponent={<EmptyState icon="edit-3" title={ar ? "لا توجد عبارات الآن" : "Nothing to write"} subtitle={ar ? "ستظهر هنا العبارات التي يضيفها الكاشير للكيك" : "Phrases added by the cashier appear here"} />}
+        ListEmptyComponent={<EmptyState icon="edit-3" title={tr("لا توجد عبارات الآن", "Nothing to write")} subtitle={tr("ستظهر هنا العبارات التي يضيفها الكاشير للكيك", "Phrases added by the cashier appear here")} />}
         showsVerticalScrollIndicator={false}
       />
     </View>
@@ -96,7 +97,7 @@ function WritingCard({ order, onAdvance }: { order: Order; onAdvance: (s: OrderS
     try {
       if (Platform.OS === "web" && typeof navigator !== "undefined" && navigator.clipboard) {
         await navigator.clipboard.writeText(text);
-        Alert.alert(ar ? "تم النسخ" : "Copied", text);
+        Alert.alert(tr("تم النسخ", "Copied"), text);
       }
     } catch { /* clipboard unavailable */ }
   };
@@ -128,7 +129,7 @@ function WritingCard({ order, onAdvance }: { order: Order; onAdvance: (s: OrderS
           {Platform.OS === "web" && (
             <Pressable style={st.copy} onPress={() => void copy(it.writing!.text)}>
               <Feather name="copy" size={12} color={Colors.textSecondary} />
-              <Text style={st.copyTxt}>{ar ? "نسخ العبارة (للطباعة)" : "Copy phrase (for printing)"}</Text>
+              <Text style={st.copyTxt}>{tr("نسخ العبارة (للطباعة)", "Copy phrase (for printing)")}</Text>
             </Pressable>
           )}
         </View>
@@ -136,19 +137,19 @@ function WritingCard({ order, onAdvance }: { order: Order; onAdvance: (s: OrderS
 
       {cakeStatus && (
         <Text style={st.cake}>
-          <Feather name="layers" size={11} color={Colors.cake} /> {ar ? "حالة الكيك:" : "Cake:"} {cakeStatus === "done" ? (ar ? "جاهز" : "ready") : cakeStatus === "in_progress" ? (ar ? "قيد التحضير" : "in progress") : (ar ? "لم يبدأ" : "not started")}
+          <Feather name="layers" size={11} color={Colors.cake} /> {tr("حالة الكيك:", "Cake:")} {cakeStatus === "done" ? (tr("جاهز", "ready")) : cakeStatus === "in_progress" ? (tr("قيد التحضير", "in progress")) : (tr("لم يبدأ", "not started"))}
         </Text>
       )}
 
       {status !== "done" ? (
         <Pressable style={[st.action, { backgroundColor: status === "pending" ? Colors.purple : Colors.statusDone }, busy && { opacity: 0.6 }]} onPress={() => void go()} disabled={busy}>
           <Feather name={status === "pending" ? "play" : "check"} size={18} color="#fff" />
-          <Text style={st.actionTxt}>{status === "pending" ? (ar ? "بدء الكتابة" : "Start writing") : (ar ? "تمت الكتابة" : "Writing done")}</Text>
+          <Text style={st.actionTxt}>{status === "pending" ? (tr("بدء الكتابة", "Start writing")) : (tr("تمت الكتابة", "Writing done"))}</Text>
         </Pressable>
       ) : (
         <View style={st.doneBox}>
           <Feather name="check-circle" size={16} color={Colors.statusDone} />
-          <Text style={st.doneTxt}>{ar ? "أُنجزت" : "Done"}{order.writingBy?.name ? ` · ${order.writingBy.name}` : ""}</Text>
+          <Text style={st.doneTxt}>{tr("أُنجزت", "Done")}{order.writingBy?.name ? ` · ${order.writingBy.name}` : ""}</Text>
         </View>
       )}
     </View>

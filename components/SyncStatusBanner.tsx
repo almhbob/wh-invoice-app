@@ -1,3 +1,4 @@
+import { tr, trf } from "@/lib/i18n";
 import { Feather } from "@expo/vector-icons";
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
@@ -16,12 +17,10 @@ export function SyncStatusBanner() {
     <View style={st.bar}>
       <Feather name="upload-cloud" size={16} color={Colors.warning} />
       <Text style={st.txt}>
-        {ar
-          ? `${pendingSyncCount} طلب محفوظ على هذا الجهاز ولم يصل للأقسام بعد — يُعاد الإرسال تلقائياً`
-          : `${pendingSyncCount} order(s) saved on this device, not yet sent to departments — retrying automatically`}
+        {trf("{p0} طلب محفوظ على هذا الجهاز ولم يصل للأقسام بعد — يُعاد الإرسال تلقائياً", "{p0} order(s) saved on this device, not yet sent to departments — retrying automatically", { p0: pendingSyncCount })}
       </Text>
       <Pressable style={st.btn} onPress={retrySync}>
-        <Text style={st.btnTxt}>{ar ? "أرسل الآن" : "Send now"}</Text>
+        <Text style={st.btnTxt}>{tr("أرسل الآن", "Send now")}</Text>
       </Pressable>
     </View>
   );

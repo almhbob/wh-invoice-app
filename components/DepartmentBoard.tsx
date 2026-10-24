@@ -1,3 +1,4 @@
+import { tr, trf } from "@/lib/i18n";
 import { Feather } from "@expo/vector-icons";
 import React, { useCallback, useMemo, useState } from "react";
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
@@ -84,17 +85,17 @@ export function DepartmentBoard({ department, titleKey, subtitleKey, deniedKey }
               <View style={s.heroIcon}><Feather name={DEPT_ICON[department] as never} size={20} color={color} /></View>
               <View style={{ flex: 1 }}>
                 <Text style={s.heroTitle}>{t(titleKey)}</Text>
-                <Text style={s.heroSub}>{ar ? `${groups.pending.length} جديدة · ${groups.in_progress.length} قيد التحضير · ${groups.done.length} أُنجزت اليوم` : `${groups.pending.length} new · ${groups.in_progress.length} preparing · ${groups.done.length} done today`}</Text>
+                <Text style={s.heroSub}>{trf("{p0} جديدة · {p1} قيد التحضير · {p2} أُنجزت اليوم", "{p0} new · {p1} preparing · {p2} done today", { p0: groups.pending.length, p1: groups.in_progress.length, p2: groups.done.length })}</Text>
               </View>
               {late > 0 && (
-                <View style={s.late}><Feather name="alert-circle" size={13} color="#fff" /><Text style={s.lateTxt}>{late} {ar ? "متأخر" : "late"}</Text></View>
+                <View style={s.late}><Feather name="alert-circle" size={13} color="#fff" /><Text style={s.lateTxt}>{late} {tr("متأخر", "late")}</Text></View>
               )}
             </View>
             <SyncStatusBanner />
             <View style={s.tabs}>
               {TABS.map((x) => (
                 <Pressable key={x.key} style={[s.tab, tab === x.key && { backgroundColor: Colors.surface }]} onPress={() => setTab(x.key)}>
-                  <Text style={[s.tabTxt, tab === x.key && { color: Colors.text, fontWeight: "900" }]} numberOfLines={1}>{ar ? x.ar : x.en}</Text>
+                  <Text style={[s.tabTxt, tab === x.key && { color: Colors.text, fontWeight: "900" }]} numberOfLines={1}>{tr(x.ar, x.en)}</Text>
                   {x.n > 0 && <View style={[s.badge, { backgroundColor: tab === x.key ? color : Colors.border }]}><Text style={s.badgeTxt}>{x.n}</Text></View>}
                 </Pressable>
               ))}

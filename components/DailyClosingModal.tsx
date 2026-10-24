@@ -1,3 +1,4 @@
+import { tr } from "@/lib/i18n";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import React, { useMemo, useState } from "react";
@@ -225,7 +226,7 @@ export function DailyClosingModal({ visible, onClose, orders }: Props) {
             <Feather name="x" size={18} color={Colors.textLight} />
           </TouchableOpacity>
           <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>إغلاق اليومية</Text>
+            <Text style={styles.headerTitle}>{tr("إغلاق اليومية", "Daily closing")}</Text>
             <Text style={styles.headerDate}>{formatDateAr(new Date().toISOString())}</Text>
           </View>
           <View style={styles.headerBadge}>
@@ -242,9 +243,9 @@ export function DailyClosingModal({ visible, onClose, orders }: Props) {
           {/* Cashier row */}
           <View style={styles.cashierRow}>
             <Feather name="user" size={15} color={Colors.gold} />
-            <Text style={styles.cashierLabel}>الكاشير: </Text>
+            <Text style={styles.cashierLabel}>{tr("الكاشير: ", "Cashier: ")}</Text>
             <Text style={styles.cashierName}>
-              {currentEmployee?.name ?? "غير محدد"}
+              {currentEmployee?.name ?? tr("غير محدد", "Unspecified")}
             </Text>
           </View>
 
@@ -253,23 +254,23 @@ export function DailyClosingModal({ visible, onClose, orders }: Props) {
             {/* Section: Orders */}
             <View style={styles.sectionHeader}>
               <Feather name="shopping-bag" size={14} color={Colors.gold} />
-              <Text style={styles.sectionTitle}>ملخص الطلبات</Text>
+              <Text style={styles.sectionTitle}>{tr("ملخص الطلبات", "Orders summary")}</Text>
             </View>
 
             <StatRow
               icon="hash"
-              label="عدد الطلبات"
+              label={tr("عدد الطلبات", "Orders")}
               value={`${summary.orderCount} طلب`}
               highlight
             />
             <StatRow
               icon="truck"
-              label="توصيل"
+              label={tr("توصيل", "Delivery")}
               value={`${summary.deliveryCount}`}
             />
             <StatRow
               icon="shopping-bag"
-              label="استلام من المحل"
+              label={tr("استلام من المحل", "Store pickup")}
               value={`${summary.pickupCount}`}
             />
 
@@ -278,29 +279,29 @@ export function DailyClosingModal({ visible, onClose, orders }: Props) {
             {/* Section: Revenue */}
             <View style={styles.sectionHeader}>
               <Feather name="dollar-sign" size={14} color={Colors.gold} />
-              <Text style={styles.sectionTitle}>المبالغ</Text>
+              <Text style={styles.sectionTitle}>{tr("المبالغ", "Amounts")}</Text>
             </View>
 
             <StatRow
               icon="layers"
-              label="الإجمالي"
+              label={tr("الإجمالي", "Total")}
               value={`${formatCurrency(summary.totalAmount)} ر.س`}
               highlight
               valueColor={Colors.success}
             />
             <StatRow
               icon="dollar-sign"
-              label="نقداً"
+              label={tr("نقداً", "Cash")}
               value={`${formatCurrency(summary.cashAmount)} ر.س`}
             />
             <StatRow
               icon="credit-card"
-              label="بطاقة"
+              label={tr("بطاقة", "Card")}
               value={`${formatCurrency(summary.cardAmount)} ر.س`}
             />
             <StatRow
               icon="send"
-              label="تحويل"
+              label={tr("تحويل", "Transfer")}
               value={`${formatCurrency(summary.transferAmount)} ر.س`}
             />
 
@@ -309,17 +310,17 @@ export function DailyClosingModal({ visible, onClose, orders }: Props) {
             {/* Section: Extras */}
             <View style={styles.sectionHeader}>
               <Feather name="bar-chart-2" size={14} color={Colors.gold} />
-              <Text style={styles.sectionTitle}>تفاصيل إضافية</Text>
+              <Text style={styles.sectionTitle}>{tr("تفاصيل إضافية", "More details")}</Text>
             </View>
 
             <StatRow
               icon="shield"
-              label="تأمينات"
+              label={tr("تأمينات", "Deposits")}
               value={`${formatCurrency(summary.insuranceTotal)} ر.س`}
             />
             <StatRow
               icon="tag"
-              label="خصومات"
+              label={tr("خصومات", "Discounts")}
               value={`${formatCurrency(summary.discountTotal)} ر.س`}
               valueColor={summary.discountTotal > 0 ? Colors.warning : undefined}
             />
@@ -328,13 +329,13 @@ export function DailyClosingModal({ visible, onClose, orders }: Props) {
           {/* Notes input */}
           <Text style={styles.notesLabel}>
             <Feather name="edit-3" size={13} color={Colors.textSecondary} />
-            {"  ملاحظات (اختياري)"}
+            {tr("  ملاحظات (اختياري)", "  Notes (optional)")}
           </Text>
           <TextInput
             style={styles.notesInput}
             value={notes}
             onChangeText={setNotes}
-            placeholder="أضف أي ملاحظات على اليومية..."
+            placeholder={tr("أضف أي ملاحظات على اليومية...", "Add any notes on the day...")}
             placeholderTextColor={Colors.textMuted}
             multiline
             numberOfLines={3}
@@ -350,7 +351,7 @@ export function DailyClosingModal({ visible, onClose, orders }: Props) {
               activeOpacity={0.8}
             >
               <Feather name="share-2" size={16} color={Colors.primary} />
-              <Text style={styles.shareBtnText}>مشاركة التقرير</Text>
+              <Text style={styles.shareBtnText}>{tr("مشاركة التقرير", "Share report")}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -365,7 +366,7 @@ export function DailyClosingModal({ visible, onClose, orders }: Props) {
                 <Feather name="lock" size={16} color="#fff" />
               )}
               <Text style={styles.closeShiftBtnText}>
-                {isClosing ? "جاري الإغلاق..." : "إغلاق اليومية"}
+                {isClosing ? tr("جاري الإغلاق...", "Closing...") : tr("إغلاق اليومية", "Daily closing")}
               </Text>
             </TouchableOpacity>
           </View>

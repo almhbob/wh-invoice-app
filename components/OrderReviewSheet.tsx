@@ -1,3 +1,4 @@
+import { tr } from "@/lib/i18n";
 import { Feather } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import React from "react";
@@ -51,10 +52,10 @@ export function OrderReviewSheet({ visible, draft, submitting, onConfirm, onEdit
   const missingPrice = draft.items.some((i) => !i.price);
   const isDelivery = draft.orderType === "delivery";
   const warnings: string[] = [];
-  if (isDelivery && !draft.deliveryAddress?.trim()) warnings.push(ar ? "لا يوجد عنوان توصيل" : "No delivery address");
+  if (isDelivery && !draft.deliveryAddress?.trim()) warnings.push(tr("لا يوجد عنوان توصيل", "No delivery address"));
   if (!draft.deliveryTime) warnings.push(ar ? `لم يُحدَّد موعد ${isDelivery ? "التوصيل" : "الاستلام"}` : "No due time set");
-  if (missingPrice) warnings.push(ar ? "بعض الأصناف بدون سعر" : "Some items have no price");
-  if (draft.customerPhone.replace(/\D/g, "").length < 9) warnings.push(ar ? "رقم الجوال يبدو غير مكتمل" : "Phone number looks incomplete");
+  if (missingPrice) warnings.push(tr("بعض الأصناف بدون سعر", "Some items have no price"));
+  if (draft.customerPhone.replace(/\D/g, "").length < 9) warnings.push(tr("رقم الجوال يبدو غير مكتمل", "Phone number looks incomplete"));
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onEdit}>
@@ -66,8 +67,8 @@ export function OrderReviewSheet({ visible, draft, submitting, onConfirm, onEdit
               <Feather name={ar ? "arrow-right" : "arrow-left"} size={20} color={Colors.primary} />
             </Pressable>
             <View style={{ flex: 1 }}>
-              <Text style={st.title}>{ar ? "مراجعة الطلب قبل الإرسال" : "Review before sending"}</Text>
-              <Text style={st.subtitle}>{ar ? "تأكد من التفاصيل — سيصل الطلب فوراً للأقسام" : "Check details — it goes straight to production"}</Text>
+              <Text style={st.title}>{tr("مراجعة الطلب قبل الإرسال", "Review before sending")}</Text>
+              <Text style={st.subtitle}>{tr("تأكد من التفاصيل — سيصل الطلب فوراً للأقسام", "Check details — it goes straight to production")}</Text>
             </View>
           </View>
 
@@ -88,12 +89,12 @@ export function OrderReviewSheet({ visible, draft, submitting, onConfirm, onEdit
               <View style={st.custRow}>
                 <View style={st.avatar}><Text style={st.avatarTxt}>{draft.customerName.trim().charAt(0) || "؟"}</Text></View>
                 <View style={{ flex: 1 }}>
-                  <Text style={st.custName}>{draft.customerName.trim() || (ar ? "بدون اسم" : "No name")}</Text>
+                  <Text style={st.custName}>{draft.customerName.trim() || (tr("بدون اسم", "No name"))}</Text>
                   <Text style={st.custPhone}>{draft.customerPhone}{draft.customerPhone2 ? ` · ${draft.customerPhone2}` : ""}</Text>
                 </View>
                 <View style={[st.typePill, isDelivery && { backgroundColor: Colors.gold + "22" }]}>
                   <Feather name={isDelivery ? "truck" : "shopping-bag"} size={12} color={isDelivery ? Colors.primary : Colors.success} />
-                  <Text style={[st.typeTxt, { color: isDelivery ? Colors.primary : Colors.success }]}>{isDelivery ? (ar ? "توصيل" : "Delivery") : (ar ? "استلام" : "Pickup")}</Text>
+                  <Text style={[st.typeTxt, { color: isDelivery ? Colors.primary : Colors.success }]}>{isDelivery ? (tr("توصيل", "Delivery")) : (tr("استلام", "Pickup"))}</Text>
                 </View>
               </View>
               {draft.deliveryTime ? (
@@ -106,13 +107,13 @@ export function OrderReviewSheet({ visible, draft, submitting, onConfirm, onEdit
 
             {/* Routing by department */}
             <View style={st.card}>
-              <Text style={st.cardTitle}>{ar ? "سيُرسل إلى الأقسام" : "Will be sent to"}</Text>
+              <Text style={st.cardTitle}>{tr("سيُرسل إلى الأقسام", "Will be sent to")}</Text>
               {byDept.map(({ d, items }) => (
                 <View key={d} style={st.dept}>
                   <View style={st.deptHead}>
                     <View style={[st.deptIcon, { backgroundColor: DEPT_COLOR[d] }]}><Feather name={DEPT_ICON[d] as never} size={13} color="#fff" /></View>
                     <Text style={st.deptName}>{t(DEPT_KEY[d])}</Text>
-                    <Text style={st.deptCount}>{items.reduce((n, i) => n + i.quantity, 0)} {ar ? "قطعة" : "pcs"}</Text>
+                    <Text style={st.deptCount}>{items.reduce((n, i) => n + i.quantity, 0)} {tr("قطعة", "pcs")}</Text>
                   </View>
                   {items.map((i) => (
                     <View key={i.id} style={st.item}>
@@ -131,13 +132,13 @@ export function OrderReviewSheet({ visible, draft, submitting, onConfirm, onEdit
               <View style={st.deptHead}>
                 <View style={[st.deptIcon, { backgroundColor: DEPT_COLOR.packaging }]}><Feather name="box" size={13} color="#fff" /></View>
                 <Text style={st.deptName}>{t("deptPackagingShort")}</Text>
-                <Text style={st.deptCount}>{ar ? "تجهيز نهائي" : "Final prep"}</Text>
+                <Text style={st.deptCount}>{tr("تجهيز نهائي", "Final prep")}</Text>
               </View>
             </View>
 
             {draft.notes?.trim() || draft.images.length ? (
               <View style={st.card}>
-                {draft.notes?.trim() ? (<><Text style={st.cardTitle}>{ar ? "ملاحظات للأقسام" : "Notes for production"}</Text><Text style={st.notes}>{draft.notes.trim()}</Text></>) : null}
+                {draft.notes?.trim() ? (<><Text style={st.cardTitle}>{tr("ملاحظات للأقسام", "Notes for production")}</Text><Text style={st.notes}>{draft.notes.trim()}</Text></>) : null}
                 {draft.images.length ? (
                   <View style={st.imgs}>{draft.images.map((u, i) => <Image key={i} source={{ uri: u }} style={st.img} contentFit="cover" />)}</View>
                 ) : null}
@@ -146,34 +147,34 @@ export function OrderReviewSheet({ visible, draft, submitting, onConfirm, onEdit
 
             {/* Money */}
             <View style={st.card}>
-              <Text style={st.cardTitle}>{ar ? "الحساب" : "Payment"}</Text>
-              <Row label={ar ? "المجموع" : "Subtotal"} value={`${draft.subtotal.toFixed(2)} ${sar}`} />
-              {draft.discountAmount > 0 && <Row label={`${ar ? "خصم" : "Discount"}${draft.discountReason ? ` (${draft.discountReason})` : ""}`} value={`− ${draft.discountAmount.toFixed(2)} ${sar}`} color={Colors.success} />}
-              {draft.insurance > 0 && <Row label={ar ? "تأمين صواني" : "Tray deposit"} value={`${draft.insurance.toFixed(2)} ${sar}`} />}
+              <Text style={st.cardTitle}>{tr("الحساب", "Payment")}</Text>
+              <Row label={tr("المجموع", "Subtotal")} value={`${draft.subtotal.toFixed(2)} ${sar}`} />
+              {draft.discountAmount > 0 && <Row label={`${tr("خصم", "Discount")}${draft.discountReason ? ` (${draft.discountReason})` : ""}`} value={`− ${draft.discountAmount.toFixed(2)} ${sar}`} color={Colors.success} />}
+              {draft.insurance > 0 && <Row label={tr("تأمين صواني", "Tray deposit")} value={`${draft.insurance.toFixed(2)} ${sar}`} />}
               <View style={st.totalRow}>
-                <Text style={st.totalLbl}>{ar ? "الإجمالي" : "Total"}</Text>
+                <Text style={st.totalLbl}>{tr("الإجمالي", "Total")}</Text>
                 <Text style={st.totalVal}>{draft.grandTotal.toFixed(2)} {sar}</Text>
               </View>
-              <Row label={ar ? "طريقة الدفع" : "Method"} value={t(PAYMENT_LABEL_KEYS[draft.paymentMethod])} />
-              {draft.paid > 0 && <Row label={ar ? "المدفوع" : "Paid"} value={`${draft.paid.toFixed(2)} ${sar}`} />}
+              <Row label={tr("طريقة الدفع", "Method")} value={t(PAYMENT_LABEL_KEYS[draft.paymentMethod])} />
+              {draft.paid > 0 && <Row label={tr("المدفوع", "Paid")} value={`${draft.paid.toFixed(2)} ${sar}`} />}
               <Row
-                label={draft.remaining > 0 ? (ar ? "المتبقي" : "Remaining") : (ar ? "الحالة" : "Status")}
-                value={draft.grandTotal <= 0 ? "—" : draft.remaining > 0 ? `${draft.remaining.toFixed(2)} ${sar}` : (ar ? "مدفوع بالكامل ✓" : "Fully paid ✓")}
+                label={draft.remaining > 0 ? (tr("المتبقي", "Remaining")) : (tr("الحالة", "Status"))}
+                value={draft.grandTotal <= 0 ? "—" : draft.remaining > 0 ? `${draft.remaining.toFixed(2)} ${sar}` : (tr("مدفوع بالكامل ✓", "Fully paid ✓"))}
                 color={draft.grandTotal <= 0 ? Colors.textMuted : draft.remaining > 0 ? Colors.accent : Colors.success}
               />
             </View>
 
-            {draft.cashierName ? <Text style={st.by}>{ar ? "المنشئ:" : "Created by:"} {draft.cashierName}</Text> : null}
+            {draft.cashierName ? <Text style={st.by}>{tr("المنشئ:", "Created by:")} {draft.cashierName}</Text> : null}
           </ScrollView>
 
           <View style={st.actions}>
             <Pressable style={st.edit} onPress={onEdit}>
               <Feather name="edit-2" size={16} color={Colors.primary} />
-              <Text style={st.editTxt}>{ar ? "تعديل" : "Edit"}</Text>
+              <Text style={st.editTxt}>{tr("تعديل", "Edit")}</Text>
             </Pressable>
             <Pressable style={[st.confirm, submitting && { opacity: 0.6 }]} onPress={onConfirm} disabled={submitting}>
               {submitting ? <ActivityIndicator color="#fff" /> : <Feather name="send" size={18} color={Colors.goldLight} />}
-              <Text style={st.confirmTxt}>{submitting ? (ar ? "جارٍ الإرسال…" : "Sending…") : (ar ? "تأكيد وإرسال للأقسام" : "Confirm & send")}</Text>
+              <Text style={st.confirmTxt}>{submitting ? (tr("جارٍ الإرسال…", "Sending…")) : (tr("تأكيد وإرسال للأقسام", "Confirm & send"))}</Text>
             </Pressable>
           </View>
         </View>

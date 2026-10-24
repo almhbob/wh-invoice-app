@@ -1,3 +1,4 @@
+import { tr } from "@/lib/i18n";
 import { Feather } from "@expo/vector-icons";
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
@@ -13,7 +14,7 @@ export function WritingBlock({ item, status, big }: { item: OrderItem; status?: 
   const ar = lang === "ar";
   const w = item.writing;
   if (!w?.text?.trim()) return null;
-  const st2 = status === "done" ? { c: Colors.statusDone, t: ar ? "كُتبت" : "Written" } : status === "in_progress" ? { c: Colors.statusInProgress, t: ar ? "عند الخطاط" : "With calligrapher" } : { c: Colors.statusPending, t: ar ? "بانتظار الخطاط" : "Awaiting calligrapher" };
+  const st2 = status === "done" ? { c: Colors.statusDone, t: tr("كُتبت", "Written") } : status === "in_progress" ? { c: Colors.statusInProgress, t: tr("عند الخطاط", "With calligrapher") } : { c: Colors.statusPending, t: tr("بانتظار الخطاط", "Awaiting calligrapher") };
   return (
     <View style={st.box}>
       <View style={st.row}>

@@ -1,3 +1,4 @@
+import { tr, trf } from "@/lib/i18n";
 import { Feather } from "@expo/vector-icons";
 import React, { useMemo, useState } from "react";
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, useWindowDimensions, View } from "react-native";
@@ -104,7 +105,7 @@ export default function TrackingScreen() {
     return (
       <View style={st.locked}>
         <Feather name="lock" size={32} color={Colors.textMuted} />
-        <Text style={st.lockedTxt}>{ar ? "هذه الشاشة للكاشير ومشرف الفرع" : "For cashiers and branch supervisors"}</Text>
+        <Text style={st.lockedTxt}>{tr("هذه الشاشة للكاشير ومشرف الفرع", "For cashiers and branch supervisors")}</Text>
       </View>
     );
   }
@@ -123,7 +124,7 @@ export default function TrackingScreen() {
           {counts.requests > 0 && (
             <Pressable style={st.reqBanner} onPress={() => setFilter("requests")}>
               <Feather name="life-buoy" size={16} color={Colors.warning} />
-              <Text style={st.reqBannerTxt}>{ar ? `${counts.requests} طلب من السائقين بانتظار المعالجة (دعم / تحويل)` : `${counts.requests} driver request(s) waiting (support / transfer)`}</Text>
+              <Text style={st.reqBannerTxt}>{trf("{p0} طلب من السائقين بانتظار المعالجة (دعم / تحويل)", "{p0} driver request(s) waiting (support / transfer)", { p0: counts.requests })}</Text>
               <Feather name={ar ? "chevron-left" : "chevron-right"} size={16} color={Colors.warning} />
             </Pressable>
           )}
@@ -139,7 +140,7 @@ export default function TrackingScreen() {
                 <Pressable key={x.k} style={[st.sumCard, filter === x.k && { borderColor: x.color }]} onPress={() => setFilter(x.k)}>
                   <Feather name={x.icon as never} size={16} color={x.color} />
                   <Text style={[st.sumNum, { color: x.color }]}>{counts[x.k]}</Text>
-                  <Text style={st.sumLbl} numberOfLines={1}>{ar ? f.ar : f.en}</Text>
+                  <Text style={st.sumLbl} numberOfLines={1}>{tr(f.ar, f.en)}</Text>
                 </Pressable>
               );
             })}
@@ -155,26 +156,26 @@ export default function TrackingScreen() {
                 style={st.searchInput}
                 value={search}
                 onChangeText={setSearch}
-                placeholder={ar ? "رقم الطلب، الاسم أو الجوال" : "Order #, name or phone"}
+                placeholder={tr("رقم الطلب، الاسم أو الجوال", "Order #, name or phone")}
                 placeholderTextColor={Colors.textMuted}
               />
             </View>
             <Pressable style={st.driversBtn} onPress={() => setShowDrivers(true)}>
               <Feather name="users" size={16} color={Colors.primary} />
-              <Text style={st.driversTxt}>{ar ? "السائقون" : "Drivers"}</Text>
+              <Text style={st.driversTxt}>{tr("السائقون", "Drivers")}</Text>
             </Pressable>
           </View>
           <View style={st.scopeRow}>
             {([["today", "اليوم", "Today"], ["upcoming", "القادمة", "Upcoming"], ["all", "الكل", "All"]] as const).map(([k, a, e]) => (
               <Pressable key={k} style={[st.scope, scope === k && st.scopeOn]} onPress={() => setScope(k)}>
-                <Text style={[st.scopeTxt, scope === k && st.scopeTxtOn]}>{ar ? a : e}</Text>
+                <Text style={[st.scopeTxt, scope === k && st.scopeTxtOn]}>{tr(a, e)}</Text>
               </Pressable>
             ))}
           </View>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={st.filters}>
             {FILTERS.map((f) => (
               <Pressable key={f.key} style={[st.filter, filter === f.key && st.filterOn]} onPress={() => setFilter(f.key)}>
-                <Text style={[st.filterTxt, filter === f.key && st.filterTxtOn]}>{ar ? f.ar : f.en}</Text>
+                <Text style={[st.filterTxt, filter === f.key && st.filterTxtOn]}>{tr(f.ar, f.en)}</Text>
                 <View style={[st.count, filter === f.key && { backgroundColor: Colors.goldLight }]}>
                   <Text style={[st.countTxt, filter === f.key && { color: Colors.primary }]}>{counts[f.key]}</Text>
                 </View>
@@ -188,7 +189,7 @@ export default function TrackingScreen() {
           {list.length === 0 && (
             <View style={st.empty}>
               <Feather name="inbox" size={30} color={Colors.textMuted} />
-              <Text style={st.emptyTxt}>{ar ? "لا توجد طلبات هنا" : "No orders here"}</Text>
+              <Text style={st.emptyTxt}>{tr("لا توجد طلبات هنا", "No orders here")}</Text>
             </View>
           )}
           {list.map((o) => (
@@ -220,7 +221,7 @@ function TrackCard({ order, onPress, wide }: { order: Order; onPress: () => void
       <View style={st.cardMeta}>
         <View style={st.metaPill}>
           <Feather name={isDelivery ? "truck" : "shopping-bag"} size={11} color={Colors.textSecondary} />
-          <Text style={st.metaTxt}>{isDelivery ? (ar ? "توصيل" : "Delivery") : (ar ? "استلام" : "Pickup")}</Text>
+          <Text style={st.metaTxt}>{isDelivery ? (tr("توصيل", "Delivery")) : (tr("استلام", "Pickup"))}</Text>
         </View>
         {order.deliveryTime ? (
           <View style={[st.metaPill, { backgroundColor: URGENCY_COLOR[urg] + "14" }]}>
@@ -237,19 +238,19 @@ function TrackCard({ order, onPress, wide }: { order: Order; onPress: () => void
         {order.source === "online" ? (
           <View style={[st.metaPill, { backgroundColor: Colors.info + "16" }]}>
             <Feather name="globe" size={11} color={Colors.info} />
-            <Text style={[st.metaTxt, { color: Colors.info }]}>{ar ? "أونلاين" : "Online"}</Text>
+            <Text style={[st.metaTxt, { color: Colors.info }]}>{tr("أونلاين", "Online")}</Text>
           </View>
         ) : null}
         {hasOpenDriverRequest(order) ? (
           <View style={[st.metaPill, { backgroundColor: Colors.warning + "18" }]}>
             <Feather name={order.driverRequest!.type === "transfer" ? "repeat" : "life-buoy"} size={11} color={Colors.warning} />
-            <Text style={[st.metaTxt, { color: Colors.warning }]}>{order.driverRequest!.type === "transfer" ? (ar ? "طلب تحويل" : "Transfer") : (ar ? "طلب دعم" : "Support")}</Text>
+            <Text style={[st.metaTxt, { color: Colors.warning }]}>{order.driverRequest!.type === "transfer" ? (tr("طلب تحويل", "Transfer")) : (tr("طلب دعم", "Support"))}</Text>
           </View>
         ) : null}
         {order.syncState ? (
           <View style={[st.metaPill, { backgroundColor: Colors.warning + "18" }]}>
             <Feather name="upload-cloud" size={11} color={Colors.warning} />
-            <Text style={[st.metaTxt, { color: Colors.warning }]}>{ar ? "لم يُرسل" : "Not sent"}</Text>
+            <Text style={[st.metaTxt, { color: Colors.warning }]}>{tr("لم يُرسل", "Not sent")}</Text>
           </View>
         ) : null}
       </View>
