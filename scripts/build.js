@@ -140,7 +140,7 @@ if (fbApiKey && fbAuthDomain && fbProjectId && fbBucket && fbSenderId && fbAppId
   patchFirebase(outputDir);
   if (!patched) console.warn("  Warning: Firebase placeholder not found — credentials may already be inlined.");
 } else {
-  console.warn("Firebase env vars not set — app will run in bootstrap/demo mode.");
+  console.warn("Firebase env vars not set — secure auth remains fail-closed when the server is unconfigured; staging hosts never fall back to production Firebase.");
 }
 
 // Inject @font-face CSS into index.html as an additional safety net

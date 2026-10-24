@@ -1,7 +1,13 @@
+const localLegacyOptIn = typeof __DEV__ !== "undefined"
+  && __DEV__
+  && process.env.EXPO_PUBLIC_ALLOW_LEGACY_AUTH === "true";
+
 export const bootstrapPolicy = {
-  allowLocalBootstrap: true,
-  productionRequiredActionAr: "عند الانتقال للإنتاج يجب تعطيل Bootstrap المحلي وتفعيل Firebase Auth و Custom Claims.",
-  reasonAr: "Bootstrap المحلي مخصص للتجربة فقط عند عدم اكتمال Firebase Auth/Claims.",
+  allowLocalBootstrap: localLegacyOptIn,
+  productionRequiredActionAr: "اترك Bootstrap المحلي معطلًا في الإنتاج واستخدم مصادقة الخادم ومطالبات Firebase الموقّعة.",
+  reasonAr: localLegacyOptIn
+    ? "تم تفعيل مسار Legacy محليًا عبر خيار تطوير صريح؛ لا تستخدم هذا الإعداد في أي نشر عام."
+    : "Bootstrap المحلي معطل؛ لا يعمل إلا في Expo development مع خيار EXPO_PUBLIC_ALLOW_LEGACY_AUTH الصريح.",
 };
 
 export function localBootstrapWarningAr() {

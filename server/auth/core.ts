@@ -47,6 +47,7 @@ export interface SessionClaims {
   role: string;
   eid: string;
   employeeId: string;
+  platformRole?: "owner" | "developer" | "super_admin";
 }
 
 // ── Small utils ────────────────────────────────────────────────────────────────

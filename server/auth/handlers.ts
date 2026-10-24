@@ -37,6 +37,22 @@ export interface Deps {
 }
 
 const DISABLED_PREFIX = "!migrated-";
+const PLATFORM_ROLES = new Set(["owner", "developer", "super_admin"]);
+
+async function signedClaims(fs: Firestore, employee: EmployeeRecord) {
+  const markerId = `${employee.companyId}__${employee.docId}`;
+  const marker = await fs.get(`platformOwners/${markerId}`);
+  const platformRole = marker?.active === true && PLATFORM_ROLES.has(String(marker.platformRole))
+    ? marker.platformRole as "owner" | "developer" | "super_admin"
+    : undefined;
+  return {
+    companyId: employee.companyId,
+    role: employee.role,
+    eid: employee.docId,
+    employeeId: employee.employeeId,
+    ...(platformRole ? { platformRole } : {}),
+  };
+}
 
 function randomHex(n = 16) {
   return Array.from(crypto.getRandomValues(new Uint8Array(n)), (b) => b.toString(16).padStart(2, "0")).join("");
@@ -149,7 +165,11 @@ export async function handleLogin(request: Request, env: AuthEnv, deps: Deps = {
         await writeSecret(fs, companyId, id, pin, true, "bootstrap");
         emp = { docId: id, companyId, name: boot.name, employeeId: boot.employeeId, username: boot.username, role: boot.role, status: "active", permissions: ["*"] };
         await clearThrottle(fs, loginKey);
-        const token = await createCustomToken(sa, employeeUid(companyId, id), { companyId, role: boot.role, eid: id, employeeId: boot.employeeId });
+        const bootEmployee: EmployeeRecord = {
+          docId: id, companyId, name: boot.name, employeeId: boot.employeeId,
+          username: boot.username, role: boot.role, status: "active",
+        };
+        const token = await createCustomToken(sa, employeeUid(companyId, id), await signedClaims(fs, bootEmployee));
         return json({ token, employee: publicEmployee(emp), mustChangePin: true });
       }
     }
@@ -161,8 +181,7 @@ export async function handleLogin(request: Request, env: AuthEnv, deps: Deps = {
     }
 
     await clearThrottle(fs, loginKey);
-    const claims = { companyId, role: emp.role, eid: emp.docId, employeeId: emp.employeeId };
-    const token = await createCustomToken(sa, employeeUid(companyId, emp.docId), claims);
+    const token = await createCustomToken(sa, employeeUid(companyId, emp.docId), await signedClaims(fs, emp));
     await fs.patch(`companies/${companyId}/employees/${emp.docId}`, { lastLoginAt: new Date().toISOString() }, { merge: true });
 
     return json({ token, employee: publicEmployee(emp), mustChangePin: result.mustChange });

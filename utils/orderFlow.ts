@@ -2,6 +2,7 @@ import { Linking, Platform } from "react-native";
 
 import { Colors } from "@/constants/colors";
 import type { Department, Order, OrderItem, WritingSurface } from "@/context/OrdersContext";
+import { resolveApiBase } from "@/lib/apiBase";
 
 /**
  * Order lifecycle — one source of truth for every screen.
@@ -260,8 +261,13 @@ export function newTrackingCode() {
 }
 
 export function appOrigin() {
-  if (Platform.OS === "web" && typeof window !== "undefined") return window.location.origin;
-  return process.env.EXPO_PUBLIC_API_BASE || "https://fotra-dv1.pages.dev";
+  return resolveApiBase({
+    platform: Platform.OS,
+    appEnv: process.env.EXPO_PUBLIC_APP_ENV,
+    apiBase: process.env.EXPO_PUBLIC_API_BASE,
+    legacyApiUrl: process.env.EXPO_PUBLIC_API_URL,
+    webOrigin: typeof window !== "undefined" ? window.location.origin : "",
+  });
 }
 
 export function trackingUrl(order: Order) {

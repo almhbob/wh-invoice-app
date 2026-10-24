@@ -2,7 +2,7 @@
 import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
 import { initializeTestEnvironment, assertFails, assertSucceeds } from "@firebase/rules-unit-testing";
-import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, getDocs, serverTimestamp } from "firebase/firestore";
 
 const C = "laviviane-trial";
 const OTHER = "other-co";
@@ -23,6 +23,12 @@ await env.withSecurityRulesDisabled(async (ctx) => {
   await setDoc(doc(db, `companies/${C}/orders/o1`), { total: 10 });
   await setDoc(doc(db, `companies/${OTHER}/orders/o1`), { total: 99 });
   await setDoc(doc(db, `authThrottle/k`), { failures: 1 });
+  await setDoc(doc(db, `companies/${C}/employees/e4`), { name: "Platform owner", role: "admin", employeeId: "P1" });
+  await setDoc(doc(db, `platformOwners/${C}__e4`), { active: true, platformRole: "owner" });
+  await setDoc(doc(db, `companies/${C}/auditLogs/a1`), {
+    action: "user_login", actorId: "e2", actorName: "Cashier", targetId: null,
+    targetType: null, details: {}, createdAt: serverTimestamp(),
+  });
 });
 
 // Custom-token sessions: rules-unit-testing sets sign_in_provider via the token's firebase field.
@@ -71,6 +77,12 @@ await t("branch supervisor cannot create or promote protected roles", async () =
   await assertFails(updateDoc(doc(sup, `companies/${C}/employees/e2`), { role: "admin" }));
   await assertFails(deleteDoc(doc(sup, `companies/${C}/employees/e1`)));
   await assertSucceeds(setDoc(doc(sup, `companies/${C}/employees/n5`), { name: "x", role: "cashier" }));
+  await assertFails(setDoc(doc(admin, `companies/${C}/employees/n6`), { name: "x", role: "developer" }));
+  await assertFails(setDoc(doc(admin, `companies/${C}/employees/n7`), { name: "x", role: "cashier", platformRole: "owner" }));
+  await assertFails(updateDoc(doc(admin, `companies/${C}/employees/e2`), { role: "super_admin" }));
+  await assertFails(updateDoc(doc(admin, `companies/${C}/employees/e4`), { name: "Overwritten" }));
+  await assertFails(deleteDoc(doc(admin, `companies/${C}/employees/e4`)));
+  await assertFails(getDoc(doc(admin, `platformOwners/${C}__e4`)));
 });
 await t("company document: members read, only admin writes", async () => {
   await assertSucceeds(getDoc(doc(cashier, `companies/${C}`)));
@@ -78,6 +90,22 @@ await t("company document: members read, only admin writes", async () => {
   await assertSucceeds(updateDoc(doc(admin, `companies/${C}`), { name: "Laviviane ✓" }));
 });
 
+await t("audit logs are tenant-scoped, actor-bound and append-only", async () => {
+  await assertSucceeds(getDoc(doc(admin, `companies/${C}/auditLogs/a1`)));
+  await assertFails(getDoc(doc(cashier, `companies/${C}/auditLogs/a1`)));
+  await assertSucceeds(setDoc(doc(cashier, `companies/${C}/auditLogs/a2`), {
+    action: "user_login", actorId: "e2", actorName: "Cashier", targetId: null,
+    targetType: null, details: {}, createdAt: serverTimestamp(),
+  }));
+  await assertFails(setDoc(doc(cashier, `companies/${C}/auditLogs/a3`), {
+    action: "user_login", actorId: "e1", actorName: "Forged", targetId: null,
+    targetType: null, details: {}, createdAt: serverTimestamp(),
+  }));
+  await assertFails(updateDoc(doc(admin, `companies/${C}/auditLogs/a1`), { actorName: "Edited" }));
+  await assertFails(deleteDoc(doc(admin, `companies/${C}/auditLogs/a1`)));
+  await assertFails(getDoc(doc(admin, `companies/${OTHER}/auditLogs/a1`)));
+});
+
 await env.cleanup();
-assert.equal(n, 7);
+assert.equal(n, 8);
 console.log(`All ${n} rule suites passed`);

@@ -2,6 +2,7 @@ rules_version = '2';
 
 // Secure rules — require server-verified sign-in (Cloudflare function /api/auth/login).
 // Every employee session carries custom claims: companyId, role, eid (employee doc id).
+// platformRole is issued only for a server-managed platformOwners marker.
 // Activate ONLY after /api/auth/status reports {"configured": true}. See SECURITY_SETUP.md.
 // Rollback: publish firestore.legacy.rules.
 service cloud.firestore {
@@ -29,6 +30,20 @@ service cloud.firestore {
     function supervisorMayAssign(data) {
       return role() == 'admin' || !(data.role in ['admin', 'branch_supervisor']);
     }
+    function isPlatformRole(data) {
+      return data.role in ['owner', 'developer', 'super_admin'] || 'platformRole' in data;
+    }
+    function isPlatformOwnerAccount(companyId, employeeId) {
+      return exists(/databases/$(database)/documents/platformOwners/$(companyId + '__' + employeeId));
+    }
+    function isPlatformProtectedEmployee(companyId, employeeId, data) {
+      return isPlatformRole(data) || isPlatformOwnerAccount(companyId, employeeId);
+    }
+
+    // Platform-owner markers are written by the trusted service account only.
+    match /platformOwners/{ownerId} {
+      allow read, write: if false;
+    }
 
     // Company metadata
     match /companies/{companyId} {
@@ -45,19 +60,38 @@ service cloud.firestore {
     match /companies/{companyId}/employees/{id} {
       allow read: if inCompany(companyId);
       allow create: if isManager(companyId)
+        && !isPlatformProtectedEmployee(companyId, id, request.resource.data)
         && noPlaintextPin()
         && supervisorMayAssign(request.resource.data);
       allow update: if isManager(companyId)
+        && !isPlatformProtectedEmployee(companyId, id, resource.data)
+        && !isPlatformProtectedEmployee(companyId, id, request.resource.data)
         && noPlaintextPin()
         && supervisorMayAssign(resource.data)
         && supervisorMayAssign(request.resource.data);
-      allow delete: if isManager(companyId) && supervisorMayAssign(resource.data);
+      allow delete: if isManager(companyId)
+        && !isPlatformProtectedEmployee(companyId, id, resource.data)
+        && supervisorMayAssign(resource.data);
+    }
+
+    // Audit records are tenant-scoped, tied to the signed-in employee, and append-only.
+    match /companies/{companyId}/auditLogs/{logId} {
+      allow read: if isAdmin(companyId);
+      allow create: if inCompany(companyId)
+        && request.resource.data.keys().hasOnly(['action', 'actorId', 'actorName', 'targetId', 'targetType', 'details', 'createdAt'])
+        && request.resource.data.keys().hasAll(['action', 'actorId', 'actorName', 'targetId', 'targetType', 'details', 'createdAt'])
+        && request.resource.data.actorId == request.auth.token.eid
+        && request.resource.data.action in ['employee_created', 'employee_deleted', 'developer_panel_opened', 'contract_uploaded', 'subscription_changed', 'company_login', 'user_login']
+        && request.resource.data.actorName is string
+        && request.resource.data.details is map
+        && request.resource.data.createdAt is timestamp;
+      allow update, delete: if false;
     }
 
     // Everything else inside a company (orders, products, counters, settings, sessions, logs…)
     match /companies/{companyId}/{sub}/{docId=**} {
       allow read, write: if inCompany(companyId)
-        && !(sub in ['employees', 'employeeSecrets']);
+        && !(sub in ['employees', 'employeeSecrets', 'auditLogs']);
     }
 
     // Login throttling state — server only.
