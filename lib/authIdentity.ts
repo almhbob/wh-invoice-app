@@ -30,8 +30,8 @@ export async function ensureTemporaryFirebaseSession() {
   // would silently replace a real (server-issued) employee session.
   await auth.authStateReady();
   if (auth.currentUser) return mapFirebaseUser(auth.currentUser);
-  // With server-verified login enabled there is no anonymous access at all.
-  if ((await getSecureAuthMode()) === "secure") return mapFirebaseUser(null);
+  // Anonymous access is allowed only in explicitly opted-in legacy development mode.
+  if ((await getSecureAuthMode()) !== "legacy") return mapFirebaseUser(null);
   const credential = await signInAnonymously(auth);
   return mapFirebaseUser(credential.user);
 }

@@ -390,6 +390,18 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
     return <View style={styles.center}><ActivityIndicator color={Colors.gold} /><Text style={styles.muted}>{tx("checking")}</Text></View>;
   }
 
+  if (authMode === "unavailable") {
+    return (
+      <ScrollView contentContainerStyle={styles.screen}>
+        <View style={styles.card}>
+          <Feather name="shield" size={28} color={Colors.accent} />
+          <Text style={styles.title}>{secureAuthText("authUnavailableTitle", lang)}</Text>
+          <Text style={styles.subtitle}>{secureAuthText("authUnavailableMessage", lang)}</Text>
+        </View>
+      </ScrollView>
+    );
+  }
+
   const isLaviviane = company.id === LAVIVIANE_COMPANY_ID;
 
   const unlockLavivianeDirect = async () => {

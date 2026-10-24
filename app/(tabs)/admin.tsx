@@ -118,7 +118,7 @@ type EmpStatusFilter = "all" | "active" | "suspended";
 function EmployeesSection() {
   const { employees, addEmployee, removeEmployee, updateEmployee, setEmployeePin, authMode, currentEmployee } = useEmployee();
   const { t, lang } = useLang();
-  const isSecure = authMode === "secure";
+  const isSecure = authMode !== "legacy";
   const [pin, setPin] = useState("");
   const [phone, setPhone] = useState("");
   const [pinTarget, setPinTarget] = useState<Employee | null>(null);

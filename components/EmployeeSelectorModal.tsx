@@ -122,7 +122,7 @@ export function EmployeeSelectorModal({ visible, onClose }: Props) {
       return e.employeeId.toLowerCase() === normalizedEmpId.toLowerCase() || empUsername === normalizedUsername;
     });
     if (exists) { Alert.alert(t("errTitle"), t("empDupIdMsg")); return; }
-    if (authMode === "secure") {
+    if (authMode !== "legacy") {
       const pinErr = localPinError(newPin.trim());
       if (pinErr) { Alert.alert(t("errTitle"), secureAuthErrorText(pinErr, lang)); return; }
     }

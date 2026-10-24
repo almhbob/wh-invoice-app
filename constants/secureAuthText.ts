@@ -22,6 +22,8 @@ const TEXT = {
   err_network:         { ar: "تعذر الاتصال بالخادم. تحقق من الإنترنت.", en: "Could not reach the server. Check your connection." },
   err_generic:         { ar: "حدث خطأ غير متوقع. حاول مرة أخرى.", en: "Something went wrong. Please try again." },
   secureBadge:         { ar: "دخول آمن مُفعّل",                 en: "Secure sign-in enabled" },
+  authUnavailableTitle:{ ar: "تسجيل الدخول الآمن غير متاح",     en: "Secure sign-in is unavailable" },
+  authUnavailableMessage: { ar: "أوقفنا الدخول المحلي لحماية البيانات. تحقّق من إعداد Pages Function /api/auth/status وسر FIREBASE_SERVICE_ACCOUNT لبيئة staging، ثم أعد تحميل التطبيق.", en: "Local sign-in is disabled to protect your data. Verify the /api/auth/status Pages Function and the staging FIREBASE_SERVICE_ACCOUNT secret, then reload the app." },
   pinRequiredForNew:   { ar: "رمز الدخول (٤–٨ أرقام)",           en: "Login PIN (4–8 digits)" },
   setPinAction:        { ar: "تعيين رمز الدخول",                en: "Set login PIN" },
   pinSaved:            { ar: "تم حفظ رمز الدخول.",               en: "PIN saved." },

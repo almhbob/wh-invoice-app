@@ -10,11 +10,11 @@ import { auth } from "@/lib/firebase";
  * When the Cloudflare function /api/auth/* is configured with a Firebase service
  * account, PINs are verified on the server and the app signs into Firebase with a
  * custom token whose claims (companyId, role, eid) are enforced by Firestore rules.
- * When it is not configured (or unreachable, e.g. local dev), the app keeps the
- * legacy client-side flow so nothing breaks during rollout.
+ * Production fails closed if that endpoint is unavailable or unconfigured. The
+ * legacy client-side flow is available only through an explicit non-production opt-in.
  */
 
-export type SecureAuthMode = "checking" | "secure" | "legacy";
+export type SecureAuthMode = "checking" | "secure" | "legacy" | "unavailable";
 
 export interface SecureEmployee {
   id: string;
@@ -57,6 +57,12 @@ function apiBase() {
 let modePromise: Promise<SecureAuthMode> | null = null;
 let resolvedMode: SecureAuthMode = "checking";
 
+function fallbackAuthMode(): SecureAuthMode {
+  const localLegacyOptIn = typeof __DEV__ !== "undefined" && __DEV__
+    && process.env.EXPO_PUBLIC_ALLOW_LEGACY_AUTH === "true";
+  return localLegacyOptIn ? "legacy" : "unavailable";
+}
+
 export function getSecureAuthMode(): Promise<SecureAuthMode> {
   if (!modePromise) {
     modePromise = (async () => {
@@ -66,11 +72,11 @@ export function getSecureAuthMode(): Promise<SecureAuthMode> {
         const res = await fetch(`${apiBase()}/api/auth/status`, { signal: controller?.signal, cache: "no-store" as RequestCache });
         clearTimeout(timer);
         const type = res.headers.get("content-type") || "";
-        if (!res.ok || !type.includes("application/json")) return "legacy";
+        if (!res.ok || !type.includes("application/json")) return fallbackAuthMode();
         const body = (await res.json()) as { configured?: boolean };
-        return body.configured ? "secure" : "legacy";
+        return body.configured === true ? "secure" : fallbackAuthMode();
       } catch {
-        return "legacy";
+        return fallbackAuthMode();
       }
     })().then((m) => {
       resolvedMode = m;
