@@ -385,11 +385,14 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
       }
 
       const now = new Date().toISOString();
+      // The PIN never goes into the employee document in secure mode (rules reject it).
+      const { pinCode: initialPin, ...profile } = data;
+      if (isSecure && !initialPin) throw new Error("PIN_REQUIRED");
       const payload = {
-        ...data,
+        ...profile,
         username: data.username || data.employeeId.toLowerCase(),
         // Secure mode never stores PINs in readable documents; they are hashed server-side.
-        ...(isSecure ? {} : { pinCode: data.pinCode || "1234" }),
+        ...(isSecure ? {} : { pinCode: initialPin || "1234" }),
         status: data.status || "active",
         companyId,
         permissions: data.permissions?.length ? data.permissions : defaultPermissionsForRole(data.role),
@@ -399,8 +402,14 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
         lastLoginAt: data.lastLoginAt,
       };
       const ref = await addDoc(employeesCollection(), cleanUndefined(payload));
-      if (isSecure && data.pinCode) {
-        await secureSetPin({ employeeDocId: ref.id, newPin: data.pinCode });
+      if (isSecure && initialPin) {
+        try {
+          await secureSetPin({ employeeDocId: ref.id, newPin: initialPin });
+        } catch (err) {
+          // Never leave an account behind without a PIN.
+          await deleteDoc(ref).catch(() => undefined);
+          throw err;
+        }
       }
       return { id: ref.id, ...payload };
     },
