@@ -1,3 +1,4 @@
+import { PurgeOrdersPanel } from "@/components/PurgeOrdersPanel";
 import { tr } from "@/lib/i18n";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -1613,7 +1614,10 @@ export default function AdminScreen() {
         ) : activeTab === "features" ? (
           <FeaturesSection />
         ) : activeTab === "backup" ? (
-          <BackupSection />
+          <>
+            <BackupSection />
+            <PurgeOrdersPanel />
+          </>
         ) : activeTab === "printer" ? (
           <PrinterSection />
         ) : (
