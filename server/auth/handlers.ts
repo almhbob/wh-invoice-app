@@ -58,10 +58,17 @@ function randomHex(n = 16) {
   return Array.from(crypto.getRandomValues(new Uint8Array(n)), (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+const SECURE_ACCOUNTS_SINCE = "2026-10-22T00:00:00.000Z";
+
 function legacyPinOf(e: EmployeeRecord): string | null {
   // The old app treated a missing PIN as "1234". Such accounts keep working once,
   // but 1234 is weak so the employee is forced to choose a new PIN right away.
-  if (e.legacyPin === undefined || e.legacyPin === "") return "1234";
+  if (e.legacyPin === undefined || e.legacyPin === "") {
+    // Accounts created after secure sign-in shipped always get a server-side PIN;
+    // one without it is incomplete and must not fall back to a guessable default.
+    if (e.createdAt && e.createdAt >= SECURE_ACCOUNTS_SINCE) return null;
+    return "1234";
+  }
   if (e.legacyPin.startsWith(DISABLED_PREFIX)) return null;
   return e.legacyPin;
 }

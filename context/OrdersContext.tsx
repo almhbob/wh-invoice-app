@@ -29,6 +29,7 @@ import { Alert } from "react-native";
 import { t as t_ } from "@/constants/translations";
 import { uploadUriToFirebaseStorage } from "@/lib/uploadFiles";
 import { isProductionDone, newTrackingCode, OrderEvent } from "@/utils/orderFlow";
+import { deepClean } from "@/utils/deepClean";
 
 export type Department = "halwa" | "mawali" | "chocolate" | "cake" | "packaging";
 export type OrderStatus = "pending" | "in_progress" | "done" | "cancelled";
@@ -248,18 +249,18 @@ const DEFAULT_WINDOW_DAYS = 21;
 const localOrdersKey = (companyId: string) => `${LOCAL_ORDERS_KEY}_${companyId}`;
 const outboxKey = (companyId: string) => `${OUTBOX_KEY}_${companyId}`;
 
-/** Firestore rejects `undefined` anywhere (even inside arrays/maps) — strip it recursively. */
-export function deepClean<T>(value: T): T {
-  if (Array.isArray(value)) return value.map((v) => deepClean(v)).filter((v) => v !== undefined) as unknown as T;
-  if (value && typeof value === "object" && !(value instanceof Date)) {
-    const out: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-      if (v === undefined) continue;
-      out[k] = deepClean(v);
+export { deepClean };
+
+/** Repairs `events` that an older build stored as a map instead of an array. */
+function normalizeEvents(raw: unknown): OrderEvent[] | undefined {
+  if (raw == null) return undefined;
+  if (Array.isArray(raw)) return raw.filter((e) => e && typeof e === "object" && typeof (e as OrderEvent).at === "string") as OrderEvent[];
+  if (typeof raw === "object") {
+    for (const v of Object.values(raw as Record<string, unknown>)) {
+      if (Array.isArray(v)) return normalizeEvents(v);
     }
-    return out as T;
   }
-  return value;
+  return [];
 }
 
 /** Firestore-compatible random document id, generated on the device so retries are idempotent. */
@@ -316,6 +317,7 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
   const requestHistory = useCallback((days: number) => setWindowDays((d) => (days > d ? days : d)), []);
   const [syncTick, setSyncTick] = useState(0);
   const outboxRef = useRef<Order[]>([]);
+  const eventsRepairRef = useRef<Set<string>>(new Set());
   const serverRef = useRef<Order[]>([]);
   const syncing = useRef(false);
 
@@ -397,7 +399,12 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
         q,
         (snapshot) => {
           if (!mounted) return;
-          sources[key] = snapshot.docs.map((d) => ({ ...(d.data() as Omit<Order, "id">), id: d.id, companyId }));
+          sources[key] = snapshot.docs.map((d) => {
+            const data = d.data() as Omit<Order, "id">;
+            const rawEvents = (data as { events?: unknown }).events;
+            if (rawEvents != null && !Array.isArray(rawEvents)) eventsRepairRef.current.add(d.id);
+            return { ...data, events: normalizeEvents((data as { events?: unknown }).events), id: d.id, companyId };
+          });
           fromServer[key] = !snapshot.metadata.fromCache;
           publish();
           setIsLoading(false);
@@ -516,10 +523,20 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
       if (!current) return;
       setServerOrders((prev) => prev.map((o) => (o.id === id ? local(o) : o)));
       try {
-        await updateDoc(orderDoc(id), deepClean({ ...remote(current), companyId, updatedAt: new Date().toISOString() }));
+        const payload: Record<string, unknown> = { ...remote(current), companyId, updatedAt: new Date().toISOString() };
+        // A damaged (map-shaped) timeline is rewritten whole instead of appended to.
+        if (eventsRepairRef.current.has(id) && "events" in payload) payload.events = local(current).events ?? [];
+        await updateDoc(orderDoc(id), deepClean(payload));
+        eventsRepairRef.current.delete(id);
       } catch (err) {
         console.warn("Firestore order update failed:", (err as { code?: string })?.code ?? err);
-        Alert.alert("تعذّر حفظ التحديث", "تحقق من الاتصال بالإنترنت ثم أعد المحاولة.");
+        const code = (err as { code?: string })?.code;
+        Alert.alert(
+          "تعذّر حفظ التحديث",
+          code === "permission-denied" || code === "unauthenticated"
+            ? "انتهت جلسة الدخول أو لا تملك صلاحية هذا الإجراء. سجّل الخروج ثم الدخول مجدداً."
+            : "تحقق من الاتصال بالإنترنت ثم أعد المحاولة."
+        );
         setServerOrders((prev) => prev.map((o) => (o.id === id ? current : o)));
         throw err;
       }

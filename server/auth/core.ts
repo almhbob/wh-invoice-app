@@ -33,6 +33,7 @@ export interface EmployeeRecord {
   permissions?: string[];
   branchId?: string;
   legacyPin?: string;
+  createdAt?: string;
 }
 
 export interface PinSecret {
@@ -336,6 +337,7 @@ export function toEmployeeRecord(companyId: string, id: string, data: Record<str
     permissions: Array.isArray(data.permissions) ? (data.permissions as string[]) : undefined,
     branchId: data.branchId ? String(data.branchId) : undefined,
     legacyPin: data.pinCode !== undefined && data.pinCode !== null ? String(data.pinCode) : undefined,
+    createdAt: typeof data.createdAt === "string" ? data.createdAt : undefined,
   };
 }
 

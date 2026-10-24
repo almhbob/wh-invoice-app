@@ -15,7 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
-      - run: bun test server
+      - run: bun test server tests/unit
       - run: npx -y -p typescript@5.9 tsc -p tsconfig.functions.json
 
   rules:

@@ -119,6 +119,7 @@ beforeEach(async () => {
   store.set(`companies/${COMPANY}/employees/e2`, { name: "كاشير", employeeId: "C01", username: "cash", pinCode: "7391", role: "cashier", status: "active" });
   store.set(`companies/${COMPANY}/employees/e3`, { name: "موقوف", employeeId: "S01", pinCode: "5555", role: "cake", status: "suspended" });
   store.set(`companies/${COMPANY}/employees/e4`, { name: "جديد", employeeId: "N01", role: "cake", status: "active" });
+  store.set(`companies/${COMPANY}/employees/e5`, { name: "ناقص", employeeId: "N02", role: "cake", status: "active", createdAt: "2026-10-24T10:00:00.000Z" });
 });
 
 describe("pin helpers", () => {
@@ -198,6 +199,11 @@ describe("login", () => {
     const r = await handleLogin(req("/api/auth/login", { companyId: COMPANY, login: "N01", pin: "1234" }), env, deps());
     expect(r.status).toBe(200);
     expect(((await r.json()) as { mustChangePin: boolean }).mustChangePin).toBe(true);
+  });
+
+  test("a recently created account without a server PIN cannot use the old default", async () => {
+    const r = await handleLogin(req("/api/auth/login", { companyId: COMPANY, login: "N02", pin: "1234" }), env, deps());
+    expect(r.status).toBe(401);
   });
 
   test("one-time owner bootstrap creates the account once", async () => {
