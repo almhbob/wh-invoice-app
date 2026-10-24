@@ -81,8 +81,8 @@ interface EmployeeContextType {
   checkAndLogin: (emp: Employee, forceKick?: boolean) => Promise<"ok" | "conflict">;
   /** Sets an employee's login PIN through the server (secure mode only). */
   setEmployeePin: (id: string, pin: string) => Promise<void>;
-  /** "secure" when PINs are verified server-side; "legacy" otherwise. */
-  authMode: "checking" | "secure" | "legacy";
+  /** Legacy access requires explicit local opt-in; production may fail closed. */
+  authMode: "checking" | "secure" | "legacy" | "unavailable";
   isLoading: boolean;
 }
 
@@ -160,7 +160,7 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const currentEmployeeRef = useRef<Employee | null>(null);
   const authMode = useSecureAuthMode();
-  const isSecure = authMode === "secure";
+  const isSecure = authMode !== "legacy";
   const [authUid, setAuthUid] = useState<string | null | undefined>(undefined);
 
   useEffect(() => onAuthStateChanged(auth, (user) => setAuthUid(user && !user.isAnonymous ? user.uid : user ? `anon:${user.uid}` : null)), []);
@@ -176,6 +176,12 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true);
     setEmployees([]);
     if (authMode === "checking" || authUid === undefined) return () => { mounted = false; };
+    if (authMode === "unavailable") {
+      currentEmployeeRef.current = null;
+      setCurrentEmployeeState(null);
+      setIsLoading(false);
+      return () => { mounted = false; };
+    }
     // Secure mode: nothing is readable until the employee signs in with a server-issued token.
     const canRead = !isSecure || (authUid !== null && !authUid.startsWith("anon:"));
     // The hardcoded fallback admin only exists in legacy mode.
