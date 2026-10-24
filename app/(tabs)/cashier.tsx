@@ -1,3 +1,6 @@
+import { LoyaltyCashierCard } from "@/components/LoyaltyCashierCard";
+import { maxRedeemable, pointsValue } from "@/constants/loyalty";
+import { useLoyaltyAccount, useLoyaltySettings } from "@/hooks/useLoyalty";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
@@ -140,6 +143,8 @@ export default function CashierScreen() {
 
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
+  const { settings: loyaltySettings } = useLoyaltySettings();
+  const { key: loyaltyPhoneKey, account: loyaltyAccount, loading: loyaltyLoading } = useLoyaltyAccount(customerPhone);
   const [customerPhone2, setCustomerPhone2] = useState("");
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [orderType, setOrderType] = useState<OrderType>("pickup");
@@ -208,6 +213,7 @@ export default function CashierScreen() {
 
   // Discount
   const [discountEnabled, setDiscountEnabled] = useState(false);
+  const [useLoyaltyPoints, setUseLoyaltyPoints] = useState(false);
   const [discountType, setDiscountType] = useState<DiscountType>("percentage");
   const [discountValue, setDiscountValue] = useState("");
   const [discountReason, setDiscountReason] = useState("");
@@ -332,6 +338,7 @@ export default function CashierScreen() {
     setItems([newItem("halwa")]); setNotes(""); setImageUri(null); setReferenceImages([]);
     setDiscountEnabled(false); setDiscountType("percentage");
     setDiscountValue(""); setDiscountReason("");
+    setUseLoyaltyPoints(false);
     setDetectedOffer(null); setAppliedOfferId(null);
     setChocoCard(null);
     setCatalogQtys({});
@@ -385,7 +392,11 @@ export default function CashierScreen() {
   const discountAmount = discountEnabled && discountVal > 0
     ? (discountType === "percentage" ? subtotal * (Math.min(discountVal, 100) / 100) : discountVal)
     : 0;
-  const grandTotal = Math.max(0, subtotal - discountAmount + insuranceVal);
+  // Loyalty: redeem points against the goods total (after manual discounts).
+  const goodsAfterDiscount = Math.max(0, subtotal - discountAmount);
+  const loyaltyRedeemPts = maxRedeemable(Math.max(0, Math.floor(loyaltyAccount?.points ?? 0)), goodsAfterDiscount, loyaltySettings);
+  const loyaltyDiscount = useLoyaltyPoints && loyaltyRedeemPts > 0 ? pointsValue(loyaltyRedeemPts, loyaltySettings) : 0;
+  const grandTotal = Math.max(0, subtotal - discountAmount - loyaltyDiscount + insuranceVal);
   const amountPaidVal = parseFloat(amountPaid) || 0;
   const remainingAmount = Math.max(0, grandTotal - amountPaidVal);
   const hasPrices = validItems.some((i) => (i.price || 0) > 0);
@@ -409,6 +420,9 @@ export default function CashierScreen() {
             ? `${order.discount.value}%`
             : `${order.discount.value.toFixed(2)} ر.س`
         }`
+      : "";
+    const loyal = order.loyalty?.redeemValue
+      ? `\nخصم نقاط الولاء (${order.loyalty.redeemPoints} نقطة): ${order.loyalty.redeemValue.toFixed(2)} ر.س`
       : "";
     const deliv = order.deliveryTime ? `\nموعد التسليم: ${order.deliveryTime}` : "";
     const addr = order.deliveryAddress ? `\nعنوان التوصيل: ${order.deliveryAddress}` : "";
@@ -435,7 +449,7 @@ export default function CashierScreen() {
       `━━━━━━━━━━━━━━━━\n` +
       `الأصناف:\n${itemLines}\n` +
       `━━━━━━━━━━━━━━━━\n` +
-      (order.totalAmount ? `الإجمالي: ${order.totalAmount.toFixed(2)} ر.س${disc}${ins}` : "") +
+      (order.totalAmount ? `الإجمالي: ${order.totalAmount.toFixed(2)} ر.س${disc}${loyal}${ins}` : "") +
       `${pm}${paid}${remaining}\n` +
       `━━━━━━━━━━━━━━━━\n` +
       `${cashier}\n` +
@@ -500,6 +514,12 @@ export default function CashierScreen() {
       <div style="display:flex;justify-content:space-between;font-size:10px;margin:3px 0">
         <span>خصم${order.discount.reason ? ` (${order.discount.reason})` : ""}</span>
         <span>${order.discount.type === "percentage" ? `${order.discount.value}%` : `${order.discount.value.toFixed(2)} ر.س`}</span>
+      </div>` : "";
+
+    const loyaltyHtml = order.loyalty?.redeemValue ? `
+      <div style="display:flex;justify-content:space-between;font-size:10px;margin:3px 0">
+        <span>خصم نقاط الولاء (${order.loyalty.redeemPoints})</span>
+        <span>-${order.loyalty.redeemValue.toFixed(2)} ر.س</span>
       </div>` : "";
 
     const insuranceHtml = order.insuranceAmount ? `
@@ -603,6 +623,7 @@ export default function CashierScreen() {
   <hr class="divider-dash">
 
   ${discountHtml}
+  ${loyaltyHtml}
   ${insuranceHtml}
   ${order.totalAmount ? `<div class="total-line grand-total"><span>الإجمالي الكلي</span><span>${order.totalAmount.toFixed(2)} ر.س</span></div>` : ""}
   ${paymentHtml}
@@ -706,6 +727,13 @@ export default function CashierScreen() {
         amountPaid: paidNum,
         paymentMethod,
         discount: discountData,
+        loyalty: loyaltyPhoneKey && loyaltySettings.enabled
+          ? {
+              key: loyaltyPhoneKey,
+              base: Math.round((goodsAfterDiscount - loyaltyDiscount) * 100) / 100,
+              ...(loyaltyDiscount > 0 ? { redeemPoints: loyaltyRedeemPts, redeemValue: loyaltyDiscount } : {}),
+            }
+          : undefined,
         items: filteredItems,
         notes: notes.trim() || undefined,
         imageUri: imageUri || undefined,
@@ -1337,6 +1365,18 @@ export default function CashierScreen() {
         />
       </View>
 
+      {/* برنامج الولاء */}
+      <LoyaltyCashierCard
+        settings={loyaltySettings}
+        account={loyaltyAccount}
+        loading={loyaltyLoading}
+        phoneKey={loyaltyPhoneKey}
+        payable={goodsAfterDiscount}
+        redeemPoints={loyaltyRedeemPts}
+        useRedeem={useLoyaltyPoints}
+        onToggle={() => setUseLoyaltyPoints((v) => !v)}
+      />
+
       {/* الخصومات والعروض */}
       <View style={styles.card}>
         <TouchableOpacity
@@ -1476,6 +1516,15 @@ export default function CashierScreen() {
               <Text style={[styles.totalValue, { color: Colors.warning }]}>
                 -{discountAmount.toFixed(2)} {t("sar")}
               </Text>
+            </View>
+          )}
+          {loyaltyDiscount > 0 && (
+            <View style={styles.totalRow}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                <Feather name="award" size={12} color={Colors.success} />
+                <Text style={[styles.totalLabel, { color: Colors.success }]}>نقاط الولاء ({loyaltyRedeemPts})</Text>
+              </View>
+              <Text style={[styles.totalValue, { color: Colors.success }]}>-{loyaltyDiscount.toFixed(2)} {t("sar")}</Text>
             </View>
           )}
           {insuranceVal > 0 && (
@@ -1841,6 +1890,18 @@ export default function CashierScreen() {
             ))}
           </View>
 
+          <LoyaltyCashierCard
+            dark
+            settings={loyaltySettings}
+            account={loyaltyAccount}
+            loading={loyaltyLoading}
+            phoneKey={loyaltyPhoneKey}
+            payable={goodsAfterDiscount}
+            redeemPoints={loyaltyRedeemPts}
+            useRedeem={useLoyaltyPoints}
+            onToggle={() => setUseLoyaltyPoints((v) => !v)}
+          />
+
           {/* Discount row */}
           <TouchableOpacity
             style={styles.checkoutDiscountRow}
@@ -1887,6 +1948,12 @@ export default function CashierScreen() {
                   <View style={styles.checkoutTotalRow}>
                     <Text style={[styles.checkoutTotalLabel, { color: Colors.warning }]}>{t("discount")}</Text>
                     <Text style={[styles.checkoutTotalValue, { color: Colors.warning }]}>-{discountAmount.toFixed(2)} {t("sar")}</Text>
+                  </View>
+                )}
+                {loyaltyDiscount > 0 && (
+                  <View style={styles.checkoutTotalRow}>
+                    <Text style={[styles.checkoutTotalLabel, { color: "#6FD0A0" }]}>نقاط الولاء</Text>
+                    <Text style={[styles.checkoutTotalValue, { color: "#6FD0A0" }]}>-{loyaltyDiscount.toFixed(2)} {t("sar")}</Text>
                   </View>
                 )}
                 {insuranceVal > 0 && (
@@ -2029,8 +2096,8 @@ export default function CashierScreen() {
           notes,
           images: [imageUri, ...referenceImages].filter(Boolean) as string[],
           subtotal,
-          discountAmount,
-          discountReason: discountReason.trim() || undefined,
+          discountAmount: discountAmount + loyaltyDiscount,
+          discountReason: [discountAmount > 0 ? discountReason.trim() : "", loyaltyDiscount > 0 ? `نقاط الولاء ${loyaltyRedeemPts}` : ""].filter(Boolean).join(" + ") || undefined,
           insurance: insuranceVal,
           grandTotal,
           paid: amountPaidVal,

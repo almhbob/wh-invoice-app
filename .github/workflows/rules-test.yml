@@ -2,10 +2,10 @@ name: Security tests
 
 on:
   pull_request:
-    paths: ["firestore.rules", "tests/**", "server/**", "functions/**", "utils/deepClean.ts", "context/**", ".github/workflows/rules-test.yml"]
+    paths: ["firestore.rules", "tests/**", "server/**", "functions/**", "utils/deepClean.ts", "context/**", "lib/loyaltyTx.ts", "constants/loyalty.ts", ".github/workflows/rules-test.yml"]
   push:
     branches: [main]
-    paths: ["firestore.rules", "tests/**", "server/**", "functions/**", "utils/deepClean.ts", "context/**"]
+    paths: ["firestore.rules", "tests/**", "server/**", "functions/**", "utils/deepClean.ts", "context/**", "lib/loyaltyTx.ts", "constants/loyalty.ts"]
   workflow_dispatch:
 
 jobs:
@@ -32,6 +32,8 @@ jobs:
         run: |
           mkdir -p /tmp/rt && cp firestore.rules tests/rules/firestore.rules.test.mjs tests/rules/flows.test.mjs /tmp/rt/
           bun build utils/deepClean.ts --format esm --outfile /tmp/rt/deepClean.mjs
+          bun build lib/loyaltyTx.ts --format esm --external firebase/firestore --outfile /tmp/rt/loyaltyTx.mjs
+          cp tests/rules/loyalty.test.mjs /tmp/rt/
           cd /tmp/rt
           echo '{"type":"module"}' > package.json
           echo '{"firestore":{"rules":"firestore.rules"},"emulators":{"firestore":{"port":8080},"ui":{"enabled":false}}}' > firebase.json
@@ -40,7 +42,7 @@ jobs:
         working-directory: /tmp/rt
         run: |
           set -o pipefail
-          npx firebase emulators:exec --only firestore --project rules-test "node firestore.rules.test.mjs && node flows.test.mjs" 2>&1 | tee out.txt || {
+          npx firebase emulators:exec --only firestore --project rules-test "node firestore.rules.test.mjs && node flows.test.mjs && node loyalty.test.mjs" 2>&1 | tee out.txt || {
             # Surface the failure as an annotation (readable without downloading logs).
             echo "::error title=Emulator tests::$(grep -vE '^\s*$|^i  |emulators' out.txt | tail -n 25 | sed 's/%/%25/g' | tr '\n' '|' | sed 's/|/%0A/g')"
             exit 1

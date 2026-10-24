@@ -30,6 +30,8 @@ import { t as t_ } from "@/constants/translations";
 import { uploadUriToFirebaseStorage } from "@/lib/uploadFiles";
 import { isProductionDone, newTrackingCode, OrderEvent } from "@/utils/orderFlow";
 import { deepClean, normalizeEvents as normalizeEventList } from "@/utils/deepClean";
+import type { LoyaltySettings, OrderLoyalty } from "@/constants/loyalty";
+import { needsLoyaltySync, subscribeLoyaltySettings, syncOrderLoyalty } from "@/lib/loyalty";
 
 const normalizeEvents = (raw: unknown) => normalizeEventList<OrderEvent>(raw);
 
@@ -172,6 +174,8 @@ export interface Order {
   onlineOrderId?: string;
   /** Calligraphy progress for items that carry a writing request. */
   writingStatus?: OrderStatus;
+  /** Customer loyalty: points redeemed on this invoice and the settled earning. */
+  loyalty?: OrderLoyalty;
   writingBy?: EmployeeRef;
   /** Client-only: number assigned offline, replaced by the shared counter when syncing. */
   provisionalNumber?: boolean;
@@ -483,6 +487,34 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
   }, [companyId, orderDoc, saveOutbox]);
 
   useEffect(() => { void flushOutbox(); }, [syncTick, flushOutbox]);
+
+  // ── Loyalty: settle points for new orders and reverse them for deleted ones.
+  // Runs on every device; each move is a transaction keyed on the order, so it happens once.
+  const [loyaltySettings, setLoyaltySettings] = useState<LoyaltySettings | null>(null);
+  useEffect(() => subscribeLoyaltySettings(companyId, setLoyaltySettings), [companyId]);
+  const loyaltyTried = useRef<Map<string, number>>(new Map());
+  const loyaltyBusy = useRef(false);
+  useEffect(() => {
+    const s = loyaltySettings;
+    if (!s || loyaltyBusy.current) return;
+    const recent = Date.now() - 10 * 86400_000;
+    const queue = serverOrders.filter((o) => {
+      if (Date.parse(o.createdAt) < recent) return false;
+      if (!needsLoyaltySync(o, s)) return false;
+      const last = loyaltyTried.current.get(o.id) ?? 0;
+      return Date.now() - last > 60_000; // retry a failed one at most once a minute
+    });
+    if (!queue.length) return;
+    loyaltyBusy.current = true;
+    (async () => {
+      for (const o of queue.slice(0, 20)) {
+        loyaltyTried.current.set(o.id, Date.now());
+        try { await syncOrderLoyalty(companyId, o.id, s); } catch (err) {
+          console.warn("Loyalty sync failed, will retry:", (err as { code?: string })?.code ?? err);
+        }
+      }
+    })().finally(() => { loyaltyBusy.current = false; });
+  }, [companyId, loyaltySettings, serverOrders]);
 
   useEffect(() => {
     const id = setInterval(() => { if (outboxRef.current.length) void flushOutbox(); }, SYNC_INTERVAL_MS);

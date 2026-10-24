@@ -1,3 +1,6 @@
+import { AdjustPointsModal, LoyaltySettingsModal } from "@/components/LoyaltyAdminModal";
+import { loyaltyKey, pointsValue, tierFor } from "@/constants/loyalty";
+import { useLoyaltyAccounts, useLoyaltySettings } from "@/hooks/useLoyalty";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as Linking from "expo-linking";
@@ -343,6 +346,14 @@ export default function CustomersScreen() {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Customer | null>(null);
   const [tab, setTab] = useState<TabKey>("all");
+  const { settings: loyalty } = useLoyaltySettings();
+  const loyaltyAccounts = useLoyaltyAccounts();
+  const accountByKey = useMemo(() => new Map(loyaltyAccounts.map((a) => [a.key, a])), [loyaltyAccounts]);
+  const [showLoyaltySettings, setShowLoyaltySettings] = useState(false);
+  const [adjustFor, setAdjustFor] = useState<Customer | null>(null);
+  const isAdminRole = currentEmployee?.role === "admin";
+  const canAdjust = currentEmployee?.role === "admin" || currentEmployee?.role === "branch_supervisor";
+  const outstanding = useMemo(() => loyaltyAccounts.reduce((sum, a) => sum + Math.max(0, a.points ?? 0), 0), [loyaltyAccounts]);
 
   // Build customer map from orders
   const customers = useMemo<Customer[]>(() => {
@@ -425,6 +436,27 @@ export default function CustomersScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
+      {/* ── Loyalty program ── */}
+      <View style={styles.loyaltyBar}>
+        <View style={styles.loyaltyIcon}><Feather name="award" size={16} color={Colors.gold} /></View>
+        <View style={{ flex: 1, gap: 1 }}>
+          <Text style={styles.loyaltyTitle}>
+            {loyalty.enabled ? (lang === "ar" ? "برنامج الولاء مفعّل" : "Loyalty program on") : (lang === "ar" ? "برنامج الولاء متوقف" : "Loyalty program off")}
+          </Text>
+          <Text style={styles.loyaltySub} numberOfLines={1}>
+            {lang === "ar"
+              ? `${loyaltyAccounts.length} عضو · نقاط قائمة ${outstanding.toLocaleString("ar-SA")} (${pointsValue(outstanding, loyalty).toFixed(0)} ر.س)`
+              : `${loyaltyAccounts.length} members · ${outstanding} points outstanding`}
+          </Text>
+        </View>
+        {isAdminRole && (
+          <TouchableOpacity style={styles.loyaltyBtn} onPress={() => setShowLoyaltySettings(true)}>
+            <Feather name="sliders" size={14} color={Colors.text} />
+            <Text style={styles.loyaltyBtnTxt}>{lang === "ar" ? "الإعدادات" : "Settings"}</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
       {/* ── Stats Header ── */}
       <View style={styles.statsRow}>
         <StatCard
@@ -589,6 +621,16 @@ export default function CustomersScreen() {
                     )}
                   </View>
                   <Text style={styles.custPhone}>{c.phone}</Text>
+                  {(() => {
+                    const acc = accountByKey.get(loyaltyKey(c.phone));
+                    if (!acc || !loyalty.enabled) return null;
+                    const tier = tierFor(acc.lifetimeSpent ?? 0, loyalty);
+                    return (
+                      <Text style={styles.custPoints}>
+                        ★ {Math.max(0, Math.floor(acc.points ?? 0)).toLocaleString("ar-SA")} {lang === "ar" ? "نقطة" : "pts"} · {tier.name}
+                      </Text>
+                    );
+                  })()}
                   <Text style={styles.custMeta}>
                     {t("custLastOrder")} {fmtDate(c.lastOrderAt, lang)}
                   </Text>
@@ -631,6 +673,16 @@ export default function CustomersScreen() {
                 </View>
 
                 <View style={styles.quickActionsRow}>
+                  {canAdjust && loyalty.enabled && (
+                    <TouchableOpacity
+                      style={[styles.quickBtn, { backgroundColor: Colors.gold + "18" }]}
+                      onPress={() => setAdjustFor(c)}
+                      activeOpacity={0.75}
+                    >
+                      <Feather name="award" size={14} color={Colors.gold} />
+                      <Text style={[styles.quickBtnText, { color: Colors.gold }]}>{lang === "ar" ? "نقاط" : "Points"}</Text>
+                    </TouchableOpacity>
+                  )}
                   {/* Call */}
                   <TouchableOpacity
                     style={[
@@ -689,6 +741,18 @@ export default function CustomersScreen() {
       />
       )}
 
+      <LoyaltySettingsModal visible={showLoyaltySettings} settings={loyalty} onClose={() => setShowLoyaltySettings(false)} />
+      {adjustFor && currentEmployee && (
+        <AdjustPointsModal
+          visible
+          phone={adjustFor.phone}
+          name={adjustFor.name}
+          balance={Math.max(0, Math.floor(accountByKey.get(loyaltyKey(adjustFor.phone))?.points ?? 0))}
+          by={{ name: currentEmployee.name, employeeId: currentEmployee.employeeId }}
+          onClose={() => setAdjustFor(null)}
+        />
+      )}
+
       {/* ── History Modal ── */}
       {selected && (
         <CustomerHistoryModal
@@ -703,6 +767,13 @@ export default function CustomersScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
+  loyaltyBar: { flexDirection: "row-reverse", alignItems: "center", gap: 10, marginHorizontal: 16, marginTop: 12, marginBottom: 4, backgroundColor: Colors.surface, borderRadius: 18, padding: 12, borderWidth: 1, borderColor: Colors.borderLight },
+  loyaltyIcon: { width: 36, height: 36, borderRadius: 12, backgroundColor: Colors.gold + "18", alignItems: "center", justifyContent: "center" },
+  loyaltyTitle: { color: Colors.text, fontSize: 13, fontWeight: "700", textAlign: "right" },
+  loyaltySub: { color: Colors.textSecondary, fontSize: 11, textAlign: "right" },
+  loyaltyBtn: { flexDirection: "row-reverse", alignItems: "center", gap: 5, backgroundColor: Colors.surfaceSecondary, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7 },
+  loyaltyBtnTxt: { color: Colors.text, fontSize: 12, fontWeight: "700" },
+  custPoints: { color: Colors.gold, fontSize: 11, fontWeight: "700", marginTop: 2 },
   occCard: { flexDirection: "row-reverse", alignItems: "center", gap: 12, backgroundColor: Colors.surface, borderRadius: 18, padding: 14, borderWidth: 1, borderColor: Colors.borderLight },
   occDays: { width: 52, height: 52, borderRadius: 16, backgroundColor: Colors.gold + "18", alignItems: "center", justifyContent: "center" },
   occDaysNum: { color: Colors.gold, fontSize: 18, fontWeight: "700" },

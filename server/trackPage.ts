@@ -15,6 +15,8 @@ export const TRACK_PAGE_HTML = `<!doctype html>
   :root { --esp:#141414; --esp2:#0D0D0D; --gold:#D9602B; --gold2:#F2A27A; --ivory:#F3F3F1; --ink:#141414; --muted:#7A7A75; --line:#E2E2DE; --ok:#1F8A5B; --info:#2D6E7E; --bad:#C8323F; }
   * { box-sizing: border-box; }
   body { margin:0; background:var(--ivory); color:var(--ink); font-family:"Laviviane Sans",-apple-system,"Segoe UI",Tahoma,sans-serif; -webkit-font-smoothing:antialiased; }
+  .card.loyal { border-color: var(--gold); }
+  .loyal .note { color: var(--muted); font-size: 12px; margin: 8px 0 0; }
   .hero { background:var(--esp); color:#fff; padding:28px 20px 64px; text-align:center; }
   .brand { letter-spacing:.18em; font-size:13px; color:var(--gold2); font-weight:700; text-transform:uppercase; }
   .hello { margin:14px 0 4px; font-size:15px; color:rgba(255,255,255,.7); }
@@ -99,6 +101,13 @@ export const TRACK_PAGE_HTML = `<!doctype html>
       html += '<div class="step ' + cls + '"><div class="dot">' + (cls === "done" ? "✓" : i + 1) + "</div>" + LABEL[k] + "</div>";
     });
     if (cur !== -2) html += "</div></div>";
+    if (d.loyalty) {
+      html += '<div class="card loyal"><h3>نقاط الولاء</h3><div class="item"><span>رصيدك</span><b>' + esc(d.loyalty.points) + ' نقطة</b></div>'
+        + '<div class="item"><span>تعادل</span><b>' + esc(Number(d.loyalty.value).toFixed(2)) + ' ر.س</b></div>'
+        + '<div class="item"><span>فئتك</span><b>' + esc(d.loyalty.tier) + '</b></div>'
+        + (d.loyalty.earned ? '<div class="item"><span>من هذا الطلب</span><b style="color:var(--ok)">+' + esc(d.loyalty.earned) + '</b></div>' : '')
+        + '<p class="note">استخدم نقاطك كخصم في طلبك القادم من الفرع.</p></div>';
+    }
     if (d.items && d.items.length) {
       html += '<div class="card"><h3>محتويات الطلب</h3>' + d.items.map(function (i) { return '<div class="item"><span>' + esc(i.name) + "</span><b>× " + esc(i.quantity) + "</b></div>"; }).join("") + "</div>";
     }
