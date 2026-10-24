@@ -1,4 +1,5 @@
 import { Firestore, isValidCompanyId, json, readServiceAccount, type AuthEnv } from "./auth/core";
+import { loyaltyKey, normalizeLoyalty, pointsValue, tierFor } from "../constants/loyalty";
 
 /**
  * Public order tracking: GET /api/track?c=<companyId>&t=<trackingCode>
@@ -74,6 +75,24 @@ export function onlineView(o: Rec, brand: string) {
   };
 }
 
+/** The customer's own loyalty summary (balance, tier, points from this order). */
+export async function loyaltyView(fs: Firestore, companyId: string, o: Rec) {
+  const settings = normalizeLoyalty(await fs.get(`companies/${companyId}/settings/loyalty`).catch(() => null));
+  if (!settings.enabled) return null;
+  const L = (o.loyalty ?? {}) as Rec;
+  const key = String(L.key ?? "") || loyaltyKey(String(o.customerPhone ?? ""));
+  if (!key) return null;
+  const acc = await fs.get(`companies/${companyId}/loyaltyAccounts/${key}`).catch(() => null);
+  if (!acc) return null;
+  const points = Math.max(0, Math.floor(Number(acc.points ?? 0)));
+  return {
+    points,
+    value: pointsValue(points, settings),
+    tier: tierFor(Number(acc.lifetimeSpent ?? 0), settings).name,
+    earned: L.state === "applied" && Number(L.earnedPoints) > 0 ? Number(L.earnedPoints) : null,
+  };
+}
+
 export async function handleTrack(request: Request, env: AuthEnv, fetchImpl: typeof fetch = fetch) {
   const sa = readServiceAccount(env);
   if (!sa) return json({ error: "not_configured" }, 503);
@@ -91,7 +110,10 @@ export async function handleTrack(request: Request, env: AuthEnv, fetchImpl: typ
     });
     const company = await fs.get(`companies/${companyId}`).catch(() => null);
     const brand = String(company?.name ?? (companyId === "laviviane-trial" ? "Laviviane" : ""));
-    if (rows.length) return json(publicView(rows[0].data, brand), 200, { "Cache-Control": "no-store" });
+    if (rows.length) {
+      const loyalty = await loyaltyView(fs, companyId, rows[0].data).catch(() => null);
+      return json({ ...publicView(rows[0].data, brand), loyalty }, 200, { "Cache-Control": "no-store" });
+    }
     // Not an order yet: maybe an online request still waiting for the branch.
     const pending = await fs.runQuery(`companies/${companyId}`, {
       from: [{ collectionId: "onlineOrders" }],
