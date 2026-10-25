@@ -1,5 +1,4 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Alert } from "react-native";
 import {
   addDoc,
   collection,
@@ -34,6 +33,7 @@ import { auth } from "@/lib/firebase";
 import { readSessionClaims, secureLogout, secureResetEmployeePin, secureSetPin, useSecureAuthMode } from "@/lib/secureAuth";
 import { db } from "@/lib/firebase";
 import { t as t_ } from "@/constants/translations";
+import { showPlatformAlert } from "@/lib/platformAlert";
 
 // Persistent unique ID for this browser/device — used to detect duplicate sessions
 function getOrCreateDeviceId(): string {
@@ -334,10 +334,9 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
         setCurrentEmployeeState(null);
         AsyncStorage.removeItem(sessionKey).catch(() => {});
         AsyncStorage.removeItem(sessionEmployeeKey).catch(() => {});
-        Alert.alert(
+        showPlatformAlert(
           t("sessionKickedTitle"),
-          t("sessionKickedMsg").replace("{name}", empName),
-          [{ text: t("ok") }]
+          t("sessionKickedMsg").replace("{name}", empName)
         );
       }
     }, () => {}); // ignore Firestore errors silently
@@ -384,7 +383,7 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
       const activeCount = employees.filter((e) => !e.isLocalFallback && !((e as unknown) as Record<string, unknown>).isLocalBootstrap && e.status !== "suspended").length;
       if (company.maxUsers && activeCount >= company.maxUsers) {
         const msg = t_("limitMaxUsersMsg", lang).replace("{n}", String(company.maxUsers));
-        Alert.alert(t_("limitMaxUsersTitle", lang), msg);
+        showPlatformAlert(t_("limitMaxUsersTitle", lang), msg);
         throw new Error("MAX_USERS_EXCEEDED");
       }
 

@@ -3,7 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Feather } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import React, { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 
 import { Colors } from "@/constants/colors";
 import { LAVIVIANE_COMPANY_ID } from "@/constants/lavivianeProducts";
@@ -14,6 +14,7 @@ import { Employee, useEmployee } from "@/context/EmployeeContext";
 import { PinChangeModal } from "@/components/PinChangeModal";
 import { secureAuthErrorText, secureAuthText } from "@/constants/secureAuthText";
 import { secureLogin, secureLogout, secureSetPin, SecureAuthFailure } from "@/lib/secureAuth";
+import { showPlatformAlert } from "@/lib/platformAlert";
 import { useLang } from "@/context/LanguageContext";
 
 const ACCESS_KEY = "@fawtara_access_gate_v1";
@@ -171,6 +172,8 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
   const { employees, currentEmployee, setCurrentEmployee, checkAndLogin, addEmployee, isLoading, authMode } = useEmployee();
   const isSecure = authMode === "secure";
   const [loggingIn, setLoggingIn] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [pendingDeviceConflict, setPendingDeviceConflict] = useState<Employee | null>(null);
   const [pendingPinChange, setPendingPinChange] = useState<{ employee: Employee; pin: string } | null>(null);
   const [ready, setReady] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
@@ -256,7 +259,7 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
 
   const unlockNewTrial = async () => {
     await unlockTenant(NEW_TRIAL_TENANT, NEW_TRIAL_USER);
-    Alert.alert(tx("trialReadyTitle"), tx("trialReadyMessage"));
+    showPlatformAlert(tx("trialReadyTitle"), tx("trialReadyMessage"));
   };
 
   const unlockNukhba = async () => {
@@ -266,7 +269,7 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
   const unlockByCode = async () => {
     const code = companyCode.trim();
     if (!code) {
-      Alert.alert(tx("requiredTitle"), tx("companyCodeRequired"));
+      showPlatformAlert(tx("requiredTitle"), tx("companyCodeRequired"));
       return;
     }
     await switchCompanyById(code);
@@ -285,19 +288,18 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
   const finishLogin = async (emp: Employee) => {
     const result = await checkAndLogin(emp);
     if (result === "conflict") {
-      Alert.alert(
-        tx("deviceConflictTitle"),
-        `"${emp.name}" ${tx("deviceConflictMessage")}`,
-        [
-          { text: tx("deviceConflictCancel"), style: "cancel", onPress: () => { if (isSecure) void secureLogout(); } },
-          { text: tx("deviceConflictForce"), style: "destructive", onPress: () => void checkAndLogin(emp, true) },
-        ]
-      );
+      setLoginError(null);
+      setPendingDeviceConflict(emp);
+      return;
     }
+    setLoginError(null);
+    setPendingDeviceConflict(null);
   };
 
   const loginEmployeeSecure = async (user: string, pin: string) => {
     setLoggingIn(true);
+    setLoginError(null);
+    setPendingDeviceConflict(null);
     try {
       const { employee, mustChangePin } = await secureLogin(company.id, user, pin);
       const emp: Employee = {
@@ -315,7 +317,7 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
     } catch (e) {
       const f = e instanceof SecureAuthFailure ? e : null;
       const code = f?.code ?? "server_error";
-      Alert.alert(tx("invalidCredentialsTitle"), code === "invalid_credentials" ? tx("invalidCredentialsMessage") : secureAuthErrorText(code, lang, f?.retryAfter));
+      setLoginError(code === "invalid_credentials" ? tx("invalidCredentialsMessage") : secureAuthErrorText(code, lang, f?.retryAfter));
     } finally {
       setLoggingIn(false);
     }
@@ -324,8 +326,10 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
   const loginEmployee = async () => {
     const user = normalize(loginId);
     const pin = loginPin.trim();
+    setLoginError(null);
+    setPendingDeviceConflict(null);
     if (!user || !pin) {
-      Alert.alert(tx("requiredTitle"), tx("requiredCredentialsMessage"));
+      setLoginError(tx("requiredCredentialsMessage"));
       return;
     }
     if (isSecure) {
@@ -341,7 +345,7 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
     });
 
     if (!found) {
-      Alert.alert(tx("invalidCredentialsTitle"), tx("invalidCredentialsMessage"));
+      setLoginError(tx("invalidCredentialsMessage"));
       return;
     }
 
@@ -350,11 +354,11 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
 
   const createOwner = async () => {
     if (!ownerName.trim()) {
-      Alert.alert(tx("requiredTitle"), tx("ownerNameRequired"));
+      showPlatformAlert(tx("requiredTitle"), tx("ownerNameRequired"));
       return;
     }
     if (!ownerId.trim() || !ownerPin.trim()) {
-      Alert.alert(tx("requiredTitle"), tx("ownerCredentialsRequired"));
+      showPlatformAlert(tx("requiredTitle"), tx("ownerCredentialsRequired"));
       return;
     }
     setSaving(true);
@@ -381,7 +385,7 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
       };
       await saveLocalUser(localOwner);
       await setCurrentEmployee(localOwner);
-      Alert.alert(tx("temporaryLoginTitle"), tx("temporaryLoginMessage"));
+      showPlatformAlert(tx("temporaryLoginTitle"), tx("temporaryLoginMessage"));
     } finally {
       setSaving(false);
     }
@@ -534,9 +538,43 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
           ) : isSecure || allUsers.length > 0 ? (
             <View style={styles.list}>
               {employeeLoadTimedOut ? <Text style={styles.warningText}>{tx("firestoreTimeout")}</Text> : null}
-              <TextInput style={[styles.input, { textAlign }]} value={loginId} onChangeText={setLoginId} placeholder={tx("employeeLoginPlaceholder")} placeholderTextColor={Colors.textMuted} autoCapitalize="none" />
-              <TextInput style={[styles.input, { textAlign }]} value={loginPin} onChangeText={setLoginPin} placeholder={tx("pinPlaceholder")} placeholderTextColor={Colors.textMuted} secureTextEntry keyboardType="number-pad" />
-              <TouchableOpacity style={[styles.primaryBtn, { flexDirection: rowDirection }, loggingIn && { opacity: 0.6 }]} onPress={loginEmployee} disabled={loggingIn}>{loggingIn ? <ActivityIndicator color="#fff" /> : <Feather name="unlock" size={16} color="#fff" />}<Text style={styles.primaryText}>{tx("employeeLoginButton")}</Text></TouchableOpacity>
+              <TextInput style={[styles.input, { textAlign }]} value={loginId} onChangeText={(value) => { setLoginId(value); setLoginError(null); }} editable={!pendingDeviceConflict} placeholder={tx("employeeLoginPlaceholder")} placeholderTextColor={Colors.textMuted} autoCapitalize="none" />
+              <TextInput style={[styles.input, { textAlign }]} value={loginPin} onChangeText={(value) => { setLoginPin(value); setLoginError(null); }} editable={!pendingDeviceConflict} placeholder={tx("pinPlaceholder")} placeholderTextColor={Colors.textMuted} secureTextEntry keyboardType="number-pad" />
+              <TouchableOpacity style={[styles.primaryBtn, { flexDirection: rowDirection }, (loggingIn || pendingDeviceConflict) && { opacity: 0.6 }]} onPress={loginEmployee} disabled={loggingIn || !!pendingDeviceConflict}>{loggingIn ? <ActivityIndicator color="#fff" /> : <Feather name="unlock" size={16} color="#fff" />}<Text style={styles.primaryText}>{tx("employeeLoginButton")}</Text></TouchableOpacity>
+              {loginError ? <Text style={styles.errorText} accessibilityRole="alert">{loginError}</Text> : null}
+              {pendingDeviceConflict ? (
+                <View style={styles.conflictCard} accessibilityRole="alert">
+                  <Text style={styles.conflictTitle}>{tx("deviceConflictTitle")}</Text>
+                  <Text style={styles.conflictMessage}>{`"${pendingDeviceConflict.name}" ${tx("deviceConflictMessage")}`}</Text>
+                  <View style={[styles.conflictActions, { flexDirection: rowDirection }]}>
+                    <TouchableOpacity
+                      style={styles.conflictCancelBtn}
+                      onPress={() => {
+                        setPendingDeviceConflict(null);
+                        if (isSecure) void secureLogout();
+                      }}
+                    >
+                      <Text style={styles.conflictCancelText}>{tx("deviceConflictCancel")}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.conflictForceBtn}
+                      onPress={async () => {
+                        const employee = pendingDeviceConflict;
+                        if (!employee) return;
+                        setPendingDeviceConflict(null);
+                        try {
+                          await checkAndLogin(employee, true);
+                        } catch {
+                          setLoginError(secureAuthErrorText("server_error", lang));
+                          if (isSecure) void secureLogout();
+                        }
+                      }}
+                    >
+                      <Text style={styles.conflictForceText}>{tx("deviceConflictForce")}</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ) : null}
               {isSecure
                 ? <Text style={styles.hint}>{secureAuthText("forgotPin", lang)}</Text>
                 : <Text style={styles.hint}>{tx("employeeLoginHint")}</Text>}
@@ -662,6 +700,15 @@ const styles = StyleSheet.create({
   input: { minHeight: 48, borderRadius: 14, paddingHorizontal: 14, backgroundColor: "#FAFAF8", borderWidth: 1, borderColor: Colors.border, color: Colors.text },
   primaryBtn: { minHeight: 48, borderRadius: 14, backgroundColor: Colors.primary, alignItems: "center", justifyContent: "center", gap: 8 },
   primaryText: { color: "#fff", fontSize: 14, fontWeight: "900" },
+  errorText: { color: Colors.accent, fontSize: 13, textAlign: "center", lineHeight: 19, fontWeight: "700" },
+  conflictCard: { gap: 10, padding: 14, borderRadius: 14, backgroundColor: Colors.info + "10", borderWidth: 1, borderColor: Colors.info + "45" },
+  conflictTitle: { color: Colors.primary, fontSize: 14, fontWeight: "900", textAlign: "center" },
+  conflictMessage: { color: Colors.text, fontSize: 12, lineHeight: 19, textAlign: "center" },
+  conflictActions: { gap: 8 },
+  conflictCancelBtn: { flex: 1, minHeight: 44, borderRadius: 12, backgroundColor: Colors.border, alignItems: "center", justifyContent: "center", paddingHorizontal: 8 },
+  conflictCancelText: { color: Colors.text, fontSize: 12, fontWeight: "800", textAlign: "center" },
+  conflictForceBtn: { flex: 1, minHeight: 44, borderRadius: 12, backgroundColor: Colors.primary, alignItems: "center", justifyContent: "center", paddingHorizontal: 8 },
+  conflictForceText: { color: "#fff", fontSize: 12, fontWeight: "800", textAlign: "center" },
   secondaryBtn: { minHeight: 48, borderRadius: 14, backgroundColor: Colors.gold + "18", alignItems: "center", justifyContent: "center", gap: 8 },
   secondaryText: { color: Colors.gold, fontSize: 14, fontWeight: "900" },
   switchBtn: { alignSelf: "flex-start", paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: Colors.accent + "12" },
