@@ -196,6 +196,17 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (!ready || typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const requestedCompany = params.get("company") || params.get("tenant") || params.get("companyId");
+    if (requestedCompany !== LAVIVIANE_COMPANY_ID) return;
+
+    // The QR selects the Laviviane tenant and opens its login screen; employee authentication is still required.
+    setUnlocked(true);
+    void AsyncStorage.setItem(ACCESS_KEY, "1");
+  }, [ready]);
+
+  useEffect(() => {
     let mounted = true;
     AsyncStorage.getItem(bootstrapKey(company.id))
       .then((raw) => {
