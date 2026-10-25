@@ -1,3 +1,6 @@
+import { useFocusEffect } from "expo-router";
+import { ProductManagerModal } from "@/components/ProductManagerModal";
+import { ScanBar } from "@/components/ScanBar";
 import { tr } from "@/lib/i18n";
 import { LoyaltyCashierCard } from "@/components/LoyaltyCashierCard";
 import { maxRedeemable, pointsValue } from "@/constants/loyalty";
@@ -7,7 +10,7 @@ import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import * as Linking from "expo-linking";
 import { Image } from "expo-image";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { InlineCatalog } from "@/components/InlineCatalog";
 import { Product } from "@/context/ProductsContext";
 import {
@@ -177,6 +180,12 @@ export default function CashierScreen() {
   // Daily closing modal
   const [showClosing, setShowClosing] = useState(false);
   const canCloseShift = canDo(currentEmployee?.role, ROLE_CAN_CLOSE_SHIFT);
+  // Only the visible cashier screen listens to a hardware barcode scanner.
+  const [screenFocused, setScreenFocused] = useState(true);
+  useFocusEffect(useCallback(() => { setScreenFocused(true); return () => setScreenFocused(false); }, []));
+  const canManageProducts = currentEmployee?.role === "admin" || currentEmployee?.role === "branch_supervisor";
+  const [newProductCode, setNewProductCode] = useState<string | null>(null);
+  const openNewProductWithCode = (code: string) => setNewProductCode(code);
   const { lastClosed } = useShift();
 
   // Invoice search
@@ -359,6 +368,25 @@ export default function CashierScreen() {
           id: Date.now().toString() + Math.random().toString(36).substring(2, 8),
           name: product.name,
           quantity: 1,
+          price: product.price,
+          department: product.department as any,
+        },
+      ];
+    });
+  };
+
+  /** Scanner / typed code: add `qty` of a product (merges with a line already on the invoice). */
+  const addProductQty = (product: Product, qty: number) => {
+    setCatalogQtys(prev => ({ ...prev, [product.id]: (prev[product.id] ?? 0) + qty }));
+    setItems(prev => {
+      const existing = prev.find(i => i.name === product.name);
+      if (existing) return prev.map(i => i.id === existing.id ? { ...i, quantity: i.quantity + qty } : i);
+      return [
+        ...prev.filter(i => i.name.trim()),
+        {
+          id: Date.now().toString() + Math.random().toString(36).substring(2, 8),
+          name: product.name,
+          quantity: qty,
           price: product.price,
           department: product.department as any,
         },
@@ -792,6 +820,12 @@ export default function CashierScreen() {
       onClose={() => setShowClosing(false)}
       orders={orders}
     />
+    <ProductManagerModal
+      visible={newProductCode !== null}
+      product={null}
+      initialCode={newProductCode ?? undefined}
+      onClose={() => setNewProductCode(null)}
+    />
     {!isWide && (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
@@ -1086,6 +1120,7 @@ export default function CashierScreen() {
 
       {/* الأصناف */}
       <View style={styles.card}>
+        <ScanBar compact onAdd={addProductQty} active={screenFocused && !isWide} onCreateWithCode={canManageProducts ? openNewProductWithCode : undefined} />
         <View style={styles.cardHeader}>
           <Text style={styles.cardTitle}>{t("itemsSection")}</Text>
           {/* dept summary */}
@@ -1625,7 +1660,12 @@ export default function CashierScreen() {
     {/* ─── Desktop wide layout: catalog + checkout panel ─────────── */}
     {isWide && (
     <View style={styles.wideContainer}>
-    <InlineCatalog selected={catalogQtys} onAdd={addFromCatalog} onRemove={removeFromCatalog} />
+    <View style={{ flex: 1 }}>
+      <View style={{ padding: 12, paddingBottom: 0, backgroundColor: "#F3F3F1" }}>
+        <ScanBar compact onAdd={addProductQty} active={screenFocused && isWide} onCreateWithCode={canManageProducts ? openNewProductWithCode : undefined} />
+      </View>
+      <InlineCatalog selected={catalogQtys} onAdd={addFromCatalog} onRemove={removeFromCatalog} />
+    </View>
       <View style={[styles.checkoutPanel, { width: 420 }]}>
         {/* ── Single outer ScrollView: everything above the sticky payment footer ── */}
         <ScrollView

@@ -1,4 +1,6 @@
-import { tr } from "@/lib/i18n";
+import { CameraScanner } from "@/components/CameraScanner";
+import { barcodeWarning, codeConflict, generateInternalBarcode, normalizeCode } from "@/utils/productCodes";
+import { tr, trf } from "@/lib/i18n";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
@@ -31,6 +33,8 @@ interface Props {
   visible: boolean;
   product?: Product | null; // null = add mode
   onClose: () => void;
+  /** Pre-fill the barcode (adding a product straight from an unknown scan). */
+  initialCode?: string;
 }
 
 const DEPT_OPTIONS: { value: ProductDept; labelAr: string; labelEn: string; color: string; icon: any }[] = [
@@ -58,9 +62,9 @@ async function uploadProductImage(uri: string, companyId: string): Promise<strin
   return getDownloadURL(path);
 }
 
-export function ProductManagerModal({ visible, product, onClose }: Props) {
+export function ProductManagerModal({ visible, product, onClose, initialCode }: Props) {
   const insets = useSafeAreaInsets();
-  const { addProduct, updateProduct } = useProducts();
+  const { addProduct, updateProduct, products } = useProducts();
   const { companyId } = useCompany();
   const { lang } = useLang();
   const isEdit = !!product;
@@ -76,6 +80,12 @@ export function ProductManagerModal({ visible, product, onClose }: Props) {
   const [isAvailable, setIsAvailable] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showCatSug, setShowCatSug] = useState(false);
+  const [barcode, setBarcode] = useState("");
+  const [sku, setSku] = useState("");
+  const [scanOpen, setScanOpen] = useState(false);
+  const barcodeConflict = barcode.trim() ? codeConflict(products, product?.id, barcode) : null;
+  const skuConflict = sku.trim() ? codeConflict(products, product?.id, sku) : null;
+  const barcodeWarn = barcode.trim() ? barcodeWarning(barcode) : null;
 
   useEffect(() => {
     if (product) {
@@ -88,13 +98,17 @@ export function ProductManagerModal({ visible, product, onClose }: Props) {
       setDescription(product.description ?? "");
       setImageUri(product.imageUri ?? null);
       setIsAvailable(product.isAvailable);
+      setBarcode(product.barcode ?? "");
+      setSku(product.sku ?? "");
     } else {
+      setBarcode(initialCode ?? "");
+      setSku("");
       setName(""); setNameEn(""); setPrice("");
       setDepartment("halwa"); setCategory(""); setSortOrder("1");
       setDescription(""); setImageUri(null); setIsAvailable(true);
     }
     setShowCatSug(false);
-  }, [product, visible]);
+  }, [product, visible, initialCode]);
 
   const pickImage = async () => {
     if (Platform.OS === "web") {
@@ -146,6 +160,13 @@ export function ProductManagerModal({ visible, product, onClose }: Props) {
         tr("أدخل التصنيف (الفئة)", "Enter a category"));
       return;
     }
+    if (barcodeConflict || skuConflict) {
+      Alert.alert(
+        tr("رمز مستخدم", "Code already used"),
+        trf("هذا الرمز مسجل للمنتج «{n}». لكل منتج رمز خاص به.", "This code belongs to “{n}”. Each product needs its own code.", { n: (barcodeConflict ?? skuConflict)!.name })
+      );
+      return;
+    }
     setSaving(true);
     try {
       let finalImageUri = imageUri;
@@ -166,6 +187,9 @@ export function ProductManagerModal({ visible, product, onClose }: Props) {
         description: description.trim() || undefined,
         imageUri: finalImageUri || undefined,
         isAvailable,
+        // "" clears a code that was removed (undefined would be skipped on update).
+        barcode: normalizeCode(barcode),
+        sku: sku.trim().toUpperCase(),
       };
       if (isEdit && product) {
         await updateProduct(product.id, data);
@@ -331,6 +355,56 @@ export function ProductManagerModal({ visible, product, onClose }: Props) {
             </View>
           </View>
 
+          {/* Barcode & item number */}
+          <View style={styles.field}>
+            <Text style={styles.label}>{tr("الباركود (اختياري)", "Barcode (optional)")}</Text>
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <TextInput
+                style={[styles.input, { flex: 1, letterSpacing: 1 }, barcodeConflict && { borderColor: Colors.accent }]}
+                value={barcode}
+                onChangeText={setBarcode}
+                placeholder={tr("امسح أو اكتب رقم الباركود", "Scan or type the barcode")}
+                placeholderTextColor={Colors.textMuted}
+                keyboardType="number-pad"
+                textAlign="right"
+                autoCorrect={false}
+              />
+              <TouchableOpacity style={styles.codeBtn} onPress={() => setScanOpen(true)} accessibilityLabel={tr("مسح بالكاميرا", "Scan with camera")}>
+                <Feather name="camera" size={16} color="#fff" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.codeBtn, { backgroundColor: Colors.surfaceSecondary }]}
+                onPress={() => setBarcode(generateInternalBarcode(products.flatMap((p) => [p.barcode ?? "", p.sku ?? ""])))}
+                accessibilityLabel={tr("توليد باركود داخلي", "Generate an internal barcode")}
+              >
+                <Feather name="refresh-cw" size={16} color={Colors.text} />
+              </TouchableOpacity>
+            </View>
+            {barcodeConflict ? (
+              <Text style={styles.codeErr}>{trf("مستخدم للمنتج «{n}»", "Used by “{n}”", { n: barcodeConflict.name })}</Text>
+            ) : barcodeWarn ? (
+              <Text style={styles.codeWarn}>{tr("رقم التحقق لا يطابق باركود تجزئة قياسي — تأكد من الرقم", "Check digit does not match a standard retail barcode — double-check it")}</Text>
+            ) : (
+              <Text style={styles.codeHint}>{tr("لمنتجات بدون باركود: زر التوليد يصنع رقماً داخلياً يمكن طباعته على ملصق", "No barcode? Generate an in-store code you can print on a label")}</Text>
+            )}
+          </View>
+
+          <View style={styles.field}>
+            <Text style={styles.label}>{tr("رقم المنتج / الرقم التسلسلي (اختياري)", "Item number / SKU (optional)")}</Text>
+            <TextInput
+              style={[styles.input, skuConflict && { borderColor: Colors.accent }]}
+              value={sku}
+              onChangeText={setSku}
+              placeholder={tr("مثال: CK-015 — يكتبه الكاشير يدوياً", "e.g. CK-015 — typed by the cashier")}
+              placeholderTextColor={Colors.textMuted}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              textAlign="right"
+            />
+            {skuConflict ? <Text style={styles.codeErr}>{trf("مستخدم للمنتج «{n}»", "Used by “{n}”", { n: skuConflict.name })}</Text> : null}
+          </View>
+          <CameraScanner visible={scanOpen} onClose={() => setScanOpen(false)} onDetected={(c) => setBarcode(normalizeCode(c))} title={tr("مسح باركود المنتج", "Scan the product barcode")} />
+
           {/* Sort Order */}
           <View style={styles.field}>
             <Text style={styles.label}>{tr("الترتيب في القائمة", "Display Order")}</Text>
@@ -439,6 +513,10 @@ const styles = StyleSheet.create({
   imagePlaceholderText: { fontSize: 14, color: Colors.textSecondary, fontWeight: "600" },
   imagePlaceholderSub: { fontSize: 12, color: Colors.textMuted },
   field: { gap: 6 },
+  codeBtn: { width: 46, borderRadius: 12, backgroundColor: Colors.primary, alignItems: "center", justifyContent: "center" },
+  codeErr: { fontSize: 12, color: Colors.accent, fontWeight: "600", textAlign: "right" },
+  codeWarn: { fontSize: 12, color: Colors.warning, fontWeight: "600", textAlign: "right" },
+  codeHint: { fontSize: 11, color: Colors.textMuted, textAlign: "right" },
   label: { fontSize: 13, color: Colors.textSecondary, fontWeight: "600" },
   input: {
     borderWidth: 1.5, borderColor: Colors.border, borderRadius: 12,

@@ -1,3 +1,5 @@
+import { tr } from "@/lib/i18n";
+import { normalizeCode } from "@/utils/productCodes";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { Image } from "expo-image";
@@ -147,7 +149,8 @@ export function InlineCatalog({ selected, onAdd, onRemove }: Props) {
       }
       if (q && !p.name.toLowerCase().includes(q) &&
           !(p.nameEn ?? "").toLowerCase().includes(q) &&
-          !(p.category ?? "").toLowerCase().includes(q)) return false;
+          !(p.category ?? "").toLowerCase().includes(q) &&
+          !(normalizeCode(q) && (normalizeCode(p.barcode).startsWith(normalizeCode(q)) || normalizeCode(p.sku).startsWith(normalizeCode(q))))) return false;
       return true;
     });
   }, [allProducts, catFilter, search, isLaviviane]);
@@ -194,7 +197,7 @@ export function InlineCatalog({ selected, onAdd, onRemove }: Props) {
             style={styles.searchInput}
             value={search}
             onChangeText={setSearch}
-            placeholder="بحث بالاسم أو الفئة..."
+            placeholder={tr("بحث بالاسم أو الفئة أو الرمز...", "Search name, category or code...")}
             placeholderTextColor={Colors.textMuted}
             textAlign="right"
           />

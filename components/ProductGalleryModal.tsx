@@ -1,3 +1,4 @@
+import { normalizeCode } from "@/utils/productCodes";
 import { tr } from "@/lib/i18n";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -215,7 +216,10 @@ export function ProductGalleryModal({ visible, onClose, onConfirm }: Props) {
       } else {
         if (deptFilter !== "all" && p.department !== deptFilter) return false;
       }
-      if (q && !p.name.toLowerCase().includes(q) && !(p.nameEn ?? "").toLowerCase().includes(q) && !(p.category ?? "").toLowerCase().includes(q)) return false;
+      if (q && !p.name.toLowerCase().includes(q) &&
+          !(p.nameEn ?? "").toLowerCase().includes(q) &&
+          !(p.category ?? "").toLowerCase().includes(q) &&
+          !(normalizeCode(q) && (normalizeCode(p.barcode).startsWith(normalizeCode(q)) || normalizeCode(p.sku).startsWith(normalizeCode(q))))) return false;
       return true;
     });
   }, [visibleProducts, deptFilter, categoryFilter, search, isLaviviane]);
@@ -329,7 +333,7 @@ export function ProductGalleryModal({ visible, onClose, onConfirm }: Props) {
             style={styles.searchInput}
             value={search}
             onChangeText={setSearch}
-            placeholder={tr("بحث بالاسم أو الفئة...", "Search name or category...")}
+            placeholder={tr("بحث بالاسم أو الفئة أو الرمز...", "Search name, category or code...")}
             placeholderTextColor={Colors.textMuted}
             textAlign={lang === "ar" ? "right" : "left"}
           />
