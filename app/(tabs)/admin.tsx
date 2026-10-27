@@ -31,6 +31,7 @@ import { PinChangeModal } from "@/components/PinChangeModal";
 import { secureAuthErrorText, secureAuthText } from "@/constants/secureAuthText";
 import { employeeCredentialErrorMessage } from "@/lib/employeeCredentials";
 import { localPinError, SecureAuthFailure } from "@/lib/secureAuth";
+import { showPlatformAlert } from "@/lib/platformAlert";
 import {
   Employee,
   EmployeeRole,
@@ -116,6 +117,11 @@ function SectionHeader({ title, icon }: { title: string; icon: any }) {
 
 // ─── Employee Management ──────────────────────────────────────────────────
 type EmpStatusFilter = "all" | "active" | "suspended";
+type EmployeeDialogState =
+  | { kind: "menu"; employee: Employee }
+  | { kind: "edit"; employee: Employee }
+  | { kind: "role"; employee: Employee }
+  | { kind: "confirm"; employee: Employee; action: "delete" | "suspend" | "activate" };
 
 function EmployeesSection() {
   const { employees, addEmployee, removeEmployee, updateEmployee, setEmployeePin, resetEmployeePin, authMode, currentEmployee } = useEmployee();
@@ -130,20 +136,25 @@ function EmployeesSection() {
   const [role, setRole] = useState<EmployeeRole>("cashier");
   const [saving, setSaving] = useState(false);
   const [statusFilter, setStatusFilter] = useState<EmpStatusFilter>("all");
+  const [employeeDialog, setEmployeeDialog] = useState<EmployeeDialogState | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [dialogSaving, setDialogSaving] = useState(false);
+  const [dialogError, setDialogError] = useState("");
 
   const handleAdd = async () => {
-    if (!name.trim()) { Alert.alert(t("errTitle"), t("empNameRequired")); return; }
-    if (!empId.trim()) { Alert.alert(t("errTitle"), t("empIdRequired")); return; }
+    if (!name.trim()) { showPlatformAlert(t("errTitle"), t("empNameRequired")); return; }
+    if (!empId.trim()) { showPlatformAlert(t("errTitle"), t("empIdRequired")); return; }
     const dup = employees.find((e) => e.employeeId.toLowerCase() === empId.trim().toLowerCase());
-    if (dup) { Alert.alert(t("errTitle"), t("adminEmpDupId")); return; }
+    if (dup) { showPlatformAlert(t("errTitle"), t("adminEmpDupId")); return; }
     if (isSecure) {
       const pinErr = localPinError(pin.trim());
-      if (pinErr) { Alert.alert(t("errTitle"), secureAuthErrorText(pinErr, lang)); return; }
+      if (pinErr) { showPlatformAlert(t("errTitle"), secureAuthErrorText(pinErr, lang)); return; }
     }
     setSaving(true);
     try {
       if (role === "driver" && phone.replace(/\D/g, "").length < 9) {
-        Alert.alert(t("errTitle"), tr("أدخل رقم جوال السائق.", "Enter the driver's phone."));
+        showPlatformAlert(t("errTitle"), tr("أدخل رقم جوال السائق.", "Enter the driver's phone."));
         return;
       }
       await addEmployee({ name: name.trim(), employeeId: empId.trim().toUpperCase(), role, ...(phone.trim() ? { phone: phone.trim() } : {}), ...(isSecure ? { pinCode: pin.trim() } : {}) });
@@ -151,75 +162,106 @@ function EmployeesSection() {
       setName(""); setEmpId(""); setPin(""); setPhone(""); setRole("cashier"); setShowAdd(false);
     } catch (e) {
       const f = e instanceof SecureAuthFailure ? e : null;
-      Alert.alert(t("errTitle"), f ? secureAuthErrorText(f.code, lang, f.retryAfter) : employeeCredentialErrorMessage(e));
+      showPlatformAlert(t("errTitle"), f ? secureAuthErrorText(f.code, lang, f.retryAfter) : employeeCredentialErrorMessage(e));
     } finally { setSaving(false); }
   };
 
   const handleRemove = (emp: Employee) => {
-    Alert.alert(t("deleteEmployee"), `${t("deleteEmpConfirm")} "${emp.name}"؟`, [
-      { text: t("cancel"), style: "cancel" },
-      { text: t("delete"), style: "destructive", onPress: () => removeEmployee(emp.id) },
-    ]);
+    setDialogError("");
+    setEmployeeDialog({ kind: "confirm", employee: emp, action: "delete" });
   };
 
   const toggleStatus = (emp: Employee) => {
-    const newStatus = emp.status === "suspended" ? "active" : "suspended";
-    const msg = newStatus === "suspended"
-      ? `${t("adminEmpSuspendMsg")} "${emp.name}"`
-      : `${t("adminEmpActivateMsg")} "${emp.name}"`;
-    Alert.alert(t("confirm"), msg, [
-      { text: t("cancel"), style: "cancel" },
-      { text: t("confirm"), onPress: () => {
-        void updateEmployee(emp.id, { status: newStatus }).catch(() => {
-          Alert.alert(t("errTitle"), tr("تعذر حفظ التغيير. تحقق من الاتصال والصلاحيات ثم أعد المحاولة.", "Could not save the change. Check your connection and permissions, then try again."));
-        });
-      } },
-    ]);
+    setDialogError("");
+    setEmployeeDialog({
+      kind: "confirm",
+      employee: emp,
+      action: emp.status === "suspended" ? "activate" : "suspend",
+    });
   };
 
   const handleChangeRole = (emp: Employee) => {
     if (currentEmployee?.role !== "admin") return;
-    const options = ALL_ROLES.map((r) => ({
-      text: ROLE_LABELS[r],
-      onPress: () => {
-        if (r !== emp.role) {
-          void updateEmployee(emp.id, { role: r }).then(() => {
-            Haptics.selectionAsync();
-          }).catch(() => {
-            Alert.alert(t("errTitle"), tr("تعذر تحديث المسمى الوظيفي. تحقق من الاتصال والصلاحيات ثم أعد المحاولة.", "Could not update the employee role. Check your connection and permissions, then try again."));
-          });
-        }
-      },
-    }));
-    Alert.alert(
-      t("adminChangeRole"),
-      `${t("adminChooseRoleFor")} "${emp.name}"`,
-      [...options, { text: t("cancel"), style: "cancel" as const }]
-    );
+    setDialogError("");
+    setEmployeeDialog({ kind: "role", employee: emp });
   };
 
   const handleEmpMenu = (emp: Employee) => {
     Haptics.selectionAsync();
-    const isSuspended = emp.status === "suspended";
-    const isCompanyAdmin = currentEmployee?.role === "admin";
-    const canManagePin = isCompanyAdmin || currentEmployee?.role === "branch_supervisor";
-    Alert.alert(
-      emp.name,
-      `#${emp.employeeId} · ${ROLE_LABELS[emp.role]}`,
-      [
-        ...(isCompanyAdmin ? [{ text: t("adminChangeRole"), onPress: () => handleChangeRole(emp) }] : []),
-        ...(isSecure && canManagePin && emp.id !== currentEmployee?.id
-          ? [{ text: secureAuthText(isCompanyAdmin ? "resetPinAction" : "setPinAction", lang), onPress: () => setPinTarget(emp) }]
-          : []),
-        {
-          text: isSuspended ? t("adminActivateAcc") : t("adminSuspendAcc"),
-          onPress: () => toggleStatus(emp),
-          style: isSuspended ? "default" : "destructive",
-        },
-        { text: t("deleteEmployee"), style: "destructive", onPress: () => handleRemove(emp) },
-        { text: t("cancel"), style: "cancel" },
-      ]
-    );
+    setDialogError("");
+    setEmployeeDialog({ kind: "menu", employee: emp });
+  };
+
+  const closeEmployeeDialog = () => {
+    if (dialogSaving) return;
+    setEmployeeDialog(null);
+    setDialogError("");
+  };
+
+  const startEmployeeEdit = (emp: Employee) => {
+    setEditName(emp.name);
+    setEditPhone(emp.phone || "");
+    setDialogError("");
+    setEmployeeDialog({ kind: "edit", employee: emp });
+  };
+
+  const saveEmployeeEdit = async () => {
+    if (employeeDialog?.kind !== "edit") return;
+    const nextName = editName.trim();
+    if (!nextName) {
+      setDialogError(tr("اسم الموظف مطلوب.", "Employee name is required."));
+      return;
+    }
+    setDialogSaving(true);
+    setDialogError("");
+    try {
+      await updateEmployee(employeeDialog.employee.id, { name: nextName, phone: editPhone.trim() });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setEmployeeDialog(null);
+    } catch (error) {
+      setDialogError(employeeCredentialErrorMessage(error));
+    } finally {
+      setDialogSaving(false);
+    }
+  };
+
+  const saveEmployeeRole = async (nextRole: EmployeeRole) => {
+    if (employeeDialog?.kind !== "role") return;
+    if (nextRole === employeeDialog.employee.role) {
+      closeEmployeeDialog();
+      return;
+    }
+    setDialogSaving(true);
+    setDialogError("");
+    try {
+      await updateEmployee(employeeDialog.employee.id, { role: nextRole });
+      Haptics.selectionAsync();
+      setEmployeeDialog(null);
+    } catch (error) {
+      setDialogError(employeeCredentialErrorMessage(error));
+    } finally {
+      setDialogSaving(false);
+    }
+  };
+
+  const confirmEmployeeAction = async () => {
+    if (employeeDialog?.kind !== "confirm") return;
+    const { employee, action } = employeeDialog;
+    setDialogSaving(true);
+    setDialogError("");
+    try {
+      if (action === "delete") {
+        await removeEmployee(employee.id);
+      } else {
+        await updateEmployee(employee.id, { status: action === "suspend" ? "suspended" : "active" });
+      }
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setEmployeeDialog(null);
+    } catch (error) {
+      setDialogError(employeeCredentialErrorMessage(error));
+    } finally {
+      setDialogSaving(false);
+    }
   };
 
   const grouped = ALL_ROLES.reduce<Record<EmployeeRole, Employee[]>>((acc, r) => {
@@ -325,7 +367,13 @@ function EmployeesSection() {
                         </TouchableOpacity>
                       )}
                     </View>
-                    <TouchableOpacity style={styles.empMenuBtn} onPress={() => handleEmpMenu(emp)} hitSlop={10}>
+                    <TouchableOpacity
+                      style={styles.empMenuBtn}
+                      onPress={(event) => { event.stopPropagation(); handleEmpMenu(emp); }}
+                      hitSlop={10}
+                      accessibilityRole="button"
+                      accessibilityLabel={tr("إجراءات الموظف", "Employee actions")}
+                    >
                       <Text style={styles.empMenuDots}>⋮</Text>
                     </TouchableOpacity>
                   </TouchableOpacity>
@@ -345,10 +393,220 @@ function EmployeesSection() {
           else await setEmployeePin(pinTarget!.id, newPin);
           setPinTarget(null);
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          Alert.alert(t("successTitle"), secureAuthText("pinSaved", lang));
+          showPlatformAlert(t("successTitle"), secureAuthText("pinSaved", lang));
         }}
         onCancel={() => setPinTarget(null)}
       />
+
+      <Modal
+        visible={!!employeeDialog}
+        transparent
+        animationType="fade"
+        onRequestClose={closeEmployeeDialog}
+      >
+        <View style={styles.employeeDialogBackdrop}>
+          <TouchableOpacity
+            style={styles.employeeDialogDismissArea}
+            activeOpacity={1}
+            onPress={closeEmployeeDialog}
+            accessibilityLabel={t("cancel")}
+          />
+          {employeeDialog ? (
+            <View style={styles.employeeDialogCard}>
+              <View style={styles.employeeDialogHeader}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.employeeDialogTitle}>
+                    {employeeDialog.kind === "menu"
+                      ? employeeDialog.employee.name
+                      : employeeDialog.kind === "edit"
+                        ? tr("تعديل بيانات الموظف", "Edit employee details")
+                        : employeeDialog.kind === "role"
+                          ? t("adminChangeRole")
+                          : employeeDialog.action === "delete"
+                            ? t("deleteEmployee")
+                            : t("confirm")}
+                  </Text>
+                  {employeeDialog.kind === "menu" || employeeDialog.kind === "role" ? (
+                    <Text style={styles.employeeDialogSubtitle}>
+                      #{employeeDialog.employee.employeeId} · {ROLE_LABELS[employeeDialog.employee.role]}
+                    </Text>
+                  ) : null}
+                </View>
+                <TouchableOpacity
+                  style={styles.employeeDialogClose}
+                  onPress={closeEmployeeDialog}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("cancel")}
+                  disabled={dialogSaving}
+                >
+                  <Feather name="x" size={18} color={Colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+
+              {employeeDialog.kind === "menu" ? (
+                <ScrollView style={styles.employeeDialogOptions} showsVerticalScrollIndicator={false}>
+                  <TouchableOpacity
+                    style={styles.employeeDialogAction}
+                    onPress={() => startEmployeeEdit(employeeDialog.employee)}
+                  >
+                    <Feather name="edit-2" size={16} color={Colors.primary} />
+                    <Text style={styles.employeeDialogActionText}>{tr("تعديل البيانات", "Edit details")}</Text>
+                  </TouchableOpacity>
+                  {currentEmployee?.role === "admin" ? (
+                    <TouchableOpacity
+                      style={styles.employeeDialogAction}
+                      onPress={() => handleChangeRole(employeeDialog.employee)}
+                    >
+                      <Feather name="briefcase" size={16} color={Colors.primary} />
+                      <Text style={styles.employeeDialogActionText}>{t("adminChangeRole")}</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                  {isSecure
+                    && (currentEmployee?.role === "admin" || currentEmployee?.role === "branch_supervisor")
+                    && employeeDialog.employee.id !== currentEmployee?.id ? (
+                    <TouchableOpacity
+                      style={styles.employeeDialogAction}
+                      onPress={() => {
+                        setPinTarget(employeeDialog.employee);
+                        setEmployeeDialog(null);
+                      }}
+                    >
+                      <Feather name="key" size={16} color={Colors.primary} />
+                      <Text style={styles.employeeDialogActionText}>
+                        {secureAuthText(currentEmployee?.role === "admin" ? "resetPinAction" : "setPinAction", lang)}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : null}
+                  <TouchableOpacity
+                    style={styles.employeeDialogAction}
+                    onPress={() => toggleStatus(employeeDialog.employee)}
+                  >
+                    <Feather
+                      name={employeeDialog.employee.status === "suspended" ? "user-check" : "user-x"}
+                      size={16}
+                      color={Colors.warning}
+                    />
+                    <Text style={styles.employeeDialogActionText}>
+                      {employeeDialog.employee.status === "suspended" ? t("adminActivateAcc") : t("adminSuspendAcc")}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.employeeDialogAction}
+                    onPress={() => handleRemove(employeeDialog.employee)}
+                  >
+                    <Feather name="trash-2" size={16} color={Colors.accent} />
+                    <Text style={[styles.employeeDialogActionText, { color: Colors.accent }]}>
+                      {t("deleteEmployee")}
+                    </Text>
+                  </TouchableOpacity>
+                </ScrollView>
+              ) : null}
+
+              {employeeDialog.kind === "edit" ? (
+                <View style={styles.employeeDialogForm}>
+                  <Text style={styles.formLabel}>{t("adminEmpNameLabel")}</Text>
+                  <TextInput
+                    style={styles.employeeDialogInput}
+                    value={editName}
+                    onChangeText={setEditName}
+                    placeholder={t("adminEmpNamePh")}
+                    placeholderTextColor={Colors.textMuted}
+                    textAlign="right"
+                    editable={!dialogSaving}
+                  />
+                  <Text style={styles.formLabel}>{tr("رقم الجوال", "Phone number")}</Text>
+                  <TextInput
+                    style={styles.employeeDialogInput}
+                    value={editPhone}
+                    onChangeText={setEditPhone}
+                    placeholder="05XXXXXXXX"
+                    placeholderTextColor={Colors.textMuted}
+                    textAlign="right"
+                    keyboardType="phone-pad"
+                    editable={!dialogSaving}
+                  />
+                </View>
+              ) : null}
+
+              {employeeDialog.kind === "role" ? (
+                <ScrollView style={styles.employeeDialogRoleList} showsVerticalScrollIndicator={false}>
+                  {ALL_ROLES.map((nextRole) => (
+                    <TouchableOpacity
+                      key={nextRole}
+                      style={[
+                        styles.employeeDialogRoleOption,
+                        employeeDialog.employee.role === nextRole && { borderColor: ROLE_COLORS[nextRole], backgroundColor: ROLE_COLORS[nextRole] + "12" },
+                      ]}
+                      onPress={() => { void saveEmployeeRole(nextRole); }}
+                      disabled={dialogSaving}
+                    >
+                      <View style={[styles.employeeDialogRoleDot, { backgroundColor: ROLE_COLORS[nextRole] }]} />
+                      <Text style={styles.employeeDialogActionText}>{ROLE_LABELS[nextRole]}</Text>
+                      {employeeDialog.employee.role === nextRole ? <Feather name="check" size={16} color={ROLE_COLORS[nextRole]} /> : null}
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              ) : null}
+
+              {employeeDialog.kind === "confirm" ? (
+                <Text style={styles.employeeDialogSubtitle}>
+                  {employeeDialog.action === "delete"
+                    ? `${t("deleteEmpConfirm")} "${employeeDialog.employee.name}"؟`
+                    : employeeDialog.action === "suspend"
+                      ? `${t("adminEmpSuspendMsg")} "${employeeDialog.employee.name}"`
+                      : `${t("adminEmpActivateMsg")} "${employeeDialog.employee.name}"`}
+                </Text>
+              ) : null}
+
+              {dialogError ? <Text style={styles.employeeDialogError} accessibilityRole="alert">{dialogError}</Text> : null}
+
+              {employeeDialog.kind === "edit" ? (
+                <View style={styles.employeeDialogButtons}>
+                  <TouchableOpacity style={styles.employeeDialogCancelButton} onPress={closeEmployeeDialog} disabled={dialogSaving}>
+                    <Text style={styles.cancelBtnText}>{t("cancel")}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.employeeDialogPrimaryButton, dialogSaving && { opacity: 0.6 }]}
+                    onPress={() => { void saveEmployeeEdit(); }}
+                    disabled={dialogSaving}
+                  >
+                    {dialogSaving ? <ActivityIndicator color="#fff" size="small" /> : <Feather name="save" size={15} color="#fff" />}
+                    <Text style={styles.saveBtnText}>{dialogSaving ? "..." : t("save")}</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null}
+
+              {employeeDialog.kind === "confirm" ? (
+                <View style={styles.employeeDialogButtons}>
+                  <TouchableOpacity style={styles.employeeDialogCancelButton} onPress={closeEmployeeDialog} disabled={dialogSaving}>
+                    <Text style={styles.cancelBtnText}>{t("cancel")}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.employeeDialogPrimaryButton,
+                      employeeDialog.action === "delete" && styles.employeeDialogDeleteButton,
+                      dialogSaving && { opacity: 0.6 },
+                    ]}
+                    onPress={() => { void confirmEmployeeAction(); }}
+                    disabled={dialogSaving}
+                  >
+                    {dialogSaving ? <ActivityIndicator color="#fff" size="small" /> : null}
+                    <Text style={styles.saveBtnText}>
+                      {dialogSaving ? "..." : employeeDialog.action === "delete" ? t("delete") : t("confirm")}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null}
+
+              {employeeDialog.kind === "menu" || employeeDialog.kind === "role" ? (
+                <TouchableOpacity style={styles.employeeDialogCancelButton} onPress={closeEmployeeDialog} disabled={dialogSaving}>
+                  <Text style={styles.cancelBtnText}>{t("cancel")}</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          ) : null}
+        </View>
+      </Modal>
 
       {/* Add form */}
       {showAdd ? (
@@ -1737,6 +1995,56 @@ const styles = StyleSheet.create({
     alignItems: "center", justifyContent: "center",
   },
   empMenuDots: { fontSize: 18, color: Colors.textMuted, lineHeight: 22 },
+  employeeDialogBackdrop: {
+    flex: 1, alignItems: "center", justifyContent: "center", padding: 16,
+    backgroundColor: "rgba(10, 12, 18, 0.58)",
+  },
+  employeeDialogDismissArea: { ...StyleSheet.absoluteFillObject },
+  employeeDialogCard: {
+    width: "100%", maxWidth: 460, maxHeight: "90%",
+    backgroundColor: Colors.surface, borderRadius: 18, borderWidth: 1,
+    borderColor: Colors.borderLight, padding: 18, gap: 12,
+    shadowColor: Colors.shadow, shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.18, shadowRadius: 16, elevation: 10,
+  },
+  employeeDialogHeader: { flexDirection: "row", alignItems: "center", gap: 12 },
+  employeeDialogTitle: { fontSize: 16, fontWeight: "800", color: Colors.text },
+  employeeDialogSubtitle: { fontSize: 13, lineHeight: 20, color: Colors.textSecondary },
+  employeeDialogClose: {
+    width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center",
+    backgroundColor: Colors.surfaceSecondary,
+  },
+  employeeDialogOptions: { flexGrow: 0, maxHeight: 380 },
+  employeeDialogAction: {
+    flexDirection: "row", alignItems: "center", gap: 11, paddingHorizontal: 12,
+    paddingVertical: 12, borderRadius: 10, backgroundColor: Colors.surfaceSecondary, marginBottom: 7,
+  },
+  employeeDialogActionText: { flex: 1, color: Colors.text, fontSize: 14, fontWeight: "600", textAlign: "right" },
+  employeeDialogForm: { gap: 8 },
+  employeeDialogInput: {
+    borderWidth: 1, borderColor: Colors.border, borderRadius: 10,
+    paddingHorizontal: 12, paddingVertical: 11, fontSize: 14,
+    color: Colors.text, backgroundColor: Colors.surface,
+  },
+  employeeDialogRoleList: { flexGrow: 0, maxHeight: 340 },
+  employeeDialogRoleOption: {
+    flexDirection: "row", alignItems: "center", gap: 10,
+    paddingHorizontal: 12, paddingVertical: 11, marginBottom: 6,
+    borderWidth: 1, borderColor: Colors.borderLight, borderRadius: 10,
+    backgroundColor: Colors.surface,
+  },
+  employeeDialogRoleDot: { width: 10, height: 10, borderRadius: 5 },
+  employeeDialogError: { color: Colors.accent, fontSize: 12, lineHeight: 18, fontWeight: "600" },
+  employeeDialogButtons: { flexDirection: "row", gap: 10, marginTop: 2 },
+  employeeDialogCancelButton: {
+    flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 11,
+    borderWidth: 1, borderColor: Colors.border, borderRadius: 10, backgroundColor: Colors.surface,
+  },
+  employeeDialogPrimaryButton: {
+    flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7,
+    paddingVertical: 11, borderRadius: 10, backgroundColor: Colors.primary,
+  },
+  employeeDialogDeleteButton: { backgroundColor: "#C8323F" },
   empFilterRow: { flexDirection: "row", gap: 8 },
   empFilterChip: {
     paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20,
