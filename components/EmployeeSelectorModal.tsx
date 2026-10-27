@@ -26,6 +26,7 @@ import {
 import { secureAuthErrorText, secureAuthText } from "@/constants/secureAuthText";
 import { localPinError } from "@/lib/secureAuth";
 import { employeeCredentialErrorMessage, prepareEmployeeCredentialPayload } from "@/lib/employeeCredentials";
+import { showPlatformAlert } from "@/lib/platformAlert";
 
 const ROLE_COLORS: Record<EmployeeRole, string> = {
   cashier: Colors.primary,
@@ -97,6 +98,13 @@ export function EmployeeSelectorModal({ visible, onClose }: Props) {
     Haptics.selectionAsync();
     // Switching identity always requires signing in with that employee's own PIN.
     if (emp.id !== currentEmployee?.id) {
+      if (Platform.OS === "web" && typeof window !== "undefined") {
+        if (window.confirm(`${emp.name}\n\n${secureAuthText("switchNeedsLogin", lang)}`)) {
+          setCurrentEmployee(null);
+          onClose();
+        }
+        return;
+      }
       Alert.alert(emp.name, secureAuthText("switchNeedsLogin", lang), [
         { text: secureAuthText("cancel", lang), style: "cancel" },
         { text: secureAuthText("logout", lang), style: "destructive", onPress: () => { setCurrentEmployee(null); onClose(); } },
@@ -113,21 +121,21 @@ export function EmployeeSelectorModal({ visible, onClose }: Props) {
   };
 
   const handleAddEmployee = async () => {
-    if (!newName.trim()) { Alert.alert(t("errTitle"), t("empNameRequired")); return; }
-    if (!newEmpId.trim()) { Alert.alert(t("errTitle"), t("empIdRequired")); return; }
+    if (!newName.trim()) { showPlatformAlert(t("errTitle"), t("empNameRequired")); return; }
+    if (!newEmpId.trim()) { showPlatformAlert(t("errTitle"), t("empIdRequired")); return; }
     const normalizedEmpId = newEmpId.trim().toUpperCase();
     const normalizedUsername = (newUsername.trim() || normalizedEmpId).toLowerCase();
     const exists = employees.find((e) => {
       const empUsername = String(e.username || e.employeeId).toLowerCase();
       return e.employeeId.toLowerCase() === normalizedEmpId.toLowerCase() || empUsername === normalizedUsername;
     });
-    if (exists) { Alert.alert(t("errTitle"), t("empDupIdMsg")); return; }
+    if (exists) { showPlatformAlert(t("errTitle"), t("empDupIdMsg")); return; }
     if (authMode !== "legacy") {
       const pinErr = localPinError(newPin.trim());
-      if (pinErr) { Alert.alert(t("errTitle"), secureAuthErrorText(pinErr, lang)); return; }
+      if (pinErr) { showPlatformAlert(t("errTitle"), secureAuthErrorText(pinErr, lang)); return; }
     }
     if (!addRoles.includes(newRole)) {
-      Alert.alert(t("permissionTitle"), t("empRoleRestrict"));
+      showPlatformAlert(t("permissionTitle"), t("empRoleRestrict"));
       return;
     }
     setSaving(true);
@@ -143,29 +151,35 @@ export function EmployeeSelectorModal({ visible, onClose }: Props) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setNewName(""); setNewEmpId(""); setNewUsername(""); setNewPin(""); setNewRole("cashier");
       setTab("select");
-      Alert.alert(t("successTitle"), t("empAddedMsg"));
+      showPlatformAlert(t("successTitle"), t("empAddedMsg"));
     } catch (error) {
       console.error("Add employee failed", error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(t("errTitle"), employeeCredentialErrorMessage(error));
+      showPlatformAlert(t("errTitle"), employeeCredentialErrorMessage(error));
     } finally {
       setSaving(false);
     }
   };
 
   const handleRemove = (emp: Employee) => {
+    const message = `${t("deleteEmpConfirm")} "${emp.name}"؟`;
+    const performRemove = async () => {
+      try { await removeEmployee(emp.id); }
+      catch (error) { showPlatformAlert(t("errTitle"), employeeCredentialErrorMessage(error)); }
+    };
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      if (window.confirm(`${t("deleteEmployee")}\n\n${message}`)) void performRemove();
+      return;
+    }
     Alert.alert(
       t("deleteEmployee"),
-      `${t("deleteEmpConfirm")} "${emp.name}"؟`,
+      message,
       [
         { text: t("cancel"), style: "cancel" },
         {
           text: t("delete"),
           style: "destructive",
-          onPress: async () => {
-            try { await removeEmployee(emp.id); }
-            catch (error) { Alert.alert(t("errTitle"), employeeCredentialErrorMessage(error)); }
-          },
+          onPress: () => { void performRemove(); },
         },
       ]
     );
