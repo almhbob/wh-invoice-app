@@ -40,6 +40,20 @@ service cloud.firestore {
       return isPlatformRole(data) || isPlatformOwnerAccount(companyId, employeeId);
     }
 
+    function isPlatformStaff() {
+      return signedIn() && request.auth.token.platformRole in ['owner', 'developer', 'super_admin'];
+    }
+
+    // Trial requests from the public /join page: created by the server only;
+    // platform staff read them and move them through the follow-up statuses.
+    match /platformLeads/{id} {
+      allow read: if isPlatformStaff();
+      allow update: if isPlatformStaff()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'followUpNote', 'updatedAt', 'handledBy'])
+        && request.resource.data.status in ['new', 'contacted', 'trial', 'won', 'lost'];
+      allow create, delete: if false;
+    }
+
     // Platform-owner markers are written by the trusted service account only.
     match /platformOwners/{ownerId} {
       allow read, write: if false;
@@ -89,10 +103,16 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // Tax registration printed on invoices: every employee prints it, only the admin edits it.
+    match /companies/{companyId}/taxProfile/{docId} {
+      allow read: if inCompany(companyId);
+      allow write: if isAdmin(companyId) && docId == 'current';
+    }
+
     // Everything else inside a company (orders, products, counters, settings, sessions, logs…)
     match /companies/{companyId}/{sub}/{docId=**} {
       allow read, write: if inCompany(companyId)
-        && !(sub in ['employees', 'employeeSecrets', 'auditLogs']);
+        && !(sub in ['employees', 'employeeSecrets', 'auditLogs', 'taxProfile']);
     }
 
     // Login throttling state — server only.

@@ -3,6 +3,7 @@ import { Redirect } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
 
+import { LeadsPanel } from "@/components/LeadsPanel";
 import { ProductionReadinessPanel } from "@/components/ProductionReadinessPanel";
 import { Colors } from "@/constants/colors";
 import { useCompany } from "@/context/CompanyContext";
@@ -67,6 +68,7 @@ export default function DeveloperScreen() {
           <Text style={styles.subtitle}>وصول داخلي موثّق بمطالبة منصة موقّعة من الخادم.</Text>
         </View>
       </View>
+      <LeadsPanel />
       <ProductionReadinessPanel />
     </ScrollView>
   );

@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>فوترة — نظام محلات الحلويات والكيك | ابدأ تجربتك</title>
+<meta name="description" content="نظام فوترة لمحلات الحلويات والكيك: كاشير، طلبات تمر على الأقسام، تتبع للعميل، ولاء، وفاتورة ضريبية. اطلب تجربتك المجانية." />
+<meta property="og:title" content="فوترة — من الطلب إلى التسليم في نظام واحد" />
+<meta property="og:description" content="كاشير، أقسام تحضير، تتبع طلب للعميل، ولاء، وفاتورة ضريبية مبسطة. لمحلات الحلويات والكيك." />
+<meta name="theme-color" content="#141414" />
+<style>
+@font-face{font-family:"Plex";src:url(/brand-fonts/PlexArabic-Regular.woff) format("woff");font-weight:100 449;font-display:swap}
+@font-face{font-family:"Plex";src:url(/brand-fonts/PlexArabic-Medium.woff) format("woff");font-weight:450 549;font-display:swap}
+@font-face{font-family:"Plex";src:url(/brand-fonts/PlexArabic-SemiBold.woff) format("woff");font-weight:550 649;font-display:swap}
+@font-face{font-family:"Plex";src:url(/brand-fonts/PlexArabic-Bold.woff) format("woff");font-weight:650 1000;font-display:swap}
+:root{--ink:#141414;--ink2:#2A2A2A;--paper:#F3F3F1;--card:#fff;--line:#E4E3DF;--muted:#6B6A66;--ember:#D9602B;--ember-l:#F2A27A;--ok:#1F8A5B;--bad:#C8323F}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:"Plex",-apple-system,"Segoe UI",Tahoma,sans-serif;background:var(--paper);color:var(--ink);line-height:1.7;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+.wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+header{background:var(--ink);color:#fff}
+.nav{display:flex;align-items:center;justify-content:space-between;height:64px}
+.brand{font-weight:800;font-size:20px;letter-spacing:.5px}
+.brand span{color:var(--ember-l)}
+.nav a.cta{background:var(--ember);color:#fff;text-decoration:none;font-weight:700;font-size:14px;padding:9px 18px;border-radius:999px}
+.hero{padding:56px 0 72px;display:grid;grid-template-columns:1.1fr .9fr;gap:40px;align-items:center}
+.kicker{color:var(--ember-l);font-weight:700;font-size:14px;letter-spacing:.3px}
+h1{font-size:44px;line-height:1.25;font-weight:800;margin:10px 0 16px}
+.lead{color:#CFCFCB;font-size:17px;max-width:520px}
+.hero-actions{display:flex;gap:12px;margin-top:26px;flex-wrap:wrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:none;cursor:pointer;font:inherit;font-weight:700;border-radius:14px;padding:14px 22px;font-size:15px;text-decoration:none}
+.btn-ember{background:var(--ember);color:#fff}
+.btn-ghost{background:transparent;color:#fff;border:1px solid #444}
+.ticket{background:#1E1E1E;border:1px solid #333;border-radius:20px;padding:20px;font-size:13px;color:#ddd}
+.ticket .row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px dashed #3a3a3a}
+.ticket .row:last-child{border:none}
+.ticket b{color:#fff}
+.stage{display:flex;gap:6px;margin:14px 0 6px}
+.stage i{flex:1;height:6px;border-radius:3px;background:#3a3a3a}
+.stage i.on{background:var(--ember)}
+.tag{display:inline-block;font-size:11px;font-weight:700;border-radius:999px;padding:2px 10px;background:rgba(242,162,122,.14);color:var(--ember-l)}
+section{padding:64px 0}
+h2{font-size:30px;font-weight:800;line-height:1.3;margin-bottom:8px}
+.sub{color:var(--muted);margin-bottom:28px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.feat{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px}
+.feat .n{font-size:13px;font-weight:800;color:var(--ember);margin-bottom:6px}
+.feat h3{font-size:17px;font-weight:700;margin-bottom:6px}
+.feat p{color:var(--muted);font-size:14px}
+.plans{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.plan{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:24px;display:flex;flex-direction:column;gap:10px}
+.plan.hot{border:2px solid var(--ink)}
+.plan .name{font-weight:700}
+.plan .price{font-size:34px;font-weight:800;line-height:1}
+.plan .price small{font-size:14px;color:var(--muted);font-weight:500}
+.plan ul{list-style:none;color:var(--muted);font-size:14px;display:grid;gap:4px}
+.plan li::before{content:"✓ ";color:var(--ok);font-weight:800}
+.plan .trial{font-size:13px;font-weight:700;color:var(--ember)}
+.form-card{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:28px;display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-card .full{grid-column:1/-1}
+label{display:block;font-size:13px;font-weight:700;color:var(--ink2);margin-bottom:6px}
+input,select,textarea{width:100%;font:inherit;font-size:15px;border:1px solid var(--line);background:#FAFAF8;border-radius:12px;padding:12px 14px;color:var(--ink);outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--ink)}
+input.err,select.err{border-color:var(--bad);background:#FDF5F5}
+textarea{min-height:84px;resize:vertical}
+.consent{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:var(--muted)}
+.consent input{width:18px;height:18px;margin-top:4px;flex:none}
+.hp{position:absolute;left:-9999px;opacity:0;height:0;width:0}
+.msg{font-size:14px;font-weight:700;border-radius:12px;padding:12px 14px;display:none}
+.msg.bad{display:block;background:#FDF0F0;color:var(--bad)}
+.done{display:none;text-align:center;background:var(--card);border:1px solid var(--line);border-radius:24px;padding:40px 24px}
+.done h3{font-size:24px;margin:10px 0}
+.done p{color:var(--muted)}
+.check{width:56px;height:56px;border-radius:50%;background:var(--ok);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:28px}
+footer{background:var(--ink);color:#9a9a96;font-size:13px;padding:28px 0}
+footer .wrap{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+footer a{color:#ddd;text-decoration:none;margin-inline-start:16px}
+@media (max-width:860px){
+  .hero{grid-template-columns:1fr;padding:36px 0 48px}
+  h1{font-size:32px}
+  .grid3,.plans{grid-template-columns:1fr}
+  .form-card{grid-template-columns:1fr;padding:20px}
+  section{padding:44px 0}
+  h2{font-size:24px}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap nav">
+    <div class="brand">فوترة<span>.</span></div>
+    <a class="cta" href="#start">اطلب تجربتك</a>
+  </div>
+  <div class="wrap hero">
+    <div>
+      <div class="kicker">لمحلات الحلويات والكيك والشوكولاتة</div>
+      <h1>من لحظة الطلب إلى التسليم، كل شيء في نظام واحد.</h1>
+      <p class="lead">الكاشير يسجّل الطلب، والأقسام تستلمه وتحدّث مراحل التحضير، والعميل يتابعه من رابط على جواله. مع نقاط ولاء، وفاتورة ضريبية مبسطة، وتقارير أداء.</p>
+      <div class="hero-actions">
+        <a class="btn btn-ember" href="#start">ابدأ التجربة المجانية</a>
+        <a class="btn btn-ghost" href="#plans">الباقات والأسعار</a>
+      </div>
+    </div>
+    <div class="ticket" aria-hidden="true">
+      <div class="row"><span>طلب #1042 · كيك عيد ميلاد</span><span class="tag">قيد التحضير</span></div>
+      <div class="stage"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></div>
+      <div class="row"><span>قسم الكيك</span><b>تم الاستلام · 10:42</b></div>
+      <div class="row"><span>قسم الكتابة</span><b>"كل عام وأنتِ بخير"</b></div>
+      <div class="row"><span>التسليم</span><b>اليوم 6:30 م · توصيل</b></div>
+      <div class="row"><span>نقاط الولاء</span><b>+185 نقطة</b></div>
+    </div>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <h2>مصمم لطريقة شغل محلات الحلويات</h2>
+    <p class="sub">مو نظام كاشير عام. كل ميزة جاءت من يوم عمل حقيقي في محل.</p>
+    <div class="grid3">
+      <div class="feat"><div class="n">01</div><h3>طلب يمر على الأقسام</h3><p>الكيك، الحلويات، الكتابة، والتغليف. كل قسم يستلم نصيبه ويحدّث مرحلته، والكاشير يشوف الحالة لحظياً.</p></div>
+      <div class="feat"><div class="n">02</div><h3>عميلك يتابع طلبه</h3><p>رابط تتبع يصل للعميل على واتساب، ومعرض أونلاين يطلب منه مسبقاً مع تحديد موعد الاستلام.</p></div>
+      <div class="feat"><div class="n">03</div><h3>ولاء وفاتورة ضريبية</h3><p>نقاط وشرائح للعملاء، تذكير بالمناسبات، وفاتورة ضريبية مبسطة برمز QR المعتمد من هيئة الزكاة.</p></div>
+      <div class="feat"><div class="n">04</div><h3>باركود وإدخال يدوي</h3><p>قارئ باركود أو كاميرا الجوال أو رقم المنتج يدوياً. الكاشير يختار الأسرع له.</p></div>
+      <div class="feat"><div class="n">05</div><h3>صلاحيات لكل موظف</h3><p>كل موظف يدخل بحسابه ورمزه، ويشوف فقط ما يخص دوره. والمسؤول يتحكم بالكل.</p></div>
+      <div class="feat"><div class="n">06</div><h3>يعمل على أي جهاز</h3><p>جوال، تابلت، أو كمبيوتر الكاشير. بدون تثبيت، وبعدة لغات للموظفين.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="plans" style="padding-top:0">
+  <div class="wrap">
+    <h2>باقات واضحة، بدون رسوم مخفية</h2>
+    <p class="sub">الأسعار شهرية بالريال السعودي. ابدأ بتجربة مجانية ثم قرّر.</p>
+    <div class="plans">
+      <div class="plan">
+        <div class="name">الأساسية</div>
+        <div class="price">149 <small>ر.س / شهر</small></div>
+        <div class="trial">تجربة مجانية 7 أيام</div>
+        <ul><li>فرع واحد · حتى 5 مستخدمين</li><li>كاشير وأقسام تحضير</li><li>توصيل وإرجاع وتلف</li></ul>
+      </div>
+      <div class="plan hot">
+        <div class="name">الأعمال <span class="tag" style="background:#141414;color:#F2A27A">الأكثر طلباً</span></div>
+        <div class="price">349 <small>ر.س / شهر</small></div>
+        <div class="trial">تجربة مجانية 14 يوماً</div>
+        <ul><li>حتى 3 فروع · 25 مستخدماً</li><li>ولاء العملاء والمخزون</li><li>تقارير أداء متقدمة</li></ul>
+      </div>
+      <div class="plan">
+        <div class="name">المتقدمة</div>
+        <div class="price">799 <small>ر.س / شهر</small></div>
+        <div class="trial">تجربة مجانية 30 يوماً</div>
+        <ul><li>حتى 20 فرعاً · 100 مستخدم</li><li>معرض وطلبات أونلاين</li><li>دومين خاص ودعم تقني</li></ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="start" style="padding-top:0">
+  <div class="wrap">
+    <h2>اطلب تجربتك المجانية</h2>
+    <p class="sub">املأ البيانات ونتواصل معك لتجهيز حسابك وشرح النظام لفريقك.</p>
+
+    <form id="f" class="form-card" novalidate>
+      <div><label for="shopName">اسم المحل</label><input id="shopName" name="shopName" maxlength="80" autocomplete="organization" required /></div>
+      <div><label for="ownerName">اسمك</label><input id="ownerName" name="ownerName" maxlength="60" autocomplete="name" required /></div>
+      <div><label for="phone">رقم الجوال</label><input id="phone" name="phone" inputmode="tel" dir="ltr" placeholder="05XXXXXXXX" maxlength="20" autocomplete="tel" required /></div>
+      <div><label for="city">المدينة</label><input id="city" name="city" maxlength="40" autocomplete="address-level2" required /></div>
+      <div><label for="shopType">نوع النشاط</label>
+        <select id="shopType" name="shopType"><option value="sweets">حلويات</option><option value="cakes">كيك</option><option value="bakery">مخبز</option><option value="chocolate">شوكولاتة</option><option value="cafe">مقهى</option><option value="other">أخرى</option></select></div>
+      <div><label for="branches">عدد الفروع</label>
+        <select id="branches" name="branches"><option value="1">فرع واحد</option><option value="2-3">2–3</option><option value="4-10">4–10</option><option value="10+">أكثر من 10</option></select></div>
+      <div><label for="plan">الباقة المهتم بها</label>
+        <select id="plan" name="plan"><option value="unsure">لم أقرر بعد</option><option value="starter">الأساسية · 149</option><option value="business">الأعمال · 349</option><option value="enterprise">المتقدمة · 799</option></select></div>
+      <div><label for="email">البريد الإلكتروني (اختياري)</label><input id="email" name="email" type="email" dir="ltr" maxlength="120" autocomplete="email" /></div>
+      <div class="full"><label for="notes">ملاحظات (اختياري)</label><textarea id="notes" name="notes" maxlength="500" placeholder="مثلاً: عندنا طلبات كيك مناسبات كثيرة ونحتاج تنظيم الكتابة"></textarea></div>
+      <input class="hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" />
+      <label class="consent full"><input type="checkbox" id="consent" /> <span>أوافق على <a href="/terms" target="_blank">الشروط</a> وعلى استخدام بياناتي للتواصل معي بشأن التجربة وفق <a href="/privacy" target="_blank">سياسة الخصوصية</a>.</span></label>
+      <div id="msg" class="msg full" role="alert"></div>
+      <button class="btn btn-ember full" id="send" type="submit">إرسال الطلب</button>
+    </form>
+
+    <div id="done" class="done" role="status">
+      <div class="check">✓</div>
+      <h3>وصلنا طلبك</h3>
+      <p>نتواصل معك قريباً على رقم جوالك لتجهيز حسابك.</p>
+      <p id="waWrap" style="display:none;margin-top:18px"><a id="wa" class="btn btn-ember" target="_blank" rel="noopener">تواصل معنا على واتساب الآن</a></p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>© <span id="y"></span> فوترة</span>
+    <span><a href="/terms">الشروط والأحكام</a><a href="/privacy">سياسة الخصوصية</a></span>
+  </div>
+</footer>
+
+<script>
+(function () {
+  document.getElementById("y").textContent = new Date().getFullYear();
+  var q = new URLSearchParams(location.search);
+  var utm = {};
+  ["source", "medium", "campaign", "content"].forEach(function (k) { var v = q.get("utm_" + k); if (v) utm[k] = v.slice(0, 60); });
+  var plan = q.get("plan"); if (plan && document.querySelector('#plan option[value="' + plan.replace(/[^a-z]/g, "") + '"]')) document.getElementById("plan").value = plan;
+
+  var f = document.getElementById("f"), msg = document.getElementById("msg"), send = document.getElementById("send");
+  var labels = { shopName: "اسم المحل", ownerName: "اسمك", phone: "رقم الجوال (يبدأ بـ 05)", city: "المدينة", email: "البريد الإلكتروني", consent: "الموافقة على الشروط" };
+  function v(id) { return document.getElementById(id).value.trim(); }
+  function phoneOk(p) { var d = p.replace(/\D/g, "").replace(/^00966/, "0").replace(/^966/, "0"); return /^05\d{8}$/.test(d); }
+  function showErr(fields) {
+    document.querySelectorAll(".err").forEach(function (e) { e.classList.remove("err"); });
+    fields.forEach(function (k) { var el = document.getElementById(k); if (el && k !== "consent") el.classList.add("err"); });
+    msg.className = "msg full bad";
+    msg.textContent = "راجع: " + fields.map(function (k) { return labels[k] || k; }).join("، ");
+  }
+  function done(wa) {
+    f.style.display = "none";
+    var d = document.getElementById("done"); d.style.display = "block";
+    if (wa) {
+      var text = "مرحباً، أرسلت طلب تجربة نظام فوترة لمحل «" + v("shopName") + "».";
+      document.getElementById("wa").href = "https://wa.me/" + wa + "?text=" + encodeURIComponent(text);
+      document.getElementById("waWrap").style.display = "block";
+    }
+    d.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+  f.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var bad = [];
+    if (v("shopName").length < 2) bad.push("shopName");
+    if (v("ownerName").length < 2) bad.push("ownerName");
+    if (!phoneOk(v("phone"))) bad.push("phone");
+    if (v("city").length < 2) bad.push("city");
+    if (v("email") && !/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i.test(v("email"))) bad.push("email");
+    if (!document.getElementById("consent").checked) bad.push("consent");
+    if (bad.length) { showErr(bad); return; }
+    msg.className = "msg full"; send.disabled = true; send.textContent = "جارٍ الإرسال…";
+    var body = { shopName: v("shopName"), ownerName: v("ownerName"), phone: v("phone"), city: v("city"), email: v("email"), shopType: v("shopType"), branches: v("branches"), plan: v("plan"), notes: v("notes"), consent: true, website: f.website.value, utm: utm };
+    fetch("/api/lead", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return { s: r.status, j: j }; }); })
+      .then(function (res) {
+        if (res.s === 200) return done(res.j.whatsapp);
+        if (res.s === 400 && res.j.fields) return showErr(res.j.fields);
+        msg.className = "msg full bad";
+        msg.textContent = res.s === 429 ? "استلمنا طلباً من هذا الرقم مسبقاً، وسنتواصل معك قريباً." : "تعذّر الإرسال الآن. حاول بعد قليل.";
+        if (res.s === 429 && res.j.whatsapp) done(res.j.whatsapp);
+      })
+      .catch(function () { msg.className = "msg full bad"; msg.textContent = "تعذّر الاتصال. تحقق من الإنترنت وحاول مجدداً."; })
+      .finally(function () { send.disabled = false; send.textContent = "إرسال الطلب"; });
+  });
+})();
+</script>
+</body>
+</html>
