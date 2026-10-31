@@ -11,6 +11,7 @@ import {
   Modal,
   Platform,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -27,11 +28,14 @@ import { DevSettingsModal } from "@/components/DevSettingsModal";
 import { PrinterSettingsModal } from "@/components/PrinterSettingsModal";
 import { ProductManagerModal } from "@/components/ProductManagerModal";
 import { useLang } from "@/context/LanguageContext";
+import { useCompany } from "@/context/CompanyContext";
 import { PinChangeModal } from "@/components/PinChangeModal";
 import { secureAuthErrorText, secureAuthText } from "@/constants/secureAuthText";
 import { employeeCredentialErrorMessage } from "@/lib/employeeCredentials";
 import { localPinError, SecureAuthFailure } from "@/lib/secureAuth";
 import { showPlatformAlert } from "@/lib/platformAlert";
+import { employeeLoginMessage } from "@/utils/loginLink";
+import { openWhatsApp } from "@/utils/orderFlow";
 import {
   Employee,
   EmployeeRole,
@@ -137,6 +141,43 @@ function EmployeesSection() {
   const [saving, setSaving] = useState(false);
   const [statusFilter, setStatusFilter] = useState<EmpStatusFilter>("all");
   const [employeeDialog, setEmployeeDialog] = useState<EmployeeDialogState | null>(null);
+  const { company } = useCompany();
+
+  const shareLoginLink = async (emp: Employee) => {
+    setEmployeeDialog(null);
+    const message = employeeLoginMessage({
+      name: emp.name,
+      companyName: company.name,
+      companyId: company.id,
+      username: String(emp.username || emp.employeeId),
+      currentOrigin: typeof window !== "undefined" ? window.location?.origin : undefined,
+      lang: lang === "ar" ? "ar" : "en",
+    });
+    const note = secureAuthText("shareLoginNoPin", lang);
+    if (emp.phone && emp.phone.replace(/\D/g, "").length >= 9) {
+      openWhatsApp(emp.phone, message);
+      showPlatformAlert(secureAuthText("shareLoginLink", lang), note);
+      return;
+    }
+    try {
+      if (Platform.OS === "web") {
+        const nav = typeof navigator !== "undefined" ? (navigator as any) : null;
+        if (nav?.share) {
+          await nav.share({ text: message });
+          showPlatformAlert(secureAuthText("shareLoginLink", lang), note);
+          return;
+        }
+        await nav?.clipboard?.writeText(message);
+        showPlatformAlert(secureAuthText("shareLoginLink", lang), `${secureAuthText("shareLoginCopied", lang)}\n\n${note}`);
+        return;
+      }
+      await Share.share({ message });
+      showPlatformAlert(secureAuthText("shareLoginLink", lang), note);
+    } catch (e: any) {
+      if (e?.name === "AbortError") return; // closed the share sheet
+      showPlatformAlert(secureAuthText("shareLoginLink", lang), message);
+    }
+  };
   const [editName, setEditName] = useState("");
   const [editPhone, setEditPhone] = useState("");
   const [dialogSaving, setDialogSaving] = useState(false);
@@ -475,6 +516,15 @@ function EmployeesSection() {
                       <Text style={styles.employeeDialogActionText}>
                         {secureAuthText(currentEmployee?.role === "admin" ? "resetPinAction" : "setPinAction", lang)}
                       </Text>
+                    </TouchableOpacity>
+                  ) : null}
+                  {isSecure && employeeDialog.employee.status !== "suspended" ? (
+                    <TouchableOpacity
+                      style={styles.employeeDialogAction}
+                      onPress={() => void shareLoginLink(employeeDialog.employee)}
+                    >
+                      <Feather name="send" size={16} color={Colors.primary} />
+                      <Text style={styles.employeeDialogActionText}>{secureAuthText("shareLoginLink", lang)}</Text>
                     </TouchableOpacity>
                   ) : null}
                   <TouchableOpacity

@@ -13,7 +13,7 @@ import { CompanyTenant, useCompany } from "@/context/CompanyContext";
 import { Employee, useEmployee } from "@/context/EmployeeContext";
 import { PinChangeModal } from "@/components/PinChangeModal";
 import { secureAuthErrorText, secureAuthText } from "@/constants/secureAuthText";
-import { secureLogin, secureLogout, secureSetPin, SecureAuthFailure } from "@/lib/secureAuth";
+import { recheckSecureAuthMode, secureLogin, secureLogout, secureSetPin, SecureAuthFailure } from "@/lib/secureAuth";
 import { showPlatformAlert } from "@/lib/platformAlert";
 import { useLang } from "@/context/LanguageContext";
 
@@ -198,10 +198,13 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!ready || typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
-    const requestedCompany = params.get("company") || params.get("tenant") || params.get("companyId");
-    if (requestedCompany !== LAVIVIANE_COMPANY_ID) return;
+    const requestedCompany = (params.get("company") || params.get("tenant") || params.get("companyId") || "").trim();
+    const requestedUser = (params.get("user") || params.get("u") || "").trim();
+    if (requestedUser) setLoginId(requestedUser.slice(0, 80));
+    if (!requestedCompany || !/^[A-Za-z0-9_-]{2,64}$/.test(requestedCompany)) return;
 
-    // The QR selects the Laviviane tenant and opens its login screen; employee authentication is still required.
+    // A shared link (QR or "send login link") selects the company and opens its login
+    // screen directly; the employee still signs in with their own PIN.
     setUnlocked(true);
     void AsyncStorage.setItem(ACCESS_KEY, "1");
   }, [ready]);
@@ -413,6 +416,10 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
           <Feather name="shield" size={28} color={Colors.accent} />
           <Text style={styles.title}>{secureAuthText("authUnavailableTitle", lang)}</Text>
           <Text style={styles.subtitle}>{secureAuthText("authUnavailableMessage", lang)}</Text>
+          <TouchableOpacity style={[styles.primaryBtn, { flexDirection: rowDirection }]} onPress={() => { void recheckSecureAuthMode(); }}>
+            <Feather name="refresh-cw" size={16} color="#fff" />
+            <Text style={styles.primaryText}>{secureAuthText("retry", lang)}</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     );
