@@ -30,7 +30,11 @@ jobs:
               out.push(`[${label}] inputs=${await ins.count()}`);
               if (await ins.count() >= 2) {
                 await ins.nth(0).fill('probe-nobody-x'); await ins.nth(1).fill('0000');
-                await p.getByText(/تسجيل الدخول|دخول الموظف|دخول/).last().click().catch(()=>{});
+                p.on('request', r => { if (r.url().includes('/api/auth')) errs.push('REQ '+r.method()+' '+r.url().slice(-30)); });
+                p.on('response', r => { if (r.url().includes('/api/auth')) errs.push('RES '+r.status()+' '+r.url().slice(-30)); });
+                const btns = p.getByText('دخول المستخدم', { exact: true });
+                out.push(`[${label}] btnCount=${await btns.count()}`);
+                await btns.last().click({ timeout: 5000 }).catch(e=>out.push('clickErr '+e.message.slice(0,80)));
                 await p.waitForTimeout(7000);
                 out.push(`[${label}] after-login: ${(await p.innerText('body')).replace(/\s+/g,' ').slice(0,300)}`);
               }
