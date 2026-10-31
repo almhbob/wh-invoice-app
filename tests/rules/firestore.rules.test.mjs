@@ -111,6 +111,31 @@ await t("audit logs are tenant-scoped, actor-bound and append-only", async () =>
   await assertFails(getDoc(doc(admin, `companies/${OTHER}/auditLogs/a1`)));
 });
 
+await t("tax profile: whole company reads, only the admin writes", async () => {
+  const tax = { enabled: true, sellerName: "Laviviane", vatNumber: "310122393500003", vatRate: 15 };
+  await assertSucceeds(setDoc(doc(admin, `companies/${C}/taxProfile/current`), tax));
+  await assertSucceeds(getDoc(doc(cashier, `companies/${C}/taxProfile/current`)));
+  await assertFails(setDoc(doc(cashier, `companies/${C}/taxProfile/current`), { ...tax, vatNumber: "300000000000003" }));
+  await assertFails(setDoc(doc(sup, `companies/${C}/taxProfile/current`), tax));
+  await assertFails(setDoc(doc(admin, `companies/${C}/taxProfile/other`), tax));
+  await assertFails(getDoc(doc(admin, `companies/${OTHER}/taxProfile/current`)));
+  await assertFails(getDoc(doc(nobody, `companies/${C}/taxProfile/current`)));
+});
+
+await t("platform leads: server-created, staff follow up, tenants can't see them", async () => {
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), "platformLeads/L1"), { shopName: "Shop", phone: "0551234567", status: "new" });
+  });
+  const staff = as("p1", { companyId: C, role: "admin", eid: "e4", platformRole: "owner" });
+  await assertSucceeds(getDoc(doc(staff, "platformLeads/L1")));
+  await assertSucceeds(updateDoc(doc(staff, "platformLeads/L1"), { status: "contacted", updatedAt: "now" }));
+  await assertFails(updateDoc(doc(staff, "platformLeads/L1"), { phone: "0500000000" }));
+  await assertFails(updateDoc(doc(staff, "platformLeads/L1"), { status: "deleted" }));
+  await assertFails(setDoc(doc(staff, "platformLeads/L2"), { shopName: "x" }));
+  await assertFails(getDoc(doc(admin, "platformLeads/L1")));
+  await assertFails(setDoc(doc(nobody, "platformLeads/L3"), { shopName: "x" }));
+});
+
 await env.cleanup();
-assert.equal(n, 9);
+assert.equal(n, 11);
 console.log(`All ${n} rule suites passed`);

@@ -35,6 +35,8 @@ import { LAVIVIANE_COMPANY_ID } from "@/constants/lavivianeProducts";
 import { t as t_ } from "@/constants/translations";
 import { ProductGalleryModal } from "@/components/ProductGalleryModal";
 import { useCompany } from "@/context/CompanyContext";
+import { useTaxProfile } from "@/hooks/useTaxProfile";
+import { taxProfileError, vatBreakdown, zatcaQrPayload } from "@/utils/zatca";
 import { useEmployee } from "@/context/EmployeeContext";
 import { useLang } from "@/context/LanguageContext";
 import {
@@ -140,6 +142,8 @@ export default function CashierScreen() {
   ], [t]);
   const { company } = useCompany();
   const isLaviviane = company.id === LAVIVIANE_COMPANY_ID;
+  const { profile: taxProfile } = useTaxProfile();
+  const taxOn = taxProfile.enabled && !taxProfileError(taxProfile);
   const { width: winW } = useWindowDimensions();
   const isWide = Platform.OS === "web" && winW >= 768;
   const checkoutDays = useMemo(() => buildCheckoutDays(lang), [lang]);
@@ -523,7 +527,7 @@ export default function CashierScreen() {
     }
   };
 
-  const buildInvoiceHtml = (order: Order, qrDataUrl?: string) => {
+  const buildInvoiceHtml = (order: Order, qrDataUrl?: string, zatcaQr = false) => {
     const itemRows = order.items.map((item) => {
       const lineTotal = item.price ? `${(item.price * item.quantity).toFixed(2)} ر.س` : "—";
       const unitPrice = item.price ? `${item.price} ر.س` : "—";
@@ -593,6 +597,22 @@ export default function CashierScreen() {
          <div style="font-size:8px;letter-spacing:2px;color:#555;text-align:center">MAISON DE PÂTISSERIE · FONDÉE EN 2010</div>`
       : `<div style="font-size:18px;font-weight:900">فاتورة</div>`;
 
+    const esc = (v: unknown) => String(v ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string));
+    const vb = vatBreakdown(order.totalAmount ?? 0, order.insuranceAmount ?? 0, taxProfile.vatRate);
+    const issuedAt = new Date(order.createdAt || Date.now());
+    const taxHeader = taxOn ? `
+  <div class="center" style="margin:4px 0;font-size:10px;line-height:1.6">
+    <div style="font-weight:900;font-size:11px">${esc(taxProfile.sellerName)}</div>
+    <div>الرقم الضريبي: <b style="letter-spacing:0.5px">${esc(taxProfile.vatNumber)}</b></div>
+    ${taxProfile.crNumber ? `<div>السجل التجاري: ${esc(taxProfile.crNumber)}</div>` : ""}
+    ${taxProfile.address ? `<div>${esc(taxProfile.address)}</div>` : ""}
+    <div>تاريخ الإصدار: ${issuedAt.toLocaleDateString("ar-SA")} ${issuedAt.toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit" })}</div>
+  </div>` : "";
+    const vatHtml = taxOn && order.totalAmount ? `
+      <div style="display:flex;justify-content:space-between;font-size:10px;margin:3px 0"><span>الإجمالي قبل الضريبة</span><span>${vb.totalWithoutVat.toFixed(2)} ر.س</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:10px;margin:3px 0"><span>ضريبة القيمة المضافة ${taxProfile.vatRate}%</span><span>${vb.vat.toFixed(2)} ر.س</span></div>
+      ${vb.deposit ? `<div style="display:flex;justify-content:space-between;font-size:9px;margin:3px 0;color:#555"><span>منها تأمين مسترد غير خاضع للضريبة</span><span>${vb.deposit.toFixed(2)} ر.س</span></div>` : ""}` : "";
+
     const html = `<!DOCTYPE html>
 <html dir="rtl" lang="ar">
 <head>
@@ -621,8 +641,9 @@ export default function CashierScreen() {
     ${logoBlock}
   </div>
 
+  ${taxHeader}
   <div class="center" style="margin:5px 0">
-    <div style="font-size:13px;font-weight:900">فاتورة #${order.orderNumber}</div>
+    <div style="font-size:13px;font-weight:900">${taxOn ? "فاتورة ضريبية مبسطة" : "فاتورة"} #${order.orderNumber}</div>
     ${order.orderType ? `<span class="badge">${order.orderType === "delivery" ? "توصيل" : "استلام"}</span>` : ""}
   </div>
 
@@ -654,7 +675,8 @@ export default function CashierScreen() {
   ${discountHtml}
   ${loyaltyHtml}
   ${insuranceHtml}
-  ${order.totalAmount ? `<div class="total-line grand-total"><span>الإجمالي الكلي</span><span>${order.totalAmount.toFixed(2)} ر.س</span></div>` : ""}
+  ${vatHtml}
+  ${order.totalAmount ? `<div class="total-line grand-total"><span>${taxOn ? "الإجمالي شامل الضريبة" : "الإجمالي الكلي"}</span><span>${order.totalAmount.toFixed(2)} ر.س</span></div>` : ""}
   ${paymentHtml}
   ${paidHtml}
 
@@ -669,8 +691,8 @@ export default function CashierScreen() {
 
     const qrBlock = qrDataUrl
       ? `<div style="text-align:center;margin:10px 0 4px">
-           <img src="${qrDataUrl}" alt="QR" style="width:90px;height:90px;" />
-           <div style="font-size:8px;color:#888;margin-top:2px">فاتورة #${order.orderNumber}</div>
+           <img src="${qrDataUrl}" alt="QR" style="width:${zatcaQr ? 110 : 90}px;height:${zatcaQr ? 110 : 90}px;" />
+           <div style="font-size:8px;color:#888;margin-top:2px">${zatcaQr ? "رمز الفاتورة الضريبية · هيئة الزكاة والضريبة والجمارك" : `فاتورة #${order.orderNumber}`}</div>
          </div>`
       : "";
 
@@ -681,14 +703,16 @@ export default function CashierScreen() {
     if (Platform.OS !== "web" || typeof document === "undefined") return;
 
     let qrDataUrl = "";
+    const zatcaQr = taxOn && !!order.totalAmount;
     try {
-      qrDataUrl = await QRCode.toDataURL(
-        `فاتورة #${order.orderNumber}\n${order.customerName}\n${order.customerPhone}\n${order.receivedAt}${order.totalAmount ? `\nالإجمالي: ${order.totalAmount.toFixed(2)} ر.س` : ""}`,
-        { width: 140, margin: 1, color: { dark: "#161616", light: "#ffffff" } }
-      );
+      const vb = vatBreakdown(order.totalAmount ?? 0, order.insuranceAmount ?? 0, taxProfile.vatRate);
+      const content = zatcaQr
+        ? zatcaQrPayload({ sellerName: taxProfile.sellerName, vatNumber: taxProfile.vatNumber, timestamp: order.createdAt || new Date(), totalWithVat: vb.totalWithVat, vat: vb.vat })
+        : `فاتورة #${order.orderNumber}\n${order.customerName}\n${order.customerPhone}\n${order.receivedAt}${order.totalAmount ? `\nالإجمالي: ${order.totalAmount.toFixed(2)} ر.س` : ""}`;
+      qrDataUrl = await QRCode.toDataURL(content, { width: zatcaQr ? 180 : 140, margin: 1, errorCorrectionLevel: "M", color: { dark: "#161616", light: "#ffffff" } });
     } catch { /* skip QR on failure */ }
 
-    const html = buildInvoiceHtml(order, qrDataUrl);
+    const html = buildInvoiceHtml(order, qrDataUrl, zatcaQr);
 
     document.getElementById("__inv_overlay__")?.remove();
 
