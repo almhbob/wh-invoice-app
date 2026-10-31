@@ -4,13 +4,42 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
+      - run: npm i -s playwright@1.48.2 && npx -y playwright@1.48.2 install --with-deps chromium >/dev/null 2>&1
       - run: |
-          B=https://fotra-dv1.pages.dev
-          r() { echo "$1: $(curl -s -o /tmp/b -w '%{http_code} %{time_total}s' "${@:2}") $(head -c 160 /tmp/b | tr '\n' ' ')" >> r.txt; }
-          r status "$B/api/auth/status"
-          r statuscheck "$B/api/auth/status?check=1"
-          r page "$B/?company=laviviane-trial"
-          r access "$B/laviviane-access.html"
-          r loginbad -X POST "$B/api/auth/login" -H 'content-type: application/json' -d '{"companyId":"laviviane-trial","login":"probe-nobody-x","pin":"0000"}'
-          for i in 1 2 3; do r "status$i" "$B/api/auth/status"; done
-          echo "::notice title=probe::$(tr '\n' '|' < r.txt)"
+          cat > p.js <<'JS'
+          const { chromium, devices } = require('playwright');
+          (async () => {
+            const out = [];
+            const b = await chromium.launch();
+            for (const [label, url] of [["bare","https://fotra-dv1.pages.dev/"],["qr","https://fotra-dv1.pages.dev/?company=laviviane-trial"]]) {
+              const ctx = await b.newContext({ ...devices['iPhone 13'], locale: 'ar-SA' });
+              const p = await ctx.newPage();
+              const errs = [];
+              p.on('pageerror', e => errs.push(e.message.slice(0,120)));
+              p.on('response', r => { if (r.status() >= 400) errs.push(r.status()+' '+r.url().slice(0,90)); });
+              await p.goto(url, { waitUntil: 'networkidle', timeout: 60000 });
+              await p.waitForTimeout(4000);
+              const t1 = (await p.innerText('body')).replace(/\s+/g,' ').slice(0,260);
+              out.push(`[${label}] screen1: ${t1}`);
+              // Enter Laviviane if gate shown
+              const enter = p.getByText(/الدخول|دخول/).first();
+              const inputs = await p.locator('input').count();
+              if (inputs < 2 && await enter.count()) { await enter.click().catch(()=>{}); await p.waitForTimeout(4000); }
+              const ins = p.locator('input');
+              out.push(`[${label}] inputs=${await ins.count()}`);
+              if (await ins.count() >= 2) {
+                await ins.nth(0).fill('probe-nobody-x'); await ins.nth(1).fill('0000');
+                await p.getByText(/تسجيل الدخول|دخول الموظف|دخول/).last().click().catch(()=>{});
+                await p.waitForTimeout(7000);
+                out.push(`[${label}] after-login: ${(await p.innerText('body')).replace(/\s+/g,' ').slice(0,300)}`);
+              }
+              out.push(`[${label}] errors: ${errs.slice(0,6).join(' ; ')}`);
+              await ctx.close();
+            }
+            await b.close();
+            console.log(out.join('\n'));
+            require('fs').writeFileSync('r.txt', out.join(' || '));
+          })();
+          JS
+          node p.js
+          echo "::notice title=ui::$(cat r.txt)"
