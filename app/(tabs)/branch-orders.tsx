@@ -1,42 +1,27 @@
-import { RoleGate } from "@/components/RoleGate";
-import { ROLE_CAN_VIEW_BRANCH_FEATURES } from "@/constants/rbac";
 import React from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { BranchDailyProductionRequestPanel } from "@/components/BranchDailyProductionRequestPanel";
-import { BranchOperationsSyncPanel } from "@/components/BranchOperationsSyncPanel";
-import { BranchProductionReceivingPanel } from "@/components/BranchProductionReceivingPanel";
-import { BranchWorkflowGuidePanel } from "@/components/BranchWorkflowGuidePanel";
+import { RoleGate } from "@/components/RoleGate";
+import { WindowOrderPanel } from "@/components/windows/WindowOrderPanel";
 import { Colors } from "@/constants/colors";
+import { ROLE_CAN_VIEW_WINDOW_ORDER } from "@/constants/rbac";
 
-function BranchOrdersScreenInner() {
+/** A sales window's daily order from the factory. */
+export default function BranchOrdersScreen() {
   const insets = useSafeAreaInsets();
-
   return (
-    <View style={styles.container}>
-      <ScrollView
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 120 }]}
-        showsVerticalScrollIndicator={false}
-      >
-        <BranchWorkflowGuidePanel />
-        <BranchOperationsSyncPanel />
-        <BranchDailyProductionRequestPanel />
-        <BranchProductionReceivingPanel />
-      </ScrollView>
-    </View>
+    <RoleGate allow={ROLE_CAN_VIEW_WINDOW_ORDER}>
+      <View style={styles.container}>
+        <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 120 }]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          <WindowOrderPanel />
+        </ScrollView>
+      </View>
+    </RoleGate>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: 16, gap: 16 },
+  content: { padding: 16, gap: 16, maxWidth: 820, width: "100%", alignSelf: "center" },
 });
-
-export default function BranchOrdersScreen() {
-  return (
-    <RoleGate allow={ROLE_CAN_VIEW_BRANCH_FEATURES}>
-      <BranchOrdersScreenInner />
-    </RoleGate>
-  );
-}

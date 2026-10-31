@@ -109,10 +109,28 @@ service cloud.firestore {
       allow write: if isAdmin(companyId) && docId == 'current';
     }
 
+    // Sales windows (branches): everyone sees them, managers set them up.
+    match /companies/{companyId}/windows/{id} {
+      allow read: if inCompany(companyId);
+      allow write: if isManager(companyId);
+    }
+
+    // Each window's daily order from the factory. Staff create and move it along;
+    // only managers may delete one.
+    match /companies/{companyId}/windowOrders/{id} {
+      allow read: if inCompany(companyId);
+      allow create, update: if inCompany(companyId)
+        && request.resource.data.windowId is string
+        && request.resource.data.date is string
+        && request.resource.data.status in ['sent', 'dispatched', 'received']
+        && id == request.resource.data.windowId + '_' + request.resource.data.date;
+      allow delete: if isManager(companyId);
+    }
+
     // Everything else inside a company (orders, products, counters, settings, sessions, logs…)
     match /companies/{companyId}/{sub}/{docId=**} {
       allow read, write: if inCompany(companyId)
-        && !(sub in ['employees', 'employeeSecrets', 'auditLogs', 'taxProfile']);
+        && !(sub in ['employees', 'employeeSecrets', 'auditLogs', 'taxProfile', 'windows', 'windowOrders']);
     }
 
     // Login throttling state — server only.

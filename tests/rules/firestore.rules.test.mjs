@@ -136,6 +136,20 @@ await t("platform leads: server-created, staff follow up, tenants can't see them
   await assertFails(setDoc(doc(nobody, "platformLeads/L3"), { shopName: "x" }));
 });
 
+await t("sales windows: managers set up, staff order, only managers delete", async () => {
+  await assertSucceeds(setDoc(doc(sup, `companies/${C}/windows/w1`), { name: "نافذة العليا", active: true, sort: 1 }));
+  await assertFails(setDoc(doc(cashier, `companies/${C}/windows/w2`), { name: "x", active: true, sort: 2 }));
+  await assertSucceeds(getDoc(doc(cashier, `companies/${C}/windows/w1`)));
+  const order = { windowId: "w1", date: "2026-11-02", status: "sent", items: [], depts: {} };
+  await assertSucceeds(setDoc(doc(cashier, `companies/${C}/windowOrders/w1_2026-11-02`), order));
+  await assertFails(setDoc(doc(cashier, `companies/${C}/windowOrders/other`), order));
+  await assertFails(setDoc(doc(cashier, `companies/${C}/windowOrders/w1_2026-11-03`), { ...order, date: "2026-11-03", status: "deleted" }));
+  await assertSucceeds(updateDoc(doc(cashier, `companies/${C}/windowOrders/w1_2026-11-02`), { "depts.cake": { status: "ready" } }));
+  await assertFails(deleteDoc(doc(cashier, `companies/${C}/windowOrders/w1_2026-11-02`)));
+  await assertSucceeds(deleteDoc(doc(admin, `companies/${C}/windowOrders/w1_2026-11-02`)));
+  await assertFails(getDoc(doc(admin, `companies/${OTHER}/windowOrders/w1_2026-11-02`)));
+});
+
 await env.cleanup();
-assert.equal(n, 11);
+assert.equal(n, 12);
 console.log(`All ${n} rule suites passed`);

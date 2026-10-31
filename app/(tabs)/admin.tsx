@@ -1,5 +1,6 @@
 import { PurgeOrdersPanel } from "@/components/PurgeOrdersPanel";
 import { TaxSettingsPanel } from "@/components/TaxSettingsPanel";
+import { useWindows } from "@/hooks/useWindows";
 import { tr } from "@/lib/i18n";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -181,6 +182,8 @@ function EmployeesSection() {
   };
   const [editName, setEditName] = useState("");
   const [editPhone, setEditPhone] = useState("");
+  const [editWindow, setEditWindow] = useState<string>("");
+  const { windows: salesWindows } = useWindows();
   const [dialogSaving, setDialogSaving] = useState(false);
   const [dialogError, setDialogError] = useState("");
 
@@ -243,6 +246,7 @@ function EmployeesSection() {
   const startEmployeeEdit = (emp: Employee) => {
     setEditName(emp.name);
     setEditPhone(emp.phone || "");
+    setEditWindow(emp.branchId || "");
     setDialogError("");
     setEmployeeDialog({ kind: "edit", employee: emp });
   };
@@ -257,7 +261,7 @@ function EmployeesSection() {
     setDialogSaving(true);
     setDialogError("");
     try {
-      await updateEmployee(employeeDialog.employee.id, { name: nextName, phone: editPhone.trim() });
+      await updateEmployee(employeeDialog.employee.id, { name: nextName, phone: editPhone.trim(), branchId: editWindow });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setEmployeeDialog(null);
     } catch (error) {
@@ -576,6 +580,23 @@ function EmployeesSection() {
                     keyboardType="phone-pad"
                     editable={!dialogSaving}
                   />
+                  {salesWindows.some((w) => w.active) ? (
+                    <>
+                      <Text style={styles.formLabel}>{tr("نافذة البيع (الفرع)", "Sales window (branch)")}</Text>
+                      <View style={{ flexDirection: "row-reverse", flexWrap: "wrap", gap: 6 }}>
+                        {[{ id: "", name: tr("بدون نافذة", "No window") }, ...salesWindows.filter((w) => w.active)].map((w) => (
+                          <TouchableOpacity
+                            key={w.id || "none"}
+                            onPress={() => setEditWindow(w.id)}
+                            disabled={dialogSaving}
+                            style={{ borderWidth: 1, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6, borderColor: editWindow === w.id ? Colors.primary : Colors.border, backgroundColor: editWindow === w.id ? Colors.primary : "transparent" }}
+                          >
+                            <Text style={{ fontSize: 12, fontWeight: "700", color: editWindow === w.id ? "#fff" : Colors.textSecondary }}>{w.name}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </>
+                  ) : null}
                 </View>
               ) : null}
 
