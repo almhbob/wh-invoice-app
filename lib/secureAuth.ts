@@ -62,6 +62,12 @@ function apiBase() {
 
 let modePromise: Promise<SecureAuthMode> | null = null;
 let resolvedMode: SecureAuthMode = "checking";
+const modeListeners = new Set<(m: SecureAuthMode) => void>();
+
+function setResolvedMode(m: SecureAuthMode) {
+  resolvedMode = m;
+  modeListeners.forEach((fn) => fn(m));
+}
 
 function fallbackAuthMode(): SecureAuthMode {
   const localLegacyOptIn = typeof __DEV__ !== "undefined" && __DEV__
@@ -69,27 +75,58 @@ function fallbackAuthMode(): SecureAuthMode {
   return localLegacyOptIn ? "legacy" : "unavailable";
 }
 
+type StatusResult = "secure" | "not_configured" | "unreachable";
+
+async function fetchStatusOnce(timeoutMs: number): Promise<StatusResult> {
+  const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+  const timer = setTimeout(() => controller?.abort(), timeoutMs);
+  try {
+    const res = await fetch(`${apiBase()}/api/auth/status`, { signal: controller?.signal, cache: "no-store" as RequestCache });
+    const type = res.headers.get("content-type") || "";
+    if (!res.ok || !type.includes("application/json")) return "unreachable";
+    const body = (await res.json()) as { configured?: boolean };
+    return body.configured === true ? "secure" : "not_configured";
+  } catch {
+    return "unreachable";
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+const STATUS_ATTEMPTS_MS = [6000, 9000, 12000];
+
+/**
+ * A phone on a weak connection (or inside WhatsApp's in-app browser) can miss the
+ * first status check. Retry a few times before failing closed, and never cache a
+ * failure: the next call (e.g. the "retry" button, or coming back online) checks again.
+ */
 export function getSecureAuthMode(): Promise<SecureAuthMode> {
   if (!modePromise) {
-    modePromise = (async () => {
-      try {
-        const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
-        const timer = setTimeout(() => controller?.abort(), 6000);
-        const res = await fetch(`${apiBase()}/api/auth/status`, { signal: controller?.signal, cache: "no-store" as RequestCache });
-        clearTimeout(timer);
-        const type = res.headers.get("content-type") || "";
-        if (!res.ok || !type.includes("application/json")) return fallbackAuthMode();
-        const body = (await res.json()) as { configured?: boolean };
-        return body.configured === true ? "secure" : fallbackAuthMode();
-      } catch {
-        return fallbackAuthMode();
+    const attempt = (async (): Promise<SecureAuthMode> => {
+      for (let i = 0; i < STATUS_ATTEMPTS_MS.length; i++) {
+        const r = await fetchStatusOnce(STATUS_ATTEMPTS_MS[i]);
+        if (r === "secure") return "secure";
+        if (r === "not_configured") return fallbackAuthMode();
+        if (i < STATUS_ATTEMPTS_MS.length - 1) await new Promise((ok) => setTimeout(ok, 800 * (i + 1)));
       }
-    })().then((m) => {
-      resolvedMode = m;
+      return fallbackAuthMode();
+    })();
+    modePromise = attempt.then((m) => {
+      if (m === "unavailable") modePromise = null;
+      setResolvedMode(m);
       return m;
     });
   }
   return modePromise;
+}
+
+/** Check again now (retry button / back online). */
+export function recheckSecureAuthMode(): Promise<SecureAuthMode> {
+  if (resolvedMode !== "secure") {
+    modePromise = null;
+    setResolvedMode("checking");
+  }
+  return getSecureAuthMode();
 }
 
 export function currentSecureAuthMode() {
@@ -100,8 +137,16 @@ export function useSecureAuthMode(): SecureAuthMode {
   const [mode, setMode] = useState<SecureAuthMode>(resolvedMode);
   useEffect(() => {
     let alive = true;
-    getSecureAuthMode().then((m) => alive && setMode(m));
-    return () => { alive = false; };
+    const fn = (m: SecureAuthMode) => { if (alive) setMode(m); };
+    modeListeners.add(fn);
+    getSecureAuthMode().then(fn);
+    const onOnline = () => { if (resolvedMode === "unavailable") void recheckSecureAuthMode(); };
+    if (typeof window !== "undefined" && window.addEventListener) window.addEventListener("online", onOnline);
+    return () => {
+      alive = false;
+      modeListeners.delete(fn);
+      if (typeof window !== "undefined" && window.removeEventListener) window.removeEventListener("online", onOnline);
+    };
   }, []);
   return mode;
 }
