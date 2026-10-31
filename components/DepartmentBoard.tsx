@@ -1,9 +1,12 @@
 import { tr, trf } from "@/lib/i18n";
 import { Feather } from "@expo/vector-icons";
 import React, { useCallback, useMemo, useState } from "react";
-import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from "react-native";
+import { FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { DeptOrderCard } from "@/components/DeptOrderCard";
+import { DeptWindowOrders } from "@/components/windows/DeptWindowOrders";
+import { useWindowOrders } from "@/hooks/useWindows";
+import { riyadhDate } from "@/utils/windowOrders";
 import { EmptyState } from "@/components/EmptyState";
 import { NewOrderBanner } from "@/components/NewOrderBanner";
 import { SyncStatusBanner } from "@/components/SyncStatusBanner";
@@ -36,6 +39,10 @@ export function DepartmentBoard({ department, titleKey, subtitleKey, deniedKey }
   const color = DEPT_COLOR[department];
   const [tab, setTab] = useState<Tab>("todo");
   const [showBanner, setShowBanner] = useState(false);
+  const [view, setView] = useState<"customers" | "windows">("customers");
+  const { orders: windowOrders } = useWindowOrders(riyadhDate());
+  const openWindowOrders = windowOrders.filter((o) => o.status === "sent"
+    && (department === "packaging" || o.items.some((i) => i.department === department) && (o.depts?.[department]?.status ?? "pending") !== "ready")).length;
 
   const all = getOrdersForDepartment(department);
   const st = (o: Order) => o.departmentStatuses?.[department] ?? "pending";
@@ -72,6 +79,36 @@ export function DepartmentBoard({ department, titleKey, subtitleKey, deniedKey }
     { key: "done", ar: "أُنجزت اليوم", en: "Done today", n: groups.done.length },
   ];
 
+  if (view === "windows") {
+    return (
+      <View style={s.container}>
+        <ScrollView contentContainerStyle={s.list} showsVerticalScrollIndicator={false}>
+          <View style={{ gap: 12, marginBottom: 12 }}>
+            <View style={[s.hero, { backgroundColor: color }]}>
+              <View style={s.heroIcon}><Feather name={DEPT_ICON[department] as never} size={20} color={color} /></View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.heroTitle}>{t(titleKey)}</Text>
+                <Text style={s.heroSub}>{trf("{p0} جديدة · {p1} قيد التحضير · {p2} أُنجزت اليوم", "{p0} new · {p1} preparing · {p2} done today", { p0: groups.pending.length, p1: groups.in_progress.length, p2: groups.done.length })}</Text>
+              </View>
+              {late > 0 && (
+                <View style={s.late}><Feather name="alert-circle" size={13} color="#fff" /><Text style={s.lateTxt}>{late} {tr("متأخر", "late")}</Text></View>
+              )}
+            </View>
+            <View style={s.tabs}>
+              {([["customers", tr("طلبات العملاء", "Customer orders"), groups.todo.length], ["windows", tr("طلبيات النوافذ", "Window orders"), openWindowOrders]] as const).map(([k, label, n]) => (
+                <Pressable key={k} style={[s.tab, view === k && { backgroundColor: Colors.surface }]} onPress={() => setView(k)}>
+                  <Text style={[s.tabTxt, view === k && { color: Colors.text, fontWeight: "900" }]} numberOfLines={1}>{label}</Text>
+                  {n > 0 && <View style={[s.badge, { backgroundColor: view === k ? color : Colors.border }]}><Text style={s.badgeTxt}>{n}</Text></View>}
+                </Pressable>
+              ))}
+            </View>
+          </View>
+          <DeptWindowOrders department={department} />
+        </ScrollView>
+      </View>
+    );
+  }
+
   return (
     <View style={s.container}>
       <NewOrderBanner visible={showBanner} count={groups.pending.length} accentColor={color} onDismiss={() => setShowBanner(false)} />
@@ -90,6 +127,14 @@ export function DepartmentBoard({ department, titleKey, subtitleKey, deniedKey }
               {late > 0 && (
                 <View style={s.late}><Feather name="alert-circle" size={13} color="#fff" /><Text style={s.lateTxt}>{late} {tr("متأخر", "late")}</Text></View>
               )}
+            </View>
+            <View style={s.tabs}>
+              {([["customers", tr("طلبات العملاء", "Customer orders"), groups.todo.length], ["windows", tr("طلبيات النوافذ", "Window orders"), openWindowOrders]] as const).map(([k, label, n]) => (
+                <Pressable key={k} style={[s.tab, view === k && { backgroundColor: Colors.surface }]} onPress={() => setView(k)}>
+                  <Text style={[s.tabTxt, view === k && { color: Colors.text, fontWeight: "900" }]} numberOfLines={1}>{label}</Text>
+                  {n > 0 && <View style={[s.badge, { backgroundColor: view === k ? color : Colors.border }]}><Text style={s.badgeTxt}>{n}</Text></View>}
+                </Pressable>
+              ))}
             </View>
             <SyncStatusBanner />
             <View style={s.tabs}>

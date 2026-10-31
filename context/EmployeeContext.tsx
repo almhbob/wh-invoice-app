@@ -77,7 +77,7 @@ interface EmployeeContextType {
   setCurrentEmployee: (emp: Employee | null) => void;
   addEmployee: (data: Omit<Employee, "id" | "createdAt" | "companyId">) => Promise<Employee>;
   removeEmployee: (id: string) => Promise<void>;
-  updateEmployee: (id: string, changes: Partial<Pick<Employee, "name" | "role" | "status" | "pinCode" | "phone">>) => Promise<void>;
+  updateEmployee: (id: string, changes: Partial<Pick<Employee, "name" | "role" | "status" | "pinCode" | "phone" | "branchId">>) => Promise<void>;
   checkAndLogin: (emp: Employee, forceKick?: boolean) => Promise<"ok" | "conflict">;
   /** Sets an employee's login PIN through the server (secure mode only). */
   setEmployeePin: (id: string, pin: string) => Promise<void>;
@@ -437,7 +437,7 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
   );
 
   const updateEmployee = useCallback(
-    async (id: string, rawChanges: Partial<Pick<Employee, "name" | "role" | "status" | "pinCode" | "phone">>) => {
+    async (id: string, rawChanges: Partial<Pick<Employee, "name" | "role" | "status" | "pinCode" | "phone" | "branchId">>) => {
       let changes = rawChanges;
       if (isSecure && rawChanges.pinCode !== undefined) {
         const { pinCode, ...rest } = rawChanges;

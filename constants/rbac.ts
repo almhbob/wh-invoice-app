@@ -40,6 +40,11 @@ export const ROLE_CAN_VIEW_BRANCH_FEATURES = new Set<EmployeeRole>([
   "admin", "branch_supervisor",
 ]);
 
+/** The window's daily order from the factory: window staff and their supervisors. */
+export const ROLE_CAN_VIEW_WINDOW_ORDER = new Set<EmployeeRole>([
+  "admin", "branch_supervisor", "cashier",
+]);
+
 export const ROLE_CAN_VIEW_CUSTOMERS = new Set<EmployeeRole>([
   "admin", "branch_supervisor", "cashier",
 ]);

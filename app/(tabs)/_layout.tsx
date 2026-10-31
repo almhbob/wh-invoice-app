@@ -27,7 +27,7 @@ import { PLATFORM_OWNER } from "@/constants/platform";
 import {
   canAccessDept, canDo,
   ROLE_CAN_ACCESS_ADMIN,
-  ROLE_CAN_VIEW_ARCHIVE, ROLE_CAN_VIEW_BRANCH_FEATURES,
+  ROLE_CAN_VIEW_ARCHIVE, ROLE_CAN_VIEW_BRANCH_FEATURES, ROLE_CAN_VIEW_WINDOW_ORDER,
   ROLE_CAN_VIEW_CASHIER, ROLE_CAN_VIEW_CUSTOMERS,
   ROLE_CAN_VIEW_DELIVERY, ROLE_CAN_VIEW_ONLINE_ORDERS, ROLE_CAN_VIEW_REPORTS,
   ROLE_CAN_VIEW_TRAYS,
@@ -249,7 +249,8 @@ function DesktopSidebar({ activePath, navigate, isRTL }: { activePath: string; n
   const showReportsNav = !hasRole || canDo(role, ROLE_CAN_VIEW_REPORTS);
   const visibleDepts = !hasRole ? DEPT_TABS : DEPT_TABS.filter(d => canAccessDept(role, d.name));
   const visibleMore = (!hasRole ? MORE_TABS : MORE_TABS.filter(m => {
-    if (["branch-orders", "branch-inventory", "branches"].includes(m.name)) return canDo(role, ROLE_CAN_VIEW_BRANCH_FEATURES);
+    if (m.name === "branch-orders") return canDo(role, ROLE_CAN_VIEW_WINDOW_ORDER);
+    if (["branch-inventory", "branches"].includes(m.name)) return canDo(role, ROLE_CAN_VIEW_BRANCH_FEATURES);
     if (m.name === "customers") return canDo(role, ROLE_CAN_VIEW_CUSTOMERS);
     if (m.name === "delivery" || m.name === "tracking") return canDo(role, ROLE_CAN_VIEW_DELIVERY);
     if (m.name === "online") return canDo(role, ROLE_CAN_VIEW_ONLINE_ORDERS);
@@ -444,7 +445,8 @@ function CustomTabBar() {
   const showReportsTab = !hasRole || canDo(role, ROLE_CAN_VIEW_REPORTS);
   const visibleDeptsTab = !hasRole ? DEPT_TABS : DEPT_TABS.filter(d => canAccessDept(role, d.name));
   const visibleMoreTab = (!hasRole ? MORE_TABS : MORE_TABS.filter(m => {
-    if (["branch-orders", "branch-inventory", "branches"].includes(m.name)) return canDo(role, ROLE_CAN_VIEW_BRANCH_FEATURES);
+    if (m.name === "branch-orders") return canDo(role, ROLE_CAN_VIEW_WINDOW_ORDER);
+    if (["branch-inventory", "branches"].includes(m.name)) return canDo(role, ROLE_CAN_VIEW_BRANCH_FEATURES);
     if (m.name === "customers") return canDo(role, ROLE_CAN_VIEW_CUSTOMERS);
     if (m.name === "delivery" || m.name === "tracking") return canDo(role, ROLE_CAN_VIEW_DELIVERY);
     if (m.name === "online") return canDo(role, ROLE_CAN_VIEW_ONLINE_ORDERS);
