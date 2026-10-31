@@ -12,7 +12,7 @@ jobs:
           (async () => {
             const out = [];
             const b = await chromium.launch();
-            for (const [label, url] of [["bare","https://fotra-dv1.pages.dev/"],["qr","https://fotra-dv1.pages.dev/?company=laviviane-trial"]]) {
+            for (const [label, url] of [["bare","https://fotra-dv1.pages.dev/"],["qr","https://fotra-dv1.pages.dev/?company=laviviane-trial&user=probe-nobody-x"]]) {
               const ctx = await b.newContext({ ...devices['iPhone 13'], locale: 'ar-SA' });
               const p = await ctx.newPage();
               const errs = [];
@@ -27,7 +27,7 @@ jobs:
               const inputs = await p.locator('input').count();
               if (inputs < 2 && await enter.count()) { await enter.click().catch(()=>{}); await p.waitForTimeout(4000); }
               const ins = p.locator('input');
-              out.push(`[${label}] inputs=${await ins.count()}`);
+              out.push(`[${label}] inputs=${await ins.count()} prefill=${await ins.count() ? await ins.nth(0).inputValue() : ''}`);
               if (await ins.count() >= 2) {
                 await ins.nth(0).fill('probe-nobody-x'); await ins.nth(1).fill('0000');
                 p.on('request', r => { if (r.url().includes('/api/auth')) errs.push('REQ '+r.method()+' '+r.url().slice(-30)); });
