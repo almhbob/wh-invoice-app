@@ -1,0 +1,16 @@
+name: tmp-probe-login
+on: push
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          B=https://fotra-dv1.pages.dev
+          r() { echo "$1: $(curl -s -o /tmp/b -w '%{http_code} %{time_total}s' "${@:2}") $(head -c 160 /tmp/b | tr '\n' ' ')" >> r.txt; }
+          r status "$B/api/auth/status"
+          r statuscheck "$B/api/auth/status?check=1"
+          r page "$B/?company=laviviane-trial"
+          r access "$B/laviviane-access.html"
+          r loginbad -X POST "$B/api/auth/login" -H 'content-type: application/json' -d '{"companyId":"laviviane-trial","login":"probe-nobody-x","pin":"0000"}'
+          for i in 1 2 3; do r "status$i" "$B/api/auth/status"; done
+          echo "::notice title=probe::$(tr '\n' '|' < r.txt)"
