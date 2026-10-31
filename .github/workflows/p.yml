@@ -4,7 +4,8 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - run: npm i -s playwright@1.48.2 && npx -y playwright@1.48.2 install --with-deps chromium >/dev/null 2>&1
+      - run: |
+          npm init -y >/dev/null; npm i playwright@1.48.2 >i.log 2>&1; npx playwright install --with-deps chromium >>i.log 2>&1 || echo "::notice title=inst::$(tail -c 600 i.log | tr '\n' ' ')"
       - run: |
           cat > p.js <<'JS'
           const { chromium, devices } = require('playwright');
@@ -41,5 +42,7 @@ jobs:
             require('fs').writeFileSync('r.txt', out.join(' || '));
           })();
           JS
-          node p.js
+          node p.js > o.txt 2>&1 || true
+          [ -f r.txt ] || cp o.txt r.txt
+          sed -i 's/\r//g' r.txt
           echo "::notice title=ui::$(cat r.txt)"
