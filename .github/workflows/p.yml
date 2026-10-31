@@ -45,4 +45,4 @@ jobs:
           node p.js > o.txt 2>&1 || true
           [ -f r.txt ] || cp o.txt r.txt
           sed -i 's/\r//g' r.txt
-          echo "::notice title=ui::$(cat r.txt)"
+          echo "::notice title=ui::$(tr "\n" " " < r.txt | cut -c1-3000)"
