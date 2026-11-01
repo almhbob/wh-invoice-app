@@ -150,6 +150,18 @@ await t("sales windows: managers set up, staff order, only managers delete", asy
   await assertFails(getDoc(doc(admin, `companies/${OTHER}/windowOrders/w1_2026-11-02`)));
 });
 
+await t("staff files and payroll are admin-only", async () => {
+  await assertSucceeds(setDoc(doc(admin, `companies/${C}/hrWorkers/h1`), { name: "W", iqamaNumber: "2412345678", basicSalary: 3000 }));
+  await assertSucceeds(setDoc(doc(admin, `companies/${C}/payroll/2026-11_h1`), { net: 3000 }));
+  for (const who of [cashier, sup]) {
+    await assertFails(getDoc(doc(who, `companies/${C}/hrWorkers/h1`)));
+    await assertFails(getDocs(collection(who, `companies/${C}/hrWorkers`)));
+    await assertFails(getDoc(doc(who, `companies/${C}/payroll/2026-11_h1`)));
+    await assertFails(setDoc(doc(who, `companies/${C}/hrWorkers/h2`), { name: "x" }));
+  }
+  await assertFails(getDoc(doc(admin, `companies/${OTHER}/hrWorkers/h1`)));
+});
+
 await env.cleanup();
-assert.equal(n, 12);
+assert.equal(n, 13);
 console.log(`All ${n} rule suites passed`);

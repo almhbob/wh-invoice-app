@@ -1,4 +1,5 @@
 import { LiveAlertsHost } from "@/components/LiveAlertsHost";
+import { HrReminderHost } from "@/components/hr/HrReminderHost";
 import { Feather } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { Image } from "expo-image";
@@ -586,6 +587,8 @@ export default function TabLayout() {
         <View style={ds.content}>
           <OfflineBanner />
           <LiveAlertsHost />
+      <HrReminderHost />
+          <HrReminderHost />
           <View style={[ds.contentHeader, isRTL ? ds.rowRTL : ds.rowLTR]}>
             <View style={[ds.contentBadge, { backgroundColor: screenAccent }]}>
               <Text style={ds.contentBadgeText}>{screenTitle}</Text>
