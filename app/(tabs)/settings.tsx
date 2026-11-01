@@ -69,6 +69,7 @@ function SettingsRow({
   destructive?: boolean;
   isLast?: boolean;
 }) {
+  const { isRTL } = useLang();
   const content = (
     <View style={[styles.row, !isLast && styles.rowBorder]}>
       <View style={[styles.iconBox, { backgroundColor: iconBg }]}>
@@ -80,7 +81,7 @@ function SettingsRow({
       ) : null}
       {showChevron && (
         <Feather
-          name="chevron-left"
+          name={isRTL ? "chevron-left" : "chevron-right"}
           size={16}
           color={destructive ? Colors.accent : Colors.textMuted}
         />
@@ -357,13 +358,13 @@ const styles = StyleSheet.create({
 
   // Title bar
   titleBar: {
-    backgroundColor: Colors.primary,
     paddingHorizontal: 20,
-    paddingVertical: 14,
-    alignItems: "flex-end",
+    paddingTop: 18,
+    paddingBottom: 4,
+    alignItems: "flex-start",
   },
   titleBarText: {
-    color: Colors.gold,
+    color: Colors.text,
     fontSize: 18,
     fontWeight: "800",
     letterSpacing: 0.4,
@@ -449,7 +450,6 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
     marginTop: 20,
     marginBottom: 8,
-    textAlign: "right",
     paddingHorizontal: 4,
   },
 
@@ -467,7 +467,7 @@ const styles = StyleSheet.create({
 
   // Row
   row: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -490,7 +490,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
     color: Colors.text,
-    textAlign: "right",
   },
   rowLabelDestructive: {
     color: Colors.accent,
@@ -500,7 +499,6 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     fontWeight: "500",
     maxWidth: 140,
-    textAlign: "left",
   },
 
   // Language picker modal
@@ -533,11 +531,10 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: "800",
     color: Colors.primary,
-    textAlign: "right",
     marginBottom: 14,
   },
   langOption: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     paddingVertical: 16,
     gap: 14,

@@ -153,7 +153,8 @@ const UI = {
 };
 
 const DATE_LOCALE: Record<string, string> = {
-  ar: "ar-SA", en: "en-US", ur: "ur-PK", hi: "hi-IN", bn: "bn-BD",
+  // Latin digits keep numbers consistent with the counters across the app
+  ar: "ar-SA-u-nu-latn", en: "en-US", ur: "ur-PK-u-nu-latn", hi: "hi-IN", bn: "bn-BD-u-nu-latn",
 };
 
 // ── Card definitions (labels/captions computed at runtime) ─────────────────────
@@ -274,7 +275,7 @@ export default function HomeScreen() {
   const { orders }          = useOrders();
   const { pendingCount }    = usePriceChange();
 
-  const locale = DATE_LOCALE[lang] ?? "ar-SA";
+  const locale = DATE_LOCALE[lang] ?? DATE_LOCALE.ar;
 
   const [now, setNow] = useState(new Date());
   useEffect(() => {
@@ -346,12 +347,14 @@ export default function HomeScreen() {
   const GAP       = isWide ? 14 : 12;
   const PAD       = isWide ? 28 : 16;
   const contentW  = winW - SIDEBAR_W - INFO_W - PAD * 2;
-  const cols      = contentW >= 760 ? 4 : contentW >= 420 ? 3 : 2;
+  const cols      = contentW >= 780 ? 5 : contentW >= 640 ? 4 : contentW >= 420 ? 3 : 2;
   const cardW     = Math.floor((contentW - GAP * (cols - 1)) / cols);
 
   const empColor = ROLE_COLOR[currentEmployee?.role ?? ""] ?? Colors.gold;
   const greeting = now.getHours() < 12 ? t("greetMorning") : t("greetEvening");
   const fmtMoney = (n: number) => n.toLocaleString(locale, { maximumFractionDigits: 2 });
+
+  const heroColors = (isLavi ? ["#3A2C22", "#2F241D", "#1C1511"] : ["#24365E", "#1A2744", "#0F1A2E"]) as [string, string, string];
 
   const renderCards = (list: typeof cards) => (
     <View style={[s.grid, { gap: GAP }]}>
@@ -417,7 +420,7 @@ export default function HomeScreen() {
 
           {/* ── Info panel ────────────────────────────────────────────────── */}
           <LinearGradient
-            colors={["#080F1E", "#0E1A30", "#152240"]}
+            colors={[heroColors[2], heroColors[1], heroColors[0]]}
             style={[s.infoPanel, { width: INFO_W }]}
             start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
           >
@@ -516,7 +519,6 @@ export default function HomeScreen() {
 
   // ── Narrow layout ─────────────────────────────────────────────────────────
   const flowTotal = pendingCnt + inProgressCnt + doneCnt;
-  const heroColors = (isLavi ? ["#3A2C22", "#2F241D", "#1C1511"] : ["#24365E", "#1A2744", "#0F1A2E"]) as [string, string, string];
   const stats = [
     { num: todayOrders.length, lbl: t("todayShort"),      color: UI.goldHi  },
     { num: pendingCnt,          lbl: t("statusWaiting"),   color: UI.pending },
@@ -538,10 +540,10 @@ export default function HomeScreen() {
 
           <View style={s.heroTop}>
             <View style={{ flex: 1, gap: 2 }}>
+              <Text style={s.heroDate}>{greeting} · {fmtDate(now, locale)}</Text>
               <Text style={s.heroGreeting} numberOfLines={1}>
-                {greeting}{currentEmployee ? `، ${currentEmployee.name}` : ""}
+                {currentEmployee?.name ?? company.name}
               </Text>
-              <Text style={s.heroDate}>{fmtDate(now, locale)}</Text>
             </View>
             <View style={s.clockPill}>
               <View style={s.liveDot} />
@@ -621,7 +623,7 @@ const s = StyleSheet.create({
 
   // Hero (narrow)
   hero:         { borderRadius: 26, padding: 18, gap: 16, overflow: "hidden", ...softShadow, shadowOpacity: 0.18 },
-  heroGlow:     { position: "absolute", top: -90, end: -70, width: 220, height: 220, borderRadius: 110, backgroundColor: "rgba(232,201,106,0.12)" },
+  heroGlow:     { position: "absolute", top: -120, end: -100, width: 240, height: 240, borderRadius: 120, backgroundColor: "rgba(232,201,106,0.06)" },
   heroTop:      { flexDirection: "row", alignItems: "center", gap: 12 },
   heroGreeting: { color: "#FFFFFF", fontSize: 18, fontWeight: "900" },
   heroDate:     { color: "rgba(255,255,255,0.55)", fontSize: 12, fontWeight: "600" },
@@ -639,7 +641,7 @@ const s = StyleSheet.create({
   heroStatLbl:  { color: "rgba(255,255,255,0.6)", fontSize: 10, fontWeight: "700" },
 
   // Info panel
-  infoPanel:        { flexShrink: 0, borderLeftWidth: 1, borderLeftColor: "rgba(255,255,255,0.06)" },
+  infoPanel:        { flexShrink: 0, borderStartWidth: 1, borderStartColor: "rgba(255,255,255,0.06)" },
   infoPanelContent: { padding: 22, gap: 18 },
 
   // Brand

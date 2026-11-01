@@ -256,13 +256,6 @@ export function DeptOrderCard({ order, department, onStatusChange }: DeptOrderCa
           <Image source={{ uri: order.imageUri }} style={styles.img} contentFit="cover" />
         )}
 
-        {order.notes ? (
-          <View style={styles.infoItem}>
-            <Feather name="file-text" size={12} color={Colors.textMuted} />
-            <Text style={styles.notesTextMuted} numberOfLines={1}>{order.notes}</Text>
-          </View>
-        ) : null}
-
         {/* Transfer button (only when order is active and no transfer done yet OR received) */}
         {canTransfer && canTransferFromDept && !isSentTransfer && (
           <TouchableOpacity
@@ -375,7 +368,7 @@ const styles = StyleSheet.create({
   statusDot: { width: 6, height: 6, borderRadius: 3 },
   statusLabel: { fontSize: 11, fontWeight: "700" },
   time: { fontSize: 13, color: Colors.textMuted, fontWeight: "500" },
-  customerRow: { flexDirection: "row", gap: 16 },
+  customerRow: { flexDirection: "row", flexWrap: "wrap", columnGap: 16, rowGap: 4 },
   infoItem: { flexDirection: "row", alignItems: "center", gap: 5 },
   customerName: { fontSize: 14, fontWeight: "700", color: Colors.primary },
   customerPhone: { fontSize: 13, color: Colors.textSecondary },

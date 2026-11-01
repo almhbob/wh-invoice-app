@@ -94,7 +94,7 @@ export default function HalwaScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  deptBanner: { paddingHorizontal: 20, paddingVertical: 14, gap: 6 },
+  deptBanner: { marginHorizontal: 16, marginTop: 16, borderRadius: 20, paddingHorizontal: 18, paddingVertical: 16, gap: 6 },
   bannerTitle: { fontSize: 20, fontWeight: "800", color: "#fff" },
   bannerStats: { flexDirection: "row", gap: 10, alignItems: "center" },
   statPill: {

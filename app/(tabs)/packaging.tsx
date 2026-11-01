@@ -91,7 +91,7 @@ export default function PackagingScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  banner: { paddingHorizontal: 20, paddingVertical: 14, gap: 4 },
+  banner: { marginHorizontal: 16, marginTop: 16, borderRadius: 20, paddingHorizontal: 18, paddingVertical: 16, gap: 4 },
   bannerTitle: { fontSize: 20, fontWeight: "800", color: "#fff" },
   bannerSub: { fontSize: 12, color: "rgba(255,255,255,0.75)" },
   bannerStats: { flexDirection: "row", gap: 10, alignItems: "center", marginTop: 4 },

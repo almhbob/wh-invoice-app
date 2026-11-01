@@ -31,7 +31,7 @@ export default function Root({ children }: PropsWithChildren) {
               }
 
               body {
-                background: #F5F7FA;
+                background: #F5F2EC;
                 overscroll-behavior-y: contain;
                 touch-action: manipulation;
                 -webkit-font-smoothing: antialiased;
@@ -52,7 +52,7 @@ export default function Root({ children }: PropsWithChildren) {
                   background:
                     radial-gradient(ellipse at 20% 0%, rgba(26,39,68,0.07) 0%, transparent 60%),
                     radial-gradient(ellipse at 80% 100%, rgba(201,168,76,0.05) 0%, transparent 60%),
-                    linear-gradient(135deg, #eef2f7 0%, #f5f7fa 50%, #edf1f8 100%);
+                    linear-gradient(135deg, #F1ECE3 0%, #F5F2EC 50%, #EFE9DF 100%);
                 }
               }
 

@@ -9,17 +9,17 @@ export const Colors = {
   info: "#2980B9",
   purple: "#8E44AD",
 
-  background: "#F5F7FA",
+  background: "#F5F2EC",
   surface: "#FFFFFF",
-  surfaceSecondary: "#F0F3F8",
+  surfaceSecondary: "#F1ECE3",
 
-  text: "#1A2744",
-  textSecondary: "#5A6A8A",
-  textMuted: "#9AA5BA",
+  text: "#1C1917",
+  textSecondary: "#57534E",
+  textMuted: "#78716C",
   textLight: "#FFFFFF",
 
-  border: "#E2E8F0",
-  borderLight: "#EEF2F7",
+  border: "#ECE6DB",
+  borderLight: "#F3EEE6",
 
   halwa: "#8B4513",
   halwaLight: "#D4956A",
