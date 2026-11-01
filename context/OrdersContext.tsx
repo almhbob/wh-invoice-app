@@ -203,6 +203,11 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [refreshTick, setRefreshTick] = useState(0);
   const firestoreAlive = useRef(false);
+  // Refs so long-lived callbacks always see the latest orders/company
+  const allOrdersRef = useRef<Order[]>([]);
+  allOrdersRef.current = allOrders;
+  const companyRef = useRef(company);
+  companyRef.current = company;
 
   const orders        = allOrders.filter(o => !o.deleted);
   const deletedOrders = allOrders.filter(o =>  o.deleted);
@@ -239,10 +244,18 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
           companyId,
           ...(d.data() as Omit<Order, "id">),
         }));
-        setAllOrders(loaded);
+        // Keep orders created offline that have not reached Firestore yet,
+        // otherwise the snapshot would silently drop them.
+        setAllOrders((prev) => {
+          const pending = prev.filter((o) =>
+            o.id.startsWith("local-") &&
+            !loaded.some((l) => l.orderNumber === o.orderNumber && l.createdAt === o.createdAt)
+          );
+          const merged = pending.length ? [...pending, ...loaded] : loaded;
+          writeLocalOrders(companyId, merged);
+          return merged;
+        });
         setIsLoading(false);
-        // Cache Firestore data locally for offline use
-        writeLocalOrders(companyId, loaded);
       },
       (err) => {
         console.warn("Firestore orders unavailable, using local data:", err.code);
@@ -278,8 +291,11 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
     } catch {
       const key = `${LOCAL_COUNTER_KEY}_${companyId}`;
       const stored = await AsyncStorage.getItem(key);
-      const current = stored ? parseInt(stored, 10) : 0;
-      const next = current + 1;
+      const current = stored ? parseInt(stored, 10) || 0 : 0;
+      // Never go below numbers already issued, so offline numbers don't
+      // restart at 1 and duplicate existing invoices.
+      const highestKnown = allOrdersRef.current.reduce((m, o) => Math.max(m, o.orderNumber || 0), 0);
+      const next = Math.max(current, highestKnown) + 1;
       await AsyncStorage.setItem(key, next.toString());
       return next;
     }
@@ -290,9 +306,14 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
       orderData: Omit<Order, "id" | "companyId" | "orderNumber" | "createdAt" | "updatedAt" | "departmentStatuses" | "departmentReceivers">
     ): Promise<Order> => {
       const lang = "ar" as const;
+      const company = companyRef.current;
       if (company.maxInvoicesPerMonth) {
-        const thisMonth = new Date().toISOString().slice(0, 7);
-        const monthCount = allOrders.filter((o) => !o.deleted && o.createdAt.startsWith(thisMonth)).length;
+        const nowD = new Date();
+        const monthCount = allOrdersRef.current.filter((o) => {
+          if (o.deleted) return false;
+          const d = new Date(o.createdAt);
+          return d.getFullYear() === nowD.getFullYear() && d.getMonth() === nowD.getMonth();
+        }).length;
         if (monthCount >= company.maxInvoicesPerMonth) {
           const msg = t_("limitMaxInvMsg", lang).replace("{n}", String(company.maxInvoicesPerMonth));
           Alert.alert(t_("limitMaxInvTitle", lang), msg);
@@ -387,20 +408,21 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
       });
 
       // Try Firestore (non-blocking)
-      const order = allOrders.find((o) => o.id === id);
+      const order = allOrdersRef.current.find((o) => o.id === id);
       if (!order || id.startsWith("local-")) return;
-      const newReceivers = { ...order.departmentReceivers };
-      if (status === "in_progress" && receiver && !newReceivers[department]) {
-        newReceivers[department] = receiver;
-      }
-      updateDoc(orderDoc(id), {
+      // Field paths only touch this department, so two devices updating
+      // different departments at once can't overwrite each other.
+      const patch: Record<string, unknown> = {
         [`departmentStatuses.${department}`]: status,
-        departmentReceivers: newReceivers,
         companyId,
         updatedAt: new Date().toISOString(),
-      }).catch((err) => console.warn("Firestore updateStatus failed:", err?.code));
+      };
+      if (status === "in_progress" && receiver && !order.departmentReceivers?.[department]) {
+        patch[`departmentReceivers.${department}`] = receiver;
+      }
+      updateDoc(orderDoc(id), patch).catch((err) => console.warn("Firestore updateStatus failed:", err?.code));
     },
-    [companyId, orderDoc, allOrders]
+    [companyId, orderDoc]
   );
 
   const transferToBranch = useCallback(
@@ -413,18 +435,25 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
           );
           const updatedStatuses = { ...o.departmentStatuses };
           if (!updatedStatuses[transfer.toDept]) updatedStatuses[transfer.toDept] = "pending";
+          if (transfer.fromDept !== "packaging" && !updatedItems.some((i) => i.department === transfer.fromDept)) {
+            updatedStatuses[transfer.fromDept] = "done";
+          }
           return { ...o, items: updatedItems, departmentStatuses: updatedStatuses, branchTransfer: transfer, updatedAt: new Date().toISOString() };
         })
       );
 
       if (orderId.startsWith("local-")) return;
-      const order = allOrders.find((o) => o.id === orderId);
+      const order = allOrdersRef.current.find((o) => o.id === orderId);
       if (!order) return;
       const updatedItems = order.items.map((item) =>
         transfer.itemIds.includes(item.id) ? { ...item, department: transfer.toDept } : item
       );
       const updatedStatuses = { ...order.departmentStatuses };
       if (!updatedStatuses[transfer.toDept]) updatedStatuses[transfer.toDept] = "pending";
+      // All items left the source department — don't leave it "pending" forever
+      if (transfer.fromDept !== "packaging" && !updatedItems.some((i) => i.department === transfer.fromDept)) {
+        updatedStatuses[transfer.fromDept] = "done";
+      }
       const clean = removeUndefined({ items: updatedItems, departmentStatuses: updatedStatuses, branchTransfer: transfer, companyId, updatedAt: new Date().toISOString() });
       updateDoc(orderDoc(orderId), clean).catch((err) => console.warn("Firestore transfer failed:", err?.code));
     },

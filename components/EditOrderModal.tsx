@@ -148,8 +148,29 @@ export default function EditOrderModal({
       .filter((it) => it.name.trim() !== "")
       .map(editableToOrderItem);
 
+    // Re-price the order when item prices/quantities change. Use the delta of
+    // the items subtotal so extras outside items (chocolate card, deposit,
+    // fixed discount) stay as they were.
+    const itemsSum = (list: OrderItem[]) => list.reduce((sum, it) => sum + (it.price ?? 0) * (it.quantity || 0), 0);
+    const delta = itemsSum(cleanedItems) - itemsSum(order.items);
+    let totalAmount = order.totalAmount;
+    if (Math.abs(delta) > 0.0001) {
+      const factor = order.discount?.type === "percentage" ? 1 - Math.min(order.discount.value, 100) / 100 : 1;
+      const next = Math.max(0, (order.totalAmount ?? 0) + delta * factor);
+      totalAmount = next > 0 ? Math.round(next * 100) / 100 : undefined;
+    }
+
+    // New departments added during the edit need a status, otherwise the
+    // department screen never shows the item.
+    const departmentStatuses = { ...order.departmentStatuses };
+    cleanedItems.forEach((it) => {
+      if (!departmentStatuses[it.department]) departmentStatuses[it.department] = "pending";
+    });
+
     const patch: Partial<Order> = {
       items: cleanedItems,
+      totalAmount,
+      departmentStatuses,
       notes: notes.trim() || undefined,
       deliveryTime: [deliveryDate.trim(), deliveryTimeSlot.trim()].filter(Boolean).join(" ") || undefined,
       paymentMethod,

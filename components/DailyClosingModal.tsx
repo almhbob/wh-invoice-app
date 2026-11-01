@@ -16,6 +16,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { localDayKey } from "@/utils/dateUtils";
 import { Colors } from "@/constants/colors";
 import { useEmployee } from "@/context/EmployeeContext";
 import { Order } from "@/context/OrdersContext";
@@ -54,9 +55,7 @@ function formatTimeAr(isoString: string): string {
   }
 }
 
-function getTodayISO(): string {
-  return new Date().toISOString().slice(0, 10);
-}
+
 
 // ─── Props ────────────────────────────────────────────────────────────────
 
@@ -76,11 +75,11 @@ export function DailyClosingModal({ visible, onClose, orders }: Props) {
   const [notes, setNotes] = useState("");
   const [isClosing, setIsClosing] = useState(false);
 
-  const today = getTodayISO();
+  const today = localDayKey();
 
   // Compute today's orders and summary
   const todayOrders = useMemo(
-    () => orders.filter((o) => !o.deleted && o.createdAt?.slice(0, 10) === today),
+    () => orders.filter((o) => !o.deleted && localDayKey(o.createdAt) === today),
     [orders, today]
   );
 

@@ -16,7 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors } from "@/constants/colors";
 import { useOrders } from "@/context/OrdersContext";
 import { useLang } from "@/context/LanguageContext";
-import { fmtCurrency } from "@/utils/dateUtils";
+import { fmtCurrency, localDayKey } from "@/utils/dateUtils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -27,9 +27,7 @@ interface Props {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function isToday(isoDate: string): boolean {
-  return isoDate?.slice(0, 10) === new Date().toISOString().slice(0, 10);
-}
+
 
 function formatDateAr(): string {
   return new Date().toLocaleDateString("ar-SA", {
@@ -65,9 +63,10 @@ export function ShiftCloseModal({ visible, onClose }: Props) {
   const bottomPad = Platform.OS === "ios" ? insets.bottom + 8 : 24;
 
   // ── Today's orders (active only) ────────────────────────────────────────────
+  const todayKey = localDayKey();
   const todayOrders = useMemo(
-    () => orders.filter((o) => !o.deleted && isToday(o.createdAt)),
-    [orders]
+    () => orders.filter((o) => !o.deleted && localDayKey(o.createdAt) === todayKey),
+    [orders, todayKey]
   );
 
   // ── Aggregated summary ──────────────────────────────────────────────────────

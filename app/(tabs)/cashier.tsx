@@ -4,6 +4,7 @@ import * as ImagePicker from "expo-image-picker";
 import * as Linking from "expo-linking";
 import { Image } from "expo-image";
 import React, { useEffect, useMemo, useState } from "react";
+import { localDayKey } from "@/utils/dateUtils";
 import { InlineCatalog } from "@/components/InlineCatalog";
 import { Product } from "@/context/ProductsContext";
 import {
@@ -24,6 +25,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Colors } from "@/constants/colors";
+import { escapeDeep } from "@/utils/html";
 import { LAVIVIANE_COMPANY_ID } from "@/constants/lavivianeProducts";
 import { t as t_ } from "@/constants/translations";
 import { ProductGalleryModal } from "@/components/ProductGalleryModal";
@@ -171,10 +173,11 @@ export default function CashierScreen() {
   const [searchQuery, setSearchQuery] = useState("");
 
   // Today's summary (for cashier strip)
-  const todayOrders = useMemo(() => {
-    const today = new Date().toISOString().slice(0, 10);
-    return orders.filter((o) => o.createdAt?.slice(0, 10) === today);
-  }, [orders]);
+  const todayKey = localDayKey();
+  const todayOrders = useMemo(
+    () => orders.filter((o) => !o.deleted && localDayKey(o.createdAt) === todayKey),
+    [orders, todayKey]
+  );
   const todayTotal = todayOrders.reduce((s, o) => s + (o.totalAmount ?? 0), 0);
 
   const searchResults = useMemo(() => {
@@ -375,10 +378,12 @@ export default function CashierScreen() {
   const subtotal = validItems.reduce((s, i) => s + (i.price || 0) * i.quantity, 0) + chocoPrice;
   const insuranceVal = parseFloat(insuranceAmount) || 0;
   const discountVal = parseFloat(discountValue) || 0;
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+  // Cap the discount at the subtotal so it can never eat the tray deposit
   const discountAmount = discountEnabled && discountVal > 0
-    ? (discountType === "percentage" ? subtotal * (Math.min(discountVal, 100) / 100) : discountVal)
+    ? round2(Math.min(subtotal, discountType === "percentage" ? subtotal * (Math.min(discountVal, 100) / 100) : discountVal))
     : 0;
-  const grandTotal = Math.max(0, subtotal - discountAmount + insuranceVal);
+  const grandTotal = round2(Math.max(0, subtotal - discountAmount + insuranceVal));
   const amountPaidVal = parseFloat(amountPaid) || 0;
   const remainingAmount = Math.max(0, grandTotal - amountPaidVal);
   const hasPrices = validItems.some((i) => (i.price || 0) > 0);
@@ -473,7 +478,9 @@ export default function CashierScreen() {
     }
   };
 
-  const buildInvoiceHtml = (order: Order, qrDataUrl?: string) => {
+  const buildInvoiceHtml = (rawOrder: Order, qrDataUrl?: string) => {
+    // Escape user-entered text (names, notes, addresses) before it goes into HTML
+    const order = escapeDeep(rawOrder);
     const itemRows = order.items.map((item) => {
       const lineTotal = item.price ? `${(item.price * item.quantity).toFixed(2)} ر.س` : "—";
       const unitPrice = item.price ? `${item.price} ر.س` : "—";

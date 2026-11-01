@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Colors } from "@/constants/colors";
 import { canBranchSupervisorAssignRole } from "@/constants/branchSupervisorPermissions";
+import { canDo, ROLE_CAN_MANAGE_EMPLOYEES } from "@/constants/rbac";
 import { useLang } from "@/context/LanguageContext";
 import {
   Employee,
@@ -71,23 +72,50 @@ export function EmployeeSelectorModal({ visible, onClose }: Props) {
   const [newPin, setNewPin] = useState("1234");
   const [newRole, setNewRole] = useState<EmployeeRole>("cashier");
   const [saving, setSaving] = useState(false);
+  const [pinTarget, setPinTarget] = useState<Employee | null>(null);
+  const [pinInput, setPinInput] = useState("");
+
+  const isAdmin = currentEmployee?.role === "admin";
+  // Only admins and branch supervisors may add or delete employees
+  const canManage = canDo(currentEmployee?.role, ROLE_CAN_MANAGE_EMPLOYEES) || currentEmployee?.role === "branch_supervisor";
 
   const addRoles = useMemo(() => {
     if (currentEmployee?.role === "branch_supervisor") {
       return ALL_ROLES.filter(canBranchSupervisorAssignRole);
     }
-    return DEFAULT_ADD_ROLES;
-  }, [currentEmployee?.role]);
+    // Only an admin can create another admin
+    return isAdmin ? DEFAULT_ADD_ROLES : DEFAULT_ADD_ROLES.filter((r) => r !== "admin");
+  }, [currentEmployee?.role, isAdmin]);
 
   const visibleRoles = useMemo(() => {
     const present = new Set(employees.map((e) => e.role));
     return ALL_ROLES.filter((role) => present.has(role));
   }, [employees]);
 
+  const finishSwitch = (emp: Employee) => {
+    setCurrentEmployee(emp);
+    setPinTarget(null);
+    setPinInput("");
+    onClose();
+  };
+
+  // Switching user requires the target employee's PIN (admins may switch freely)
   const handleSelect = (emp: Employee) => {
     Haptics.selectionAsync();
-    setCurrentEmployee(emp);
-    onClose();
+    if (currentEmployee?.id === emp.id) { onClose(); return; }
+    if (isAdmin) { finishSwitch(emp); return; }
+    setPinInput("");
+    setPinTarget(emp);
+  };
+
+  const confirmPin = () => {
+    if (!pinTarget) return;
+    if (String(pinTarget.pinCode || "1234") !== pinInput.trim()) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert(t("errTitle"), t("empSwitchPinWrong"));
+      return;
+    }
+    finishSwitch(pinTarget);
   };
 
   const handleLogout = () => {
@@ -96,6 +124,7 @@ export function EmployeeSelectorModal({ visible, onClose }: Props) {
   };
 
   const handleAddEmployee = async () => {
+    if (!canManage) { Alert.alert(t("permissionTitle"), t("empRoleRestrict")); return; }
     if (!newName.trim()) { Alert.alert(t("errTitle"), t("empNameRequired")); return; }
     if (!newEmpId.trim()) { Alert.alert(t("errTitle"), t("empIdRequired")); return; }
     const normalizedEmpId = newEmpId.trim().toUpperCase();
@@ -165,12 +194,40 @@ export function EmployeeSelectorModal({ visible, onClose }: Props) {
           <TouchableOpacity style={[styles.tab, tab === "select" && styles.tabActive]} onPress={() => setTab("select")}>
             <Text style={[styles.tabText, tab === "select" && styles.tabTextActive]}>{t("selectEmpTab")}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.tab, tab === "add" && styles.tabActive]} onPress={() => setTab("add")}>
-            <Text style={[styles.tabText, tab === "add" && styles.tabTextActive]}>{t("addEmpTab")}</Text>
-          </TouchableOpacity>
+          {canManage && (
+            <TouchableOpacity style={[styles.tab, tab === "add" && styles.tabActive]} onPress={() => setTab("add")}>
+              <Text style={[styles.tabText, tab === "add" && styles.tabTextActive]}>{t("addEmpTab")}</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
-        {tab === "select" ? (
+        {pinTarget && (
+          <View style={styles.pinBox}>
+            <Text style={styles.pinTitle}>{t("empSwitchPinTitle").replace("{name}", pinTarget.name)}</Text>
+            <TextInput
+              style={styles.input}
+              value={pinInput}
+              onChangeText={setPinInput}
+              placeholder="••••"
+              placeholderTextColor={Colors.textMuted}
+              secureTextEntry
+              keyboardType="number-pad"
+              autoFocus
+              onSubmitEditing={confirmPin}
+              textAlign="center"
+            />
+            <View style={styles.pinActions}>
+              <TouchableOpacity style={[styles.saveBtn, styles.pinBtn]} onPress={confirmPin} activeOpacity={0.85}>
+                <Text style={styles.saveBtnText}>{t("confirm")}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.pinCancel, styles.pinBtn]} onPress={() => { setPinTarget(null); setPinInput(""); }}>
+                <Text style={styles.pinCancelText}>{t("cancel")}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {tab === "select" || !canManage ? (
           <ScrollView contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false}>
             {currentEmployee && (
               <TouchableOpacity style={styles.logoutRow} onPress={handleLogout}>
@@ -207,9 +264,11 @@ export function EmployeeSelectorModal({ visible, onClose }: Props) {
                             <Text style={styles.empIdText}>#{emp.employeeId} · {emp.username || emp.employeeId}</Text>
                           </View>
                           {isCurrent ? <Feather name="check-circle" size={20} color={ROLE_COLORS[role]} /> : null}
-                          <TouchableOpacity style={styles.delBtn} onPress={() => handleRemove(emp)} hitSlop={10}>
-                            <Feather name="trash-2" size={15} color={Colors.textMuted} />
-                          </TouchableOpacity>
+                          {canManage && !isCurrent && (
+                            <TouchableOpacity style={styles.delBtn} onPress={() => handleRemove(emp)} hitSlop={10}>
+                              <Feather name="trash-2" size={15} color={Colors.textMuted} />
+                            </TouchableOpacity>
+                          )}
                         </TouchableOpacity>
                       );
                     })}
@@ -259,6 +318,12 @@ export function EmployeeSelectorModal({ visible, onClose }: Props) {
 }
 
 const styles = StyleSheet.create({
+  pinBox: { marginHorizontal: 16, marginBottom: 12, padding: 14, borderRadius: 16, backgroundColor: "#fff", borderWidth: 1, borderColor: "#ECE6DB", gap: 10 },
+  pinTitle: { fontSize: 14, fontWeight: "800", color: Colors.text, textAlign: "center" },
+  pinActions: { flexDirection: "row", gap: 10 },
+  pinBtn: { flex: 1, marginTop: 0 },
+  pinCancel: { alignItems: "center", justifyContent: "center", borderRadius: 12, paddingVertical: 12, backgroundColor: "#F5F2EC" },
+  pinCancelText: { color: Colors.text, fontWeight: "700" },
   container: { flex: 1, backgroundColor: Colors.background },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: Colors.border },
   closeBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.surfaceSecondary, alignItems: "center", justifyContent: "center" },

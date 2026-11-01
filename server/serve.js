@@ -86,7 +86,12 @@ function securityHeaders(extra = {}) {
 }
 
 function safeJoin(root, urlPath) {
-  const decoded = decodeURIComponent(urlPath.split("?")[0]);
+  let decoded;
+  try {
+    decoded = decodeURIComponent(urlPath.split("?")[0]);
+  } catch {
+    return null; // malformed percent-encoding (e.g. /%E0%A4%A) must not crash the server
+  }
   const normalized = path.normalize(decoded).replace(/^(\.\.(\/|\\|$))+/, "");
   const filePath = path.join(root, normalized);
   if (!filePath.startsWith(root)) return null;
@@ -162,7 +167,7 @@ function serveStatic(req, res) {
       diagnostics: diagnosticsPayload(),
     });
   }
-  const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
+  const url = new URL(req.url || "/", "http://localhost");
   const pathname = url.pathname === "/" ? "/index.html" : url.pathname;
   const requestedPath = safeJoin(STATIC_ROOT, pathname);
   if (!requestedPath) {
@@ -182,7 +187,7 @@ const server = http.createServer((req, res) => {
     res.end("Method Not Allowed");
     return;
   }
-  const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
+  const url = new URL(req.url || "/", "http://localhost");
   if (url.pathname === "/api/healthz" || url.pathname === "/healthz") return sendJson(res, 200, diagnosticsPayload());
   if (url.pathname === "/api/diagnostics") return sendJson(res, 200, diagnosticsPayload());
   if (url.pathname === "/diagnostics") return sendHtml(res, 200, diagnosticsHtml());

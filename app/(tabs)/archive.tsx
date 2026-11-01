@@ -14,6 +14,7 @@ import {
 import { EmptyState } from "@/components/EmptyState";
 import EditOrderModal from "@/components/EditOrderModal";
 import { Colors } from "@/constants/colors";
+import { escapeDeep } from "@/utils/html";
 import { canDo, ROLE_CAN_DELETE_ORDERS, ROLE_CAN_EDIT_ORDERS } from "@/constants/rbac";
 import { useLang } from "@/context/LanguageContext";
 import { useEmployee } from "@/context/EmployeeContext";
@@ -351,7 +352,8 @@ export default function ArchiveScreen() {
   const handlePrint = () => {
     if (Platform.OS !== "web") return;
     const grandTotal = filtered.reduce((sum, o) => sum + (o.totalAmount ?? 0), 0);
-    const rows = filtered.map(o => {
+    const rows = filtered.map(rawOrder => {
+      const o = escapeDeep(rawOrder); // user-entered text goes into HTML
       const itemsHtml = Object.entries(deptMeta).map(([key, meta]) => {
         const di = o.items.filter(i => i.department === key);
         if (!di.length) return "";

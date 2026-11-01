@@ -884,6 +884,8 @@ const translations = {
   usernameOptPh:       { ar: "اختياري، الافتراضي الرقم الوظيفي",      en: "Optional, defaults to Employee ID",         ur: "اختیاری، پہلے سے ملازم نمبر",               hi: "वैकल्पिक, डिफ़ॉल्ट कर्मचारी ID",             bn: "ঐচ্ছিক, ডিফল্ট কর্মচারী আইডি" },
   empPinLabel:         { ar: "رمز الدخول",                            en: "PIN Code",                                  ur: "پن کوڈ",                                    hi: "PIN कोड",                                   bn: "PIN কোড" },
   pinPh:               { ar: "مثال: 1234",                            en: "e.g. 1234",                                 ur: "مثلاً: 1234",                               hi: "उदा: 1234",                                 bn: "যেমন: 1234" },
+  empSwitchPinTitle:   { ar: "أدخل رمز دخول {name}", en: "Enter {name}'s PIN", ur: "{name} کا پن درج کریں", hi: "{name} का PIN दर्ज करें", bn: "{name}-এর PIN দিন" },
+  empSwitchPinWrong:   { ar: "رمز الدخول غير صحيح", en: "Incorrect PIN",     ur: "غلط پن",           hi: "गलत PIN",            bn: "ভুল PIN" },
   branchSupAddNote:    { ar: "مشرف الفرع يستطيع إضافة الأدوار التشغيلية ومشرف القسم فقط.", en: "Branch supervisor can only add operational roles and dept. supervisors.", ur: "برانچ سپروائزر صرف آپریشنل کردار اور ڈیپ سپروائزر شامل کر سکتا ہے۔", hi: "शाखा सुपरवाइजर केवल परिचालन भूमिकाएं जोड़ सकता है।", bn: "শাখা সুপারভাইজার শুধু অপারেশনাল ভূমিকা যোগ করতে পারে।" },
 
   // ── Edit Order Modal ───────────────────────────────────────────────────────

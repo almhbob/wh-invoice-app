@@ -20,7 +20,7 @@ import { canDo, ROLE_CAN_VIEW_DELIVERY } from "@/constants/rbac";
 import { useEmployee } from "@/context/EmployeeContext";
 import { useLang } from "@/context/LanguageContext";
 import { Order, useOrders } from "@/context/OrdersContext";
-import { fmtDate } from "@/utils/dateUtils";
+import { fmtDate, localDayKey } from "@/utils/dateUtils";
 
 // ── Types & constants ─────────────────────────────────────────────────────────
 
@@ -61,14 +61,14 @@ function fmtCurrency(n: number) {
 }
 function isDelivered(o: Order) { return o.deliveryStatus === "delivered"; }
 function isUnassigned(o: Order) { return !o.deliveryDriver?.employeeId && !isDelivered(o); }
-function isToday(ds: string) { return ds?.slice(0, 10) === new Date().toISOString().slice(0, 10); }
+function isToday(ds: string) { return ds?.slice(0, 10) === localDayKey(); }
 
 function parseDeliveryDT(dt?: string): Date | null {
   if (!dt) return null;
   const full = dt.match(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})$/);
   if (full) return new Date(`${full[1]}T${full[2]}:00`);
   const timeOnly = dt.match(/^(\d{2}:\d{2})$/);
-  if (timeOnly) return new Date(`${new Date().toISOString().slice(0, 10)}T${timeOnly[1]}:00`);
+  if (timeOnly) return new Date(`${localDayKey()}T${timeOnly[1]}:00`);
   return null;
 }
 

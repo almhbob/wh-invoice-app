@@ -21,6 +21,7 @@ import { Image } from "expo-image";
 
 import { Colors } from "@/constants/colors";
 import { canDo, ROLE_CAN_ACCESS_ADMIN } from "@/constants/rbac";
+import { employeeCredentialErrorMessage } from "@/lib/employeeCredentials";
 import { DevSettingsModal } from "@/components/DevSettingsModal";
 import { PrinterSettingsModal } from "@/components/PrinterSettingsModal";
 import { ProductManagerModal } from "@/components/ProductManagerModal";
@@ -144,7 +145,7 @@ function EmployeesSection() {
       : `${t("adminEmpActivateMsg")} "${emp.name}"`;
     Alert.alert(t("confirm"), msg, [
       { text: t("cancel"), style: "cancel" },
-      { text: t("confirm"), onPress: () => updateEmployee(emp.id, { status: newStatus }) },
+      { text: t("confirm"), onPress: () => updateEmployee(emp.id, { status: newStatus }).catch((e) => Alert.alert(t("errTitle"), employeeCredentialErrorMessage(e))) },
     ]);
   };
 
@@ -153,8 +154,9 @@ function EmployeesSection() {
       text: ROLE_LABELS[r],
       onPress: () => {
         if (r !== emp.role) {
-          updateEmployee(emp.id, { role: r });
-          Haptics.selectionAsync();
+          updateEmployee(emp.id, { role: r })
+            .then(() => Haptics.selectionAsync())
+            .catch((e) => Alert.alert(t("errTitle"), employeeCredentialErrorMessage(e)));
         }
       },
     }));

@@ -1,6 +1,6 @@
 import { getApp, getApps, initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { getFirestore, initializeFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
 // Firebase client-side config — these values are intentionally public.
@@ -21,5 +21,16 @@ export const firebaseConfigDiagnostics = { missingKeys: [] as string[] };
 
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+// ignoreUndefinedProperties: optional fields (price, note, …) left undefined in
+// nested objects otherwise make addDoc/updateDoc throw synchronously and the
+// write never reaches Firestore.
+function createDb() {
+  try {
+    return initializeFirestore(app, { ignoreUndefinedProperties: true });
+  } catch {
+    // Already initialized (e.g. fast refresh) — reuse the existing instance.
+    return getFirestore(app);
+  }
+}
+export const db = createDb();
 export const storage = getStorage(app);
