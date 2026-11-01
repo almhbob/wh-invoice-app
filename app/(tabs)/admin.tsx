@@ -1,5 +1,10 @@
 import { PurgeOrdersPanel } from "@/components/PurgeOrdersPanel";
 import { TaxSettingsPanel } from "@/components/TaxSettingsPanel";
+import { HrSection } from "@/components/hr/HrSection";
+import { useHrWorkers } from "@/hooks/useHr";
+import { expiryAlerts } from "@/utils/hr";
+import { riyadhDate } from "@/utils/windowOrders";
+import { useLocalSearchParams } from "expo-router";
 import { useWindows } from "@/hooks/useWindows";
 import { tr } from "@/lib/i18n";
 import { Feather } from "@expo/vector-icons";
@@ -1840,7 +1845,11 @@ export default function AdminScreen() {
   useOrderHistory(365);
   const { currentEmployee } = useEmployee();
   const { t } = useLang();
-  const [activeTab, setActiveTab] = useState<"overview" | "employees" | "products" | "offers" | "priceRequests" | "features" | "backup" | "printer">("overview");
+  const params = useLocalSearchParams<{ tab?: string }>();
+  const [activeTab, setActiveTab] = useState<"overview" | "employees" | "hr" | "products" | "offers" | "priceRequests" | "features" | "backup" | "printer">(params.tab === "hr" ? "hr" : "overview");
+  React.useEffect(() => { if (params.tab === "hr") setActiveTab("hr"); }, [params.tab]);
+  const { workers: hrWorkers } = useHrWorkers();
+  const hrAlertCount = useMemo(() => expiryAlerts(hrWorkers, riyadhDate()).length, [hrWorkers]);
   const [showDev, setShowDev] = useState(false);
   const { pendingCount: priceReqCount } = usePriceChange();
 
@@ -1872,6 +1881,7 @@ export default function AdminScreen() {
     { key: "overview",      label: t("adminTabOverview"),  icon: "grid" },
     { key: "products",      label: t("adminTabProducts"),  icon: "shopping-bag" },
     { key: "employees",     label: t("adminTabEmployees"), icon: "users" },
+    ...(currentEmployee.role === "admin" ? [{ key: "hr" as const, label: `${tr("العمالة والرواتب", "Staff & payroll")}${hrAlertCount ? ` (${hrAlertCount})` : ""}`, icon: "briefcase" as const }] : []),
     { key: "offers",        label: t("adminTabOffers"),    icon: "tag" },
     { key: "priceRequests", label: `${t("adminTabPrices")}${priceReqCount > 0 ? ` (${priceReqCount})` : ""}`, icon: "dollar-sign" },
     { key: "features",      label: t("adminTabFeatures"),  icon: "sliders" },
@@ -1886,7 +1896,7 @@ export default function AdminScreen() {
 
       {/* Tab bar with hidden dev button */}
       <View style={styles.tabBarWrapper}>
-      <View style={styles.tabBar}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabBar} contentContainerStyle={{ gap: 2, flexGrow: 1 }}>
         {TABS.map((t) => (
           <TouchableOpacity
             key={t.key}
@@ -1899,7 +1909,7 @@ export default function AdminScreen() {
             </Text>
           </TouchableOpacity>
         ))}
-      </View>
+      </ScrollView>
         {/* Hidden developer button */}
         <TouchableOpacity
           style={styles.devBtn}
@@ -1948,6 +1958,8 @@ export default function AdminScreen() {
             <BackupSection />
             <PurgeOrdersPanel />
           </>
+        ) : activeTab === "hr" ? (
+          <HrSection />
         ) : activeTab === "printer" ? (
           <>
             <PrinterSection />
@@ -1971,7 +1983,7 @@ const styles = StyleSheet.create({
     paddingRight: 12, marginTop: 12, marginBottom: 4,
   },
   tabBar: {
-    flex: 1, flexDirection: "row", backgroundColor: Colors.surface,
+    flex: 1, backgroundColor: Colors.surface,
     marginLeft: 16,
     borderRadius: 14, padding: 4,
     shadowColor: Colors.shadow, shadowOffset: { width: 0, height: 1 },
@@ -1985,8 +1997,8 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
   tabItem: {
-    flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center",
-    gap: 6, paddingVertical: 10, borderRadius: 10,
+    flexGrow: 1, flexDirection: "row", alignItems: "center", justifyContent: "center",
+    gap: 6, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 10,
   },
   tabItemActive: { backgroundColor: Colors.primary + "12" },
   tabLabel: { fontSize: 13, fontWeight: "600", color: Colors.textMuted },

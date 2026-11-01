@@ -127,10 +127,18 @@ service cloud.firestore {
       allow delete: if isManager(companyId);
     }
 
+    // Staff files (iqama, passports, salaries) and payroll: company admin only.
+    match /companies/{companyId}/hrWorkers/{id} {
+      allow read, write: if isAdmin(companyId);
+    }
+    match /companies/{companyId}/payroll/{id} {
+      allow read, write: if isAdmin(companyId);
+    }
+
     // Everything else inside a company (orders, products, counters, settings, sessions, logs…)
     match /companies/{companyId}/{sub}/{docId=**} {
       allow read, write: if inCompany(companyId)
-        && !(sub in ['employees', 'employeeSecrets', 'auditLogs', 'taxProfile', 'windows', 'windowOrders']);
+        && !(sub in ['employees', 'employeeSecrets', 'auditLogs', 'taxProfile', 'windows', 'windowOrders', 'hrWorkers', 'payroll']);
     }
 
     // Login throttling state — server only.
