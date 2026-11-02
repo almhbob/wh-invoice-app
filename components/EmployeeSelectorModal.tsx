@@ -16,7 +16,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Colors } from "@/constants/colors";
 import { canBranchSupervisorAssignRole } from "@/constants/branchSupervisorPermissions";
-import { canDo, ROLE_CAN_MANAGE_EMPLOYEES } from "@/constants/rbac";
 import { useLang } from "@/context/LanguageContext";
 import {
   Employee,
@@ -24,7 +23,10 @@ import {
   ROLE_LABELS,
   useEmployee,
 } from "@/context/EmployeeContext";
+import { secureAuthErrorText, secureAuthText } from "@/constants/secureAuthText";
+import { localPinError } from "@/lib/secureAuth";
 import { employeeCredentialErrorMessage, prepareEmployeeCredentialPayload } from "@/lib/employeeCredentials";
+import { showPlatformAlert } from "@/lib/platformAlert";
 
 const ROLE_COLORS: Record<EmployeeRole, string> = {
   cashier: Colors.primary,
@@ -33,9 +35,11 @@ const ROLE_COLORS: Record<EmployeeRole, string> = {
   chocolate: Colors.chocolate,
   cake: Colors.cake,
   packaging: Colors.packaging,
+  calligrapher: Colors.purple,
+  driver: Colors.success,
   admin: Colors.gold,
-  branch_supervisor: "#0d9488",
-  dept_supervisor: "#0891b2",
+  branch_supervisor: "#2D6E7E",
+  dept_supervisor: "#2D6E7E",
   guest: Colors.textMuted,
 };
 
@@ -46,14 +50,16 @@ const ROLE_ICONS: Record<EmployeeRole, string> = {
   chocolate: "gift",
   cake: "layers",
   packaging: "box",
+  calligrapher: "edit-3",
+  driver: "truck",
   admin: "shield",
   branch_supervisor: "git-branch",
   dept_supervisor: "briefcase",
   guest: "eye",
 };
 
-const ALL_ROLES: EmployeeRole[] = ["cashier", "halwa", "mawali", "chocolate", "cake", "packaging", "dept_supervisor", "branch_supervisor", "admin", "guest"];
-const DEFAULT_ADD_ROLES: EmployeeRole[] = ["cashier", "halwa", "mawali", "chocolate", "cake", "packaging", "dept_supervisor", "admin"];
+const ALL_ROLES: EmployeeRole[] = ["cashier", "halwa", "mawali", "chocolate", "cake", "packaging", "calligrapher", "driver", "dept_supervisor", "branch_supervisor", "admin", "guest"];
+const DEFAULT_ADD_ROLES: EmployeeRole[] = ["cashier", "halwa", "mawali", "chocolate", "cake", "packaging", "calligrapher", "driver", "dept_supervisor", "admin"];
 
 interface Props {
   visible: boolean;
@@ -61,61 +67,52 @@ interface Props {
 }
 
 export function EmployeeSelectorModal({ visible, onClose }: Props) {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const insets = useSafeAreaInsets();
-  const { employees, currentEmployee, setCurrentEmployee, addEmployee, removeEmployee } =
+  const { employees, currentEmployee, setCurrentEmployee, addEmployee, removeEmployee, authMode } =
     useEmployee();
   const [tab, setTab] = useState<"select" | "add">("select");
+  // Only managers see colleagues and can add/remove; everyone else sees just their own account.
+  const isManager = currentEmployee?.role === "admin" || currentEmployee?.role === "branch_supervisor";
+  const listed = isManager ? employees : employees.filter((e) => e.id === currentEmployee?.id);
   const [newName, setNewName] = useState("");
   const [newEmpId, setNewEmpId] = useState("");
   const [newUsername, setNewUsername] = useState("");
-  const [newPin, setNewPin] = useState("1234");
+  const [newPin, setNewPin] = useState("");
   const [newRole, setNewRole] = useState<EmployeeRole>("cashier");
   const [saving, setSaving] = useState(false);
-  const [pinTarget, setPinTarget] = useState<Employee | null>(null);
-  const [pinInput, setPinInput] = useState("");
-
-  const isAdmin = currentEmployee?.role === "admin";
-  // Only admins and branch supervisors may add or delete employees
-  const canManage = canDo(currentEmployee?.role, ROLE_CAN_MANAGE_EMPLOYEES) || currentEmployee?.role === "branch_supervisor";
 
   const addRoles = useMemo(() => {
     if (currentEmployee?.role === "branch_supervisor") {
       return ALL_ROLES.filter(canBranchSupervisorAssignRole);
     }
-    // Only an admin can create another admin
-    return isAdmin ? DEFAULT_ADD_ROLES : DEFAULT_ADD_ROLES.filter((r) => r !== "admin");
-  }, [currentEmployee?.role, isAdmin]);
+    return DEFAULT_ADD_ROLES;
+  }, [currentEmployee?.role]);
 
   const visibleRoles = useMemo(() => {
     const present = new Set(employees.map((e) => e.role));
     return ALL_ROLES.filter((role) => present.has(role));
   }, [employees]);
 
-  const finishSwitch = (emp: Employee) => {
-    setCurrentEmployee(emp);
-    setPinTarget(null);
-    setPinInput("");
-    onClose();
-  };
-
-  // Switching user requires the target employee's PIN (admins may switch freely)
   const handleSelect = (emp: Employee) => {
     Haptics.selectionAsync();
-    if (currentEmployee?.id === emp.id) { onClose(); return; }
-    if (isAdmin) { finishSwitch(emp); return; }
-    setPinInput("");
-    setPinTarget(emp);
-  };
-
-  const confirmPin = () => {
-    if (!pinTarget) return;
-    if (String(pinTarget.pinCode || "1234") !== pinInput.trim()) {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(t("errTitle"), t("empSwitchPinWrong"));
+    // Switching identity always requires signing in with that employee's own PIN.
+    if (emp.id !== currentEmployee?.id) {
+      if (Platform.OS === "web" && typeof window !== "undefined") {
+        if (window.confirm(`${emp.name}\n\n${secureAuthText("switchNeedsLogin", lang)}`)) {
+          setCurrentEmployee(null);
+          onClose();
+        }
+        return;
+      }
+      Alert.alert(emp.name, secureAuthText("switchNeedsLogin", lang), [
+        { text: secureAuthText("cancel", lang), style: "cancel" },
+        { text: secureAuthText("logout", lang), style: "destructive", onPress: () => { setCurrentEmployee(null); onClose(); } },
+      ]);
       return;
     }
-    finishSwitch(pinTarget);
+    setCurrentEmployee(emp);
+    onClose();
   };
 
   const handleLogout = () => {
@@ -124,18 +121,21 @@ export function EmployeeSelectorModal({ visible, onClose }: Props) {
   };
 
   const handleAddEmployee = async () => {
-    if (!canManage) { Alert.alert(t("permissionTitle"), t("empRoleRestrict")); return; }
-    if (!newName.trim()) { Alert.alert(t("errTitle"), t("empNameRequired")); return; }
-    if (!newEmpId.trim()) { Alert.alert(t("errTitle"), t("empIdRequired")); return; }
+    if (!newName.trim()) { showPlatformAlert(t("errTitle"), t("empNameRequired")); return; }
+    if (!newEmpId.trim()) { showPlatformAlert(t("errTitle"), t("empIdRequired")); return; }
     const normalizedEmpId = newEmpId.trim().toUpperCase();
     const normalizedUsername = (newUsername.trim() || normalizedEmpId).toLowerCase();
     const exists = employees.find((e) => {
       const empUsername = String(e.username || e.employeeId).toLowerCase();
       return e.employeeId.toLowerCase() === normalizedEmpId.toLowerCase() || empUsername === normalizedUsername;
     });
-    if (exists) { Alert.alert(t("errTitle"), t("empDupIdMsg")); return; }
+    if (exists) { showPlatformAlert(t("errTitle"), t("empDupIdMsg")); return; }
+    if (authMode !== "legacy") {
+      const pinErr = localPinError(newPin.trim());
+      if (pinErr) { showPlatformAlert(t("errTitle"), secureAuthErrorText(pinErr, lang)); return; }
+    }
     if (!addRoles.includes(newRole)) {
-      Alert.alert(t("permissionTitle"), t("empRoleRestrict"));
+      showPlatformAlert(t("permissionTitle"), t("empRoleRestrict"));
       return;
     }
     setSaving(true);
@@ -149,31 +149,37 @@ export function EmployeeSelectorModal({ visible, onClose }: Props) {
       });
       await addEmployee(payload as any);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setNewName(""); setNewEmpId(""); setNewUsername(""); setNewPin("1234"); setNewRole("cashier");
+      setNewName(""); setNewEmpId(""); setNewUsername(""); setNewPin(""); setNewRole("cashier");
       setTab("select");
-      Alert.alert(t("successTitle"), t("empAddedMsg"));
+      showPlatformAlert(t("successTitle"), t("empAddedMsg"));
     } catch (error) {
       console.error("Add employee failed", error);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert(t("errTitle"), employeeCredentialErrorMessage(error));
+      showPlatformAlert(t("errTitle"), employeeCredentialErrorMessage(error));
     } finally {
       setSaving(false);
     }
   };
 
   const handleRemove = (emp: Employee) => {
+    const message = `${t("deleteEmpConfirm")} "${emp.name}"؟`;
+    const performRemove = async () => {
+      try { await removeEmployee(emp.id); }
+      catch (error) { showPlatformAlert(t("errTitle"), employeeCredentialErrorMessage(error)); }
+    };
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      if (window.confirm(`${t("deleteEmployee")}\n\n${message}`)) void performRemove();
+      return;
+    }
     Alert.alert(
       t("deleteEmployee"),
-      `${t("deleteEmpConfirm")} "${emp.name}"؟`,
+      message,
       [
         { text: t("cancel"), style: "cancel" },
         {
           text: t("delete"),
           style: "destructive",
-          onPress: async () => {
-            try { await removeEmployee(emp.id); }
-            catch (error) { Alert.alert(t("errTitle"), employeeCredentialErrorMessage(error)); }
-          },
+          onPress: () => { void performRemove(); },
         },
       ]
     );
@@ -194,40 +200,14 @@ export function EmployeeSelectorModal({ visible, onClose }: Props) {
           <TouchableOpacity style={[styles.tab, tab === "select" && styles.tabActive]} onPress={() => setTab("select")}>
             <Text style={[styles.tabText, tab === "select" && styles.tabTextActive]}>{t("selectEmpTab")}</Text>
           </TouchableOpacity>
-          {canManage && (
-            <TouchableOpacity style={[styles.tab, tab === "add" && styles.tabActive]} onPress={() => setTab("add")}>
-              <Text style={[styles.tabText, tab === "add" && styles.tabTextActive]}>{t("addEmpTab")}</Text>
-            </TouchableOpacity>
+          {isManager && (
+          <TouchableOpacity style={[styles.tab, tab === "add" && styles.tabActive]} onPress={() => setTab("add")}>
+            <Text style={[styles.tabText, tab === "add" && styles.tabTextActive]}>{t("addEmpTab")}</Text>
+          </TouchableOpacity>
           )}
         </View>
 
-        {pinTarget && (
-          <View style={styles.pinBox}>
-            <Text style={styles.pinTitle}>{t("empSwitchPinTitle").replace("{name}", pinTarget.name)}</Text>
-            <TextInput
-              style={styles.input}
-              value={pinInput}
-              onChangeText={setPinInput}
-              placeholder="••••"
-              placeholderTextColor={Colors.textMuted}
-              secureTextEntry
-              keyboardType="number-pad"
-              autoFocus
-              onSubmitEditing={confirmPin}
-              textAlign="center"
-            />
-            <View style={styles.pinActions}>
-              <TouchableOpacity style={[styles.saveBtn, styles.pinBtn]} onPress={confirmPin} activeOpacity={0.85}>
-                <Text style={styles.saveBtnText}>{t("confirm")}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.pinCancel, styles.pinBtn]} onPress={() => { setPinTarget(null); setPinInput(""); }}>
-                <Text style={styles.pinCancelText}>{t("cancel")}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-
-        {tab === "select" || !canManage ? (
+        {tab === "select" || !isManager ? (
           <ScrollView contentContainerStyle={styles.listContent} showsVerticalScrollIndicator={false}>
             {currentEmployee && (
               <TouchableOpacity style={styles.logoutRow} onPress={handleLogout}>
@@ -236,7 +216,7 @@ export function EmployeeSelectorModal({ visible, onClose }: Props) {
               </TouchableOpacity>
             )}
 
-            {employees.length === 0 ? (
+            {listed.length === 0 ? (
               <View style={styles.emptyBox}>
                 <Feather name="users" size={40} color={Colors.textMuted} />
                 <Text style={styles.emptyText}>{t("noEmpYet")}</Text>
@@ -244,7 +224,7 @@ export function EmployeeSelectorModal({ visible, onClose }: Props) {
               </View>
             ) : (
               visibleRoles.map((role) => {
-                const roleEmps = employees.filter((e) => e.role === role);
+                const roleEmps = listed.filter((e) => e.role === role);
                 if (roleEmps.length === 0) return null;
                 return (
                   <View key={role} style={styles.roleGroup}>
@@ -264,10 +244,10 @@ export function EmployeeSelectorModal({ visible, onClose }: Props) {
                             <Text style={styles.empIdText}>#{emp.employeeId} · {emp.username || emp.employeeId}</Text>
                           </View>
                           {isCurrent ? <Feather name="check-circle" size={20} color={ROLE_COLORS[role]} /> : null}
-                          {canManage && !isCurrent && (
-                            <TouchableOpacity style={styles.delBtn} onPress={() => handleRemove(emp)} hitSlop={10}>
-                              <Feather name="trash-2" size={15} color={Colors.textMuted} />
-                            </TouchableOpacity>
+                          {isManager && !isCurrent && (
+                          <TouchableOpacity style={styles.delBtn} onPress={() => handleRemove(emp)} hitSlop={10}>
+                            <Feather name="trash-2" size={15} color={Colors.textMuted} />
+                          </TouchableOpacity>
                           )}
                         </TouchableOpacity>
                       );
@@ -318,12 +298,6 @@ export function EmployeeSelectorModal({ visible, onClose }: Props) {
 }
 
 const styles = StyleSheet.create({
-  pinBox: { marginHorizontal: 16, marginBottom: 12, padding: 14, borderRadius: 16, backgroundColor: "#fff", borderWidth: 1, borderColor: "#ECE6DB", gap: 10 },
-  pinTitle: { fontSize: 14, fontWeight: "800", color: Colors.text, textAlign: "center" },
-  pinActions: { flexDirection: "row", gap: 10 },
-  pinBtn: { flex: 1, marginTop: 0 },
-  pinCancel: { alignItems: "center", justifyContent: "center", borderRadius: 12, paddingVertical: 12, backgroundColor: "#F5F2EC" },
-  pinCancelText: { color: Colors.text, fontWeight: "700" },
   container: { flex: 1, backgroundColor: Colors.background },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: Colors.border },
   closeBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: Colors.surfaceSecondary, alignItems: "center", justifyContent: "center" },

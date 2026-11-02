@@ -1,8 +1,9 @@
+import { tr } from "@/lib/i18n";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Feather } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import React, { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 
 import { Colors } from "@/constants/colors";
 import { LAVIVIANE_COMPANY_ID } from "@/constants/lavivianeProducts";
@@ -10,6 +11,10 @@ import { DEFAULT_TENANT } from "@/constants/platform";
 import { tenantAccessText } from "@/constants/tenantAccessTranslations";
 import { CompanyTenant, useCompany } from "@/context/CompanyContext";
 import { Employee, useEmployee } from "@/context/EmployeeContext";
+import { PinChangeModal } from "@/components/PinChangeModal";
+import { secureAuthErrorText, secureAuthText } from "@/constants/secureAuthText";
+import { recheckSecureAuthMode, secureLogin, secureLogout, secureSetPin, SecureAuthFailure } from "@/lib/secureAuth";
+import { showPlatformAlert } from "@/lib/platformAlert";
 import { useLang } from "@/context/LanguageContext";
 
 const ACCESS_KEY = "@fawtara_access_gate_v1";
@@ -164,7 +169,12 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
   const textAlign = isRTL ? "right" : "left";
   const rowDirection = isRTL ? "row-reverse" : "row";
   const { company, setCompany, switchCompanyById } = useCompany();
-  const { employees, currentEmployee, setCurrentEmployee, checkAndLogin, addEmployee, isLoading } = useEmployee();
+  const { employees, currentEmployee, setCurrentEmployee, checkAndLogin, addEmployee, isLoading, authMode } = useEmployee();
+  const isSecure = authMode === "secure";
+  const [loggingIn, setLoggingIn] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [pendingDeviceConflict, setPendingDeviceConflict] = useState<Employee | null>(null);
+  const [pendingPinChange, setPendingPinChange] = useState<{ employee: Employee; pin: string } | null>(null);
   const [ready, setReady] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
   const [companyCode, setCompanyCode] = useState("");
@@ -186,6 +196,20 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (!ready || typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const requestedCompany = (params.get("company") || params.get("tenant") || params.get("companyId") || "").trim();
+    const requestedUser = (params.get("user") || params.get("u") || "").trim();
+    if (requestedUser) setLoginId(requestedUser.slice(0, 80));
+    if (!requestedCompany || !/^[A-Za-z0-9_-]{2,64}$/.test(requestedCompany)) return;
+
+    // A shared link (QR or "send login link") selects the company and opens its login
+    // screen directly; the employee still signs in with their own PIN.
+    setUnlocked(true);
+    void AsyncStorage.setItem(ACCESS_KEY, "1");
+  }, [ready]);
+
+  useEffect(() => {
     let mounted = true;
     AsyncStorage.getItem(bootstrapKey(company.id))
       .then((raw) => {
@@ -204,6 +228,8 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
   }, [unlocked, isLoading, company.id]);
 
   const allUsers = useMemo(() => {
+    // Secure mode: the employee list is private until sign-in, and hardcoded accounts never apply.
+    if (isSecure) return [] as BootstrapEmployee[];
     const firestoreAndLocal = [...employees, ...localUsers];
     const existingIds = new Set(firestoreAndLocal.map((e) => e.employeeId.toLowerCase()));
     if (company.id === LAVIVIANE_COMPANY_ID) {
@@ -215,9 +241,9 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
       return [...firestoreAndLocal, ...extras];
     }
     return firestoreAndLocal;
-  }, [employees, localUsers, company.id]);
+  }, [employees, localUsers, company.id, isSecure]);
   const employeeCountLabel = useMemo(() => allUsers.length ? `${allUsers.length} ${tx("usersCount")}` : tx("noUsers"), [allUsers.length, lang]);
-  const shouldShowBootstrapForm = !isLoading || employeeLoadTimedOut || allUsers.length > 0;
+  const shouldShowBootstrapForm = isSecure || (authMode !== "checking" && (!isLoading || employeeLoadTimedOut || allUsers.length > 0));
 
   const saveLocalUser = async (employee: BootstrapEmployee) => {
     const next = [employee, ...localUsers.filter((u) => u.employeeId !== employee.employeeId)];
@@ -247,7 +273,7 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
 
   const unlockNewTrial = async () => {
     await unlockTenant(NEW_TRIAL_TENANT, NEW_TRIAL_USER);
-    Alert.alert(tx("trialReadyTitle"), tx("trialReadyMessage"));
+    showPlatformAlert(tx("trialReadyTitle"), tx("trialReadyMessage"));
   };
 
   const unlockNukhba = async () => {
@@ -257,7 +283,7 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
   const unlockByCode = async () => {
     const code = companyCode.trim();
     if (!code) {
-      Alert.alert(tx("requiredTitle"), tx("companyCodeRequired"));
+      showPlatformAlert(tx("requiredTitle"), tx("companyCodeRequired"));
       return;
     }
     await switchCompanyById(code);
@@ -273,11 +299,55 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
     setUnlocked(false);
   };
 
+  const finishLogin = async (emp: Employee) => {
+    const result = await checkAndLogin(emp);
+    if (result === "conflict") {
+      setLoginError(null);
+      setPendingDeviceConflict(emp);
+      return;
+    }
+    setLoginError(null);
+    setPendingDeviceConflict(null);
+  };
+
+  const loginEmployeeSecure = async (user: string, pin: string) => {
+    setLoggingIn(true);
+    setLoginError(null);
+    setPendingDeviceConflict(null);
+    try {
+      const { employee, mustChangePin } = await secureLogin(company.id, user, pin);
+      const emp: Employee = {
+        ...employee,
+        role: employee.role as Employee["role"],
+        status: (employee.status as Employee["status"]) ?? "active",
+        createdAt: new Date().toISOString(),
+      };
+      setLoginPin("");
+      if (mustChangePin) {
+        setPendingPinChange({ employee: emp, pin });
+        return;
+      }
+      await finishLogin(emp);
+    } catch (e) {
+      const f = e instanceof SecureAuthFailure ? e : null;
+      const code = f?.code ?? "server_error";
+      setLoginError(code === "invalid_credentials" ? tx("invalidCredentialsMessage") : secureAuthErrorText(code, lang, f?.retryAfter));
+    } finally {
+      setLoggingIn(false);
+    }
+  };
+
   const loginEmployee = async () => {
     const user = normalize(loginId);
     const pin = loginPin.trim();
+    setLoginError(null);
+    setPendingDeviceConflict(null);
     if (!user || !pin) {
-      Alert.alert(tx("requiredTitle"), tx("requiredCredentialsMessage"));
+      setLoginError(tx("requiredCredentialsMessage"));
+      return;
+    }
+    if (isSecure) {
+      await loginEmployeeSecure(loginId.trim(), pin);
       return;
     }
 
@@ -289,34 +359,20 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
     });
 
     if (!found) {
-      Alert.alert(tx("invalidCredentialsTitle"), tx("invalidCredentialsMessage"));
+      setLoginError(tx("invalidCredentialsMessage"));
       return;
     }
 
-    const result = await checkAndLogin(found);
-    if (result === "conflict") {
-      Alert.alert(
-        tx("deviceConflictTitle"),
-        `"${found.name}" ${tx("deviceConflictMessage")}`,
-        [
-          { text: tx("deviceConflictCancel"), style: "cancel" },
-          {
-            text: tx("deviceConflictForce"),
-            style: "destructive",
-            onPress: () => void checkAndLogin(found, true),
-          },
-        ]
-      );
-    }
+    await finishLogin(found);
   };
 
   const createOwner = async () => {
     if (!ownerName.trim()) {
-      Alert.alert(tx("requiredTitle"), tx("ownerNameRequired"));
+      showPlatformAlert(tx("requiredTitle"), tx("ownerNameRequired"));
       return;
     }
     if (!ownerId.trim() || !ownerPin.trim()) {
-      Alert.alert(tx("requiredTitle"), tx("ownerCredentialsRequired"));
+      showPlatformAlert(tx("requiredTitle"), tx("ownerCredentialsRequired"));
       return;
     }
     setSaving(true);
@@ -343,7 +399,7 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
       };
       await saveLocalUser(localOwner);
       await setCurrentEmployee(localOwner);
-      Alert.alert(tx("temporaryLoginTitle"), tx("temporaryLoginMessage"));
+      showPlatformAlert(tx("temporaryLoginTitle"), tx("temporaryLoginMessage"));
     } finally {
       setSaving(false);
     }
@@ -351,6 +407,22 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
 
   if (!ready) {
     return <View style={styles.center}><ActivityIndicator color={Colors.gold} /><Text style={styles.muted}>{tx("checking")}</Text></View>;
+  }
+
+  if (authMode === "unavailable") {
+    return (
+      <ScrollView contentContainerStyle={styles.screen}>
+        <View style={styles.card}>
+          <Feather name="shield" size={28} color={Colors.accent} />
+          <Text style={styles.title}>{secureAuthText("authUnavailableTitle", lang)}</Text>
+          <Text style={styles.subtitle}>{secureAuthText("authUnavailableMessage", lang)}</Text>
+          <TouchableOpacity style={[styles.primaryBtn, { flexDirection: rowDirection }]} onPress={() => { void recheckSecureAuthMode(); }}>
+            <Feather name="refresh-cw" size={16} color="#fff" />
+            <Text style={styles.primaryText}>{secureAuthText("retry", lang)}</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    );
   }
 
   const isLaviviane = company.id === LAVIVIANE_COMPANY_ID;
@@ -381,7 +453,7 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
 
             {/* Direct Entry */}
             <TouchableOpacity style={styles.laviEnterBtn} onPress={unlockLavivianeDirect}>
-              <Feather name="log-in" size={18} color="#d6b56d" />
+              <Feather name="log-in" size={18} color="#F2A27A" />
               <Text style={styles.laviEnterText}>{tx("laviEnterBtn")}</Text>
             </TouchableOpacity>
 
@@ -394,7 +466,7 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
 
             <View style={{ paddingHorizontal: 20, gap: 10, paddingBottom: 20 }}>
               <TextInput
-                style={[styles.input, { textAlign, backgroundColor: "#fefcf8" }]}
+                style={[styles.input, { textAlign, backgroundColor: "#FAFAF8" }]}
                 value={companyCode}
                 onChangeText={setCompanyCode}
                 placeholder={tx("companyCodePlaceholder")}
@@ -417,13 +489,14 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
           <Text style={styles.subtitle}>{tx("companyLoginSubtitle")}</Text>
           <TextInput style={[styles.input, { textAlign }]} value={companyCode} onChangeText={setCompanyCode} placeholder={tx("companyCodePlaceholder")} placeholderTextColor={Colors.textMuted} />
           <TouchableOpacity style={[styles.primaryBtn, { flexDirection: rowDirection }]} onPress={unlockByCode}><Feather name="log-in" size={16} color="#fff" /><Text style={styles.primaryText}>{tx("loginByCode")}</Text></TouchableOpacity>
+          {!isSecure && (<>
           <TouchableOpacity style={[styles.secondaryBtn, { flexDirection: rowDirection }]} onPress={unlockNewTrial}><Feather name="star" size={16} color={Colors.gold} /><Text style={styles.secondaryText}>{tx("createTrialCompany")}</Text></TouchableOpacity>
           <TouchableOpacity style={[styles.secondaryBtn, { flexDirection: rowDirection }]} onPress={unlockDemo}><Feather name="briefcase" size={16} color={Colors.gold} /><Text style={styles.secondaryText}>{tx("openDemoCompany")}</Text></TouchableOpacity>
 
           {/* Demo divider */}
           <View style={styles.demoSectionRow}>
             <View style={styles.laviDividerLine} />
-            <Text style={styles.demoSectionLabel}>نماذج حية</Text>
+            <Text style={styles.demoSectionLabel}>{tr("نماذج حية", "Live demos")}</Text>
             <View style={styles.laviDividerLine} />
           </View>
 
@@ -437,6 +510,7 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
               <Text style={styles.nukhbaBtnSub}>Nukhba Fine Foods · Starter Plan · كود: nukhba-food</Text>
             </View>
           </TouchableOpacity>
+          </>)}
         </View>
       </ScrollView>
     );
@@ -463,29 +537,65 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
               <Text style={styles.nukhbaBannerTitle}>🍽️ النخبة للمأكولات الراقية</Text>
               <Text style={styles.nukhbaBannerSub}>Nukhba Fine Foods · Starter Plan</Text>
               <View style={styles.nukhbaPillRow}>
-                <View style={[styles.nukhbaPill, { backgroundColor: "#0891B218" }]}><Text style={[styles.nukhbaPillTxt, { color: "#0891B2" }]}>5 مستخدمين</Text></View>
-                <View style={[styles.nukhbaPill, { backgroundColor: "#7C3AED18" }]}><Text style={[styles.nukhbaPillTxt, { color: "#7C3AED" }]}>800 فاتورة/شهر</Text></View>
+                <View style={[styles.nukhbaPill, { backgroundColor: "#2D6E7E18" }]}><Text style={[styles.nukhbaPillTxt, { color: "#2D6E7E" }]}>5 مستخدمين</Text></View>
+                <View style={[styles.nukhbaPill, { backgroundColor: "#8C4A5E18" }]}><Text style={[styles.nukhbaPillTxt, { color: "#8C4A5E" }]}>800 فاتورة/شهر</Text></View>
                 <View style={[styles.nukhbaPill, { backgroundColor: "#05966918" }]}><Text style={[styles.nukhbaPillTxt, { color: "#059669" }]}>نشط</Text></View>
               </View>
-              <Text style={styles.nukhbaCredLabel}>المستخدمون: NK001–NK004 · رمز: 5678</Text>
+              {!isSecure && <Text style={styles.nukhbaCredLabel}>المستخدمون: NK001–NK004 · رمز: 5678</Text>}
             </View>
           )}
           <TouchableOpacity style={styles.switchBtn} onPress={resetCompany}><Text style={styles.switchText}>{tx("changeCompany")}</Text></TouchableOpacity>
           <Text style={styles.title}>{tx("employeeLoginTitle")}</Text>
-          <Text style={styles.subtitle}>{tx("currentCompany")}: {company.name} · {employeeCountLabel}</Text>
+          <Text style={styles.subtitle}>{tx("currentCompany")}: {company.name} · {isSecure ? `🔒 ${secureAuthText("secureBadge", lang)}` : employeeCountLabel}</Text>
 
           {!shouldShowBootstrapForm ? (
             <View style={styles.loadingBox}>
               <ActivityIndicator color={Colors.gold} />
               <Text style={styles.hint}>{tx("loadingCompanyUsers")}</Text>
             </View>
-          ) : allUsers.length > 0 ? (
+          ) : isSecure || allUsers.length > 0 ? (
             <View style={styles.list}>
               {employeeLoadTimedOut ? <Text style={styles.warningText}>{tx("firestoreTimeout")}</Text> : null}
-              <TextInput style={[styles.input, { textAlign }]} value={loginId} onChangeText={setLoginId} placeholder={tx("employeeLoginPlaceholder")} placeholderTextColor={Colors.textMuted} autoCapitalize="none" />
-              <TextInput style={[styles.input, { textAlign }]} value={loginPin} onChangeText={setLoginPin} placeholder={tx("pinPlaceholder")} placeholderTextColor={Colors.textMuted} secureTextEntry keyboardType="number-pad" />
-              <TouchableOpacity style={[styles.primaryBtn, { flexDirection: rowDirection }]} onPress={loginEmployee}><Feather name="unlock" size={16} color="#fff" /><Text style={styles.primaryText}>{tx("employeeLoginButton")}</Text></TouchableOpacity>
-              <Text style={styles.hint}>{tx("employeeLoginHint")}</Text>
+              <TextInput style={[styles.input, { textAlign }]} value={loginId} onChangeText={(value) => { setLoginId(value); setLoginError(null); }} editable={!pendingDeviceConflict} placeholder={tx("employeeLoginPlaceholder")} placeholderTextColor={Colors.textMuted} autoCapitalize="none" />
+              <TextInput style={[styles.input, { textAlign }]} value={loginPin} onChangeText={(value) => { setLoginPin(value); setLoginError(null); }} editable={!pendingDeviceConflict} placeholder={tx("pinPlaceholder")} placeholderTextColor={Colors.textMuted} secureTextEntry keyboardType="number-pad" />
+              <TouchableOpacity style={[styles.primaryBtn, { flexDirection: rowDirection }, (loggingIn || pendingDeviceConflict) && { opacity: 0.6 }]} onPress={loginEmployee} disabled={loggingIn || !!pendingDeviceConflict}>{loggingIn ? <ActivityIndicator color="#fff" /> : <Feather name="unlock" size={16} color="#fff" />}<Text style={styles.primaryText}>{tx("employeeLoginButton")}</Text></TouchableOpacity>
+              {loginError ? <Text style={styles.errorText} accessibilityRole="alert">{loginError}</Text> : null}
+              {pendingDeviceConflict ? (
+                <View style={styles.conflictCard} accessibilityRole="alert">
+                  <Text style={styles.conflictTitle}>{tx("deviceConflictTitle")}</Text>
+                  <Text style={styles.conflictMessage}>{`"${pendingDeviceConflict.name}" ${tx("deviceConflictMessage")}`}</Text>
+                  <View style={[styles.conflictActions, { flexDirection: rowDirection }]}>
+                    <TouchableOpacity
+                      style={styles.conflictCancelBtn}
+                      onPress={() => {
+                        setPendingDeviceConflict(null);
+                        if (isSecure) void secureLogout();
+                      }}
+                    >
+                      <Text style={styles.conflictCancelText}>{tx("deviceConflictCancel")}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.conflictForceBtn}
+                      onPress={async () => {
+                        const employee = pendingDeviceConflict;
+                        if (!employee) return;
+                        setPendingDeviceConflict(null);
+                        try {
+                          await checkAndLogin(employee, true);
+                        } catch {
+                          setLoginError(secureAuthErrorText("server_error", lang));
+                          if (isSecure) void secureLogout();
+                        }
+                      }}
+                    >
+                      <Text style={styles.conflictForceText}>{tx("deviceConflictForce")}</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ) : null}
+              {isSecure
+                ? <Text style={styles.hint}>{secureAuthText("forgotPin", lang)}</Text>
+                : <Text style={styles.hint}>{tx("employeeLoginHint")}</Text>}
             </View>
           ) : (
             <View style={styles.list}>
@@ -498,6 +608,19 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
             </View>
           )}
         </View>
+        <PinChangeModal
+          visible={!!pendingPinChange}
+          mode="self"
+          forced
+          knownCurrentPin={pendingPinChange?.pin}
+          onSubmit={async (newPin, currentPin) => {
+            await secureSetPin({ newPin, currentPin });
+            const emp = pendingPinChange!.employee;
+            setPendingPinChange(null);
+            await finishLogin(emp);
+          }}
+          onCancel={() => { setPendingPinChange(null); void secureLogout(); }}
+        />
       </ScrollView>
     );
   }
@@ -507,7 +630,7 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
 
 const styles = StyleSheet.create({
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 10, backgroundColor: Colors.background },
-  screen: { flexGrow: 1, justifyContent: "center", padding: 20, backgroundColor: "#faf7f2" },
+  screen: { flexGrow: 1, justifyContent: "center", padding: 20, backgroundColor: "#F3F3F1" },
   card: { gap: 12, backgroundColor: "#fff", borderRadius: 24, padding: 18, borderWidth: 1, borderColor: Colors.border },
 
   // Laviviane gate
@@ -518,15 +641,15 @@ const styles = StyleSheet.create({
     padding: 0,
     overflow: "hidden",
     borderWidth: 1.5,
-    borderColor: "#2f241d",
-    shadowColor: "#2f241d",
+    borderColor: "#161616",
+    shadowColor: "#161616",
     shadowOpacity: 0.12,
     shadowRadius: 20,
     shadowOffset: { width: 0, height: 6 },
     elevation: 8,
   },
   laviBanner: {
-    backgroundColor: "#2f241d",
+    backgroundColor: "#161616",
     alignItems: "center",
     paddingTop: 22,
     paddingBottom: 14,
@@ -534,7 +657,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   laviLogoImg: { width: 180, height: 68 },
-  laviSub: { color: "#d6b56d", fontSize: 11, fontWeight: "600", letterSpacing: 2, textTransform: "uppercase" as const },
+  laviSub: { color: "#F2A27A", fontSize: 11, fontWeight: "600", letterSpacing: 2, textTransform: "uppercase" as const },
 
   laviQrBox: {
     alignItems: "center",
@@ -547,7 +670,7 @@ const styles = StyleSheet.create({
     height: 190,
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: "#e8ddd0",
+    borderColor: "#E2E2DE",
   },
   laviQrLabel: { color: "#7a6550", fontSize: 12, fontWeight: "700", textAlign: "center" },
 
@@ -557,14 +680,14 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
-    borderBottomColor: "#e8ddd0",
+    borderBottomColor: "#E2E2DE",
   },
   laviQrImgSmall: {
     width: 130,
     height: 130,
     borderRadius: 10,
     borderWidth: 1.5,
-    borderColor: "#e8ddd0",
+    borderColor: "#E2E2DE",
   },
 
   laviEnterBtn: {
@@ -573,11 +696,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
     marginHorizontal: 20,
-    backgroundColor: "#2f241d",
+    backgroundColor: "#161616",
     borderRadius: 14,
     paddingVertical: 14,
   },
-  laviEnterText: { color: "#d6b56d", fontSize: 16, fontWeight: "900" },
+  laviEnterText: { color: "#F2A27A", fontSize: 16, fontWeight: "900" },
 
   laviDividerRow: {
     flexDirection: "row",
@@ -585,16 +708,25 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 20,
   },
-  laviDividerLine: { flex: 1, height: 1, backgroundColor: "#e8ddd0" },
+  laviDividerLine: { flex: 1, height: 1, backgroundColor: "#E2E2DE" },
   laviDividerText: { color: "#b8a090", fontSize: 11, fontWeight: "600" },
   title: { fontSize: 22, fontWeight: "900", color: Colors.primary, textAlign: "center" },
   subtitle: { fontSize: 13, color: Colors.textMuted, textAlign: "center", lineHeight: 21 },
   muted: { fontSize: 12, color: Colors.textMuted, textAlign: "right" },
   hint: { fontSize: 11, color: Colors.info, textAlign: "center", lineHeight: 18, fontWeight: "700" },
   warningText: { fontSize: 11, color: Colors.accent, textAlign: "center", lineHeight: 18, fontWeight: "800" },
-  input: { minHeight: 48, borderRadius: 14, paddingHorizontal: 14, backgroundColor: "#f8fafc", borderWidth: 1, borderColor: Colors.border, color: Colors.text },
+  input: { minHeight: 48, borderRadius: 14, paddingHorizontal: 14, backgroundColor: "#FAFAF8", borderWidth: 1, borderColor: Colors.border, color: Colors.text },
   primaryBtn: { minHeight: 48, borderRadius: 14, backgroundColor: Colors.primary, alignItems: "center", justifyContent: "center", gap: 8 },
   primaryText: { color: "#fff", fontSize: 14, fontWeight: "900" },
+  errorText: { color: Colors.accent, fontSize: 13, textAlign: "center", lineHeight: 19, fontWeight: "700" },
+  conflictCard: { gap: 10, padding: 14, borderRadius: 14, backgroundColor: Colors.info + "10", borderWidth: 1, borderColor: Colors.info + "45" },
+  conflictTitle: { color: Colors.primary, fontSize: 14, fontWeight: "900", textAlign: "center" },
+  conflictMessage: { color: Colors.text, fontSize: 12, lineHeight: 19, textAlign: "center" },
+  conflictActions: { gap: 8 },
+  conflictCancelBtn: { flex: 1, minHeight: 44, borderRadius: 12, backgroundColor: Colors.border, alignItems: "center", justifyContent: "center", paddingHorizontal: 8 },
+  conflictCancelText: { color: Colors.text, fontSize: 12, fontWeight: "800", textAlign: "center" },
+  conflictForceBtn: { flex: 1, minHeight: 44, borderRadius: 12, backgroundColor: Colors.primary, alignItems: "center", justifyContent: "center", paddingHorizontal: 8 },
+  conflictForceText: { color: "#fff", fontSize: 12, fontWeight: "800", textAlign: "center" },
   secondaryBtn: { minHeight: 48, borderRadius: 14, backgroundColor: Colors.gold + "18", alignItems: "center", justifyContent: "center", gap: 8 },
   secondaryText: { color: Colors.gold, fontSize: 14, fontWeight: "900" },
   switchBtn: { alignSelf: "flex-start", paddingHorizontal: 12, paddingVertical: 7, borderRadius: 20, backgroundColor: Colors.accent + "12" },
@@ -614,12 +746,12 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: "#0891B230",
-    backgroundColor: "#0891B208",
+    borderColor: "#2D6E7E30",
+    backgroundColor: "#2D6E7E08",
   },
   nukhbaIconBox: {
     width: 36, height: 36, borderRadius: 10,
-    backgroundColor: "#0891B218", alignItems: "center", justifyContent: "center",
+    backgroundColor: "#2D6E7E18", alignItems: "center", justifyContent: "center",
   },
   nukhbaIcon: { fontSize: 18 },
   nukhbaBtnTitle: { fontSize: 13, fontWeight: "800", color: Colors.text },
@@ -627,15 +759,15 @@ const styles = StyleSheet.create({
 
   // Nukhba banner (shown on employee login screen)
   nukhbaBanner: {
-    backgroundColor: "#0891B208",
+    backgroundColor: "#2D6E7E08",
     borderRadius: 14,
     borderWidth: 1.5,
-    borderColor: "#0891B230",
+    borderColor: "#2D6E7E30",
     padding: 14,
     gap: 6,
   },
-  nukhbaBannerTitle: { fontSize: 15, fontWeight: "900", color: "#0891B2", textAlign: "center" },
-  nukhbaBannerSub: { fontSize: 11, color: "#0891B280", textAlign: "center", fontWeight: "600" },
+  nukhbaBannerTitle: { fontSize: 15, fontWeight: "900", color: "#2D6E7E", textAlign: "center" },
+  nukhbaBannerSub: { fontSize: 11, color: "#2D6E7E80", textAlign: "center", fontWeight: "600" },
   nukhbaPillRow: { flexDirection: "row", gap: 6, justifyContent: "center", flexWrap: "wrap" },
   nukhbaPill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
   nukhbaPillTxt: { fontSize: 10, fontWeight: "700" },

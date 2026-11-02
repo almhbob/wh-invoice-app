@@ -58,7 +58,7 @@ http://localhost:3000/api/healthz
 
 ```env
 NODE_ENV=production
-EXPO_PUBLIC_API_URL=https://your-permanent-server-domain.example
+EXPO_PUBLIC_API_BASE=https://fotra-dv1.pages.dev
 EXPO_PUBLIC_FIREBASE_API_KEY=replace_me
 EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=replace_me
 EXPO_PUBLIC_FIREBASE_PROJECT_ID=replace_me
@@ -70,3 +70,5 @@ EXPO_PUBLIC_FIREBASE_APP_ID=replace_me
 ## Notes
 
 The current server hosts the Expo web app and provides health checks. Mobile APK builds still need EAS or Expo tooling. Firestore rules and Firebase project settings should be configured before using real customer invoices.
+
+For native staging builds, set `EXPO_PUBLIC_APP_ENV=staging` and provide only the staging Firebase client values plus a staging `FIREBASE_SERVICE_ACCOUNT` in the staging Cloudflare environment. The API resolver ignores the default production endpoint in staging mode. On web, API requests use the current Pages origin. Never copy the production service-account JSON into staging.

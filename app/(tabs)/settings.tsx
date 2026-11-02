@@ -250,7 +250,7 @@ export default function SettingsScreen() {
         <SettingsCard>
           <SettingsRow
             icon="globe"
-            iconBg="#2563eb"
+            iconBg="#2D6E7E"
             label={t("settingsLangLabel")}
             value={currentLangLabel}
             onPress={() => setShowLangPicker(true)}
@@ -301,7 +301,7 @@ export default function SettingsScreen() {
           />
           <SettingsRow
             icon="tag"
-            iconBg="#6d28d9"
+            iconBg="#8C4A5E"
             label={t("settingsVersion")}
             value={appVersion}
             showChevron={false}

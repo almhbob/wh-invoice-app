@@ -72,7 +72,7 @@ const styles = StyleSheet.create({
   profileBtn: { flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 11, borderRadius: 13, backgroundColor: Colors.primary },
   profileBtnText: { color: "#fff", fontSize: 13, fontWeight: "900" },
   sectionTitle: { fontSize: 14, fontWeight: "900", color: Colors.text, textAlign: "right", marginTop: 4 },
-  groupCard: { gap: 7, padding: 12, borderRadius: 14, backgroundColor: "#f8fafc" },
+  groupCard: { gap: 7, padding: 12, borderRadius: 14, backgroundColor: "#FAFAF8" },
   groupTitle: { fontSize: 13, fontWeight: "900", color: Colors.primary, textAlign: "right" },
   groupDesc: { fontSize: 11, color: Colors.textMuted, textAlign: "right", lineHeight: 17 },
   highlightsWrap: { flexDirection: "row-reverse", flexWrap: "wrap", gap: 6 },

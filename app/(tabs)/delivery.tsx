@@ -1,8 +1,10 @@
+import { tr } from "@/lib/i18n";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as Linking from "expo-linking";
 import React, { useMemo, useState } from "react";
 import {
+  Alert,
   FlatList,
   Modal,
   Pressable,
@@ -21,6 +23,12 @@ import { useEmployee } from "@/context/EmployeeContext";
 import { useLang } from "@/context/LanguageContext";
 import { Order, useOrders } from "@/context/OrdersContext";
 import { fmtDate, localDayKey } from "@/utils/dateUtils";
+import { DriversModal } from "@/components/DriversModal";
+import { OrderDetailsSheet } from "@/components/OrderDetailsSheet";
+import { StageBadge } from "@/components/OrderTracker";
+import { SyncStatusBanner } from "@/components/SyncStatusBanner";
+import { useCompany } from "@/context/CompanyContext";
+import { customerTrackingMessage, driverDispatchMessage, isOrderOpen, isProductionDone, openWhatsApp as waSend, orderStage } from "@/utils/orderFlow";
 
 // ── Types & constants ─────────────────────────────────────────────────────────
 
@@ -29,10 +37,10 @@ type TabKey = "all" | "pending" | "unassigned" | "done";
 type SortKey = "time" | "date";
 
 const URGENCY_COLOR: Record<Urgency, string> = {
-  overdue: "#dc2626",
-  urgent: "#ea580c",
+  overdue: "#C8323F",
+  urgent: "#D9602B",
   soon: Colors.gold,
-  ok: "#16a34a",
+  ok: "#1F8A5B",
   none: Colors.textMuted,
 };
 // URGENCY_LABEL is built inside components using t() — see useUrgencyLabel()
@@ -57,7 +65,7 @@ const DEPT_COLORS: Record<string, string> = {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function fmtCurrency(n: number) {
-  return n.toLocaleString("ar-SA", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ر.س";
+  return n.toLocaleString("ar-SA", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " " + tr("ر.س", "SAR");
 }
 function isDelivered(o: Order) { return o.deliveryStatus === "delivered"; }
 function isUnassigned(o: Order) { return !o.deliveryDriver?.employeeId && !isDelivered(o); }
@@ -74,9 +82,7 @@ function parseDeliveryDT(dt?: string): Date | null {
 
 function isReadyForDelivery(o: Order) {
   if (isDelivered(o)) return false;
-  const depts = [...new Set(o.items.map((i) => i.department))];
-  if (!depts.length) return false;
-  return depts.every((d) => o.departmentStatuses?.[d] === "done");
+  return isProductionDone(o);
 }
 
 function getUrgency(o: Order): Urgency {
@@ -170,22 +176,22 @@ function StatsHeader({ orders }: { orders: Order[] }) {
           <Text style={[styles.statNum, { color: Colors.gold }]}>{pendingCount}</Text>
           <Text style={styles.statLabel}>{t("delInProgress")}</Text>
         </View>
-        <View style={[styles.statCard, { borderColor: "#16a34a60" }]}>
-          <Text style={[styles.statNum, { color: "#16a34a" }]}>{deliveredCount}</Text>
+        <View style={[styles.statCard, { borderColor: "#1F8A5B60" }]}>
+          <Text style={[styles.statNum, { color: "#1F8A5B" }]}>{deliveredCount}</Text>
           <Text style={styles.statLabel}>{t("delDelivered")}</Text>
         </View>
         <View style={[styles.statCard, {
-          borderColor: unassignedCount > 0 ? "#ea580c60" : Colors.border,
+          borderColor: unassignedCount > 0 ? "#D9602B60" : Colors.border,
         }]}>
-          <Text style={[styles.statNum, { color: unassignedCount > 0 ? "#ea580c" : Colors.textMuted }]}>
+          <Text style={[styles.statNum, { color: unassignedCount > 0 ? "#D9602B" : Colors.textMuted }]}>
             {unassignedCount}
           </Text>
           <Text style={styles.statLabel}>{t("delNoDriverTab")}</Text>
         </View>
         <View style={[styles.statCard, {
-          borderColor: readyCount > 0 ? "#7c3aed60" : Colors.border,
+          borderColor: readyCount > 0 ? "#8C4A5E60" : Colors.border,
         }]}>
-          <Text style={[styles.statNum, { color: readyCount > 0 ? "#7c3aed" : Colors.textMuted }]}>
+          <Text style={[styles.statNum, { color: readyCount > 0 ? "#8C4A5E" : Colors.textMuted }]}>
             {readyCount}
           </Text>
           <Text style={styles.statLabel}>{t("delReadyLabel")}</Text>
@@ -291,167 +297,13 @@ function DriverChips({
                 </Text>
               </View>
               {d.readyCount > 0 && (
-                <View style={[styles.chipReadyDot, active && { backgroundColor: "#7c3aed" }]} />
+                <View style={[styles.chipReadyDot, active && { backgroundColor: "#8C4A5E" }]} />
               )}
             </TouchableOpacity>
           );
         })}
       </ScrollView>
     </View>
-  );
-}
-
-// ── Driver Assignment Modal ───────────────────────────────────────────────────
-
-function DriverModal({
-  visible,
-  orderId,
-  orderNumber,
-  currentDriver,
-  allOrders,
-  onClose,
-  onAssign,
-}: {
-  visible: boolean;
-  orderId: string;
-  orderNumber?: number;
-  currentDriver?: { name: string; employeeId: string };
-  allOrders: Order[];
-  onClose: () => void;
-  onAssign: (id: string, driver: { name: string; employeeId: string }) => void;
-}) {
-  const { employees } = useEmployee();
-  const { t } = useLang();
-  const [search, setSearch] = useState("");
-
-  const workload: Record<string, number> = useMemo(() => {
-    const m: Record<string, number> = {};
-    allOrders.forEach((o) => {
-      if (o.deliveryDriver?.employeeId && !isDelivered(o)) {
-        const id = o.deliveryDriver.employeeId;
-        m[id] = (m[id] ?? 0) + 1;
-      }
-    });
-    return m;
-  }, [allOrders]);
-
-  const filteredEmployees = employees
-    .filter((e) => e.status !== "suspended")
-    .filter((e) =>
-      search.trim()
-        ? e.name.toLowerCase().includes(search.toLowerCase()) ||
-          e.employeeId.includes(search.trim())
-        : true
-    );
-
-  return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.modalOverlay} onPress={onClose}>
-        <Pressable style={styles.modalSheet} onPress={() => {}}>
-          <View style={styles.modalHandle} />
-
-          {/* Modal header */}
-          <View style={styles.modalHeader}>
-            <View style={styles.modalHeaderIcon}>
-              <Feather name="truck" size={16} color="#fff" />
-            </View>
-            <View>
-              <Text style={styles.modalTitle}>{t("delAssignTitle")}</Text>
-              {orderNumber ? (
-                <Text style={styles.modalSub}>#{orderNumber}</Text>
-              ) : null}
-            </View>
-          </View>
-
-          {/* Current driver */}
-          {currentDriver?.employeeId ? (
-            <View style={styles.currentDriverBox}>
-              <View style={styles.currentDriverAvatar}>
-                <Text style={styles.currentDriverAvatarText}>{currentDriver.name.charAt(0)}</Text>
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.currentDriverLabel}>{t("delCurrentDriver")}</Text>
-                <Text style={styles.currentDriverName}>{currentDriver.name}</Text>
-              </View>
-              <TouchableOpacity
-                style={styles.removeBtn}
-                onPress={() => { onAssign(orderId, { name: "", employeeId: "" }); onClose(); }}
-              >
-                <Feather name="user-x" size={13} color={Colors.accent} />
-                <Text style={styles.removeBtnText}>{t("delRemoveDriver")}</Text>
-              </TouchableOpacity>
-            </View>
-          ) : null}
-
-          {/* Search */}
-          <View style={styles.searchRow}>
-            <Feather name="search" size={15} color={Colors.textMuted} />
-            <TextInput
-              style={styles.searchInput}
-              value={search}
-              onChangeText={setSearch}
-              placeholder={t("delSearchDriver")}
-              placeholderTextColor={Colors.textMuted}
-              textAlign="right"
-            />
-            {search.length > 0 && (
-              <TouchableOpacity onPress={() => setSearch("")}>
-                <Feather name="x" size={14} color={Colors.textMuted} />
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {/* Employee list */}
-          <FlatList
-            data={filteredEmployees}
-            keyExtractor={(e) => e.id}
-            contentContainerStyle={{ gap: 8, padding: 16 }}
-            renderItem={({ item: emp }) => {
-              const isCurrent = currentDriver?.employeeId === emp.employeeId;
-              const load = workload[emp.employeeId] ?? 0;
-              return (
-                <TouchableOpacity
-                  style={[styles.empRow, isCurrent && styles.empRowActive]}
-                  onPress={() => {
-                    Haptics.selectionAsync();
-                    onAssign(orderId, { name: emp.name, employeeId: emp.employeeId });
-                    onClose();
-                  }}
-                  activeOpacity={0.8}
-                >
-                  <View style={[styles.empAvatar, isCurrent && { backgroundColor: Colors.primary }]}>
-                    <Text style={[styles.empAvatarText, isCurrent && { color: "#fff" }]}>
-                      {emp.name.charAt(0)}
-                    </Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.empName, isCurrent && { color: Colors.primary }]}>
-                      {emp.name}
-                    </Text>
-                    <Text style={styles.empId}>#{emp.employeeId}</Text>
-                  </View>
-                  {load > 0 && (
-                    <View style={[styles.loadBadge, load >= 3 && styles.loadBadgeHeavy]}>
-                      <Feather
-                        name="package"
-                        size={11}
-                        color={load >= 3 ? "#ea580c" : Colors.textSecondary}
-                      />
-                      <Text style={[styles.loadBadgeText, load >= 3 && { color: "#ea580c" }]}>
-                        {load}
-                      </Text>
-                    </View>
-                  )}
-                  {isCurrent && (
-                    <Feather name="check-circle" size={18} color={Colors.primary} />
-                  )}
-                </TouchableOpacity>
-              );
-            }}
-          />
-        </Pressable>
-      </Pressable>
-    </Modal>
   );
 }
 
@@ -462,13 +314,20 @@ function DeliveryCard({
   lang,
   onMarkDelivered,
   onOpenDriverModal,
+  onDispatch,
+  onOpenDetails,
 }: {
   order: Order;
   lang: string;
   onMarkDelivered: (id: string) => void;
   onOpenDriverModal: (order: Order) => void;
+  onDispatch: (order: Order) => void;
+  onOpenDetails: (order: Order) => void;
 }) {
   const { t } = useLang();
+  const { company } = useCompany();
+  const stage = orderStage(order);
+  const outForDelivery = stage === "out_for_delivery";
   const delivered = isDelivered(order);
   const urgency = getUrgency(order);
   const urgencyColor = URGENCY_COLOR[urgency];
@@ -476,9 +335,9 @@ function DeliveryCard({
   const hasDriver = !!order.deliveryDriver?.employeeId;
 
   const accentColor = delivered
-    ? "#16a34a"
+    ? "#1F8A5B"
     : ready
-    ? "#7c3aed"
+    ? "#8C4A5E"
     : urgency !== "none"
     ? urgencyColor
     : Colors.gold;
@@ -493,9 +352,9 @@ function DeliveryCard({
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
             <Text style={styles.orderNum}>#{order.orderNumber}</Text>
             {ready && !delivered && (
-              <View style={[styles.badge, { backgroundColor: "#7c3aed12" }]}>
-                <Feather name="check-circle" size={10} color="#7c3aed" />
-                <Text style={[styles.badgeText, { color: "#7c3aed" }]}>{t("delReadyForDel")}</Text>
+              <View style={[styles.badge, { backgroundColor: "#8C4A5E12" }]}>
+                <Feather name="check-circle" size={10} color="#8C4A5E" />
+                <Text style={[styles.badgeText, { color: "#8C4A5E" }]}>{t("delReadyForDel")}</Text>
               </View>
             )}
             {!delivered && !ready && urgency !== "none" && (
@@ -515,11 +374,10 @@ function DeliveryCard({
             <DeptDots order={order} />
           </View>
         </View>
-        <View style={[styles.statusPill, { backgroundColor: accentColor + "18" }]}>
-          <Text style={[styles.statusPillText, { color: accentColor }]}>
-            {delivered ? t("delDeliveredMark") : t("delPending")}
-          </Text>
-        </View>
+        <TouchableOpacity onPress={() => onOpenDetails(order)} style={{ alignItems: "flex-end", gap: 6 }} activeOpacity={0.7}>
+          <StageBadge order={order} size="sm" />
+          <Text style={{ fontSize: 11, color: Colors.primary, fontWeight: "800" }}>{tr("التفاصيل ‹", "Details ›")}</Text>
+        </TouchableOpacity>
       </View>
 
       {/* ── Customer row ── */}
@@ -530,10 +388,10 @@ function DeliveryCard({
         </View>
         <View style={styles.quickActions}>
           <TouchableOpacity
-            style={[styles.quickBtn, { backgroundColor: "#16a34a18" }]}
+            style={[styles.quickBtn, { backgroundColor: "#1F8A5B18" }]}
             onPress={() => { Haptics.selectionAsync(); callPhone(order.customerPhone); }}
           >
-            <Feather name="phone" size={15} color="#16a34a" />
+            <Feather name="phone" size={15} color="#1F8A5B" />
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.quickBtn, { backgroundColor: "#25D36618" }]}
@@ -543,10 +401,10 @@ function DeliveryCard({
           </TouchableOpacity>
           {order.customerPhone2 ? (
             <TouchableOpacity
-              style={[styles.quickBtn, { backgroundColor: "#16a34a18" }]}
+              style={[styles.quickBtn, { backgroundColor: "#1F8A5B18" }]}
               onPress={() => { Haptics.selectionAsync(); callPhone(order.customerPhone2!); }}
             >
-              <Feather name="phone-call" size={15} color="#16a34a" />
+              <Feather name="phone-call" size={15} color="#1F8A5B" />
             </TouchableOpacity>
           ) : null}
         </View>
@@ -642,10 +500,7 @@ function DeliveryCard({
           style={styles.waReadyBtn}
           onPress={() => {
             Haptics.selectionAsync();
-            openWhatsApp(
-              order.customerPhone,
-              `أهلاً ${order.customerName}، طلبك رقم #${order.orderNumber} جاهز وفي طريقه إليك! 🎉`
-            );
+            waSend(order.customerPhone, customerTrackingMessage(order, company.name || "Laviviane"));
           }}
           activeOpacity={0.8}
         >
@@ -654,10 +509,20 @@ function DeliveryCard({
         </TouchableOpacity>
       )}
 
-      {/* ── Mark as delivered ── */}
-      {!delivered && (
+      {/* ── Next step: dispatch → delivered ── */}
+      {!delivered && hasDriver && !outForDelivery && (
         <TouchableOpacity
-          style={styles.deliverBtn}
+          style={[styles.deliverBtn, { backgroundColor: Colors.primary }]}
+          onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium); onDispatch(order); }}
+          activeOpacity={0.8}
+        >
+          <Feather name="truck" size={16} color={Colors.goldLight} />
+          <Text style={styles.deliverBtnText}>{tr("خرج للتوصيل · إرسال التفاصيل للسائق", "Out for delivery · send to driver")}</Text>
+        </TouchableOpacity>
+      )}
+      {!delivered && (outForDelivery || !hasDriver) && (
+        <TouchableOpacity
+          style={[styles.deliverBtn, !outForDelivery && { opacity: 0.85 }]}
           onPress={() => {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             onMarkDelivered(order.id);
@@ -676,14 +541,24 @@ function DeliveryCard({
 
 export default function DeliveryScreen() {
   const { t, lang } = useLang();
-  const { orders, updateDeliveryStatus, assignDeliveryDriver } = useOrders();
+  const { orders, assignDeliveryDriver, dispatchOrder, markDelivered } = useOrders();
+  const { company } = useCompany();
+  const [detailsId, setDetailsId] = useState<string | null>(null);
+  const [manageDrivers, setManageDrivers] = useState(false);
   const insets = useSafeAreaInsets();
   const { currentEmployee } = useEmployee();
 
-  const [tab, setTab] = useState<TabKey>("all");
+  const [tab, setTab] = useState<TabKey>("pending");
   const [sort, setSort] = useState<SortKey>("time");
   const [selectedDriver, setSelectedDriver] = useState<string | null>(null);
   const [driverModalOrder, setDriverModalOrder] = useState<Order | null>(null);
+
+  const actor = currentEmployee ? { name: currentEmployee.name, employeeId: currentEmployee.employeeId } : undefined;
+  const driverLoad = useMemo(() => {
+    const m: Record<string, number> = {};
+    orders.forEach((o) => { if (o.deliveryDriver?.employeeId && isOrderOpen(o)) m[o.deliveryDriver.employeeId] = (m[o.deliveryDriver.employeeId] ?? 0) + 1; });
+    return m;
+  }, [orders]);
 
   const deliveryOrders = useMemo(
     () => orders.filter((o) => o.orderType === "delivery"),
@@ -760,6 +635,15 @@ export default function DeliveryScreen() {
           <>
             {/* Stats + title */}
             <StatsHeader orders={deliveryOrders} />
+
+            <View style={{ gap: 10, marginBottom: 6 }}>
+              <SyncStatusBanner />
+              <TouchableOpacity style={styles.manageDriversBtn} onPress={() => setManageDrivers(true)} activeOpacity={0.8}>
+                <Feather name="users" size={16} color={Colors.primary} />
+                <Text style={styles.manageDriversTxt}>{tr("إدارة السائقين", "Manage drivers")}</Text>
+                <Feather name={lang === "ar" ? "chevron-left" : "chevron-right"} size={16} color={Colors.textMuted} />
+              </TouchableOpacity>
+            </View>
 
             {/* Driver filter chips */}
             <DriverChips
@@ -847,25 +731,41 @@ export default function DeliveryScreen() {
           <DeliveryCard
             order={item}
             lang={lang}
-            onMarkDelivered={(id) => updateDeliveryStatus(id, "delivered")}
+            onMarkDelivered={(id) => void markDelivered(id, actor)}
             onOpenDriverModal={setDriverModalOrder}
+            onOpenDetails={(o) => setDetailsId(o.id)}
+            onDispatch={(o) => {
+              const send = () => {
+                void dispatchOrder(o.id, actor);
+                if (o.deliveryDriver?.phone) waSend(o.deliveryDriver.phone, driverDispatchMessage(o, company.name || "Laviviane"));
+              };
+              if (isProductionDone(o)) return send();
+              Alert.alert(
+                tr("التحضير لم يكتمل", "Not ready yet"),
+                tr("بعض الأقسام لم تُنهِ الطلب. إخراجه للتوصيل الآن؟", "Some departments are not done. Dispatch anyway?"),
+                [{ text: tr("إلغاء", "Cancel"), style: "cancel" }, { text: tr("نعم", "Yes"), onPress: send }]
+              );
+            }}
           />
         )}
       />
 
-      <DriverModal
+      <DriversModal
         visible={driverModalOrder !== null}
-        orderId={driverModalOrder?.id ?? ""}
-        orderNumber={driverModalOrder?.orderNumber}
-        currentDriver={
-          driverModalOrder?.deliveryDriver?.employeeId
-            ? driverModalOrder.deliveryDriver
-            : undefined
-        }
-        allOrders={deliveryOrders}
         onClose={() => setDriverModalOrder(null)}
-        onAssign={assignDeliveryDriver}
+        currentDriverId={driverModalOrder?.deliveryDriver?.employeeId}
+        loadByDriver={driverLoad}
+        onPick={(d) => {
+          if (driverModalOrder) void assignDeliveryDriver(driverModalOrder.id, { name: d.name, employeeId: d.id, phone: d.phone }, actor);
+          setDriverModalOrder(null);
+        }}
+        onUnassign={() => {
+          if (driverModalOrder) void assignDeliveryDriver(driverModalOrder.id, { name: "", employeeId: "" }, actor);
+          setDriverModalOrder(null);
+        }}
       />
+      <DriversModal visible={manageDrivers} onClose={() => setManageDrivers(false)} />
+      <OrderDetailsSheet orderId={detailsId} visible={!!detailsId} onClose={() => setDetailsId(null)} />
     </View>
   );
 }
@@ -874,6 +774,8 @@ export default function DeliveryScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
+  manageDriversBtn: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: Colors.surface, borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, borderWidth: 1, borderColor: Colors.borderLight },
+  manageDriversTxt: { flex: 1, fontSize: 14, fontWeight: "800", color: Colors.primary },
 
   // ─ Stats Header ─
   statsWrap: { padding: 14, paddingBottom: 8, gap: 10 },
@@ -888,9 +790,9 @@ const styles = StyleSheet.create({
   screenSub: { fontSize: 11, color: Colors.textMuted, marginTop: 1 },
   alertBadge: {
     flexDirection: "row", alignItems: "center", gap: 5,
-    backgroundColor: "#dc2626", borderRadius: 20,
+    backgroundColor: "#C8323F", borderRadius: 20,
     paddingHorizontal: 10, paddingVertical: 5,
-    shadowColor: "#dc2626", shadowOpacity: 0.3, shadowRadius: 4,
+    shadowColor: "#C8323F", shadowOpacity: 0.3, shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 }, elevation: 3,
   },
   alertBadgeText: { fontSize: 11, fontWeight: "800", color: "#fff" },
@@ -951,7 +853,7 @@ const styles = StyleSheet.create({
   chipBadgeText: { fontSize: 11, fontWeight: "800", color: Colors.primary },
   chipReadyDot: {
     width: 7, height: 7, borderRadius: 4,
-    backgroundColor: "#7c3aed",
+    backgroundColor: "#8C4A5E",
     position: "absolute", top: 0, right: 0,
   },
 
@@ -967,10 +869,10 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface, borderWidth: 1.5, borderColor: Colors.border,
   },
   tabBtnActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
-  tabBtnAlert: { borderColor: "#ea580c50", backgroundColor: "#ea580c0A" },
+  tabBtnAlert: { borderColor: "#D9602B50", backgroundColor: "#D9602B0A" },
   tabText: { fontSize: 12, fontWeight: "600", color: Colors.textSecondary },
   tabTextActive: { color: "#fff" },
-  tabTextAlert: { color: "#ea580c", fontWeight: "700" },
+  tabTextAlert: { color: "#D9602B", fontWeight: "700" },
   tabBadge: {
     minWidth: 20, height: 18, borderRadius: 9,
     backgroundColor: Colors.surfaceSecondary,
@@ -978,7 +880,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
   },
   tabBadgeActive: { backgroundColor: "rgba(255,255,255,0.25)" },
-  tabBadgeAlert: { backgroundColor: "#ea580c" },
+  tabBadgeAlert: { backgroundColor: "#D9602B" },
   tabBadgeText: { fontSize: 10, fontWeight: "800", color: Colors.textSecondary },
   sortBtn: {
     width: 38, height: 38, borderRadius: 12,
@@ -1081,8 +983,8 @@ const styles = StyleSheet.create({
   deliverBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
     marginTop: 10, paddingVertical: 13, borderRadius: 12,
-    backgroundColor: "#16a34a",
-    shadowColor: "#16a34a", shadowOpacity: 0.25, shadowRadius: 6,
+    backgroundColor: "#1F8A5B",
+    shadowColor: "#1F8A5B", shadowOpacity: 0.25, shadowRadius: 6,
     shadowOffset: { width: 0, height: 3 }, elevation: 3,
   },
   deliverBtnText: { color: "#fff", fontSize: 14, fontWeight: "800" },
@@ -1168,6 +1070,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surfaceSecondary,
     borderWidth: 1, borderColor: Colors.border,
   },
-  loadBadgeHeavy: { backgroundColor: "#ea580c12", borderColor: "#ea580c30" },
+  loadBadgeHeavy: { backgroundColor: "#D9602B12", borderColor: "#D9602B30" },
   loadBadgeText: { fontSize: 11, fontWeight: "700", color: Colors.textSecondary },
 });

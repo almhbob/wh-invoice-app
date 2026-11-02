@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
   linkBtn: { minHeight: 42, borderRadius: 14, paddingHorizontal: 12, flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 7, backgroundColor: Colors.surfaceSecondary, borderWidth: 1, borderColor: Colors.border },
   linkText: { fontSize: 12, fontWeight: "900", color: Colors.primary },
   opsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  opsItem: { flexGrow: 1, flexBasis: 220, gap: 8, borderRadius: 18, padding: 12, backgroundColor: "#f8fafc", borderWidth: 1, borderColor: Colors.border },
+  opsItem: { flexGrow: 1, flexBasis: 220, gap: 8, borderRadius: 18, padding: 12, backgroundColor: "#FAFAF8", borderWidth: 1, borderColor: Colors.border },
   opsTopRow: { flexDirection: "row-reverse", alignItems: "center", justifyContent: "space-between" },
   opsIcon: { width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center" },
   statusBadge: { flexDirection: "row-reverse", alignItems: "center", gap: 4, borderRadius: 12, paddingHorizontal: 8, paddingVertical: 4 },

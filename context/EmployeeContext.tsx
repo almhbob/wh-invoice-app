@@ -1,5 +1,4 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Alert } from "react-native";
 import {
   addDoc,
   collection,
@@ -26,10 +25,15 @@ import {
   canBranchSupervisorManageRole,
   defaultPermissionsForRole,
 } from "@/constants/branchSupervisorPermissions";
+import { onAuthStateChanged } from "firebase/auth";
+
 import { useCompany } from "@/context/CompanyContext";
 import { useLang } from "@/context/LanguageContext";
+import { auth } from "@/lib/firebase";
+import { readSessionClaims, secureLogout, secureResetEmployeePin, secureSetPin, useSecureAuthMode } from "@/lib/secureAuth";
 import { db } from "@/lib/firebase";
 import { t as t_ } from "@/constants/translations";
+import { showPlatformAlert } from "@/lib/platformAlert";
 
 // Persistent unique ID for this browser/device — used to detect duplicate sessions
 function getOrCreateDeviceId(): string {
@@ -46,7 +50,7 @@ function getOrCreateDeviceId(): string {
 }
 const MY_DEVICE_ID = getOrCreateDeviceId();
 
-export type EmployeeRole = "cashier" | "halwa" | "mawali" | "chocolate" | "cake" | "packaging" | "admin" | "branch_supervisor" | "dept_supervisor" | "guest";
+export type EmployeeRole = "cashier" | "halwa" | "mawali" | "chocolate" | "cake" | "packaging" | "calligrapher" | "driver" | "admin" | "branch_supervisor" | "dept_supervisor" | "guest";
 
 export interface Employee {
   id: string;
@@ -54,6 +58,8 @@ export interface Employee {
   name: string;
   employeeId: string;
   username?: string;
+  /** Contact number (used for drivers). */
+  phone?: string;
   pinCode?: string;
   status?: "active" | "suspended";
   role: EmployeeRole;
@@ -71,8 +77,14 @@ interface EmployeeContextType {
   setCurrentEmployee: (emp: Employee | null) => void;
   addEmployee: (data: Omit<Employee, "id" | "createdAt" | "companyId">) => Promise<Employee>;
   removeEmployee: (id: string) => Promise<void>;
-  updateEmployee: (id: string, changes: Partial<Pick<Employee, "name" | "role" | "status" | "pinCode">>) => Promise<void>;
+  updateEmployee: (id: string, changes: Partial<Pick<Employee, "name" | "role" | "status" | "pinCode" | "phone" | "branchId">>) => Promise<void>;
   checkAndLogin: (emp: Employee, forceKick?: boolean) => Promise<"ok" | "conflict">;
+  /** Sets an employee's login PIN through the server (secure mode only). */
+  setEmployeePin: (id: string, pin: string) => Promise<void>;
+  /** Resets another employee's PIN through the admin-only server endpoint. */
+  resetEmployeePin: (id: string, pin: string) => Promise<void>;
+  /** Legacy access requires explicit local opt-in; production may fail closed. */
+  authMode: "checking" | "secure" | "legacy" | "unavailable";
   isLoading: boolean;
 }
 
@@ -88,6 +100,8 @@ const ROLE_LABELS: Record<EmployeeRole, string> = {
   chocolate: "قسم شوكولاتة",
   cake: "قسم الكيك",
   packaging: "قسم التغليف",
+  calligrapher: "الخطاط",
+  driver: "سائق توصيل",
   admin: "مشرف",
   branch_supervisor: "مشرف فرع",
   dept_supervisor: "مشرف قسم",
@@ -130,6 +144,10 @@ function fallbackEmployee(companyId: string): Employee {
   };
 }
 
+function cleanUndefined<T extends Record<string, unknown>>(obj: T): T {
+  return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined)) as T;
+}
+
 function mergeSessionIntoEmployees(employees: Employee[], sessionEmployee: Employee | null): Employee[] {
   if (!sessionEmployee || sessionEmployee.status === "suspended") return employees;
   const exists = employees.some((emp) => emp.id === sessionEmployee.id);
@@ -143,6 +161,11 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
   const [currentEmployee, setCurrentEmployeeState] = useState<Employee | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const currentEmployeeRef = useRef<Employee | null>(null);
+  const authMode = useSecureAuthMode();
+  const isSecure = authMode !== "legacy";
+  const [authUid, setAuthUid] = useState<string | null | undefined>(undefined);
+
+  useEffect(() => onAuthStateChanged(auth, (user) => setAuthUid(user && !user.isAnonymous ? user.uid : user ? `anon:${user.uid}` : null)), []);
 
   const employeesCollection = useCallback(() => collection(db, "companies", companyId, "employees"), [companyId]);
   const employeeDoc = useCallback((id: string) => doc(db, "companies", companyId, "employees", id), [companyId]);
@@ -154,6 +177,17 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
     let mounted = true;
     setIsLoading(true);
     setEmployees([]);
+    if (authMode === "checking" || authUid === undefined) return () => { mounted = false; };
+    if (authMode === "unavailable") {
+      currentEmployeeRef.current = null;
+      setCurrentEmployeeState(null);
+      setIsLoading(false);
+      return () => { mounted = false; };
+    }
+    // Secure mode: nothing is readable until the employee signs in with a server-issued token.
+    const canRead = !isSecure || (authUid !== null && !authUid.startsWith("anon:"));
+    // The hardcoded fallback admin only exists in legacy mode.
+    const fallbackList = (): Employee[] => (isSecure ? [] : [fallbackEmployee(companyId)]);
 
     async function restoreSessionSnapshot() {
       try {
@@ -175,11 +209,17 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
       const restored = await restoredPromise;
       if (!mounted) return;
       setEmployees((existing) => {
-        const base = existing.length ? existing : [fallbackEmployee(companyId)];
+        const base = existing.length ? existing : fallbackList();
         return mergeSessionIntoEmployees(base, restored);
       });
       setIsLoading(false);
     }, FIRESTORE_EMPLOYEE_TIMEOUT_MS);
+
+    if (!canRead) {
+      clearTimeout(timeout);
+      restoredPromise.then(() => { if (mounted) setIsLoading(false); });
+      return () => { mounted = false; };
+    }
 
     const q = query(employeesCollection(), orderBy("createdAt", "asc"));
     const unsub = onSnapshot(
@@ -193,7 +233,7 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
           companyId,
           ...(d.data() as Omit<Employee, "id">),
         }));
-        const base = loaded.length ? loaded : [fallbackEmployee(companyId)];
+        const base = loaded.length ? loaded : fallbackList();
         const withSession = mergeSessionIntoEmployees(base, restored);
         setEmployees(withSession);
         setIsLoading(false);
@@ -217,7 +257,7 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
         console.error("Firestore company employees error:", err);
         const restored = await restoredPromise;
         if (!mounted) return;
-        setEmployees(mergeSessionIntoEmployees([fallbackEmployee(companyId)], restored));
+        setEmployees(mergeSessionIntoEmployees(fallbackList(), restored));
         if (restored) setCurrentEmployeeState(restored);
         setIsLoading(false);
       }
@@ -227,7 +267,7 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
       clearTimeout(timeout);
       unsub();
     };
-  }, [companyId, employeesCollection, sessionKey, sessionEmployeeKey]);
+  }, [companyId, employeesCollection, sessionKey, sessionEmployeeKey, authMode, authUid, isSecure]);
 
   const setCurrentEmployee = useCallback(async (emp: Employee | null) => {
     const allowedEmployee = emp?.status === "suspended" ? null : emp;
@@ -255,6 +295,7 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
       } else {
         await AsyncStorage.removeItem(sessionKey);
         await AsyncStorage.removeItem(sessionEmployeeKey);
+        if (isSecure) void secureLogout();
         // Delete session only if it's ours
         if (prev && !prev.isLocalFallback && !((prev as unknown) as Record<string, unknown>).isLocalBootstrap) {
           getDoc(activeSessionRef(prev.employeeId)).then((snap) => {
@@ -265,7 +306,20 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
         }
       }
     } catch {}
-  }, [sessionKey, sessionEmployeeKey, companyId, activeSessionRef]);
+  }, [sessionKey, sessionEmployeeKey, companyId, activeSessionRef, isSecure]);
+
+  // Secure mode: a remembered employee is only trusted if the Firebase session proves it.
+  useEffect(() => {
+    if (!isSecure || !currentEmployee || authUid === undefined) return;
+    let alive = true;
+    readSessionClaims().then((claims) => {
+      if (!alive) return;
+      if (!claims || claims.eid !== currentEmployee.id || claims.companyId !== companyId) {
+        setCurrentEmployee(null);
+      }
+    }).catch(() => {});
+    return () => { alive = false; };
+  }, [isSecure, currentEmployee?.id, companyId, authUid, setCurrentEmployee]);
 
   // Watch active session — if another device logs in as the same employee, force logout
   useEffect(() => {
@@ -280,10 +334,9 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
         setCurrentEmployeeState(null);
         AsyncStorage.removeItem(sessionKey).catch(() => {});
         AsyncStorage.removeItem(sessionEmployeeKey).catch(() => {});
-        Alert.alert(
+        showPlatformAlert(
           t("sessionKickedTitle"),
-          t("sessionKickedMsg").replace("{name}", empName),
-          [{ text: t("ok") }]
+          t("sessionKickedMsg").replace("{name}", empName)
         );
       }
     }, () => {}); // ignore Firestore errors silently
@@ -297,8 +350,12 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
     }
     if (!forceKick) {
       try {
-        const snap = await getDoc(activeSessionRef(emp.employeeId));
-        if (snap.exists() && (snap.data() as { deviceId?: string }).deviceId !== MY_DEVICE_ID) {
+        // A slow or offline connection must never hold the login screen hostage.
+        const snap = await Promise.race([
+          getDoc(activeSessionRef(emp.employeeId)),
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), 3500)),
+        ]);
+        if (snap && snap.exists() && (snap.data() as { deviceId?: string }).deviceId !== MY_DEVICE_ID) {
           return "conflict";
         }
       } catch {
@@ -326,15 +383,19 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
       const activeCount = employees.filter((e) => !e.isLocalFallback && !((e as unknown) as Record<string, unknown>).isLocalBootstrap && e.status !== "suspended").length;
       if (company.maxUsers && activeCount >= company.maxUsers) {
         const msg = t_("limitMaxUsersMsg", lang).replace("{n}", String(company.maxUsers));
-        Alert.alert(t_("limitMaxUsersTitle", lang), msg);
+        showPlatformAlert(t_("limitMaxUsersTitle", lang), msg);
         throw new Error("MAX_USERS_EXCEEDED");
       }
 
       const now = new Date().toISOString();
+      // The PIN never goes into the employee document in secure mode (rules reject it).
+      const { pinCode: initialPin, ...profile } = data;
+      if (isSecure && !initialPin) throw new Error("PIN_REQUIRED");
       const payload = {
-        ...data,
+        ...profile,
         username: data.username || data.employeeId.toLowerCase(),
-        pinCode: data.pinCode || "1234",
+        // Secure mode never stores PINs in readable documents; they are hashed server-side.
+        ...(isSecure ? {} : { pinCode: initialPin || "1234" }),
         status: data.status || "active",
         companyId,
         permissions: data.permissions?.length ? data.permissions : defaultPermissionsForRole(data.role),
@@ -343,10 +404,19 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
         createdAt: now,
         lastLoginAt: data.lastLoginAt,
       };
-      const ref = await addDoc(employeesCollection(), payload);
+      const ref = await addDoc(employeesCollection(), cleanUndefined(payload));
+      if (isSecure && initialPin) {
+        try {
+          await secureSetPin({ employeeDocId: ref.id, newPin: initialPin });
+        } catch (err) {
+          // Never leave an account behind without a PIN.
+          await deleteDoc(ref).catch(() => undefined);
+          throw err;
+        }
+      }
       return { id: ref.id, ...payload };
     },
-    [companyId, currentEmployee, employeesCollection]
+    [companyId, currentEmployee, employeesCollection, isSecure]
   );
 
   const removeEmployee = useCallback(
@@ -367,7 +437,7 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
   );
 
   const updateEmployee = useCallback(
-    async (id: string, changes: Partial<Pick<Employee, "name" | "role" | "status" | "pinCode">>) => {
+    async (id: string, rawChanges: Partial<Pick<Employee, "name" | "role" | "status" | "pinCode" | "phone" | "branchId">>) => {
       // Same guards as add/remove: a branch supervisor can't touch protected
       // roles or promote anyone (including themselves) to one.
       const existing = employees.find((e) => e.id === id);
@@ -375,14 +445,26 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
         if (existing && !canBranchSupervisorManageRole(existing.role)) {
           throw new Error("BRANCH_SUPERVISOR_CANNOT_MANAGE_PROTECTED_ROLE");
         }
-        if (changes.role && !canBranchSupervisorAssignRole(changes.role)) {
+        if (rawChanges.role && !canBranchSupervisorAssignRole(rawChanges.role)) {
           throw new Error("BRANCH_SUPERVISOR_CANNOT_ASSIGN_PROTECTED_ROLE");
         }
       } else if (currentEmployee && currentEmployee.role !== "admin" && currentEmployee.id !== id) {
         throw new Error("FORBIDDEN");
       }
 
-      // Update local state immediately
+      let changes = rawChanges;
+      if (isSecure && rawChanges.pinCode !== undefined) {
+        const { pinCode, ...rest } = rawChanges;
+        await secureSetPin({ employeeDocId: id, newPin: String(pinCode) });
+        changes = rest;
+        if (!Object.keys(rest).length) return;
+      }
+      // Persist remote employee changes before presenting them as saved locally.
+      const target = employees.find((e) => e.id === id);
+      if (!target?.isLocalFallback) {
+        await updateDoc(employeeDoc(id), changes as Record<string, unknown>);
+      }
+
       setEmployees((current) =>
         current.map((e) => (e.id === id ? { ...e, ...changes } : e))
       );
@@ -399,22 +481,24 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
         }
       } catch {}
 
-      // Update Firestore (non-blocking; skip for local-fallback employees)
-      const target = employees.find((e) => e.id === id);
-      if (!target?.isLocalFallback) {
-        updateDoc(employeeDoc(id), changes as Record<string, unknown>).catch(() => {});
-      }
-
       // If the updated employee is the current employee and status becomes "suspended", log them out
       if (currentEmployee?.id === id && changes.status === "suspended") {
         setCurrentEmployee(null);
       }
     },
-    [currentEmployee, employeeDoc, employees, sessionEmployeeKey, setCurrentEmployee]
+    [currentEmployee, employeeDoc, employees, sessionEmployeeKey, setCurrentEmployee, isSecure]
   );
 
+  const setEmployeePin = useCallback(async (id: string, pin: string) => {
+    await secureSetPin({ employeeDocId: id, newPin: pin });
+  }, []);
+
+  const resetEmployeePin = useCallback(async (id: string, pin: string) => {
+    await secureResetEmployeePin({ employeeDocId: id, newPin: pin });
+  }, []);
+
   return (
-    <EmployeeContext.Provider value={{ employees, currentEmployee, setCurrentEmployee, addEmployee, removeEmployee, updateEmployee, checkAndLogin, isLoading }}>
+    <EmployeeContext.Provider value={{ employees, currentEmployee, setCurrentEmployee, addEmployee, removeEmployee, updateEmployee, checkAndLogin, setEmployeePin, resetEmployeePin, authMode, isLoading }}>
       {children}
     </EmployeeContext.Provider>
   );

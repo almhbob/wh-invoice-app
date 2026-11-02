@@ -1,3 +1,12 @@
+import { PurgeOrdersPanel } from "@/components/PurgeOrdersPanel";
+import { TaxSettingsPanel } from "@/components/TaxSettingsPanel";
+import { HrSection } from "@/components/hr/HrSection";
+import { useHrWorkers } from "@/hooks/useHr";
+import { expiryAlerts } from "@/utils/hr";
+import { riyadhDate } from "@/utils/windowOrders";
+import { useLocalSearchParams } from "expo-router";
+import { useWindows } from "@/hooks/useWindows";
+import { tr } from "@/lib/i18n";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as FileSystem from "expo-file-system/legacy";
@@ -9,6 +18,7 @@ import {
   Modal,
   Platform,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TextInput,
@@ -21,18 +31,25 @@ import { Image } from "expo-image";
 
 import { Colors } from "@/constants/colors";
 import { canDo, ROLE_CAN_ACCESS_ADMIN } from "@/constants/rbac";
-import { employeeCredentialErrorMessage } from "@/lib/employeeCredentials";
 import { DevSettingsModal } from "@/components/DevSettingsModal";
 import { PrinterSettingsModal } from "@/components/PrinterSettingsModal";
 import { ProductManagerModal } from "@/components/ProductManagerModal";
 import { useLang } from "@/context/LanguageContext";
+import { useCompany } from "@/context/CompanyContext";
+import { PinChangeModal } from "@/components/PinChangeModal";
+import { secureAuthErrorText, secureAuthText } from "@/constants/secureAuthText";
+import { employeeCredentialErrorMessage } from "@/lib/employeeCredentials";
+import { localPinError, SecureAuthFailure } from "@/lib/secureAuth";
+import { showPlatformAlert } from "@/lib/platformAlert";
+import { employeeLoginMessage } from "@/utils/loginLink";
+import { openWhatsApp } from "@/utils/orderFlow";
 import {
   Employee,
   EmployeeRole,
   ROLE_LABELS,
   useEmployee,
 } from "@/context/EmployeeContext";
-import { Department, DISCOUNT_REASON_PRESETS, DiscountType, Order, PAYMENT_LABEL_KEYS, PaymentMethod, useOrders } from "@/context/OrdersContext";
+import { Department, DISCOUNT_REASON_PRESETS, DiscountType, Order, PAYMENT_LABEL_KEYS, PaymentMethod, useOrders, useOrderHistory } from "@/context/OrdersContext";
 import { Offer, useOffers } from "@/context/OffersContext";
 import { Product, useProducts } from "@/context/ProductsContext";
 import { usePriceChange } from "@/context/PriceChangeContext";
@@ -55,9 +72,11 @@ const ROLE_COLORS: Record<EmployeeRole, string> = {
   chocolate: Colors.chocolate,
   cake: Colors.cake,
   packaging: Colors.packaging,
+  calligrapher: Colors.purple,
+  driver: Colors.success,
   admin: Colors.primaryLight,
-  branch_supervisor: "#0d9488",
-  dept_supervisor: "#0891b2",
+  branch_supervisor: "#2D6E7E",
+  dept_supervisor: "#2D6E7E",
   guest: Colors.textMuted,
 };
 const ROLE_ICONS: Record<EmployeeRole, any> = {
@@ -67,12 +86,14 @@ const ROLE_ICONS: Record<EmployeeRole, any> = {
   chocolate: "gift",
   cake: "layers",
   packaging: "box",
+  calligrapher: "edit-3",
+  driver: "truck",
   admin: "shield",
   branch_supervisor: "git-branch",
   dept_supervisor: "users",
   guest: "user",
 };
-const ALL_ROLES: EmployeeRole[] = ["cashier", "halwa", "mawali", "chocolate", "cake", "packaging", "admin"];
+const ALL_ROLES: EmployeeRole[] = ["cashier", "halwa", "mawali", "chocolate", "cake", "packaging", "calligrapher", "driver", "dept_supervisor", "guest", "branch_supervisor", "admin"];
 
 // ─── sub-components ────────────────────────────────────────────────────────
 function StatCard({
@@ -107,83 +128,191 @@ function SectionHeader({ title, icon }: { title: string; icon: any }) {
 
 // ─── Employee Management ──────────────────────────────────────────────────
 type EmpStatusFilter = "all" | "active" | "suspended";
+type EmployeeDialogState =
+  | { kind: "menu"; employee: Employee }
+  | { kind: "edit"; employee: Employee }
+  | { kind: "role"; employee: Employee }
+  | { kind: "confirm"; employee: Employee; action: "delete" | "suspend" | "activate" };
 
 function EmployeesSection() {
-  const { employees, addEmployee, removeEmployee, updateEmployee } = useEmployee();
-  const { t } = useLang();
+  const { employees, addEmployee, removeEmployee, updateEmployee, setEmployeePin, resetEmployeePin, authMode, currentEmployee } = useEmployee();
+  const { t, lang } = useLang();
+  const isSecure = authMode !== "legacy";
+  const [pin, setPin] = useState("");
+  const [phone, setPhone] = useState("");
+  const [pinTarget, setPinTarget] = useState<Employee | null>(null);
   const [showAdd, setShowAdd] = useState(false);
   const [name, setName] = useState("");
   const [empId, setEmpId] = useState("");
   const [role, setRole] = useState<EmployeeRole>("cashier");
   const [saving, setSaving] = useState(false);
   const [statusFilter, setStatusFilter] = useState<EmpStatusFilter>("all");
+  const [employeeDialog, setEmployeeDialog] = useState<EmployeeDialogState | null>(null);
+  const { company } = useCompany();
+
+  const shareLoginLink = async (emp: Employee) => {
+    setEmployeeDialog(null);
+    const message = employeeLoginMessage({
+      name: emp.name,
+      companyName: company.name,
+      companyId: company.id,
+      username: String(emp.username || emp.employeeId),
+      currentOrigin: typeof window !== "undefined" ? window.location?.origin : undefined,
+      lang: lang === "ar" ? "ar" : "en",
+    });
+    const note = secureAuthText("shareLoginNoPin", lang);
+    if (emp.phone && emp.phone.replace(/\D/g, "").length >= 9) {
+      openWhatsApp(emp.phone, message);
+      showPlatformAlert(secureAuthText("shareLoginLink", lang), note);
+      return;
+    }
+    try {
+      if (Platform.OS === "web") {
+        const nav = typeof navigator !== "undefined" ? (navigator as any) : null;
+        if (nav?.share) {
+          await nav.share({ text: message });
+          showPlatformAlert(secureAuthText("shareLoginLink", lang), note);
+          return;
+        }
+        await nav?.clipboard?.writeText(message);
+        showPlatformAlert(secureAuthText("shareLoginLink", lang), `${secureAuthText("shareLoginCopied", lang)}\n\n${note}`);
+        return;
+      }
+      await Share.share({ message });
+      showPlatformAlert(secureAuthText("shareLoginLink", lang), note);
+    } catch (e: any) {
+      if (e?.name === "AbortError") return; // closed the share sheet
+      showPlatformAlert(secureAuthText("shareLoginLink", lang), message);
+    }
+  };
+  const [editName, setEditName] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editWindow, setEditWindow] = useState<string>("");
+  const { windows: salesWindows } = useWindows();
+  const [dialogSaving, setDialogSaving] = useState(false);
+  const [dialogError, setDialogError] = useState("");
 
   const handleAdd = async () => {
-    if (!name.trim()) { Alert.alert(t("errTitle"), t("empNameRequired")); return; }
-    if (!empId.trim()) { Alert.alert(t("errTitle"), t("empIdRequired")); return; }
+    if (!name.trim()) { showPlatformAlert(t("errTitle"), t("empNameRequired")); return; }
+    if (!empId.trim()) { showPlatformAlert(t("errTitle"), t("empIdRequired")); return; }
     const dup = employees.find((e) => e.employeeId.toLowerCase() === empId.trim().toLowerCase());
-    if (dup) { Alert.alert(t("errTitle"), t("adminEmpDupId")); return; }
+    if (dup) { showPlatformAlert(t("errTitle"), t("adminEmpDupId")); return; }
+    if (isSecure) {
+      const pinErr = localPinError(pin.trim());
+      if (pinErr) { showPlatformAlert(t("errTitle"), secureAuthErrorText(pinErr, lang)); return; }
+    }
     setSaving(true);
     try {
-      await addEmployee({ name: name.trim(), employeeId: empId.trim().toUpperCase(), role });
+      if (role === "driver" && phone.replace(/\D/g, "").length < 9) {
+        showPlatformAlert(t("errTitle"), tr("أدخل رقم جوال السائق.", "Enter the driver's phone."));
+        return;
+      }
+      await addEmployee({ name: name.trim(), employeeId: empId.trim().toUpperCase(), role, ...(phone.trim() ? { phone: phone.trim() } : {}), ...(isSecure ? { pinCode: pin.trim() } : {}) });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setName(""); setEmpId(""); setRole("cashier"); setShowAdd(false);
+      setName(""); setEmpId(""); setPin(""); setPhone(""); setRole("cashier"); setShowAdd(false);
+    } catch (e) {
+      const f = e instanceof SecureAuthFailure ? e : null;
+      showPlatformAlert(t("errTitle"), f ? secureAuthErrorText(f.code, lang, f.retryAfter) : employeeCredentialErrorMessage(e));
     } finally { setSaving(false); }
   };
 
   const handleRemove = (emp: Employee) => {
-    Alert.alert(t("deleteEmployee"), `${t("deleteEmpConfirm")} "${emp.name}"؟`, [
-      { text: t("cancel"), style: "cancel" },
-      { text: t("delete"), style: "destructive", onPress: () => removeEmployee(emp.id) },
-    ]);
+    setDialogError("");
+    setEmployeeDialog({ kind: "confirm", employee: emp, action: "delete" });
   };
 
   const toggleStatus = (emp: Employee) => {
-    const newStatus = emp.status === "suspended" ? "active" : "suspended";
-    const msg = newStatus === "suspended"
-      ? `${t("adminEmpSuspendMsg")} "${emp.name}"`
-      : `${t("adminEmpActivateMsg")} "${emp.name}"`;
-    Alert.alert(t("confirm"), msg, [
-      { text: t("cancel"), style: "cancel" },
-      { text: t("confirm"), onPress: () => updateEmployee(emp.id, { status: newStatus }).catch((e) => Alert.alert(t("errTitle"), employeeCredentialErrorMessage(e))) },
-    ]);
+    setDialogError("");
+    setEmployeeDialog({
+      kind: "confirm",
+      employee: emp,
+      action: emp.status === "suspended" ? "activate" : "suspend",
+    });
   };
 
   const handleChangeRole = (emp: Employee) => {
-    const options = ALL_ROLES.map((r) => ({
-      text: ROLE_LABELS[r],
-      onPress: () => {
-        if (r !== emp.role) {
-          updateEmployee(emp.id, { role: r })
-            .then(() => Haptics.selectionAsync())
-            .catch((e) => Alert.alert(t("errTitle"), employeeCredentialErrorMessage(e)));
-        }
-      },
-    }));
-    Alert.alert(
-      t("adminChangeRole"),
-      `${t("adminChooseRoleFor")} "${emp.name}"`,
-      [...options, { text: t("cancel"), style: "cancel" as const }]
-    );
+    if (currentEmployee?.role !== "admin") return;
+    setDialogError("");
+    setEmployeeDialog({ kind: "role", employee: emp });
   };
 
   const handleEmpMenu = (emp: Employee) => {
     Haptics.selectionAsync();
-    const isSuspended = emp.status === "suspended";
-    Alert.alert(
-      emp.name,
-      `#${emp.employeeId} · ${ROLE_LABELS[emp.role]}`,
-      [
-        { text: t("adminChangeRole"), onPress: () => handleChangeRole(emp) },
-        {
-          text: isSuspended ? t("adminActivateAcc") : t("adminSuspendAcc"),
-          onPress: () => toggleStatus(emp),
-          style: isSuspended ? "default" : "destructive",
-        },
-        { text: t("deleteEmployee"), style: "destructive", onPress: () => handleRemove(emp) },
-        { text: t("cancel"), style: "cancel" },
-      ]
-    );
+    setDialogError("");
+    setEmployeeDialog({ kind: "menu", employee: emp });
+  };
+
+  const closeEmployeeDialog = () => {
+    if (dialogSaving) return;
+    setEmployeeDialog(null);
+    setDialogError("");
+  };
+
+  const startEmployeeEdit = (emp: Employee) => {
+    setEditName(emp.name);
+    setEditPhone(emp.phone || "");
+    setEditWindow(emp.branchId || "");
+    setDialogError("");
+    setEmployeeDialog({ kind: "edit", employee: emp });
+  };
+
+  const saveEmployeeEdit = async () => {
+    if (employeeDialog?.kind !== "edit") return;
+    const nextName = editName.trim();
+    if (!nextName) {
+      setDialogError(tr("اسم الموظف مطلوب.", "Employee name is required."));
+      return;
+    }
+    setDialogSaving(true);
+    setDialogError("");
+    try {
+      await updateEmployee(employeeDialog.employee.id, { name: nextName, phone: editPhone.trim(), branchId: editWindow });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setEmployeeDialog(null);
+    } catch (error) {
+      setDialogError(employeeCredentialErrorMessage(error));
+    } finally {
+      setDialogSaving(false);
+    }
+  };
+
+  const saveEmployeeRole = async (nextRole: EmployeeRole) => {
+    if (employeeDialog?.kind !== "role") return;
+    if (nextRole === employeeDialog.employee.role) {
+      closeEmployeeDialog();
+      return;
+    }
+    setDialogSaving(true);
+    setDialogError("");
+    try {
+      await updateEmployee(employeeDialog.employee.id, { role: nextRole });
+      Haptics.selectionAsync();
+      setEmployeeDialog(null);
+    } catch (error) {
+      setDialogError(employeeCredentialErrorMessage(error));
+    } finally {
+      setDialogSaving(false);
+    }
+  };
+
+  const confirmEmployeeAction = async () => {
+    if (employeeDialog?.kind !== "confirm") return;
+    const { employee, action } = employeeDialog;
+    setDialogSaving(true);
+    setDialogError("");
+    try {
+      if (action === "delete") {
+        await removeEmployee(employee.id);
+      } else {
+        await updateEmployee(employee.id, { status: action === "suspend" ? "suspended" : "active" });
+      }
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setEmployeeDialog(null);
+    } catch (error) {
+      setDialogError(employeeCredentialErrorMessage(error));
+    } finally {
+      setDialogSaving(false);
+    }
   };
 
   const grouped = ALL_ROLES.reduce<Record<EmployeeRole, Employee[]>>((acc, r) => {
@@ -226,7 +355,7 @@ function EmployeesSection() {
       <View style={styles.empFilterRow}>
         {STATUS_FILTERS.map((f) => {
           const isActive = statusFilter === f.key;
-          const color = f.key === "active" ? "#16a34a" : f.key === "suspended" ? "#dc2626" : Colors.primary;
+          const color = f.key === "active" ? "#1F8A5B" : f.key === "suspended" ? "#C8323F" : Colors.primary;
           return (
             <TouchableOpacity
               key={f.key}
@@ -277,8 +406,25 @@ function EmployeesSection() {
                         </Text>
                       </View>
                       <Text style={styles.empIdText}>#{emp.employeeId}</Text>
+                      {isSecure && currentEmployee?.role === "admin" && emp.id !== currentEmployee.id && (
+                        <TouchableOpacity
+                          style={styles.empResetPinBtn}
+                          accessibilityRole="button"
+                          accessibilityLabel={secureAuthText("resetPinAction", lang)}
+                          onPress={(event) => { event.stopPropagation(); setPinTarget(emp); }}
+                        >
+                          <Feather name="key" size={12} color={Colors.primary} />
+                          <Text style={styles.empResetPinText}>{secureAuthText("resetPinActionShort", lang)}</Text>
+                        </TouchableOpacity>
+                      )}
                     </View>
-                    <TouchableOpacity style={styles.empMenuBtn} onPress={() => handleEmpMenu(emp)} hitSlop={10}>
+                    <TouchableOpacity
+                      style={styles.empMenuBtn}
+                      onPress={(event) => { event.stopPropagation(); handleEmpMenu(emp); }}
+                      hitSlop={10}
+                      accessibilityRole="button"
+                      accessibilityLabel={tr("إجراءات الموظف", "Employee actions")}
+                    >
                       <Text style={styles.empMenuDots}>⋮</Text>
                     </TouchableOpacity>
                   </TouchableOpacity>
@@ -288,6 +434,256 @@ function EmployeesSection() {
           );
         })
       )}
+
+      <PinChangeModal
+        visible={!!pinTarget}
+        mode="other"
+        employeeName={pinTarget?.name}
+        onSubmit={async (newPin) => {
+          if (currentEmployee?.role === "admin") await resetEmployeePin(pinTarget!.id, newPin);
+          else await setEmployeePin(pinTarget!.id, newPin);
+          setPinTarget(null);
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          showPlatformAlert(t("successTitle"), secureAuthText("pinSaved", lang));
+        }}
+        onCancel={() => setPinTarget(null)}
+      />
+
+      <Modal
+        visible={!!employeeDialog}
+        transparent
+        animationType="fade"
+        onRequestClose={closeEmployeeDialog}
+      >
+        <View style={styles.employeeDialogBackdrop}>
+          <TouchableOpacity
+            style={styles.employeeDialogDismissArea}
+            activeOpacity={1}
+            onPress={closeEmployeeDialog}
+            accessibilityLabel={t("cancel")}
+          />
+          {employeeDialog ? (
+            <View style={styles.employeeDialogCard}>
+              <View style={styles.employeeDialogHeader}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.employeeDialogTitle}>
+                    {employeeDialog.kind === "menu"
+                      ? employeeDialog.employee.name
+                      : employeeDialog.kind === "edit"
+                        ? tr("تعديل بيانات الموظف", "Edit employee details")
+                        : employeeDialog.kind === "role"
+                          ? t("adminChangeRole")
+                          : employeeDialog.action === "delete"
+                            ? t("deleteEmployee")
+                            : t("confirm")}
+                  </Text>
+                  {employeeDialog.kind === "menu" || employeeDialog.kind === "role" ? (
+                    <Text style={styles.employeeDialogSubtitle}>
+                      #{employeeDialog.employee.employeeId} · {ROLE_LABELS[employeeDialog.employee.role]}
+                    </Text>
+                  ) : null}
+                </View>
+                <TouchableOpacity
+                  style={styles.employeeDialogClose}
+                  onPress={closeEmployeeDialog}
+                  accessibilityRole="button"
+                  accessibilityLabel={t("cancel")}
+                  disabled={dialogSaving}
+                >
+                  <Feather name="x" size={18} color={Colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+
+              {employeeDialog.kind === "menu" ? (
+                <ScrollView style={styles.employeeDialogOptions} showsVerticalScrollIndicator={false}>
+                  <TouchableOpacity
+                    style={styles.employeeDialogAction}
+                    onPress={() => startEmployeeEdit(employeeDialog.employee)}
+                  >
+                    <Feather name="edit-2" size={16} color={Colors.primary} />
+                    <Text style={styles.employeeDialogActionText}>{tr("تعديل البيانات", "Edit details")}</Text>
+                  </TouchableOpacity>
+                  {currentEmployee?.role === "admin" ? (
+                    <TouchableOpacity
+                      style={styles.employeeDialogAction}
+                      onPress={() => handleChangeRole(employeeDialog.employee)}
+                    >
+                      <Feather name="briefcase" size={16} color={Colors.primary} />
+                      <Text style={styles.employeeDialogActionText}>{t("adminChangeRole")}</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                  {isSecure
+                    && (currentEmployee?.role === "admin" || currentEmployee?.role === "branch_supervisor")
+                    && employeeDialog.employee.id !== currentEmployee?.id ? (
+                    <TouchableOpacity
+                      style={styles.employeeDialogAction}
+                      onPress={() => {
+                        setPinTarget(employeeDialog.employee);
+                        setEmployeeDialog(null);
+                      }}
+                    >
+                      <Feather name="key" size={16} color={Colors.primary} />
+                      <Text style={styles.employeeDialogActionText}>
+                        {secureAuthText(currentEmployee?.role === "admin" ? "resetPinAction" : "setPinAction", lang)}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : null}
+                  {isSecure && employeeDialog.employee.status !== "suspended" ? (
+                    <TouchableOpacity
+                      style={styles.employeeDialogAction}
+                      onPress={() => void shareLoginLink(employeeDialog.employee)}
+                    >
+                      <Feather name="send" size={16} color={Colors.primary} />
+                      <Text style={styles.employeeDialogActionText}>{secureAuthText("shareLoginLink", lang)}</Text>
+                    </TouchableOpacity>
+                  ) : null}
+                  <TouchableOpacity
+                    style={styles.employeeDialogAction}
+                    onPress={() => toggleStatus(employeeDialog.employee)}
+                  >
+                    <Feather
+                      name={employeeDialog.employee.status === "suspended" ? "user-check" : "user-x"}
+                      size={16}
+                      color={Colors.warning}
+                    />
+                    <Text style={styles.employeeDialogActionText}>
+                      {employeeDialog.employee.status === "suspended" ? t("adminActivateAcc") : t("adminSuspendAcc")}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.employeeDialogAction}
+                    onPress={() => handleRemove(employeeDialog.employee)}
+                  >
+                    <Feather name="trash-2" size={16} color={Colors.accent} />
+                    <Text style={[styles.employeeDialogActionText, { color: Colors.accent }]}>
+                      {t("deleteEmployee")}
+                    </Text>
+                  </TouchableOpacity>
+                </ScrollView>
+              ) : null}
+
+              {employeeDialog.kind === "edit" ? (
+                <View style={styles.employeeDialogForm}>
+                  <Text style={styles.formLabel}>{t("adminEmpNameLabel")}</Text>
+                  <TextInput
+                    style={styles.employeeDialogInput}
+                    value={editName}
+                    onChangeText={setEditName}
+                    placeholder={t("adminEmpNamePh")}
+                    placeholderTextColor={Colors.textMuted}
+                    textAlign="right"
+                    editable={!dialogSaving}
+                  />
+                  <Text style={styles.formLabel}>{tr("رقم الجوال", "Phone number")}</Text>
+                  <TextInput
+                    style={styles.employeeDialogInput}
+                    value={editPhone}
+                    onChangeText={setEditPhone}
+                    placeholder="05XXXXXXXX"
+                    placeholderTextColor={Colors.textMuted}
+                    textAlign="right"
+                    keyboardType="phone-pad"
+                    editable={!dialogSaving}
+                  />
+                  {salesWindows.some((w) => w.active) ? (
+                    <>
+                      <Text style={styles.formLabel}>{tr("نافذة البيع (الفرع)", "Sales window (branch)")}</Text>
+                      <View style={{ flexDirection: "row-reverse", flexWrap: "wrap", gap: 6 }}>
+                        {[{ id: "", name: tr("بدون نافذة", "No window") }, ...salesWindows.filter((w) => w.active)].map((w) => (
+                          <TouchableOpacity
+                            key={w.id || "none"}
+                            onPress={() => setEditWindow(w.id)}
+                            disabled={dialogSaving}
+                            style={{ borderWidth: 1, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6, borderColor: editWindow === w.id ? Colors.primary : Colors.border, backgroundColor: editWindow === w.id ? Colors.primary : "transparent" }}
+                          >
+                            <Text style={{ fontSize: 12, fontWeight: "700", color: editWindow === w.id ? "#fff" : Colors.textSecondary }}>{w.name}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </>
+                  ) : null}
+                </View>
+              ) : null}
+
+              {employeeDialog.kind === "role" ? (
+                <ScrollView style={styles.employeeDialogRoleList} showsVerticalScrollIndicator={false}>
+                  {ALL_ROLES.map((nextRole) => (
+                    <TouchableOpacity
+                      key={nextRole}
+                      style={[
+                        styles.employeeDialogRoleOption,
+                        employeeDialog.employee.role === nextRole && { borderColor: ROLE_COLORS[nextRole], backgroundColor: ROLE_COLORS[nextRole] + "12" },
+                      ]}
+                      onPress={() => { void saveEmployeeRole(nextRole); }}
+                      disabled={dialogSaving}
+                    >
+                      <View style={[styles.employeeDialogRoleDot, { backgroundColor: ROLE_COLORS[nextRole] }]} />
+                      <Text style={styles.employeeDialogActionText}>{ROLE_LABELS[nextRole]}</Text>
+                      {employeeDialog.employee.role === nextRole ? <Feather name="check" size={16} color={ROLE_COLORS[nextRole]} /> : null}
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              ) : null}
+
+              {employeeDialog.kind === "confirm" ? (
+                <Text style={styles.employeeDialogSubtitle}>
+                  {employeeDialog.action === "delete"
+                    ? `${t("deleteEmpConfirm")} "${employeeDialog.employee.name}"؟`
+                    : employeeDialog.action === "suspend"
+                      ? `${t("adminEmpSuspendMsg")} "${employeeDialog.employee.name}"`
+                      : `${t("adminEmpActivateMsg")} "${employeeDialog.employee.name}"`}
+                </Text>
+              ) : null}
+
+              {dialogError ? <Text style={styles.employeeDialogError} accessibilityRole="alert">{dialogError}</Text> : null}
+
+              {employeeDialog.kind === "edit" ? (
+                <View style={styles.employeeDialogButtons}>
+                  <TouchableOpacity style={styles.employeeDialogCancelButton} onPress={closeEmployeeDialog} disabled={dialogSaving}>
+                    <Text style={styles.cancelBtnText}>{t("cancel")}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.employeeDialogPrimaryButton, dialogSaving && { opacity: 0.6 }]}
+                    onPress={() => { void saveEmployeeEdit(); }}
+                    disabled={dialogSaving}
+                  >
+                    {dialogSaving ? <ActivityIndicator color="#fff" size="small" /> : <Feather name="save" size={15} color="#fff" />}
+                    <Text style={styles.saveBtnText}>{dialogSaving ? "..." : t("save")}</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null}
+
+              {employeeDialog.kind === "confirm" ? (
+                <View style={styles.employeeDialogButtons}>
+                  <TouchableOpacity style={styles.employeeDialogCancelButton} onPress={closeEmployeeDialog} disabled={dialogSaving}>
+                    <Text style={styles.cancelBtnText}>{t("cancel")}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.employeeDialogPrimaryButton,
+                      employeeDialog.action === "delete" && styles.employeeDialogDeleteButton,
+                      dialogSaving && { opacity: 0.6 },
+                    ]}
+                    onPress={() => { void confirmEmployeeAction(); }}
+                    disabled={dialogSaving}
+                  >
+                    {dialogSaving ? <ActivityIndicator color="#fff" size="small" /> : null}
+                    <Text style={styles.saveBtnText}>
+                      {dialogSaving ? "..." : employeeDialog.action === "delete" ? t("delete") : t("confirm")}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null}
+
+              {employeeDialog.kind === "menu" || employeeDialog.kind === "role" ? (
+                <TouchableOpacity style={styles.employeeDialogCancelButton} onPress={closeEmployeeDialog} disabled={dialogSaving}>
+                  <Text style={styles.cancelBtnText}>{t("cancel")}</Text>
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          ) : null}
+        </View>
+      </Modal>
 
       {/* Add form */}
       {showAdd ? (
@@ -299,6 +695,21 @@ function EmployeesSection() {
           <TextInput style={styles.formInput} value={empId} onChangeText={setEmpId}
             placeholder={t("adminEmpIdPh")} placeholderTextColor={Colors.textMuted}
             textAlign="right" autoCapitalize="characters" />
+          {isSecure && (
+            <>
+              <Text style={styles.formLabel}>{secureAuthText("pinRequiredForNew", lang)} *</Text>
+              <TextInput style={styles.formInput} value={pin} onChangeText={setPin}
+                placeholder="••••" placeholderTextColor={Colors.textMuted}
+                textAlign="right" secureTextEntry keyboardType="number-pad" maxLength={8} />
+            </>
+          )}
+          {role === "driver" && (
+            <>
+              <Text style={styles.formLabel}>{tr("جوال السائق *", "Driver phone *")}</Text>
+              <TextInput style={styles.formInput} value={phone} onChangeText={setPhone}
+                placeholder="05XXXXXXXX" placeholderTextColor={Colors.textMuted} textAlign="right" keyboardType="phone-pad" />
+            </>
+          )}
           <Text style={styles.formLabel}>{t("adminEmpRoleLabel")}</Text>
           <View style={styles.roleRow}>
             {ALL_ROLES.map((r) => (
@@ -1208,7 +1619,7 @@ function PriceRequestsSection() {
 
             <View style={styles.priceReqActions}>
               <TouchableOpacity
-                style={[styles.priceReqBtn, { backgroundColor: "#16a34a" }]}
+                style={[styles.priceReqBtn, { backgroundColor: "#1F8A5B" }]}
                 onPress={() => approveRequest(req.id)}
                 activeOpacity={0.8}
               >
@@ -1240,11 +1651,11 @@ function PriceRequestsSection() {
                 <View style={styles.priceReqHeader}>
                   <Text style={styles.priceReqProduct}>{req.productName}</Text>
                   <View style={[styles.priceReqBadge, {
-                    backgroundColor: req.status === "approved" ? "#16a34a20" : Colors.statusCancelled + "20",
-                    borderColor: req.status === "approved" ? "#16a34a40" : Colors.statusCancelled + "40",
+                    backgroundColor: req.status === "approved" ? "#1F8A5B20" : Colors.statusCancelled + "20",
+                    borderColor: req.status === "approved" ? "#1F8A5B40" : Colors.statusCancelled + "40",
                   }]}>
                     <Text style={[styles.priceReqBadgeText, {
-                      color: req.status === "approved" ? "#16a34a" : Colors.statusCancelled,
+                      color: req.status === "approved" ? "#1F8A5B" : Colors.statusCancelled,
                     }]}>
                       {req.status === "approved" ? t("adminApprovedStatus") : t("adminRejectedStatus")}
                     </Text>
@@ -1267,6 +1678,7 @@ function PriceRequestsSection() {
 // ─── Backup Section ────────────────────────────────────────────────────────
 function BackupSection() {
   const { orders } = useOrders();
+  useOrderHistory(365);
   const { t } = useLang();
   const [exporting, setExporting] = useState(false);
 
@@ -1369,9 +1781,9 @@ function FeaturesSection() {
     { key: "chocolateEnabled", label: t("tabChocolate"),  icon: "gift",         color: Colors.chocolate },
     { key: "cakeEnabled",      label: t("tabCake"),       icon: "layers",       color: Colors.cake },
     { key: "packagingEnabled", label: t("tabPackaging"),  icon: "box",          color: Colors.packaging },
-    { key: "reportsEnabled",   label: t("tabReports"),    icon: "pie-chart",    color: "#8b5cf6" },
-    { key: "customersEnabled", label: t("tabCustomers"),  icon: "users",        color: "#0891b2" },
-    { key: "deliveryEnabled",  label: t("tabDelivery"),   icon: "truck",        color: "#0d9488" },
+    { key: "reportsEnabled",   label: t("tabReports"),    icon: "pie-chart",    color: "#8C4A5E" },
+    { key: "customersEnabled", label: t("tabCustomers"),  icon: "users",        color: "#2D6E7E" },
+    { key: "deliveryEnabled",  label: t("tabDelivery"),   icon: "truck",        color: "#2D6E7E" },
     { key: "traysEnabled",     label: t("tabTrays"),      icon: "layers",       color: Colors.gold },
   ];
 
@@ -1430,9 +1842,14 @@ function PrinterSection() {
 export default function AdminScreen() {
   const insets = useSafeAreaInsets();
   const { orders } = useOrders();
+  useOrderHistory(365);
   const { currentEmployee } = useEmployee();
   const { t } = useLang();
-  const [activeTab, setActiveTab] = useState<"overview" | "employees" | "products" | "offers" | "priceRequests" | "features" | "backup" | "printer">("overview");
+  const params = useLocalSearchParams<{ tab?: string }>();
+  const [activeTab, setActiveTab] = useState<"overview" | "employees" | "hr" | "products" | "offers" | "priceRequests" | "features" | "backup" | "printer">(params.tab === "hr" ? "hr" : "overview");
+  React.useEffect(() => { if (params.tab === "hr") setActiveTab("hr"); }, [params.tab]);
+  const { workers: hrWorkers } = useHrWorkers();
+  const hrAlertCount = useMemo(() => expiryAlerts(hrWorkers, riyadhDate()).length, [hrWorkers]);
   const [showDev, setShowDev] = useState(false);
   const { pendingCount: priceReqCount } = usePriceChange();
 
@@ -1464,6 +1881,7 @@ export default function AdminScreen() {
     { key: "overview",      label: t("adminTabOverview"),  icon: "grid" },
     { key: "products",      label: t("adminTabProducts"),  icon: "shopping-bag" },
     { key: "employees",     label: t("adminTabEmployees"), icon: "users" },
+    ...(currentEmployee.role === "admin" ? [{ key: "hr" as const, label: `${tr("العمالة والرواتب", "Staff & payroll")}${hrAlertCount ? ` (${hrAlertCount})` : ""}`, icon: "briefcase" as const }] : []),
     { key: "offers",        label: t("adminTabOffers"),    icon: "tag" },
     { key: "priceRequests", label: `${t("adminTabPrices")}${priceReqCount > 0 ? ` (${priceReqCount})` : ""}`, icon: "dollar-sign" },
     { key: "features",      label: t("adminTabFeatures"),  icon: "sliders" },
@@ -1478,7 +1896,7 @@ export default function AdminScreen() {
 
       {/* Tab bar with hidden dev button */}
       <View style={styles.tabBarWrapper}>
-      <View style={styles.tabBar}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabBar} contentContainerStyle={{ gap: 2, flexGrow: 1 }}>
         {TABS.map((t) => (
           <TouchableOpacity
             key={t.key}
@@ -1491,7 +1909,7 @@ export default function AdminScreen() {
             </Text>
           </TouchableOpacity>
         ))}
-      </View>
+      </ScrollView>
         {/* Hidden developer button */}
         <TouchableOpacity
           style={styles.devBtn}
@@ -1536,9 +1954,17 @@ export default function AdminScreen() {
         ) : activeTab === "features" ? (
           <FeaturesSection />
         ) : activeTab === "backup" ? (
-          <BackupSection />
+          <>
+            <BackupSection />
+            <PurgeOrdersPanel />
+          </>
+        ) : activeTab === "hr" ? (
+          <HrSection />
         ) : activeTab === "printer" ? (
-          <PrinterSection />
+          <>
+            <PrinterSection />
+            <TaxSettingsPanel />
+          </>
         ) : (
           <EmployeesSection />
         )}
@@ -1557,7 +1983,7 @@ const styles = StyleSheet.create({
     paddingRight: 12, marginTop: 12, marginBottom: 4,
   },
   tabBar: {
-    flex: 1, flexDirection: "row", backgroundColor: Colors.surface,
+    flex: 1, backgroundColor: Colors.surface,
     marginLeft: 16,
     borderRadius: 14, padding: 4,
     shadowColor: Colors.shadow, shadowOffset: { width: 0, height: 1 },
@@ -1571,8 +1997,8 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
   tabItem: {
-    flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center",
-    gap: 6, paddingVertical: 10, borderRadius: 10,
+    flexGrow: 1, flexDirection: "row", alignItems: "center", justifyContent: "center",
+    gap: 6, paddingVertical: 10, paddingHorizontal: 12, borderRadius: 10,
   },
   tabItemActive: { backgroundColor: Colors.primary + "12" },
   tabLabel: { fontSize: 13, fontWeight: "600", color: Colors.textMuted },
@@ -1646,14 +2072,66 @@ const styles = StyleSheet.create({
   empAvatarLetter: { color: "#fff", fontSize: 16, fontWeight: "800" },
   empName: { fontSize: 14, fontWeight: "700", color: Colors.text },
   empIdText: { fontSize: 12, color: Colors.textMuted },
-  empStatusActive: { fontSize: 11, fontWeight: "700", color: "#16a34a" },
-  empStatusSuspended: { fontSize: 11, fontWeight: "700", color: "#dc2626" },
+  empResetPinBtn: { alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 5, marginTop: 5, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, backgroundColor: Colors.primary + "10" },
+  empResetPinText: { fontSize: 11, fontWeight: "700", color: Colors.primary },
+  empStatusActive: { fontSize: 11, fontWeight: "700", color: "#1F8A5B" },
+  empStatusSuspended: { fontSize: 11, fontWeight: "700", color: "#C8323F" },
   empMenuBtn: {
     width: 34, height: 34, borderRadius: 17,
     backgroundColor: Colors.surfaceSecondary,
     alignItems: "center", justifyContent: "center",
   },
   empMenuDots: { fontSize: 18, color: Colors.textMuted, lineHeight: 22 },
+  employeeDialogBackdrop: {
+    flex: 1, alignItems: "center", justifyContent: "center", padding: 16,
+    backgroundColor: "rgba(10, 12, 18, 0.58)",
+  },
+  employeeDialogDismissArea: { ...StyleSheet.absoluteFillObject },
+  employeeDialogCard: {
+    width: "100%", maxWidth: 460, maxHeight: "90%",
+    backgroundColor: Colors.surface, borderRadius: 18, borderWidth: 1,
+    borderColor: Colors.borderLight, padding: 18, gap: 12,
+    shadowColor: Colors.shadow, shadowOffset: { width: 0, height: 5 },
+    shadowOpacity: 0.18, shadowRadius: 16, elevation: 10,
+  },
+  employeeDialogHeader: { flexDirection: "row", alignItems: "center", gap: 12 },
+  employeeDialogTitle: { fontSize: 16, fontWeight: "800", color: Colors.text },
+  employeeDialogSubtitle: { fontSize: 13, lineHeight: 20, color: Colors.textSecondary },
+  employeeDialogClose: {
+    width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center",
+    backgroundColor: Colors.surfaceSecondary,
+  },
+  employeeDialogOptions: { flexGrow: 0, maxHeight: 380 },
+  employeeDialogAction: {
+    flexDirection: "row", alignItems: "center", gap: 11, paddingHorizontal: 12,
+    paddingVertical: 12, borderRadius: 10, backgroundColor: Colors.surfaceSecondary, marginBottom: 7,
+  },
+  employeeDialogActionText: { flex: 1, color: Colors.text, fontSize: 14, fontWeight: "600", textAlign: "right" },
+  employeeDialogForm: { gap: 8 },
+  employeeDialogInput: {
+    borderWidth: 1, borderColor: Colors.border, borderRadius: 10,
+    paddingHorizontal: 12, paddingVertical: 11, fontSize: 14,
+    color: Colors.text, backgroundColor: Colors.surface,
+  },
+  employeeDialogRoleList: { flexGrow: 0, maxHeight: 340 },
+  employeeDialogRoleOption: {
+    flexDirection: "row", alignItems: "center", gap: 10,
+    paddingHorizontal: 12, paddingVertical: 11, marginBottom: 6,
+    borderWidth: 1, borderColor: Colors.borderLight, borderRadius: 10,
+    backgroundColor: Colors.surface,
+  },
+  employeeDialogRoleDot: { width: 10, height: 10, borderRadius: 5 },
+  employeeDialogError: { color: Colors.accent, fontSize: 12, lineHeight: 18, fontWeight: "600" },
+  employeeDialogButtons: { flexDirection: "row", gap: 10, marginTop: 2 },
+  employeeDialogCancelButton: {
+    flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 11,
+    borderWidth: 1, borderColor: Colors.border, borderRadius: 10, backgroundColor: Colors.surface,
+  },
+  employeeDialogPrimaryButton: {
+    flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7,
+    paddingVertical: 11, borderRadius: 10, backgroundColor: Colors.primary,
+  },
+  employeeDialogDeleteButton: { backgroundColor: "#C8323F" },
   empFilterRow: { flexDirection: "row", gap: 8 },
   empFilterChip: {
     paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20,

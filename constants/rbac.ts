@@ -40,7 +40,18 @@ export const ROLE_CAN_VIEW_BRANCH_FEATURES = new Set<EmployeeRole>([
   "admin", "branch_supervisor",
 ]);
 
+/** The window's daily order from the factory: window staff and their supervisors. */
+export const ROLE_CAN_VIEW_WINDOW_ORDER = new Set<EmployeeRole>([
+  "admin", "branch_supervisor", "cashier",
+]);
+
 export const ROLE_CAN_VIEW_CUSTOMERS = new Set<EmployeeRole>([
+  "admin", "branch_supervisor", "cashier",
+]);
+
+export const ROLE_IS_DRIVER = new Set<EmployeeRole>(["driver"]);
+
+export const ROLE_CAN_VIEW_ONLINE_ORDERS = new Set<EmployeeRole>([
   "admin", "branch_supervisor", "cashier",
 ]);
 
@@ -59,6 +70,7 @@ export const DEPT_ROLE_ACCESS: Record<string, Set<EmployeeRole>> = {
   chocolate: new Set(["admin", "branch_supervisor", "dept_supervisor", "chocolate"]),
   cake:      new Set(["admin", "branch_supervisor", "dept_supervisor", "cake"]),
   packaging: new Set(["admin", "branch_supervisor", "dept_supervisor", "packaging"]),
+  writing:   new Set(["admin", "branch_supervisor", "dept_supervisor", "calligrapher", "cake"]),
 };
 
 export function canDo(role: EmployeeRole | undefined, permission: Set<EmployeeRole>): boolean {

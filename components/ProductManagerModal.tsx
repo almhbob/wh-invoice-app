@@ -1,3 +1,6 @@
+import { CameraScanner } from "@/components/CameraScanner";
+import { barcodeWarning, codeConflict, generateInternalBarcode, normalizeCode } from "@/utils/productCodes";
+import { tr, trf } from "@/lib/i18n";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
@@ -30,6 +33,8 @@ interface Props {
   visible: boolean;
   product?: Product | null; // null = add mode
   onClose: () => void;
+  /** Pre-fill the barcode (adding a product straight from an unknown scan). */
+  initialCode?: string;
 }
 
 const DEPT_OPTIONS: { value: ProductDept; labelAr: string; labelEn: string; color: string; icon: any }[] = [
@@ -57,9 +62,9 @@ async function uploadProductImage(uri: string, companyId: string): Promise<strin
   return getDownloadURL(path);
 }
 
-export function ProductManagerModal({ visible, product, onClose }: Props) {
+export function ProductManagerModal({ visible, product, onClose, initialCode }: Props) {
   const insets = useSafeAreaInsets();
-  const { addProduct, updateProduct } = useProducts();
+  const { addProduct, updateProduct, products } = useProducts();
   const { companyId } = useCompany();
   const { lang } = useLang();
   const isEdit = !!product;
@@ -75,6 +80,12 @@ export function ProductManagerModal({ visible, product, onClose }: Props) {
   const [isAvailable, setIsAvailable] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showCatSug, setShowCatSug] = useState(false);
+  const [barcode, setBarcode] = useState("");
+  const [sku, setSku] = useState("");
+  const [scanOpen, setScanOpen] = useState(false);
+  const barcodeConflict = barcode.trim() ? codeConflict(products, product?.id, barcode) : null;
+  const skuConflict = sku.trim() ? codeConflict(products, product?.id, sku) : null;
+  const barcodeWarn = barcode.trim() ? barcodeWarning(barcode) : null;
 
   useEffect(() => {
     if (product) {
@@ -87,13 +98,17 @@ export function ProductManagerModal({ visible, product, onClose }: Props) {
       setDescription(product.description ?? "");
       setImageUri(product.imageUri ?? null);
       setIsAvailable(product.isAvailable);
+      setBarcode(product.barcode ?? "");
+      setSku(product.sku ?? "");
     } else {
+      setBarcode(initialCode ?? "");
+      setSku("");
       setName(""); setNameEn(""); setPrice("");
       setDepartment("halwa"); setCategory(""); setSortOrder("1");
       setDescription(""); setImageUri(null); setIsAvailable(true);
     }
     setShowCatSug(false);
-  }, [product, visible]);
+  }, [product, visible, initialCode]);
 
   const pickImage = async () => {
     if (Platform.OS === "web") {
@@ -102,11 +117,11 @@ export function ProductManagerModal({ visible, product, onClose }: Props) {
       return;
     }
     Alert.alert(
-      lang === "ar" ? "اختر مصدر الصورة" : "Choose Photo Source",
+      tr("اختر مصدر الصورة", "Choose Photo Source"),
       "",
       [
         {
-          text: lang === "ar" ? "الكاميرا" : "Camera",
+          text: tr("الكاميرا", "Camera"),
           onPress: async () => {
             const { status } = await ImagePicker.requestCameraPermissionsAsync();
             if (status !== "granted") return;
@@ -115,7 +130,7 @@ export function ProductManagerModal({ visible, product, onClose }: Props) {
           },
         },
         {
-          text: lang === "ar" ? "معرض الصور" : "Gallery",
+          text: tr("معرض الصور", "Gallery"),
           onPress: async () => {
             const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
             if (status !== "granted") return;
@@ -123,26 +138,33 @@ export function ProductManagerModal({ visible, product, onClose }: Props) {
             if (!res.canceled) setImageUri(res.assets[0].uri);
           },
         },
-        { text: lang === "ar" ? "إلغاء" : "Cancel", style: "cancel" },
+        { text: tr("إلغاء", "Cancel"), style: "cancel" },
       ]
     );
   };
 
   const handleSave = async () => {
     if (!name.trim()) {
-      Alert.alert(lang === "ar" ? "خطأ" : "Error",
-        lang === "ar" ? "أدخل اسم المنتج" : "Enter product name");
+      Alert.alert(tr("خطأ", "Error"),
+        tr("أدخل اسم المنتج", "Enter product name"));
       return;
     }
     const priceNum = parseFloat(price);
     if (!price || isNaN(priceNum) || priceNum < 0) {
-      Alert.alert(lang === "ar" ? "خطأ" : "Error",
-        lang === "ar" ? "أدخل سعراً صحيحاً" : "Enter a valid price");
+      Alert.alert(tr("خطأ", "Error"),
+        tr("أدخل سعراً صحيحاً", "Enter a valid price"));
       return;
     }
     if (!category.trim()) {
-      Alert.alert(lang === "ar" ? "خطأ" : "Error",
-        lang === "ar" ? "أدخل التصنيف (الفئة)" : "Enter a category");
+      Alert.alert(tr("خطأ", "Error"),
+        tr("أدخل التصنيف (الفئة)", "Enter a category"));
+      return;
+    }
+    if (barcodeConflict || skuConflict) {
+      Alert.alert(
+        tr("رمز مستخدم", "Code already used"),
+        trf("هذا الرمز مسجل للمنتج «{n}». لكل منتج رمز خاص به.", "This code belongs to “{n}”. Each product needs its own code.", { n: (barcodeConflict ?? skuConflict)!.name })
+      );
       return;
     }
     setSaving(true);
@@ -165,6 +187,9 @@ export function ProductManagerModal({ visible, product, onClose }: Props) {
         description: description.trim() || undefined,
         imageUri: finalImageUri || undefined,
         isAvailable,
+        // "" clears a code that was removed (undefined would be skipped on update).
+        barcode: normalizeCode(barcode),
+        sku: sku.trim().toUpperCase(),
       };
       if (isEdit && product) {
         await updateProduct(product.id, data);
@@ -191,14 +216,14 @@ export function ProductManagerModal({ visible, product, onClose }: Props) {
           </TouchableOpacity>
           <Text style={styles.title}>
             {isEdit
-              ? (lang === "ar" ? "تعديل المنتج" : "Edit Product")
-              : (lang === "ar" ? "إضافة منتج جديد" : "Add New Product")}
+              ? (tr("تعديل المنتج", "Edit Product"))
+              : (tr("إضافة منتج جديد", "Add New Product"))}
           </Text>
           <TouchableOpacity
             style={[styles.saveHdrBtn, saving && { opacity: 0.6 }]}
             onPress={handleSave} disabled={saving}
           >
-            <Text style={styles.saveHdrText}>{saving ? "..." : (lang === "ar" ? "حفظ" : "Save")}</Text>
+            <Text style={styles.saveHdrText}>{saving ? "..." : (tr("حفظ", "Save"))}</Text>
           </TouchableOpacity>
         </View>
 
@@ -210,7 +235,7 @@ export function ProductManagerModal({ visible, product, onClose }: Props) {
                 <Image source={{ uri: imageUri }} style={styles.imagePreview} contentFit="cover" />
                 <View style={styles.imageEditOverlay}>
                   <Feather name="camera" size={22} color="#fff" />
-                  <Text style={styles.imageEditText}>{lang === "ar" ? "تغيير الصورة" : "Change Photo"}</Text>
+                  <Text style={styles.imageEditText}>{tr("تغيير الصورة", "Change Photo")}</Text>
                 </View>
                 <Pressable style={styles.removeImageBtn} onPress={() => setImageUri(null)} hitSlop={10}>
                   <Feather name="x" size={14} color="#fff" />
@@ -222,10 +247,10 @@ export function ProductManagerModal({ visible, product, onClose }: Props) {
                   <Feather name="camera" size={28} color={deptColor} />
                 </View>
                 <Text style={styles.imagePlaceholderText}>
-                  {lang === "ar" ? "اضغط لإضافة صورة المنتج" : "Tap to add product photo"}
+                  {tr("اضغط لإضافة صورة المنتج", "Tap to add product photo")}
                 </Text>
                 <Text style={styles.imagePlaceholderSub}>
-                  {lang === "ar" ? "يُفضَّل صورة مربعة (1:1)" : "Square image preferred (1:1)"}
+                  {tr("يُفضَّل صورة مربعة (1:1)", "Square image preferred (1:1)")}
                 </Text>
               </View>
             )}
@@ -233,7 +258,7 @@ export function ProductManagerModal({ visible, product, onClose }: Props) {
 
           {/* Department */}
           <View style={styles.field}>
-            <Text style={styles.label}>{lang === "ar" ? "القسم *" : "Department *"}</Text>
+            <Text style={styles.label}>{tr("القسم *", "Department *")}</Text>
             <View style={styles.deptGrid}>
               {DEPT_OPTIONS.map((opt) => (
                 <TouchableOpacity
@@ -262,12 +287,12 @@ export function ProductManagerModal({ visible, product, onClose }: Props) {
 
           {/* Name AR */}
           <View style={styles.field}>
-            <Text style={styles.label}>{lang === "ar" ? "اسم المنتج (عربي) *" : "Product Name (Arabic) *"}</Text>
+            <Text style={styles.label}>{tr("اسم المنتج (عربي) *", "Product Name (Arabic) *")}</Text>
             <TextInput
               style={styles.input}
               value={name}
               onChangeText={setName}
-              placeholder={lang === "ar" ? "مثال: كيك شوكولاتة" : "e.g. كيك شوكولاتة"}
+              placeholder={tr("مثال: كيك شوكولاتة", "e.g. كيك شوكولاتة")}
               placeholderTextColor={Colors.textMuted}
               textAlign="right"
             />
@@ -275,7 +300,7 @@ export function ProductManagerModal({ visible, product, onClose }: Props) {
 
           {/* Name EN */}
           <View style={styles.field}>
-            <Text style={styles.label}>{lang === "ar" ? "اسم المنتج (إنجليزي)" : "Product Name (English)"}</Text>
+            <Text style={styles.label}>{tr("اسم المنتج (إنجليزي)", "Product Name (English)")}</Text>
             <TextInput
               style={styles.input}
               value={nameEn}
@@ -288,13 +313,13 @@ export function ProductManagerModal({ visible, product, onClose }: Props) {
 
           {/* Category */}
           <View style={styles.field}>
-            <Text style={styles.label}>{lang === "ar" ? "التصنيف *" : "Category *"}</Text>
+            <Text style={styles.label}>{tr("التصنيف *", "Category *")}</Text>
             <TextInput
               style={styles.input}
               value={category}
               onChangeText={(t) => { setCategory(t); setShowCatSug(true); }}
               onFocus={() => setShowCatSug(true)}
-              placeholder={lang === "ar" ? "مثال: مقاس 15 سم" : "e.g. Size 15cm"}
+              placeholder={tr("مثال: مقاس 15 سم", "e.g. Size 15cm")}
               placeholderTextColor={Colors.textMuted}
               textAlign="right"
             />
@@ -315,9 +340,9 @@ export function ProductManagerModal({ visible, product, onClose }: Props) {
 
           {/* Price */}
           <View style={styles.field}>
-            <Text style={styles.label}>{lang === "ar" ? "السعر (ر.س) *" : "Price (SAR) *"}</Text>
+            <Text style={styles.label}>{tr("السعر (ر.س) *", "Price (SAR) *")}</Text>
             <View style={styles.priceRow}>
-              <Text style={styles.currency}>{lang === "ar" ? "ر.س" : "SAR"}</Text>
+              <Text style={styles.currency}>{tr("ر.س", "SAR")}</Text>
               <TextInput
                 style={[styles.input, { flex: 1, borderRightWidth: 0, borderRadius: 0, borderTopRightRadius: 0, borderBottomRightRadius: 0 }]}
                 value={price}
@@ -330,9 +355,59 @@ export function ProductManagerModal({ visible, product, onClose }: Props) {
             </View>
           </View>
 
+          {/* Barcode & item number */}
+          <View style={styles.field}>
+            <Text style={styles.label}>{tr("الباركود (اختياري)", "Barcode (optional)")}</Text>
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <TextInput
+                style={[styles.input, { flex: 1, letterSpacing: 1 }, barcodeConflict && { borderColor: Colors.accent }]}
+                value={barcode}
+                onChangeText={setBarcode}
+                placeholder={tr("امسح أو اكتب رقم الباركود", "Scan or type the barcode")}
+                placeholderTextColor={Colors.textMuted}
+                keyboardType="number-pad"
+                textAlign="right"
+                autoCorrect={false}
+              />
+              <TouchableOpacity style={styles.codeBtn} onPress={() => setScanOpen(true)} accessibilityLabel={tr("مسح بالكاميرا", "Scan with camera")}>
+                <Feather name="camera" size={16} color="#fff" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.codeBtn, { backgroundColor: Colors.surfaceSecondary }]}
+                onPress={() => setBarcode(generateInternalBarcode(products.flatMap((p) => [p.barcode ?? "", p.sku ?? ""])))}
+                accessibilityLabel={tr("توليد باركود داخلي", "Generate an internal barcode")}
+              >
+                <Feather name="refresh-cw" size={16} color={Colors.text} />
+              </TouchableOpacity>
+            </View>
+            {barcodeConflict ? (
+              <Text style={styles.codeErr}>{trf("مستخدم للمنتج «{n}»", "Used by “{n}”", { n: barcodeConflict.name })}</Text>
+            ) : barcodeWarn ? (
+              <Text style={styles.codeWarn}>{tr("رقم التحقق لا يطابق باركود تجزئة قياسي — تأكد من الرقم", "Check digit does not match a standard retail barcode — double-check it")}</Text>
+            ) : (
+              <Text style={styles.codeHint}>{tr("لمنتجات بدون باركود: زر التوليد يصنع رقماً داخلياً يمكن طباعته على ملصق", "No barcode? Generate an in-store code you can print on a label")}</Text>
+            )}
+          </View>
+
+          <View style={styles.field}>
+            <Text style={styles.label}>{tr("رقم المنتج / الرقم التسلسلي (اختياري)", "Item number / SKU (optional)")}</Text>
+            <TextInput
+              style={[styles.input, skuConflict && { borderColor: Colors.accent }]}
+              value={sku}
+              onChangeText={setSku}
+              placeholder={tr("مثال: CK-015 — يكتبه الكاشير يدوياً", "e.g. CK-015 — typed by the cashier")}
+              placeholderTextColor={Colors.textMuted}
+              autoCapitalize="characters"
+              autoCorrect={false}
+              textAlign="right"
+            />
+            {skuConflict ? <Text style={styles.codeErr}>{trf("مستخدم للمنتج «{n}»", "Used by “{n}”", { n: skuConflict.name })}</Text> : null}
+          </View>
+          <CameraScanner visible={scanOpen} onClose={() => setScanOpen(false)} onDetected={(c) => setBarcode(normalizeCode(c))} title={tr("مسح باركود المنتج", "Scan the product barcode")} />
+
           {/* Sort Order */}
           <View style={styles.field}>
-            <Text style={styles.label}>{lang === "ar" ? "الترتيب في القائمة" : "Display Order"}</Text>
+            <Text style={styles.label}>{tr("الترتيب في القائمة", "Display Order")}</Text>
             <TextInput
               style={styles.input}
               value={sortOrder}
@@ -344,12 +419,12 @@ export function ProductManagerModal({ visible, product, onClose }: Props) {
 
           {/* Description */}
           <View style={styles.field}>
-            <Text style={styles.label}>{lang === "ar" ? "وصف مختصر (اختياري)" : "Short Description (optional)"}</Text>
+            <Text style={styles.label}>{tr("وصف مختصر (اختياري)", "Short Description (optional)")}</Text>
             <TextInput
               style={[styles.input, { height: 70, textAlignVertical: "top" }]}
               value={description}
               onChangeText={setDescription}
-              placeholder={lang === "ar" ? "وصف المنتج..." : "Product description..."}
+              placeholder={tr("وصف المنتج...", "Product description...")}
               placeholderTextColor={Colors.textMuted}
               multiline
               textAlign={lang === "ar" ? "right" : "left"}
@@ -360,9 +435,9 @@ export function ProductManagerModal({ visible, product, onClose }: Props) {
           {/* Availability toggle */}
           <View style={styles.availRow}>
             <View style={styles.availInfo}>
-              <Text style={styles.availTitle}>{lang === "ar" ? "متوفر للطلب" : "Available for Order"}</Text>
+              <Text style={styles.availTitle}>{tr("متوفر للطلب", "Available for Order")}</Text>
               <Text style={styles.availSub}>
-                {lang === "ar" ? "إيقاف التوفر يخفي المنتج من الكاشير" : "Disabling hides it from cashier"}
+                {tr("إيقاف التوفر يخفي المنتج من الكاشير", "Disabling hides it from cashier")}
               </Text>
             </View>
             <Switch
@@ -383,10 +458,10 @@ export function ProductManagerModal({ visible, product, onClose }: Props) {
             <Feather name={isEdit ? "save" : "plus-circle"} size={18} color="#fff" />
             <Text style={styles.saveBtnText}>
               {saving
-                ? (lang === "ar" ? "جاري الحفظ..." : "Saving...")
+                ? (tr("جاري الحفظ...", "Saving..."))
                 : isEdit
-                  ? (lang === "ar" ? "حفظ التعديلات" : "Save Changes")
-                  : (lang === "ar" ? "إضافة المنتج" : "Add Product")}
+                  ? (tr("حفظ التعديلات", "Save Changes"))
+                  : (tr("إضافة المنتج", "Add Product"))}
             </Text>
           </TouchableOpacity>
         </ScrollView>
@@ -438,6 +513,10 @@ const styles = StyleSheet.create({
   imagePlaceholderText: { fontSize: 14, color: Colors.textSecondary, fontWeight: "600" },
   imagePlaceholderSub: { fontSize: 12, color: Colors.textMuted },
   field: { gap: 6 },
+  codeBtn: { width: 46, borderRadius: 12, backgroundColor: Colors.primary, alignItems: "center", justifyContent: "center" },
+  codeErr: { fontSize: 12, color: Colors.accent, fontWeight: "600", textAlign: "right" },
+  codeWarn: { fontSize: 12, color: Colors.warning, fontWeight: "600", textAlign: "right" },
+  codeHint: { fontSize: 11, color: Colors.textMuted, textAlign: "right" },
   label: { fontSize: 13, color: Colors.textSecondary, fontWeight: "600" },
   input: {
     borderWidth: 1.5, borderColor: Colors.border, borderRadius: 12,

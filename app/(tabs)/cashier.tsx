@@ -1,9 +1,16 @@
+import { useFocusEffect } from "expo-router";
+import { ProductManagerModal } from "@/components/ProductManagerModal";
+import { ScanBar } from "@/components/ScanBar";
+import { tr } from "@/lib/i18n";
+import { LoyaltyCashierCard } from "@/components/LoyaltyCashierCard";
+import { maxRedeemable, pointsValue } from "@/constants/loyalty";
+import { useLoyaltyAccount, useLoyaltySettings } from "@/hooks/useLoyalty";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import * as Linking from "expo-linking";
 import { Image } from "expo-image";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { localDayKey } from "@/utils/dateUtils";
 import { InlineCatalog } from "@/components/InlineCatalog";
 import { Product } from "@/context/ProductsContext";
@@ -30,6 +37,8 @@ import { LAVIVIANE_COMPANY_ID } from "@/constants/lavivianeProducts";
 import { t as t_ } from "@/constants/translations";
 import { ProductGalleryModal } from "@/components/ProductGalleryModal";
 import { useCompany } from "@/context/CompanyContext";
+import { useTaxProfile } from "@/hooks/useTaxProfile";
+import { taxProfileError, vatBreakdown, zatcaQrPayload } from "@/utils/zatca";
 import { useEmployee } from "@/context/EmployeeContext";
 import { useLang } from "@/context/LanguageContext";
 import {
@@ -48,6 +57,11 @@ import {
 import { Offer, normalizePhone, useOffers } from "@/context/OffersContext";
 import { DeliveryDatePicker, DeliveryTimePicker } from "@/components/DeliveryDateTimePicker";
 import { DailyClosingModal } from "@/components/DailyClosingModal";
+import { OrderReviewSheet } from "@/components/OrderReviewSheet";
+import { WritingEditor } from "@/components/WritingEditor";
+import { SyncStatusBanner } from "@/components/SyncStatusBanner";
+import { OrderTracker } from "@/components/OrderTracker";
+import { customerTrackingMessage, openWhatsApp as waSend } from "@/utils/orderFlow";
 import { ChocolateCardSection, ChocolateCardValue, buildChocoItems, chocoCardTotal } from "@/components/ChocolateCardSection";
 import { canDo, ROLE_CAN_CLOSE_SHIFT } from "@/constants/rbac";
 import { useShift } from "@/context/ShiftContext";
@@ -117,7 +131,7 @@ const PAYMENT_OPTIONS: { value: PaymentMethod; icon: string }[] = [
 
 export default function CashierScreen() {
   const insets = useSafeAreaInsets();
-  const { addOrder, orders } = useOrders();
+  const { addOrder, orders, ensureTrackingCode } = useOrders();
   const { currentEmployee, setCurrentEmployee } = useEmployee();
   const { getOfferByPhone, incrementUsage } = useOffers();
   const { t, lang } = useLang();
@@ -130,6 +144,8 @@ export default function CashierScreen() {
   ], [t]);
   const { company } = useCompany();
   const isLaviviane = company.id === LAVIVIANE_COMPANY_ID;
+  const { profile: taxProfile } = useTaxProfile();
+  const taxOn = taxProfile.enabled && !taxProfileError(taxProfile);
   const { width: winW } = useWindowDimensions();
   const isWide = Platform.OS === "web" && winW >= 768;
   const checkoutDays = useMemo(() => buildCheckoutDays(lang), [lang]);
@@ -137,6 +153,8 @@ export default function CashierScreen() {
 
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
+  const { settings: loyaltySettings } = useLoyaltySettings();
+  const { key: loyaltyPhoneKey, account: loyaltyAccount, loading: loyaltyLoading } = useLoyaltyAccount(customerPhone);
   const [customerPhone2, setCustomerPhone2] = useState("");
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [orderType, setOrderType] = useState<OrderType>("pickup");
@@ -155,6 +173,8 @@ export default function CashierScreen() {
   const [showPreview, setShowPreview] = useState(false);
   const [showGallery, setShowGallery] = useState(false);
   const [receiptOrder, setReceiptOrder] = useState<Order | null>(null);
+  // The receipt follows the live order so its sync state and progress update in place.
+  const liveReceipt = receiptOrder ? (orders.find((o) => o.id === receiptOrder.id) ?? receiptOrder) : null;
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [receiptQr, setReceiptQr] = useState<string>("");
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
@@ -166,6 +186,12 @@ export default function CashierScreen() {
   // Daily closing modal
   const [showClosing, setShowClosing] = useState(false);
   const canCloseShift = canDo(currentEmployee?.role, ROLE_CAN_CLOSE_SHIFT);
+  // Only the visible cashier screen listens to a hardware barcode scanner.
+  const [screenFocused, setScreenFocused] = useState(true);
+  useFocusEffect(useCallback(() => { setScreenFocused(true); return () => setScreenFocused(false); }, []));
+  const canManageProducts = currentEmployee?.role === "admin" || currentEmployee?.role === "branch_supervisor";
+  const [newProductCode, setNewProductCode] = useState<string | null>(null);
+  const openNewProductWithCode = (code: string) => setNewProductCode(code);
   const { lastClosed } = useShift();
 
   // Invoice search
@@ -204,6 +230,7 @@ export default function CashierScreen() {
 
   // Discount
   const [discountEnabled, setDiscountEnabled] = useState(false);
+  const [useLoyaltyPoints, setUseLoyaltyPoints] = useState(false);
   const [discountType, setDiscountType] = useState<DiscountType>("percentage");
   const [discountValue, setDiscountValue] = useState("");
   const [discountReason, setDiscountReason] = useState("");
@@ -328,6 +355,7 @@ export default function CashierScreen() {
     setItems([newItem("halwa")]); setNotes(""); setImageUri(null); setReferenceImages([]);
     setDiscountEnabled(false); setDiscountType("percentage");
     setDiscountValue(""); setDiscountReason("");
+    setUseLoyaltyPoints(false);
     setDetectedOffer(null); setAppliedOfferId(null);
     setChocoCard(null);
     setCatalogQtys({});
@@ -347,6 +375,25 @@ export default function CashierScreen() {
           id: Date.now().toString() + Math.random().toString(36).substring(2, 8),
           name: product.name,
           quantity: 1,
+          price: product.price,
+          department: product.department as any,
+        },
+      ];
+    });
+  };
+
+  /** Scanner / typed code: add `qty` of a product (merges with a line already on the invoice). */
+  const addProductQty = (product: Product, qty: number) => {
+    setCatalogQtys(prev => ({ ...prev, [product.id]: (prev[product.id] ?? 0) + qty }));
+    setItems(prev => {
+      const existing = prev.find(i => i.name === product.name);
+      if (existing) return prev.map(i => i.id === existing.id ? { ...i, quantity: i.quantity + qty } : i);
+      return [
+        ...prev.filter(i => i.name.trim()),
+        {
+          id: Date.now().toString() + Math.random().toString(36).substring(2, 8),
+          name: product.name,
+          quantity: qty,
           price: product.price,
           department: product.department as any,
         },
@@ -383,7 +430,11 @@ export default function CashierScreen() {
   const discountAmount = discountEnabled && discountVal > 0
     ? round2(Math.min(subtotal, discountType === "percentage" ? subtotal * (Math.min(discountVal, 100) / 100) : discountVal))
     : 0;
-  const grandTotal = round2(Math.max(0, subtotal - discountAmount + insuranceVal));
+  // Loyalty: redeem points against the goods total (after manual discounts).
+  const goodsAfterDiscount = Math.max(0, subtotal - discountAmount);
+  const loyaltyRedeemPts = maxRedeemable(Math.max(0, Math.floor(loyaltyAccount?.points ?? 0)), goodsAfterDiscount, loyaltySettings);
+  const loyaltyDiscount = useLoyaltyPoints && loyaltyRedeemPts > 0 ? round2(pointsValue(loyaltyRedeemPts, loyaltySettings)) : 0;
+  const grandTotal = round2(Math.max(0, subtotal - discountAmount - loyaltyDiscount + insuranceVal));
   const amountPaidVal = parseFloat(amountPaid) || 0;
   const remainingAmount = Math.max(0, grandTotal - amountPaidVal);
   const hasPrices = validItems.some((i) => (i.price || 0) > 0);
@@ -407,6 +458,9 @@ export default function CashierScreen() {
             ? `${order.discount.value}%`
             : `${order.discount.value.toFixed(2)} ر.س`
         }`
+      : "";
+    const loyal = order.loyalty?.redeemValue
+      ? `\nخصم نقاط الولاء (${order.loyalty.redeemPoints} نقطة): ${order.loyalty.redeemValue.toFixed(2)} ر.س`
       : "";
     const deliv = order.deliveryTime ? `\nموعد التسليم: ${order.deliveryTime}` : "";
     const addr = order.deliveryAddress ? `\nعنوان التوصيل: ${order.deliveryAddress}` : "";
@@ -433,7 +487,7 @@ export default function CashierScreen() {
       `━━━━━━━━━━━━━━━━\n` +
       `الأصناف:\n${itemLines}\n` +
       `━━━━━━━━━━━━━━━━\n` +
-      (order.totalAmount ? `الإجمالي: ${order.totalAmount.toFixed(2)} ر.س${disc}${ins}` : "") +
+      (order.totalAmount ? `الإجمالي: ${order.totalAmount.toFixed(2)} ر.س${disc}${loyal}${ins}` : "") +
       `${pm}${paid}${remaining}\n` +
       `━━━━━━━━━━━━━━━━\n` +
       `${cashier}\n` +
@@ -478,7 +532,7 @@ export default function CashierScreen() {
     }
   };
 
-  const buildInvoiceHtml = (rawOrder: Order, qrDataUrl?: string) => {
+  const buildInvoiceHtml = (rawOrder: Order, qrDataUrl?: string, zatcaQr = false) => {
     // Escape user-entered text (names, notes, addresses) before it goes into HTML
     const order = escapeDeep(rawOrder);
     const itemRows = order.items.map((item) => {
@@ -500,6 +554,12 @@ export default function CashierScreen() {
       <div style="display:flex;justify-content:space-between;font-size:10px;margin:3px 0">
         <span>خصم${order.discount.reason ? ` (${order.discount.reason})` : ""}</span>
         <span>${order.discount.type === "percentage" ? `${order.discount.value}%` : `${order.discount.value.toFixed(2)} ر.س`}</span>
+      </div>` : "";
+
+    const loyaltyHtml = order.loyalty?.redeemValue ? `
+      <div style="display:flex;justify-content:space-between;font-size:10px;margin:3px 0">
+        <span>خصم نقاط الولاء (${order.loyalty.redeemPoints})</span>
+        <span>-${order.loyalty.redeemValue.toFixed(2)} ر.س</span>
       </div>` : "";
 
     const insuranceHtml = order.insuranceAmount ? `
@@ -544,6 +604,22 @@ export default function CashierScreen() {
          <div style="font-size:8px;letter-spacing:2px;color:#555;text-align:center">MAISON DE PÂTISSERIE · FONDÉE EN 2010</div>`
       : `<div style="font-size:18px;font-weight:900">فاتورة</div>`;
 
+    const esc = (v: unknown) => String(v ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string));
+    const vb = vatBreakdown(order.totalAmount ?? 0, order.insuranceAmount ?? 0, taxProfile.vatRate);
+    const issuedAt = new Date(order.createdAt || Date.now());
+    const taxHeader = taxOn ? `
+  <div class="center" style="margin:4px 0;font-size:10px;line-height:1.6">
+    <div style="font-weight:900;font-size:11px">${esc(taxProfile.sellerName)}</div>
+    <div>الرقم الضريبي: <b style="letter-spacing:0.5px">${esc(taxProfile.vatNumber)}</b></div>
+    ${taxProfile.crNumber ? `<div>السجل التجاري: ${esc(taxProfile.crNumber)}</div>` : ""}
+    ${taxProfile.address ? `<div>${esc(taxProfile.address)}</div>` : ""}
+    <div>تاريخ الإصدار: ${issuedAt.toLocaleDateString("ar-SA")} ${issuedAt.toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit" })}</div>
+  </div>` : "";
+    const vatHtml = taxOn && order.totalAmount ? `
+      <div style="display:flex;justify-content:space-between;font-size:10px;margin:3px 0"><span>الإجمالي قبل الضريبة</span><span>${vb.totalWithoutVat.toFixed(2)} ر.س</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:10px;margin:3px 0"><span>ضريبة القيمة المضافة ${taxProfile.vatRate}%</span><span>${vb.vat.toFixed(2)} ر.س</span></div>
+      ${vb.deposit ? `<div style="display:flex;justify-content:space-between;font-size:9px;margin:3px 0;color:#555"><span>منها تأمين مسترد غير خاضع للضريبة</span><span>${vb.deposit.toFixed(2)} ر.س</span></div>` : ""}` : "";
+
     const html = `<!DOCTYPE html>
 <html dir="rtl" lang="ar">
 <head>
@@ -572,8 +648,9 @@ export default function CashierScreen() {
     ${logoBlock}
   </div>
 
+  ${taxHeader}
   <div class="center" style="margin:5px 0">
-    <div style="font-size:13px;font-weight:900">فاتورة #${order.orderNumber}</div>
+    <div style="font-size:13px;font-weight:900">${taxOn ? "فاتورة ضريبية مبسطة" : "فاتورة"} #${order.orderNumber}</div>
     ${order.orderType ? `<span class="badge">${order.orderType === "delivery" ? "توصيل" : "استلام"}</span>` : ""}
   </div>
 
@@ -603,8 +680,10 @@ export default function CashierScreen() {
   <hr class="divider-dash">
 
   ${discountHtml}
+  ${loyaltyHtml}
   ${insuranceHtml}
-  ${order.totalAmount ? `<div class="total-line grand-total"><span>الإجمالي الكلي</span><span>${order.totalAmount.toFixed(2)} ر.س</span></div>` : ""}
+  ${vatHtml}
+  ${order.totalAmount ? `<div class="total-line grand-total"><span>${taxOn ? "الإجمالي شامل الضريبة" : "الإجمالي الكلي"}</span><span>${order.totalAmount.toFixed(2)} ر.س</span></div>` : ""}
   ${paymentHtml}
   ${paidHtml}
 
@@ -619,8 +698,8 @@ export default function CashierScreen() {
 
     const qrBlock = qrDataUrl
       ? `<div style="text-align:center;margin:10px 0 4px">
-           <img src="${qrDataUrl}" alt="QR" style="width:90px;height:90px;" />
-           <div style="font-size:8px;color:#888;margin-top:2px">فاتورة #${order.orderNumber}</div>
+           <img src="${qrDataUrl}" alt="QR" style="width:${zatcaQr ? 110 : 90}px;height:${zatcaQr ? 110 : 90}px;" />
+           <div style="font-size:8px;color:#888;margin-top:2px">${zatcaQr ? "رمز الفاتورة الضريبية · هيئة الزكاة والضريبة والجمارك" : `فاتورة #${order.orderNumber}`}</div>
          </div>`
       : "";
 
@@ -631,14 +710,16 @@ export default function CashierScreen() {
     if (Platform.OS !== "web" || typeof document === "undefined") return;
 
     let qrDataUrl = "";
+    const zatcaQr = taxOn && !!order.totalAmount;
     try {
-      qrDataUrl = await QRCode.toDataURL(
-        `فاتورة #${order.orderNumber}\n${order.customerName}\n${order.customerPhone}\n${order.receivedAt}${order.totalAmount ? `\nالإجمالي: ${order.totalAmount.toFixed(2)} ر.س` : ""}`,
-        { width: 140, margin: 1, color: { dark: "#2f241d", light: "#ffffff" } }
-      );
+      const vb = vatBreakdown(order.totalAmount ?? 0, order.insuranceAmount ?? 0, taxProfile.vatRate);
+      const content = zatcaQr
+        ? zatcaQrPayload({ sellerName: taxProfile.sellerName, vatNumber: taxProfile.vatNumber, timestamp: order.createdAt || new Date(), totalWithVat: vb.totalWithVat, vat: vb.vat })
+        : `فاتورة #${order.orderNumber}\n${order.customerName}\n${order.customerPhone}\n${order.receivedAt}${order.totalAmount ? `\nالإجمالي: ${order.totalAmount.toFixed(2)} ر.س` : ""}`;
+      qrDataUrl = await QRCode.toDataURL(content, { width: zatcaQr ? 180 : 140, margin: 1, errorCorrectionLevel: "M", color: { dark: "#161616", light: "#ffffff" } });
     } catch { /* skip QR on failure */ }
 
-    const html = buildInvoiceHtml(order, qrDataUrl);
+    const html = buildInvoiceHtml(order, qrDataUrl, zatcaQr);
 
     document.getElementById("__inv_overlay__")?.remove();
 
@@ -655,7 +736,7 @@ export default function CashierScreen() {
 
     const printBtn = document.createElement("button");
     printBtn.textContent = "🖨 طباعة";
-    printBtn.style.cssText = "background:#2f241d;color:#d6b56d;border:none;padding:8px 20px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:700;font-family:sans-serif;";
+    printBtn.style.cssText = "background:#161616;color:#F2A27A;border:none;padding:8px 20px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:700;font-family:sans-serif;";
     printBtn.onclick = () => frame.contentWindow?.print();
 
     const closeBtn = document.createElement("button");
@@ -706,6 +787,13 @@ export default function CashierScreen() {
         amountPaid: paidNum,
         paymentMethod,
         discount: discountData,
+        loyalty: loyaltyPhoneKey && loyaltySettings.enabled
+          ? {
+              key: loyaltyPhoneKey,
+              base: Math.round((goodsAfterDiscount - loyaltyDiscount) * 100) / 100,
+              ...(loyaltyDiscount > 0 ? { redeemPoints: loyaltyRedeemPts, redeemValue: loyaltyDiscount } : {}),
+            }
+          : undefined,
         items: filteredItems,
         notes: notes.trim() || undefined,
         imageUri: imageUri || undefined,
@@ -720,7 +808,7 @@ export default function CashierScreen() {
       if (appliedOfferId) incrementUsage(appliedOfferId).catch(() => {});
       QRCode.toDataURL(
         `فاتورة #${created.orderNumber}\n${created.customerName}\n${created.customerPhone}\n${created.receivedAt}${created.totalAmount ? `\nالإجمالي: ${created.totalAmount.toFixed(2)} ر.س` : ""}`,
-        { width: 160, margin: 1, color: { dark: "#2f241d", light: "#ffffff" } }
+        { width: 160, margin: 1, color: { dark: "#161616", light: "#ffffff" } }
       ).then(setReceiptQr).catch(() => setReceiptQr(""));
       resetForm();
       setExpandedItems(new Set());
@@ -763,6 +851,12 @@ export default function CashierScreen() {
       onClose={() => setShowClosing(false)}
       orders={orders}
     />
+    <ProductManagerModal
+      visible={newProductCode !== null}
+      product={null}
+      initialCode={newProductCode ?? undefined}
+      onClose={() => setNewProductCode(null)}
+    />
     {!isWide && (
     <KeyboardAvoidingView
       style={{ flex: 1 }}
@@ -777,6 +871,7 @@ export default function CashierScreen() {
       ]}
       keyboardShouldPersistTaps="handled"
     >
+      <SyncStatusBanner />
       {/* Today's summary strip + close shift */}
       <View style={styles.todayStrip}>
         <View style={styles.todayStripLeft}>
@@ -1056,6 +1151,7 @@ export default function CashierScreen() {
 
       {/* الأصناف */}
       <View style={styles.card}>
+        <ScanBar compact onAdd={addProductQty} active={screenFocused && !isWide} onCreateWithCode={canManageProducts ? openNewProductWithCode : undefined} />
         <View style={styles.cardHeader}>
           <Text style={styles.cardTitle}>{t("itemsSection")}</Text>
           {/* dept summary */}
@@ -1219,6 +1315,12 @@ export default function CashierScreen() {
                   autoFocus={isExpanded && !hasNote}
                 />
               )}
+              {item.name.trim() ? (
+                <WritingEditor
+                  value={item.writing}
+                  onChange={(w) => updateItem(item.id, "writing", w)}
+                />
+              ) : null}
             </View>
           );
           });
@@ -1307,7 +1409,7 @@ export default function CashierScreen() {
             {referenceImages.length < 3 && (
               <TouchableOpacity style={styles.refImgAdd} onPress={addReferenceImage} activeOpacity={0.8}>
                 <Feather name="camera" size={20} color={Colors.cake} />
-                <Text style={styles.refImgAddText}>إضافة{"\n"}صورة</Text>
+                <Text style={styles.refImgAddText}>{tr("إضافة", "Add")}{"\n"}{tr("صورة", "photo")}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -1329,6 +1431,18 @@ export default function CashierScreen() {
           multiline textAlign="right" textAlignVertical="top"
         />
       </View>
+
+      {/* برنامج الولاء */}
+      <LoyaltyCashierCard
+        settings={loyaltySettings}
+        account={loyaltyAccount}
+        loading={loyaltyLoading}
+        phoneKey={loyaltyPhoneKey}
+        payable={goodsAfterDiscount}
+        redeemPoints={loyaltyRedeemPts}
+        useRedeem={useLoyaltyPoints}
+        onToggle={() => setUseLoyaltyPoints((v) => !v)}
+      />
 
       {/* الخصومات والعروض */}
       <View style={styles.card}>
@@ -1412,7 +1526,7 @@ export default function CashierScreen() {
               style={styles.input}
               value={discountReason}
               onChangeText={setDiscountReason}
-              placeholder="أو اكتب سبباً مخصصاً..."
+              placeholder={tr("أو اكتب سبباً مخصصاً...", "Or type a custom reason...")}
               placeholderTextColor={Colors.textMuted}
               textAlign="right"
             />
@@ -1469,6 +1583,15 @@ export default function CashierScreen() {
               <Text style={[styles.totalValue, { color: Colors.warning }]}>
                 -{discountAmount.toFixed(2)} {t("sar")}
               </Text>
+            </View>
+          )}
+          {loyaltyDiscount > 0 && (
+            <View style={styles.totalRow}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 5 }}>
+                <Feather name="award" size={12} color={Colors.success} />
+                <Text style={[styles.totalLabel, { color: Colors.success }]}>{tr("نقاط الولاء", "Loyalty points")} ({loyaltyRedeemPts})</Text>
+              </View>
+              <Text style={[styles.totalValue, { color: Colors.success }]}>-{loyaltyDiscount.toFixed(2)} {t("sar")}</Text>
             </View>
           )}
           {insuranceVal > 0 && (
@@ -1568,7 +1691,12 @@ export default function CashierScreen() {
     {/* ─── Desktop wide layout: catalog + checkout panel ─────────── */}
     {isWide && (
     <View style={styles.wideContainer}>
-    <InlineCatalog selected={catalogQtys} onAdd={addFromCatalog} onRemove={removeFromCatalog} />
+    <View style={{ flex: 1 }}>
+      <View style={{ padding: 12, paddingBottom: 0, backgroundColor: "#F3F3F1" }}>
+        <ScanBar compact onAdd={addProductQty} active={screenFocused && isWide} onCreateWithCode={canManageProducts ? openNewProductWithCode : undefined} />
+      </View>
+      <InlineCatalog selected={catalogQtys} onAdd={addFromCatalog} onRemove={removeFromCatalog} />
+    </View>
       <View style={[styles.checkoutPanel, { width: 420 }]}>
         {/* ── Single outer ScrollView: everything above the sticky payment footer ── */}
         <ScrollView
@@ -1735,16 +1863,16 @@ export default function CashierScreen() {
         {/* Employee badge */}
         {currentEmployee ? (
           <View style={styles.checkoutEmpRow}>
-            <Feather name="user-check" size={13} color="#4ade80" />
+            <Feather name="user-check" size={13} color="#4FBF8B" />
             <Text style={styles.checkoutEmpText}>{currentEmployee.name} · #{currentEmployee.employeeId}</Text>
             <TouchableOpacity onPress={() => setCurrentEmployee(null)} style={{ marginLeft: "auto" as any }}>
-              <Text style={{ color: "#f87171", fontSize: 11, fontWeight: "700" }}>{t("switchBtn")}</Text>
+              <Text style={{ color: "#E8737C", fontSize: 11, fontWeight: "700" }}>{t("switchBtn")}</Text>
             </TouchableOpacity>
           </View>
         ) : (
           <View style={[styles.checkoutEmpRow, { borderColor: "rgba(248,113,113,0.3)", backgroundColor: "rgba(248,113,113,0.08)" }]}>
-            <Feather name="alert-circle" size={13} color="#f87171" />
-            <Text style={[styles.checkoutEmpText, { color: "#f87171" }]}>{t("cashierLoginMsg")}</Text>
+            <Feather name="alert-circle" size={13} color="#E8737C" />
+            <Text style={[styles.checkoutEmpText, { color: "#E8737C" }]}>{t("cashierLoginMsg")}</Text>
           </View>
         )}
 
@@ -1762,13 +1890,18 @@ export default function CashierScreen() {
                 const dc = DEPT_OPTIONS.find((d) => d.value === item.department)!;
                 const lt = (item.price || 0) * item.quantity;
                 return (
-                  <View key={item.id} style={styles.checkoutItem}>
-                    <View style={[styles.checkoutItemAccent, { backgroundColor: dc.color }]} />
-                    <Text style={styles.checkoutItemName} numberOfLines={1}>{item.name}</Text>
-                    <Text style={styles.checkoutItemQty}>×{item.quantity}</Text>
-                    <Text style={[styles.checkoutItemAmt, !item.price && { color: "#f87171" }]}>
-                      {lt > 0 ? `${lt.toFixed(0)} ر.س` : "—"}
-                    </Text>
+                  <View key={item.id}>
+                    <View style={styles.checkoutItem}>
+                      <View style={[styles.checkoutItemAccent, { backgroundColor: dc.color }]} />
+                      <Text style={styles.checkoutItemName} numberOfLines={1}>{item.name}</Text>
+                      <Text style={styles.checkoutItemQty}>×{item.quantity}</Text>
+                      <Text style={[styles.checkoutItemAmt, !item.price && { color: "#E8737C" }]}>
+                        {lt > 0 ? `${lt.toFixed(0)} ر.س` : "—"}
+                      </Text>
+                    </View>
+                    <View style={{ backgroundColor: Colors.surface, borderRadius: 12, paddingHorizontal: 8, paddingBottom: 6, marginBottom: 6 }}>
+                      <WritingEditor value={item.writing} onChange={(w) => updateItem(item.id, "writing", w)} />
+                    </View>
                   </View>
                 );
               })}
@@ -1829,6 +1962,18 @@ export default function CashierScreen() {
             ))}
           </View>
 
+          <LoyaltyCashierCard
+            dark
+            settings={loyaltySettings}
+            account={loyaltyAccount}
+            loading={loyaltyLoading}
+            phoneKey={loyaltyPhoneKey}
+            payable={goodsAfterDiscount}
+            redeemPoints={loyaltyRedeemPts}
+            useRedeem={useLoyaltyPoints}
+            onToggle={() => setUseLoyaltyPoints((v) => !v)}
+          />
+
           {/* Discount row */}
           <TouchableOpacity
             style={styles.checkoutDiscountRow}
@@ -1877,6 +2022,12 @@ export default function CashierScreen() {
                     <Text style={[styles.checkoutTotalValue, { color: Colors.warning }]}>-{discountAmount.toFixed(2)} {t("sar")}</Text>
                   </View>
                 )}
+                {loyaltyDiscount > 0 && (
+                  <View style={styles.checkoutTotalRow}>
+                    <Text style={[styles.checkoutTotalLabel, { color: "#6FD0A0" }]}>{tr("نقاط الولاء", "Loyalty points")}</Text>
+                    <Text style={[styles.checkoutTotalValue, { color: "#6FD0A0" }]}>-{loyaltyDiscount.toFixed(2)} {t("sar")}</Text>
+                  </View>
+                )}
                 {insuranceVal > 0 && (
                   <View style={styles.checkoutTotalRow}>
                     <Text style={[styles.checkoutTotalLabel, { color: Colors.goldLight }]}>{t("trayInsurance")}</Text>
@@ -1913,13 +2064,13 @@ export default function CashierScreen() {
                 <Feather
                   name={remainingAmount === 0 ? "check-circle" : "alert-circle"}
                   size={13}
-                  color={remainingAmount === 0 ? "#4ade80" : "#f87171"}
+                  color={remainingAmount === 0 ? "#4FBF8B" : "#E8737C"}
                 />
-                <Text style={[styles.checkoutTotalLabel, { color: remainingAmount === 0 ? "#4ade80" : "#f87171", flex: 1 }]}>
+                <Text style={[styles.checkoutTotalLabel, { color: remainingAmount === 0 ? "#4FBF8B" : "#E8737C", flex: 1 }]}>
                   {remainingAmount === 0 ? t("fullyPaid") : t("remaining")}
                 </Text>
                 {remainingAmount > 0 && (
-                  <Text style={[styles.checkoutTotalValue, { color: "#f87171", fontWeight: "800" }]}>
+                  <Text style={[styles.checkoutTotalValue, { color: "#E8737C", fontWeight: "800" }]}>
                     {remainingAmount.toFixed(2)} {t("sar")}
                   </Text>
                 )}
@@ -1999,221 +2150,34 @@ export default function CashierScreen() {
       </Modal>
     )}
 
-    {/* ─── Preview Modal ──────────────────────────────────────────── */}
+    {/* ─── Review before sending ─────────────────────────────────── */}
     {showPreview && (
-      <Modal visible transparent animationType="slide" onRequestClose={() => setShowPreview(false)}>
-        <View style={styles.previewOverlay}>
-          <View style={styles.previewSheet}>
-            <View style={styles.previewHandle} />
-
-            {/* Header */}
-            <View style={styles.previewHeader}>
-              <TouchableOpacity style={styles.previewBackBtn} onPress={() => setShowPreview(false)}>
-                <Feather name="arrow-right" size={20} color={Colors.primary} />
-              </TouchableOpacity>
-              <Text style={styles.previewTitle}>{t("previewOrder")}</Text>
-              <View style={{ width: 36 }} />
-            </View>
-
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 8 }}>
-
-              {/* بيانات العميل */}
-              <View style={styles.previewSection}>
-                <View style={styles.previewSectionHeader}>
-                  <Feather name="user" size={14} color={Colors.primary} />
-                  <Text style={styles.previewSectionTitle}>{t("customerData")}</Text>
-                </View>
-                <View style={styles.previewRow}>
-                  <Text style={styles.previewLabel}>{t("nameLabel")}</Text>
-                  <Text style={styles.previewValue}>{customerName.trim()}</Text>
-                </View>
-                <View style={styles.previewRow}>
-                  <Text style={styles.previewLabel}>{t("phoneLabel")}</Text>
-                  <Text style={styles.previewValue}>{customerPhone.trim()}</Text>
-                </View>
-                {customerPhone2.trim() ? (
-                  <View style={styles.previewRow}>
-                    <Text style={styles.previewLabel}>{t("phone2Label")}</Text>
-                    <Text style={styles.previewValue}>{customerPhone2.trim()}</Text>
-                  </View>
-                ) : null}
-                <View style={styles.previewRow}>
-                  <Text style={styles.previewLabel}>{t("orderTypeLabel")}</Text>
-                  <View style={[styles.previewTypeBadge, orderType === "delivery" && { backgroundColor: Colors.info + "18", borderColor: Colors.info + "50" }]}>
-                    <Text style={[styles.previewTypeBadgeText, orderType === "delivery" && { color: Colors.info }]}>
-                      {t(ORDER_TYPE_LABEL_KEYS[orderType])}
-                    </Text>
-                  </View>
-                </View>
-                {orderType === "delivery" && deliveryAddress.trim() ? (
-                  <View style={styles.previewRow}>
-                    <Text style={styles.previewLabel}>{t("addressLabel")}</Text>
-                    <Text style={[styles.previewValue, { flex: 1, textAlign: "left", marginLeft: 8 }]}>{deliveryAddress.trim()}</Text>
-                  </View>
-                ) : null}
-                {deliveryDateTime ? (
-                  <View style={styles.previewRow}>
-                    <Text style={styles.previewLabel}>{t("delivSchedule")}</Text>
-                    <Text style={[styles.previewValue, { color: Colors.primary, fontWeight: "700" }]}>{deliveryDateTime}</Text>
-                  </View>
-                ) : null}
-              </View>
-
-              {/* الأصناف */}
-              {(() => {
-                const previewItems = items.filter((i) => i.name.trim() && i.quantity > 0);
-                return (
-                  <View style={styles.previewSection}>
-                    <View style={styles.previewSectionHeader}>
-                      <Feather name="shopping-bag" size={14} color={Colors.primary} />
-                      <Text style={styles.previewSectionTitle}>{t("itemsSection")} ({previewItems.length})</Text>
-                    </View>
-                    {previewItems.map((item) => {
-                      const deptConf = DEPT_OPTIONS.find((d) => d.value === item.department)!;
-                      const lineTotal = item.price ? (item.price * item.quantity).toFixed(2) : null;
-                      return (
-                        <View key={item.id} style={styles.previewItemRow}>
-                          <View style={[styles.previewDeptDot, { backgroundColor: deptConf.color }]} />
-                          <View style={{ flex: 1 }}>
-                            <Text style={styles.previewItemName}>{item.name}</Text>
-                            {item.note ? <Text style={styles.previewItemNote}>{item.note}</Text> : null}
-                          </View>
-                          <Text style={styles.previewItemQty}>×{item.quantity}</Text>
-                          <Text style={[styles.previewItemPrice, !item.price && { color: Colors.accent }]}>
-                            {lineTotal ? `${lineTotal} ر.س` : t("noPrice")}
-                          </Text>
-                        </View>
-                      );
-                    })}
-                    {previewItems.some((i) => !i.price) && (
-                      <View style={styles.previewWarning}>
-                        <Feather name="alert-triangle" size={13} color={Colors.warning} />
-                        <Text style={styles.previewWarningText}>{t("someNoPriceWarn")}</Text>
-                      </View>
-                    )}
-                  </View>
-                );
-              })()}
-
-              {/* الإجمالي */}
-              {(grandTotal > 0 || discountEnabled || insuranceVal > 0) && (
-                <View style={styles.previewSection}>
-                  <View style={styles.previewSectionHeader}>
-                    <Feather name="dollar-sign" size={14} color={Colors.primary} />
-                    <Text style={styles.previewSectionTitle}>{t("previewTotalLabel")}</Text>
-                  </View>
-                  {subtotal > 0 && (discountAmount > 0 || insuranceVal > 0) ? (
-                    <View style={styles.previewRow}>
-                      <Text style={styles.previewLabel}>{t("previewSubtotal")}</Text>
-                      <Text style={styles.previewValue}>{subtotal.toFixed(2)} {t("sar")}</Text>
-                    </View>
-                  ) : null}
-                  {discountAmount > 0 && (
-                    <View style={styles.previewRow}>
-                      <Text style={[styles.previewLabel, { color: Colors.success }]}>
-                        {t("discount")}{discountReason.trim() ? ` (${discountReason.trim()})` : ""}
-                      </Text>
-                      <Text style={[styles.previewValue, { color: Colors.success }]}>- {discountAmount.toFixed(2)} {t("sar")}</Text>
-                    </View>
-                  )}
-                  {insuranceVal > 0 && (
-                    <View style={styles.previewRow}>
-                      <Text style={styles.previewLabel}>{t("trayInsurance")}</Text>
-                      <Text style={styles.previewValue}>{insuranceVal.toFixed(2)} {t("sar")}</Text>
-                    </View>
-                  )}
-                  {grandTotal > 0 && (
-                    <View style={[styles.previewRow, styles.previewTotalRow]}>
-                      <Text style={styles.previewTotalLabel}>{t("grandTotalAll")}</Text>
-                      <Text style={styles.previewTotalValue}>{grandTotal.toFixed(2)} {t("sar")}</Text>
-                    </View>
-                  )}
-                  <View style={styles.previewRow}>
-                    <Text style={styles.previewLabel}>{t("paymentMethod")}</Text>
-                    <Text style={styles.previewValue}>{t(PAYMENT_LABEL_KEYS[paymentMethod])}</Text>
-                  </View>
-                  {amountPaidVal > 0 && (
-                    <View style={styles.previewRow}>
-                      <Text style={styles.previewLabel}>{t("paidShort")}</Text>
-                      <Text style={styles.previewValue}>{amountPaidVal.toFixed(2)} {t("sar")}</Text>
-                    </View>
-                  )}
-                  {remainingAmount > 0 && (
-                    <View style={styles.previewRow}>
-                      <Text style={[styles.previewLabel, { color: Colors.accent }]}>{t("remaining")}</Text>
-                      <Text style={[styles.previewValue, { color: Colors.accent, fontWeight: "800" }]}>{remainingAmount.toFixed(2)} {t("sar")}</Text>
-                    </View>
-                  )}
-                </View>
-              )}
-
-              {/* ملاحظات */}
-              {notes.trim() ? (
-                <View style={styles.previewSection}>
-                  <View style={styles.previewSectionHeader}>
-                    <Feather name="file-text" size={14} color={Colors.primary} />
-                    <Text style={styles.previewSectionTitle}>{t("notesSection")}</Text>
-                  </View>
-                  <Text style={styles.previewNotes}>{notes.trim()}</Text>
-                </View>
-              ) : null}
-
-              {/* الصور المرفقة */}
-              {(imageUri || referenceImages.length > 0) && (
-                <View style={styles.previewSection}>
-                  <View style={styles.previewSectionHeader}>
-                    <Feather name="image" size={14} color={Colors.primary} />
-                    <Text style={styles.previewSectionTitle}>{t("attachedImages")}</Text>
-                  </View>
-                  <View style={styles.previewImgsRow}>
-                    {imageUri && (
-                      <View style={{ alignItems: "center" }}>
-                        <Image source={{ uri: imageUri }} style={styles.previewThumb} contentFit="cover" />
-                        <Text style={styles.previewThumbLabel}>{t("orderImageLabel")}</Text>
-                      </View>
-                    )}
-                    {referenceImages.map((uri, i) => (
-                      <View key={i} style={{ alignItems: "center" }}>
-                        <Image source={{ uri }} style={styles.previewThumb} contentFit="cover" />
-                        <Text style={styles.previewThumbLabel}>{t("refThumbLabel")} {i + 1}</Text>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              )}
-
-              {/* منشئ الطلب */}
-              {currentEmployee && (
-                <View style={styles.previewCashierRow}>
-                  <Feather name="user-check" size={13} color={Colors.textMuted} />
-                  <Text style={styles.previewCashierText}>
-                    المنشئ: {currentEmployee.name} #{currentEmployee.employeeId}
-                  </Text>
-                </View>
-              )}
-
-              <View style={{ height: 8 }} />
-            </ScrollView>
-
-            {/* Action buttons */}
-            <View style={styles.previewActions}>
-              <TouchableOpacity style={styles.previewEditBtn} onPress={() => setShowPreview(false)} activeOpacity={0.8}>
-                <Feather name="edit-2" size={16} color={Colors.primary} />
-                <Text style={styles.previewEditBtnText}>{t("edit")}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.previewConfirmBtn, isSubmitting && { opacity: 0.6 }]}
-                onPress={() => void doSubmit()}
-                disabled={isSubmitting}
-                activeOpacity={0.85}
-              >
-                <Feather name="check-circle" size={18} color="#fff" />
-                <Text style={styles.previewConfirmBtnText}>{isSubmitting ? t("sending") : t("confirmSend")}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      <OrderReviewSheet
+        visible
+        submitting={isSubmitting}
+        onEdit={() => setShowPreview(false)}
+        onConfirm={() => void doSubmit()}
+        draft={{
+          customerName,
+          customerPhone: customerPhone.trim(),
+          customerPhone2: customerPhone2.trim() || undefined,
+          orderType,
+          deliveryAddress: deliveryAddress.trim() || undefined,
+          deliveryTime: deliveryDateTime || undefined,
+          items: [...items.filter((i) => i.name.trim() && i.quantity > 0), ...buildChocoItems(chocoCard)],
+          notes,
+          images: [imageUri, ...referenceImages].filter(Boolean) as string[],
+          subtotal,
+          discountAmount: discountAmount + loyaltyDiscount,
+          discountReason: [discountAmount > 0 ? discountReason.trim() : "", loyaltyDiscount > 0 ? `نقاط الولاء ${loyaltyRedeemPts}` : ""].filter(Boolean).join(" + ") || undefined,
+          insurance: insuranceVal,
+          grandTotal,
+          paid: amountPaidVal,
+          remaining: remainingAmount,
+          paymentMethod,
+          cashierName: currentEmployee ? `${currentEmployee.name} #${currentEmployee.employeeId}` : undefined,
+        }}
+      />
     )}
 
     {/* ─── Receipt Modal ──────────────────────────────────────────── */}
@@ -2242,20 +2206,38 @@ export default function CashierScreen() {
             )}
 
             {/* Success banner */}
-            <View style={[styles.receiptBanner, isLaviviane && { backgroundColor: "#2f241d" }]}>
+            <View style={[styles.receiptBanner, isLaviviane && { backgroundColor: "#161616" }]}>
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 16, width: "100%" }}>
-                <View style={[styles.receiptCheckCircle, isLaviviane && { backgroundColor: "#d6b56d" }]}>
+                <View style={[styles.receiptCheckCircle, isLaviviane && { backgroundColor: "#F2A27A" }]}>
                   <Feather name="check" size={28} color="#fff" />
                 </View>
                 {receiptQr ? (
                   <Image source={{ uri: receiptQr }} style={styles.receiptQrImg} contentFit="contain" />
                 ) : null}
               </View>
-              <Text style={styles.receiptBannerTitle}>{t("sentSuccess")}</Text>
-              <Text style={styles.receiptBannerSub}>{t("invoiceNum")}{receiptOrder.orderNumber}</Text>
+              <Text style={styles.receiptBannerTitle}>
+                {liveReceipt?.syncState ? (tr("حُفظ على الجهاز — جارٍ الإرسال للأقسام", "Saved — sending to departments…")) : t("sentSuccess")}
+              </Text>
+              <Text style={styles.receiptBannerSub}>{t("invoiceNum")}{liveReceipt?.orderNumber ?? receiptOrder.orderNumber}{liveReceipt?.provisionalNumber ? (tr(" (رقم مؤقت حتى يعود الاتصال)", " (provisional)")) : ""}</Text>
             </View>
 
             <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, gap: 12 }}>
+              {liveReceipt && (
+                <View style={[styles.receiptCard, { gap: 10 }]}>
+                  <OrderTracker order={liveReceipt} />
+                  <TouchableOpacity
+                    style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: Colors.primary, borderRadius: 12, paddingVertical: 11 }}
+                    onPress={async () => {
+                      const code = await ensureTrackingCode(liveReceipt.id);
+                      waSend(liveReceipt.customerPhone, customerTrackingMessage({ ...liveReceipt, trackingCode: code ?? liveReceipt.trackingCode }, company.name || "Laviviane"));
+                    }}
+                    activeOpacity={0.85}
+                  >
+                    <Feather name="send" size={15} color={Colors.goldLight} />
+                    <Text style={{ color: "#fff", fontWeight: "800" }}>{tr("إرسال رابط تتبع الطلب للعميل", "Send tracking link to customer")}</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
 
               {/* Order type badge */}
               {receiptOrder.orderType && (
@@ -2452,7 +2434,7 @@ export default function CashierScreen() {
                 onPress={() => shareViaWhatsApp(receiptOrder)}
                 activeOpacity={0.85}
               >
-                <Text style={styles.whatsappBtnText}>📱 واتساب</Text>
+                <Text style={styles.whatsappBtnText}>{tr("📱 واتساب", "📱 WhatsApp")}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.shareBtn}
@@ -2800,11 +2782,11 @@ const styles = StyleSheet.create({
     alignSelf: "center", marginTop: 10, marginBottom: 6,
   },
   receiptLogoHeader: {
-    backgroundColor: "#2f241d", alignItems: "center", justifyContent: "center",
+    backgroundColor: "#161616", alignItems: "center", justifyContent: "center",
     paddingTop: 18, paddingBottom: 10, paddingHorizontal: 20, gap: 4,
   },
   receiptLogoImg: { width: 160, height: 60 },
-  receiptLogoSub: { color: "#d6b56d", fontSize: 10, fontWeight: "600", letterSpacing: 1.5 },
+  receiptLogoSub: { color: "#F2A27A", fontSize: 10, fontWeight: "600", letterSpacing: 1.5 },
   receiptBanner: {
     backgroundColor: Colors.primary, paddingVertical: 20, paddingHorizontal: 24,
     alignItems: "center", gap: 6,
@@ -2841,7 +2823,7 @@ const styles = StyleSheet.create({
   },
   printBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
-    backgroundColor: "#1f2937", borderRadius: 14, paddingVertical: 13, paddingHorizontal: 18,
+    backgroundColor: "#1F1F1E", borderRadius: 14, paddingVertical: 13, paddingHorizontal: 18,
   },
   printBtnText: { color: "#fff", fontSize: 14, fontWeight: "800" },
   whatsappBtn: {
@@ -2859,8 +2841,8 @@ const styles = StyleSheet.create({
   shareBtnText: { color: Colors.primary, fontSize: 14, fontWeight: "600" },
   aiBtn: {
     flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
-    backgroundColor: "#6C3FC5", borderRadius: 14, paddingVertical: 12,
-    shadowColor: "#6C3FC5", shadowOffset: { width: 0, height: 3 },
+    backgroundColor: "#8C4A5E", borderRadius: 14, paddingVertical: 12,
+    shadowColor: "#8C4A5E", shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.25, shadowRadius: 6, elevation: 4,
   },
   aiBtnText: { color: "#fff", fontSize: 14, fontWeight: "700" },
@@ -3157,7 +3139,7 @@ const styles = StyleSheet.create({
   },
   checkoutCloseShiftBtn: {
     width: 36, height: 36, borderRadius: 18,
-    backgroundColor: "rgba(201,168,76,0.15)",
+    backgroundColor: "rgba(217,96,43,0.15)",
     alignItems: "center" as const, justifyContent: "center" as const,
   },
   checkoutEmpRow: {
@@ -3167,7 +3149,7 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(74,222,128,0.08)",
     borderWidth: 1, borderColor: "rgba(74,222,128,0.18)",
   },
-  checkoutEmpText: { fontSize: 12, color: "#4ade80", fontWeight: "600" as const, flex: 1 },
+  checkoutEmpText: { fontSize: 12, color: "#4FBF8B", fontWeight: "600" as const, flex: 1 },
   checkoutItemsList: { padding: 12, gap: 6, paddingBottom: 16 },
   checkoutItem: {
     flexDirection: "row" as const, alignItems: "center" as const, gap: 10,
@@ -3274,7 +3256,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: "rgba(255,255,255,0.12)",
     backgroundColor: "rgba(255,255,255,0.04)",
   },
-  checkoutTimeChipActive: { backgroundColor: "rgba(201,168,76,0.25)", borderColor: Colors.gold },
+  checkoutTimeChipActive: { backgroundColor: "rgba(217,96,43,0.25)", borderColor: Colors.gold },
   checkoutTimeText: { fontSize: 11, fontWeight: "600" as const, color: "rgba(255,255,255,0.6)" },
   checkoutTimeTextActive: { color: Colors.gold, fontWeight: "800" as const },
 

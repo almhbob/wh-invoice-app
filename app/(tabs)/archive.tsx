@@ -18,7 +18,7 @@ import { escapeDeep } from "@/utils/html";
 import { canDo, ROLE_CAN_DELETE_ORDERS, ROLE_CAN_EDIT_ORDERS } from "@/constants/rbac";
 import { useLang } from "@/context/LanguageContext";
 import { useEmployee } from "@/context/EmployeeContext";
-import { Department, Order, OrderStatus, PAYMENT_LABEL_KEYS, useOrders } from "@/context/OrdersContext";
+import { Department, Order, OrderStatus, PAYMENT_LABEL_KEYS, useOrders, useOrderHistory } from "@/context/OrdersContext";
 import { fmtDate, fmtDateTime } from "@/utils/dateUtils";
 
 import { t as t_, type Lang, type TranslationKey } from "@/constants/translations";
@@ -287,6 +287,7 @@ function DeletedCard({ order, onRestore }: { order: Order; onRestore: (id: strin
 
 export default function ArchiveScreen() {
   const { orders, deletedOrders, deleteOrder, restoreOrder, updateOrder } = useOrders();
+  useOrderHistory(730);
   const { currentEmployee } = useEmployee();
   const { t, lang } = useLang();
   const isAdmin = canDo(currentEmployee?.role, ROLE_CAN_DELETE_ORDERS);
@@ -383,7 +384,7 @@ body{font-family:Arial,sans-serif;font-size:12px;direction:rtl;margin:20px}
 h2{text-align:center;margin-bottom:12px}
 table{width:100%;border-collapse:collapse}
 th,td{border:1px solid #ccc;padding:6px 8px;text-align:right;vertical-align:top}
-th{background:#0A1628;color:#fff}
+th{background:#161616;color:#fff}
 tr:nth-child(even){background:#f7f7f7}
 @media print{body{margin:0}}
 </style></head><body>
@@ -391,7 +392,7 @@ tr:nth-child(even){background:#f7f7f7}
 <table><thead><tr>
 <th>#</th><th>العميل</th><th>الأصناف</th><th>المبلغ</th><th>الدفع</th><th>الخصم</th><th>التاريخ</th>
 </tr></thead><tbody>${rows}</tbody>
-<tfoot><tr style="background:#0A1628;color:#fff">
+<tfoot><tr style="background:#161616;color:#fff">
 <td colspan="3" style="text-align:center;font-weight:700;padding:8px">الإجمالي</td>
 <td style="font-weight:700;font-size:13px">${grandTotal.toFixed(2)} ر.س</td>
 <td colspan="3"></td>

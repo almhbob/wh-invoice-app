@@ -268,7 +268,7 @@ const styles = StyleSheet.create({
   requestChip: { minWidth: 118, gap: 3, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 9, backgroundColor: Colors.surfaceSecondary, borderWidth: 1, borderColor: Colors.border },
   requestChipTitle: { fontSize: 12, fontWeight: "900", color: Colors.primary, textAlign: "right" },
   requestChipSub: { fontSize: 10, fontWeight: "700", color: Colors.textMuted, textAlign: "right" },
-  selectedBox: { gap: 12, borderRadius: 18, padding: 12, backgroundColor: "#f8fafc", borderWidth: 1, borderColor: Colors.border },
+  selectedBox: { gap: 12, borderRadius: 18, padding: 12, backgroundColor: "#FAFAF8", borderWidth: 1, borderColor: Colors.border },
   selectedTopRow: { flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", gap: 10 },
   selectedTitle: { fontSize: 15, fontWeight: "900", color: Colors.primary, textAlign: "right" },
   selectedMeta: { fontSize: 10, color: Colors.textMuted, textAlign: "right", marginTop: 3, fontWeight: "700" },

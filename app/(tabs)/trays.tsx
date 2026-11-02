@@ -1,6 +1,8 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as Linking from "expo-linking";
+import { RoleGate } from "@/components/RoleGate";
+import { ROLE_CAN_VIEW_TRAYS } from "@/constants/rbac";
 import React, { useMemo, useState } from "react";
 import {
   FlatList,
@@ -14,7 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors } from "@/constants/colors";
 import { useEmployee } from "@/context/EmployeeContext";
 import { useLang } from "@/context/LanguageContext";
-import { useOrders } from "@/context/OrdersContext";
+import { useOrders, useOrderHistory } from "@/context/OrdersContext";
 import { fmtCurrency, fmtDate } from "@/utils/dateUtils";
 
 function openWhatsApp(phone: string, message?: string) {
@@ -24,9 +26,10 @@ function openWhatsApp(phone: string, message?: string) {
   Linking.openURL(`https://wa.me/${intl}${text}`).catch(() => {});
 }
 
-export default function TraysScreen() {
+function TraysScreenInner() {
   const { t, lang } = useLang();
   const { orders, markTrayReturned } = useOrders();
+  useOrderHistory(365);
   const { currentEmployee } = useEmployee();
   const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<"pending" | "returned">("pending");
@@ -69,8 +72,8 @@ export default function TraysScreen() {
           <Text style={[styles.summaryNum, { color: Colors.gold }]}>{pending.length}</Text>
           <Text style={styles.summaryLabel}>{t("traysOutstanding")}</Text>
         </View>
-        <View style={[styles.summaryCard, { borderColor: "#16a34a" }]}>
-          <Text style={[styles.summaryNum, { color: "#16a34a" }]}>{returned.length}</Text>
+        <View style={[styles.summaryCard, { borderColor: "#1F8A5B" }]}>
+          <Text style={[styles.summaryNum, { color: "#1F8A5B" }]}>{returned.length}</Text>
           <Text style={styles.summaryLabel}>{t("traysReturned")}</Text>
         </View>
       </View>
@@ -111,7 +114,7 @@ export default function TraysScreen() {
         renderItem={({ item: order }) => {
           const isReturned = !!order.trayReturned;
           return (
-            <View style={[styles.card, { borderLeftColor: isReturned ? "#16a34a" : Colors.gold }]}>
+            <View style={[styles.card, { borderLeftColor: isReturned ? "#1F8A5B" : Colors.gold }]}>
               <View style={styles.cardHeader}>
                 <View>
                   <Text style={styles.orderNum}>#{order.orderNumber}</Text>
@@ -128,10 +131,10 @@ export default function TraysScreen() {
                 <Text style={styles.customerName}>{order.customerName}</Text>
                 <Text style={styles.customerPhone}>{order.customerPhone}</Text>
                 <TouchableOpacity
-                  style={[styles.quickBtn, { backgroundColor: "#16a34a18" }]}
+                  style={[styles.quickBtn, { backgroundColor: "#1F8A5B18" }]}
                   onPress={() => { Haptics.selectionAsync(); Linking.openURL(`tel:${order.customerPhone.replace(/\D/g, "")}`); }}
                 >
-                  <Feather name="phone" size={13} color="#16a34a" />
+                  <Feather name="phone" size={13} color="#1F8A5B" />
                 </TouchableOpacity>
                 {!isReturned && (
                   <TouchableOpacity
@@ -157,8 +160,8 @@ export default function TraysScreen() {
                 onPress={() => !isReturned && handleMarkReturned(order.id)}
                 activeOpacity={0.8}
               >
-                <Feather name={isReturned ? "check-circle" : "rotate-ccw"} size={14} color={isReturned ? "#16a34a" : Colors.primary} />
-                <Text style={[styles.returnBtnText, isReturned && { color: "#16a34a" }]}>
+                <Feather name={isReturned ? "check-circle" : "rotate-ccw"} size={14} color={isReturned ? "#1F8A5B" : Colors.primary} />
+                <Text style={[styles.returnBtnText, isReturned && { color: "#1F8A5B" }]}>
                   {isReturned ? t("traysReturned2") : t("traysMarkRet")}
                 </Text>
               </TouchableOpacity>
@@ -217,8 +220,16 @@ const styles = StyleSheet.create({
     paddingVertical: 8, borderRadius: 10, borderWidth: 1.5,
     borderColor: Colors.primary + "60", backgroundColor: Colors.primary + "08",
   },
-  returnBtnDone: { borderColor: "#16a34a60", backgroundColor: "#16a34a10" },
+  returnBtnDone: { borderColor: "#1F8A5B60", backgroundColor: "#1F8A5B10" },
   returnBtnText: { fontSize: 13, fontWeight: "700", color: Colors.primary },
   emptyState: { alignItems: "center", paddingTop: 60, gap: 12 },
   emptyText: { fontSize: 15, color: Colors.textMuted },
 });
+
+export default function TraysScreen() {
+  return (
+    <RoleGate allow={ROLE_CAN_VIEW_TRAYS}>
+      <TraysScreenInner />
+    </RoleGate>
+  );
+}

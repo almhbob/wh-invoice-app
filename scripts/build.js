@@ -140,7 +140,7 @@ if (fbApiKey && fbAuthDomain && fbProjectId && fbBucket && fbSenderId && fbAppId
   patchFirebase(outputDir);
   if (!patched) console.warn("  Warning: Firebase placeholder not found — credentials may already be inlined.");
 } else {
-  console.warn("Firebase env vars not set — app will run in bootstrap/demo mode.");
+  console.warn("Firebase env vars not set — secure auth remains fail-closed when the server is unconfigured; staging hosts never fall back to production Firebase.");
 }
 
 // Inject @font-face CSS into index.html as an additional safety net
@@ -158,8 +158,31 @@ if (fs.existsSync(indexPath)) {
     )
     .join("\n");
 
+  // Brand typography: IBM Plex Sans Arabic (OFL), served from /brand-fonts.
+  // React Native Web renders text with the system stack, so the same files are
+  // also registered under those family names: every screen picks up the brand
+  // font without touching individual styles, and icon/monospace fonts keep theirs.
+  const brandWeights = [["Regular", "100 449"], ["Medium", "450 549"], ["SemiBold", "550 649"], ["Bold", "650 1000"]];
+  const brandFamilies = ["Laviviane Sans", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "Helvetica", "Arial"];
+  const brandRules = brandFamilies
+    .flatMap((fam) =>
+      brandWeights.map(
+        ([w, range]) =>
+          `  @font-face { font-family: "${fam}"; src: url("/brand-fonts/PlexArabic-${w}.woff") format("woff"); font-weight: ${range}; font-display: swap; }`
+      )
+    )
+    .join("\n");
+  const brandBase =
+    `  html, body { background: #F3F3F1; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; }\n` +
+    `  ::selection { background: rgba(217, 96, 43, 0.22); }`;
+
   let html = fs.readFileSync(indexPath, "utf8");
-  html = html.replace("</head>", `<style>\n${fontFaceRules}\n</style>\n</head>`);
+  html = html.replace(
+    "</head>",
+    `<link rel="preload" href="/brand-fonts/PlexArabic-Regular.woff" as="font" type="font/woff" crossorigin>\n` +
+      `<link rel="preload" href="/brand-fonts/PlexArabic-Bold.woff" as="font" type="font/woff" crossorigin>\n` +
+      `<style>\n${fontFaceRules}\n${brandRules}\n${brandBase}\n</style>\n</head>`
+  );
   fs.writeFileSync(indexPath, html, "utf8");
   console.log(`Injected @font-face CSS for ${allFontNames.length} fonts into index.html`);
 }

@@ -1,3 +1,5 @@
+import { normalizeCode } from "@/utils/productCodes";
+import { tr } from "@/lib/i18n";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { Image } from "expo-image";
@@ -39,15 +41,15 @@ const DEPT_FILTERS: { value: Department | "all"; labelAr: string; labelEn: strin
 
 // Laviviane category colours — cycle through brand palette
 const LAVI_CATEGORY_COLORS: Record<string, string> = {
-  "New Cake Collection":      "#c0392b",
-  "Laviviane Cakes":          "#8e44ad",
-  "Celebration Bites":        "#2f241d",
-  "Mousse Cake":              "#16a085",
-  "Laviviane Bites":          "#d35400",
-  "Sandwich":                 "#27ae60",
-  "Luxury Chocolate":         "#d6b56d",
-  "Occasion Chocolate":       "#2980b9",
-  "Distributions and Gifts":  "#7f8c8d",
+  "New Cake Collection":      "#C8323F",
+  "Laviviane Cakes":          "#8C4A5E",
+  "Celebration Bites":        "#161616",
+  "Mousse Cake":              "#2D6E7E",
+  "Laviviane Bites":          "#D9602B",
+  "Sandwich":                 "#1F8A5B",
+  "Luxury Chocolate":         "#F2A27A",
+  "Occasion Chocolate":       "#2D6E7E",
+  "Distributions and Gifts":  "#5C5C59",
 };
 
 function makeOrderItemId() {
@@ -55,7 +57,7 @@ function makeOrderItemId() {
 }
 
 function formatPrice(value: number, lang: string) {
-  return `${value.toFixed(2)} ${lang === "ar" ? "ر.س" : "SAR"}`;
+  return `${value.toFixed(2)} ${tr("ر.س", "SAR")}`;
 }
 
 function ProductCard({
@@ -145,7 +147,7 @@ function ProductCard({
 
         {!product.isAvailable && (
           <View style={styles.unavailableOverlay}>
-            <Text style={styles.unavailableText}>{lang === "ar" ? "غير متوفر" : "Unavailable"}</Text>
+            <Text style={styles.unavailableText}>{tr("غير متوفر", "Unavailable")}</Text>
           </View>
         )}
       </TouchableOpacity>
@@ -172,7 +174,7 @@ function ProductCard({
         ) : (
           <TouchableOpacity style={[styles.addToOrderBtn, { backgroundColor: deptColor }]} onPress={onAdd} activeOpacity={0.86}>
             <Feather name="plus" size={14} color="#fff" />
-            <Text style={styles.addToOrderText}>{lang === "ar" ? "إضافة" : "Add"}</Text>
+            <Text style={styles.addToOrderText}>{tr("إضافة", "Add")}</Text>
           </TouchableOpacity>
         )
       ) : null}
@@ -214,7 +216,10 @@ export function ProductGalleryModal({ visible, onClose, onConfirm }: Props) {
       } else {
         if (deptFilter !== "all" && p.department !== deptFilter) return false;
       }
-      if (q && !p.name.toLowerCase().includes(q) && !(p.nameEn ?? "").toLowerCase().includes(q) && !(p.category ?? "").toLowerCase().includes(q)) return false;
+      if (q && !p.name.toLowerCase().includes(q) &&
+          !(p.nameEn ?? "").toLowerCase().includes(q) &&
+          !(p.category ?? "").toLowerCase().includes(q) &&
+          !(normalizeCode(q) && (normalizeCode(p.barcode).startsWith(normalizeCode(q)) || normalizeCode(p.sku).startsWith(normalizeCode(q))))) return false;
       return true;
     });
   }, [visibleProducts, deptFilter, categoryFilter, search, isLaviviane]);
@@ -304,13 +309,13 @@ export function ProductGalleryModal({ visible, onClose, onConfirm }: Props) {
           <View style={styles.headerCenter}>
             {isLaviviane ? (
               <>
-                <Text style={[styles.headerTitle, { color: "#2f241d" }]}>LAVIVIANE</Text>
+                <Text style={[styles.headerTitle, { color: "#161616" }]}>LAVIVIANE</Text>
                 <Text style={styles.headerSubtitle}>اختر من كتالوج لاففيان · {visibleProducts.length} منتج</Text>
               </>
             ) : (
               <>
-                <Text style={styles.headerTitle}>{lang === "ar" ? "اختيار المنتجات" : "Choose Products"}</Text>
-                <Text style={styles.headerSubtitle}>{lang === "ar" ? "بطاقات مرئية بالصور والسعر والكمية" : "Visual cards with image, price, and quantity"}</Text>
+                <Text style={styles.headerTitle}>{tr("اختيار المنتجات", "Choose Products")}</Text>
+                <Text style={styles.headerSubtitle}>{tr("بطاقات مرئية بالصور والسعر والكمية", "Visual cards with image, price, and quantity")}</Text>
               </>
             )}
           </View>
@@ -328,7 +333,7 @@ export function ProductGalleryModal({ visible, onClose, onConfirm }: Props) {
             style={styles.searchInput}
             value={search}
             onChangeText={setSearch}
-            placeholder={lang === "ar" ? "بحث بالاسم أو الفئة..." : "Search name or category..."}
+            placeholder={tr("بحث بالاسم أو الفئة أو الرمز...", "Search name, category or code...")}
             placeholderTextColor={Colors.textMuted}
             textAlign={lang === "ar" ? "right" : "left"}
           />
@@ -348,10 +353,10 @@ export function ProductGalleryModal({ visible, onClose, onConfirm }: Props) {
             contentContainerStyle={styles.laviFilterRow}
           >
             <TouchableOpacity
-              style={[styles.laviChip, categoryFilter === "all" && { backgroundColor: "#2f241d", borderColor: "#2f241d" }]}
+              style={[styles.laviChip, categoryFilter === "all" && { backgroundColor: "#161616", borderColor: "#161616" }]}
               onPress={() => setCategoryFilter("all")}
             >
-              <Text style={[styles.laviChipText, categoryFilter === "all" && { color: "#d6b56d" }]}>
+              <Text style={[styles.laviChipText, categoryFilter === "all" && { color: "#F2A27A" }]}>
                 الكل ({visibleProducts.length})
               </Text>
             </TouchableOpacity>
@@ -388,7 +393,7 @@ export function ProductGalleryModal({ visible, onClose, onConfirm }: Props) {
                 </TouchableOpacity>
               );
             })}
-            <Text style={styles.productCount}>{filtered.length} {lang === "ar" ? "منتج" : "products"}</Text>
+            <Text style={styles.productCount}>{filtered.length} {tr("منتج", "products")}</Text>
           </View>
         )}
 
@@ -457,7 +462,7 @@ export function ProductGalleryModal({ visible, onClose, onConfirm }: Props) {
             ListEmptyComponent={
               <View style={styles.emptyBox}>
                 <Feather name="shopping-bag" size={40} color={Colors.textMuted} />
-                <Text style={styles.emptyText}>{lang === "ar" ? "لا توجد منتجات" : "No products found"}</Text>
+                <Text style={styles.emptyText}>{tr("لا توجد منتجات", "No products found")}</Text>
               </View>
             }
             showsVerticalScrollIndicator={false}
@@ -493,12 +498,12 @@ export function ProductGalleryModal({ visible, onClose, onConfirm }: Props) {
         {totalSelected > 0 && (
           <View style={[styles.confirmBar, { paddingBottom: insets.bottom + 12 }]}>
             <View style={styles.confirmLeft}>
-              <Text style={styles.confirmCount}>{totalSelected} {lang === "ar" ? "صنف مختار" : "selected"}</Text>
+              <Text style={styles.confirmCount}>{totalSelected} {tr("صنف مختار", "selected")}</Text>
               <Text style={styles.confirmTotal}>{formatPrice(totalValue, lang)}</Text>
             </View>
             <TouchableOpacity style={styles.confirmBtn} onPress={handleConfirm} activeOpacity={0.85}>
               <Feather name="check" size={18} color="#fff" />
-              <Text style={styles.confirmBtnText}>{lang === "ar" ? "إضافة للفاتورة" : "Add to Invoice"}</Text>
+              <Text style={styles.confirmBtnText}>{tr("إضافة للفاتورة", "Add to Invoice")}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -545,9 +550,9 @@ const styles = StyleSheet.create({
   },
   laviChip: {
     paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
-    borderWidth: 1.5, borderColor: "#d6b56d", backgroundColor: "#fefcf8",
+    borderWidth: 1.5, borderColor: "#F2A27A", backgroundColor: "#FAFAF8",
   },
-  laviChipText: { fontSize: 12, fontWeight: "700", color: "#2f241d" },
+  laviChipText: { fontSize: 12, fontWeight: "700", color: "#161616" },
   laviResultCount: { fontSize: 11, color: Colors.textMuted, textAlign: "right", paddingHorizontal: 16, paddingBottom: 4 },
 
   // Generic dept filter

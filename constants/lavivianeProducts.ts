@@ -1,4 +1,4 @@
-import type { Product, ProductDept } from "@/context/TenantProductsContext";
+import type { Product, ProductDept } from "./productTypes";
 
 export const LAVIVIANE_COMPANY_ID = "laviviane-trial";
 

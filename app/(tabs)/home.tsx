@@ -1,9 +1,11 @@
+import { tr } from "@/lib/i18n";
 import { Feather } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
+  Animated,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -20,7 +22,10 @@ import { useCompany } from "@/context/CompanyContext";
 import { useEmployee } from "@/context/EmployeeContext";
 import { useLang } from "@/context/LanguageContext";
 import { Department, Order, useOrders } from "@/context/OrdersContext";
+import { SyncStatusBanner } from "@/components/SyncStatusBanner";
+import { AttentionBanner } from "@/components/AttentionBanner";
 import { usePriceChange } from "@/context/PriceChangeContext";
+import type { TranslationKey } from "@/constants/translations";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -35,14 +40,14 @@ function overallStatus(order: Order): "pending" | "in_progress" | "done" | "canc
   return "pending";
 }
 
-function fmtClock(d: Date, locale: string) {
-  return d.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit", hour12: true });
+function fmtClock(d: Date) {
+  return d.toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit", hour12: true });
 }
-function fmtSecs(d: Date, locale: string) {
-  return d.toLocaleTimeString(locale, { second: "2-digit", hour12: false });
+function fmtSecs(d: Date) {
+  return d.toLocaleTimeString("ar-SA", { second: "2-digit", hour12: false });
 }
-function fmtDate(d: Date, locale: string) {
-  return d.toLocaleDateString(locale, { weekday: "long", day: "numeric", month: "long" });
+function fmtDate(d: Date) {
+  return d.toLocaleDateString("ar-SA", { weekday: "long", day: "numeric", month: "long" });
 }
 
 // ── Dept meta for cashier tracker (built at runtime with t()) ──────────────────
@@ -51,14 +56,22 @@ const DEPT_COLORS = {
   cake: Colors.cake, packaging: Colors.packaging,
 } as const;
 
+// On light surfaces use the base status tones; on dark espresso use the lifted ones.
+const HERO_WAIT = "#F2C46B";
+const HERO_PROG = "#8FC9D2";
+const HERO_DONE = "#6FD0A0";
+
 const STATUS_COLORS = {
-  pending:     "#6B7280",
-  in_progress: "#60A5FA",
-  done:        "#34D399",
-  cancelled:   "#F87171",
+  pending:     Colors.textSecondary,
+  in_progress: Colors.statusInProgress,
+  done:        Colors.statusDone,
+  cancelled:   Colors.statusCancelled,
 };
 
 function CashierOrderTracker({ orders, isDark }: { orders: Order[]; isDark?: boolean }) {
+  const DONE_C = isDark ? HERO_DONE : Colors.statusDone;
+  const PROG_C = isDark ? HERO_PROG : Colors.statusInProgress;
+  const WAIT_C = isDark ? "#B9AC9C" : Colors.textSecondary;
   const { t } = useLang();
   const deptMeta = useMemo(() => ({
     halwa:     { short: t("deptHalwaShort"),     color: Colors.halwa },
@@ -96,16 +109,16 @@ function CashierOrderTracker({ orders, isDark }: { orders: Order[]; isDark?: boo
         const anyInProg = depts.some(d => order.departmentStatuses?.[d] === "in_progress");
 
         return (
-          <View key={order.id} style={[ct.card, { backgroundColor: cardBg, borderColor: allDone ? "#34D39940" : cardBorder }]}>
+          <View key={order.id} style={[ct.card, { backgroundColor: cardBg, borderColor: allDone ? Colors.statusDone + "40" : cardBorder }]}>
             {allDone && <View style={ct.doneLine} />}
             <View style={ct.cardHead}>
-              <Text style={[ct.orderNum, { color: allDone ? "#34D399" : textColor }]}>#{order.orderNumber}</Text>
+              <Text style={[ct.orderNum, { color: allDone ? DONE_C : textColor }]}>#{order.orderNumber}</Text>
               <Text style={[ct.custName, { color: textColor }]} numberOfLines={1}>{order.customerName}</Text>
               <View style={[ct.statusBadge, {
-                backgroundColor: allDone ? "#34D39918" : anyInProg ? "#60A5FA18" : "#6B728018",
+                backgroundColor: allDone ? DONE_C + "18" : anyInProg ? PROG_C + "18" : WAIT_C + "18",
               }]}>
-                <View style={[ct.statusDot, { backgroundColor: allDone ? "#34D399" : anyInProg ? "#60A5FA" : "#6B7280" }]} />
-                <Text style={[ct.statusTxt, { color: allDone ? "#34D399" : anyInProg ? "#60A5FA" : "#6B7280" }]}>
+                <View style={[ct.statusDot, { backgroundColor: allDone ? DONE_C : anyInProg ? PROG_C : WAIT_C }]} />
+                <Text style={[ct.statusTxt, { color: allDone ? DONE_C : anyInProg ? PROG_C : WAIT_C }]}>
                   {allDone ? t("statusReady") : anyInProg ? t("statusPrepping") : t("statusWaiting")}
                 </Text>
               </View>
@@ -113,7 +126,7 @@ function CashierOrderTracker({ orders, isDark }: { orders: Order[]; isDark?: boo
             <View style={ct.chips}>
               {depts.map(d => {
                 const status = order.departmentStatuses?.[d] ?? "pending";
-                const col = STATUS_COLORS[status] ?? "#6B7280";
+                const col = STATUS_COLORS[status] ?? Colors.textSecondary;
                 const dm = deptMeta[d];
                 return (
                   <View key={d} style={[ct.chip, { backgroundColor: col + "18", borderColor: col + "35" }]}>
@@ -131,123 +144,143 @@ function CashierOrderTracker({ orders, isDark }: { orders: Order[]; isDark?: boo
 }
 
 const ROLE_COLOR: Record<string, string> = {
-  cashier: Colors.gold, admin: "#7C3AED", branch_supervisor: "#0D9488",
-  dept_supervisor: "#0891B2", halwa: Colors.halwa, mawali: Colors.mawali,
+  cashier: Colors.gold, admin: Colors.purple, branch_supervisor: Colors.success,
+  dept_supervisor: Colors.info, halwa: Colors.halwa, mawali: Colors.mawali,
   chocolate: Colors.chocolate, cake: Colors.cake, packaging: Colors.packaging,
 };
 
-// ── Palette (warm ivory surface + ink text, gold brand accent) ─────────────────
-const UI = {
-  bg:      "#F5F2EC",
-  card:    "#FFFFFF",
-  line:    "#ECE6DB",
-  ink:     "#1C1917",
-  muted:   "#78716C",
-  faint:   "#A8A29E",
-  gold:    "#C9A84C",
-  goldHi:  "#E8C96A",
-  goldDeep:"#A9863A",
-  pending: "#F59E0B",
-  active:  "#60A5FA",
-  done:    "#34D399",
+// ── Module definitions (labels computed at runtime) ─────────────────────────────
+type ModuleDef = {
+  route: string;
+  icon: string;
+  accent: string;
+  labelKey: TranslationKey;
+  capKey?: TranslationKey;
+  group: "ops" | "dept" | "admin";
+  primary?: boolean;
 };
 
-const DATE_LOCALE: Record<string, string> = {
-  // Latin digits keep numbers consistent with the counters across the app
-  ar: "ar-SA-u-nu-latn", en: "en-US", ur: "ur-PK-u-nu-latn", hi: "hi-IN", bn: "bn-BD-u-nu-latn",
-};
-
-// ── Card definitions (labels/captions computed at runtime) ─────────────────────
-type CardKey = "tabCashier" | "tabArchive" | "tabReports" | "tabDelivery" | "tabAdmin"
-  | "deptHalwaShort" | "deptMawaliShort" | "deptChocolateShort" | "deptCakeShort" | "deptPackagingShort";
-
-const CARD_DEFS: { key: CardKey; icon: string; route: string; accent: string; group: "ops" | "prod" }[] = [
-  { key: "tabCashier",         icon: "file-text",   route: "cashier",   accent: "#B8892B",         group: "ops"  },
-  { key: "tabArchive",         icon: "archive",     route: "archive",   accent: "#2563EB",         group: "ops"  },
-  { key: "tabReports",         icon: "bar-chart-2", route: "reports",   accent: "#7C3AED",         group: "ops"  },
-  { key: "tabDelivery",        icon: "truck",       route: "delivery",  accent: "#0D9488",         group: "ops"  },
-  { key: "deptHalwaShort",     icon: "coffee",      route: "halwa",     accent: Colors.halwa,      group: "prod" },
-  { key: "deptMawaliShort",    icon: "package",     route: "mawali",    accent: Colors.mawali,     group: "prod" },
-  { key: "deptChocolateShort", icon: "gift",        route: "chocolate", accent: Colors.chocolate,  group: "prod" },
-  { key: "deptCakeShort",      icon: "layers",      route: "cake",      accent: Colors.cake,       group: "prod" },
-  { key: "deptPackagingShort", icon: "box",         route: "packaging", accent: Colors.packaging,  group: "prod" },
+const MODULE_DEFS: ModuleDef[] = [
+  { route: "cashier",   icon: "file-text",   accent: Colors.gold,     labelKey: "homeTileCashier",    capKey: "homeCapCashier",  group: "ops", primary: true },
+  { route: "archive",   icon: "archive",     accent: Colors.info,     labelKey: "tabArchive",         capKey: "homeCapArchive",  group: "ops" },
+  { route: "reports",   icon: "bar-chart-2", accent: Colors.purple,   labelKey: "tabReports",         capKey: "homeCapReports",  group: "ops" },
+  { route: "online",    icon: "globe",       accent: Colors.info,     labelKey: "tabOnline",          capKey: "homeCapOnline",   group: "ops" },
+  { route: "driver",    icon: "truck",       accent: Colors.success,  labelKey: "tabMyDeliveries",    capKey: "homeCapDriver",   group: "ops" },
+  { route: "tracking",  icon: "navigation",  accent: Colors.gold,     labelKey: "tabTracking",        capKey: "homeCapTracking", group: "ops" },
+  { route: "delivery",  icon: "truck",       accent: Colors.success,  labelKey: "tabDelivery",        capKey: "homeCapDelivery", group: "ops" },
+  { route: "branch-orders", icon: "clipboard", accent: Colors.gold,  labelKey: "tabBranchOrders",    capKey: "homeCapWindowOrder", group: "ops" },
+  { route: "branches",  icon: "map-pin",     accent: Colors.success,  labelKey: "tabBranches",        capKey: "homeCapWindows",  group: "ops" },
+  { route: "customers", icon: "users",       accent: Colors.packaging, labelKey: "tabCustomers",      capKey: "homeCapCustomers", group: "ops" },
+  { route: "halwa",     icon: "coffee",      accent: Colors.halwa,    labelKey: "deptHalwaShort",     group: "dept" },
+  { route: "mawali",    icon: "package",     accent: Colors.mawali,   labelKey: "deptMawaliShort",    group: "dept" },
+  { route: "chocolate", icon: "gift",        accent: Colors.chocolate,labelKey: "deptChocolateShort", group: "dept" },
+  { route: "cake",      icon: "layers",      accent: Colors.cake,     labelKey: "deptCakeShort",      group: "dept" },
+  { route: "writing",   icon: "edit-3",      accent: Colors.purple,   labelKey: "tabWriting",         group: "dept" },
+  { route: "packaging", icon: "box",         accent: Colors.packaging,labelKey: "deptPackagingShort", group: "dept" },
+  { route: "admin",     icon: "settings",    accent: Colors.primary,  labelKey: "tabAdmin",           capKey: "homeCapAdmin",    group: "admin" },
 ];
-const ADMIN_CARD = { key: "tabAdmin" as CardKey, icon: "settings", route: "admin", accent: "#475569", group: "ops" as const };
 
-// ── Action card ────────────────────────────────────────────────────────────────
+// ── Pressable with a soft spring scale ─────────────────────────────────────────
+function PressScale({ onPress, style, children }: { onPress: () => void; style?: any; children: React.ReactNode }) {
+  const sc = useRef(new Animated.Value(1)).current;
+  const to = (v: number) => Animated.spring(sc, { toValue: v, useNativeDriver: true, speed: 60, bounciness: 4 }).start();
+  return (
+    <Animated.View style={[style, { transform: [{ scale: sc }] }]}>
+      <Pressable
+        onPress={onPress}
+        onPressIn={() => to(0.96)}
+        onPressOut={() => to(1)}
+        style={{ flex: 1 }}
+        accessibilityRole="button"
+      >
+        {children}
+      </Pressable>
+    </Animated.View>
+  );
+}
 
-function ActionCard({ label, caption, captionActive, icon, accent, badge, width, isRTL, onPress }: {
-  label: string; caption: string; captionActive?: boolean; icon: string; accent: string;
-  badge?: number; width: number; isRTL: boolean; onPress: () => void;
+// ── Operations card (icon + title + caption) ───────────────────────────────────
+function OpsCard({ label, caption, icon, accent, primary, width, onPress }: {
+  label: string; caption?: string; icon: string; accent: string; primary?: boolean; width: number; onPress: () => void;
 }) {
   return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [ac.card, { width }, pressed && ac.cardPressed]}
-    >
-      <View style={ac.top}>
-        <View style={[ac.iconBox, { backgroundColor: accent + "14" }]}>
-          <Feather name={icon as any} size={20} color={accent} />
+    <PressScale onPress={onPress} style={{ width }}>
+      <View style={[m.opsCard, primary && m.opsCardPrimary]}>
+        <View style={[m.opsIcon, { backgroundColor: primary ? "rgba(217,192,143,0.16)" : accent + "14" }]}>
+          <Feather name={icon as any} size={20} color={primary ? Colors.goldLight : accent} />
         </View>
-        {badge ? (
-          <View style={[ac.badge, { backgroundColor: Colors.accent }]}>
-            <Text style={ac.badgeTxt}>{badge > 99 ? "99+" : badge}</Text>
-          </View>
-        ) : (
-          <Feather name={isRTL ? "arrow-up-left" : "arrow-up-right"} size={16} color={UI.faint} />
-        )}
-      </View>
-      <View style={{ gap: 3 }}>
-        <Text style={ac.label} numberOfLines={1}>{label}</Text>
-        <View style={ac.captionRow}>
-          {captionActive && <View style={[ac.captionDot, { backgroundColor: accent }]} />}
-          <Text style={[ac.caption, captionActive && { color: accent, fontWeight: "700" }]} numberOfLines={1}>
-            {caption}
-          </Text>
+        <View style={{ gap: 2 }}>
+          <Text style={[m.opsLabel, primary && { color: "#fff" }]} numberOfLines={1}>{label}</Text>
+          {!!caption && (
+            <Text style={[m.opsCap, primary && { color: "rgba(255,255,255,0.55)" }]} numberOfLines={1}>{caption}</Text>
+          )}
         </View>
       </View>
-    </Pressable>
+    </PressScale>
   );
 }
 
-// ── Primary CTA ────────────────────────────────────────────────────────────────
-
-function NewInvoiceButton({ title, sub, isRTL, onPress }: { title: string; sub: string; isRTL: boolean; onPress: () => void }) {
+// ── Department card with live queue count ──────────────────────────────────────
+function DeptCard({ label, icon, accent, queue, queueLabel, active, width, onPress, queueTxt, clearTxt }: {
+  label: string; icon: string; accent: string; queue: number; queueLabel: string; active: number; width: number;
+  onPress: () => void; queueTxt: string; clearTxt: string;
+}) {
+  const busy = queue > 0;
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [cta.wrap, pressed && { transform: [{ scale: 0.98 }] }]}>
-      <LinearGradient
-        colors={[UI.goldHi, UI.gold, UI.goldDeep]}
-        style={cta.inner}
-        start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-      >
-        <View style={cta.iconCircle}>
-          <Feather name="plus" size={22} color="#1A1206" />
+    <PressScale onPress={onPress} style={{ width }}>
+      <View style={[m.deptCard, busy && { borderColor: accent + "55" }]}>
+        <View style={[m.deptStrip, { backgroundColor: accent }]} />
+        <View style={m.deptTop}>
+          <View style={[m.deptIcon, { backgroundColor: accent + "16" }]}>
+            <Feather name={icon as any} size={18} color={accent} />
+          </View>
+          {busy && (
+            <View style={[m.deptCount, { backgroundColor: accent }]}>
+              <Text style={m.deptCountTxt}>{queueLabel}</Text>
+            </View>
+          )}
+        </View>
+        <Text style={m.deptLabel} numberOfLines={1}>{label}</Text>
+        <View style={m.deptStatusRow}>
+          <View style={[m.deptDot, { backgroundColor: busy ? (active > 0 ? Colors.statusInProgress : Colors.statusPending) : Colors.statusDone }]} />
+          <Text style={m.deptStatus} numberOfLines={1}>{busy ? queueTxt : clearTxt}</Text>
+        </View>
+      </View>
+    </PressScale>
+  );
+}
+
+// ── Admin row ──────────────────────────────────────────────────────────────────
+function AdminRow({ label, caption, badge, isRTL, onPress }: { label: string; caption: string; badge?: number; isRTL: boolean; onPress: () => void }) {
+  return (
+    <PressScale onPress={onPress}>
+      <View style={m.adminRow}>
+        <View style={[m.opsIcon, { backgroundColor: Colors.primary + "12" }]}>
+          <Feather name="settings" size={20} color={Colors.primary} />
         </View>
         <View style={{ flex: 1, gap: 2 }}>
-          <Text style={cta.title}>{title}</Text>
-          <Text style={cta.sub} numberOfLines={1}>{sub}</Text>
+          <Text style={m.opsLabel}>{label}</Text>
+          <Text style={m.opsCap} numberOfLines={1}>{caption}</Text>
         </View>
-        <Feather name={isRTL ? "chevron-left" : "chevron-right"} size={22} color="#1A1206" />
-      </LinearGradient>
-    </Pressable>
+        {!!badge && (
+          <View style={m.adminBadge}><Text style={m.adminBadgeTxt}>{badge > 99 ? "99+" : badge}</Text></View>
+        )}
+        <Feather name={isRTL ? "chevron-left" : "chevron-right"} size={18} color={Colors.textMuted} />
+      </View>
+    </PressScale>
   );
 }
 
-// ── Section header ─────────────────────────────────────────────────────────────
-
-function SectionHeader({ title, count }: { title: string; count?: number }) {
+function SectionTitle({ title, right }: { title: string; right?: string }) {
   return (
-    <View style={sh.row}>
-      <Text style={sh.title}>{title}</Text>
-      {count !== undefined && (
-        <View style={sh.countPill}><Text style={sh.countTxt}>{count}</Text></View>
-      )}
-      <View style={sh.line} />
+    <View style={m.secHead}>
+      <Text style={m.secTitle}>{title}</Text>
+      {!!right && <Text style={m.secRight}>{right}</Text>}
     </View>
   );
 }
 
-// ── Stat card (wide info panel) ────────────────────────────────────────────────
+// ── Stat card ──────────────────────────────────────────────────────────────────
 
 function StatCard({ label, value, color, icon }: { label: string; value: number | string; color: string; icon: string }) {
   return (
@@ -269,13 +302,11 @@ export default function HomeScreen() {
   const { width: winW } = useWindowDimensions();
   const isWide  = winW >= 700;
 
-  const { t, rl, lang, isRTL } = useLang();
+  const { t, rl, isRTL, lang } = useLang();
   const { company }         = useCompany();
   const { currentEmployee } = useEmployee();
   const { orders }          = useOrders();
   const { pendingCount }    = usePriceChange();
-
-  const locale = DATE_LOCALE[lang] ?? DATE_LOCALE.ar;
 
   const [now, setNow] = useState(new Date());
   useEffect(() => {
@@ -285,148 +316,255 @@ export default function HomeScreen() {
 
   const isAdmin  = canDo(currentEmployee?.role, ROLE_CAN_ACCESS_ADMIN);
   const isLavi   = company.id === LAVIVIANE_COMPANY_ID;
-  const todayStr = useMemo(() => new Date().toDateString(), []);
+  const todayStr = now.toDateString();
 
   const todayOrders   = useMemo(() => orders.filter(o => !o.deleted && new Date(o.createdAt).toDateString() === todayStr), [orders, todayStr]);
+  // Revenue is hidden by default (screens face customers) and re-hides on its own.
+  const [showRevenue, setShowRevenue] = useState(false);
+  useEffect(() => {
+    if (!showRevenue) return;
+    const timer = setTimeout(() => setShowRevenue(false), 15000);
+    return () => clearTimeout(timer);
+  }, [showRevenue]);
   const todayRevenue  = useMemo(() => todayOrders.reduce((s, o) => s + (o.totalAmount ?? 0), 0), [todayOrders]);
   const pendingCnt    = useMemo(() => todayOrders.filter(o => overallStatus(o) === "pending").length,     [todayOrders]);
   const inProgressCnt = useMemo(() => todayOrders.filter(o => overallStatus(o) === "in_progress").length, [todayOrders]);
   const doneCnt       = useMemo(() => todayOrders.filter(o => overallStatus(o) === "done").length,        [todayOrders]);
 
-  // Active (not done / cancelled) orders per production department
-  const deptActive = useMemo(() => {
-    const out: Record<string, number> = {};
-    for (const d of DEPARTMENTS) {
-      out[d] = todayOrders.filter(o => {
-        if (!o.items.some(i => i.department === d)) return false;
+  // Live queue per department (pending + in progress)
+  const deptQueues = useMemo(() => {
+    const out = {} as Record<Department, { queue: number; active: number }>;
+    DEPARTMENTS.forEach(d => { out[d] = { queue: 0, active: 0 }; });
+    todayOrders.forEach(o => {
+      DEPARTMENTS.forEach(d => {
+        if (!o.items?.some(i => i.department === d)) return;
         const st = o.departmentStatuses?.[d] ?? "pending";
-        return st === "pending" || st === "in_progress";
-      }).length;
-    }
+        if (st === "pending" || st === "in_progress") out[d].queue += 1;
+        if (st === "in_progress") out[d].active += 1;
+      });
+    });
     return out;
   }, [todayOrders]);
 
+  const writingQueue = useMemo(() => {
+    const open = todayOrders.filter(o => o.items?.some(i => i.writing?.text?.trim()) && (o.writingStatus ?? "pending") !== "done");
+    return { queue: open.length, active: open.filter(o => o.writingStatus === "in_progress").length };
+  }, [todayOrders]);
+
+  // Role-based module visibility (same rules as before)
   const role = currentEmployee?.role;
+  // Sales figures are for management and the cashier only.
+  const canSeeMoney = !role || ["admin", "branch_supervisor", "cashier"].includes(role);
   const isCashierRole = role === "cashier";
-
-  const cards = useMemo(() => {
-    let defs = CARD_DEFS;
+  const visible = useMemo(() => {
+    const base = MODULE_DEFS.filter(d => d.group !== "admin" && d.route !== "driver");
     if (!role || role === "admin" || role === "branch_supervisor" || role === "dept_supervisor") {
-      defs = isAdmin ? [...CARD_DEFS, ADMIN_CARD] : CARD_DEFS;
-    } else if (role === "cashier") {
-      defs = CARD_DEFS.filter(c => ["cashier", "archive", "delivery"].includes(c.route));
-    } else {
-      // Dept workers: only their own dept card
-      defs = CARD_DEFS.filter(c => c.route === role);
+      const all = isAdmin ? MODULE_DEFS : base;
+      return role === "dept_supervisor" ? all.filter(d => !["customers", "branch-orders", "branches"].includes(d.route)) : all;
     }
-    return defs.map(c => {
-      const active = deptActive[c.route];
-      let caption: string;
-      let captionActive = false;
-      if (c.group === "prod") {
-        captionActive = active > 0;
-        caption = active > 0 ? t("homeDeptActive").replace("{n}", String(active)) : t("homeDeptClear");
-      } else if (c.route === "cashier")  caption = t("homeCapCashier");
-      else if (c.route === "archive")    caption = t("homeCapArchive").replace("{n}", String(todayOrders.length));
-      else if (c.route === "reports")    caption = t("homeCapReports");
-      else if (c.route === "delivery")   caption = t("homeCapDelivery");
-      else                               caption = t("homeCapAdmin");
-      return { ...c, label: t(c.key), caption, captionActive };
-    });
-  }, [role, isAdmin, t, deptActive, todayOrders.length]);
+    if (role === "cashier") return base.filter(d => ["cashier", "branch-orders", "online", "tracking", "delivery", "customers", "archive"].includes(d.route));
+    if (role === "driver") return MODULE_DEFS.filter(d => d.route === "driver");
+    const own = role === "calligrapher" ? "writing" : role;
+    return base.filter(d => d.route === own || (role === "cake" && d.route === "writing"));
+  }, [role, isAdmin]);
 
-  const opsCards  = cards.filter(c => c.group === "ops");
-  const prodCards = cards.filter(c => c.group === "prod");
-  const prodActiveTotal = prodCards.reduce((s, c) => s + (deptActive[c.route] ?? 0), 0);
+  const opsMods   = visible.filter(d => d.group === "ops");
+  const deptMods  = visible.filter(d => d.group === "dept");
+  const adminMod  = visible.find(d => d.group === "admin");
+  const canInvoice = visible.some(d => d.route === "cashier");
 
   const go = (route: string) => router.navigate(`/(tabs)/${route}` as any);
 
-  // Responsive card grid
+  // Layout math
   const SIDEBAR_W = winW >= 768 ? 220 : 0;
-  const INFO_W    = isWide ? 280 : 0;
-  const GAP       = isWide ? 14 : 12;
+  const INFO_W    = isWide ? 300 : 0;
   const PAD       = isWide ? 28 : 16;
-  const contentW  = winW - SIDEBAR_W - INFO_W - PAD * 2;
-  const cols      = contentW >= 780 ? 5 : contentW >= 640 ? 4 : contentW >= 420 ? 3 : 2;
-  const cardW     = Math.floor((contentW - GAP * (cols - 1)) / cols);
+  const GAP       = isWide ? 14 : 10;
+  const contentW  = Math.min(winW - SIDEBAR_W - INFO_W, 1100) - PAD * 2;
+  const colW = (cols: number) => Math.floor((contentW - GAP * (cols - 1)) / cols);
+  const opsCols  = isWide ? Math.min(5, Math.max(opsMods.length, 1)) : (opsMods.length === 1 ? 1 : 2);
+  const deptCols = isWide ? 6 : 3;
 
   const empColor = ROLE_COLOR[currentEmployee?.role ?? ""] ?? Colors.gold;
-  const greeting = now.getHours() < 12 ? t("greetMorning") : t("greetEvening");
-  const fmtMoney = (n: number) => n.toLocaleString(locale, { maximumFractionDigits: 2 });
+  const greeting = now.getHours() < 12 ? t("homeGreetMorning") : t("homeGreetEvening");
+  const firstName = currentEmployee?.name;
+  const locale = lang === "ar" ? "ar-SA" : "en-US";
+  const fmtNum = (n: number) => n.toLocaleString(locale);
+  const total = Math.max(todayOrders.length, 1);
 
-  const heroColors = (isLavi ? ["#3A2C22", "#2F241D", "#1C1511"] : ["#24365E", "#1A2744", "#0F1A2E"]) as [string, string, string];
+  const fmtNow = now.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit", hour12: true });
+  const fmtDay = now.toLocaleDateString(locale, { weekday: "long", day: "numeric", month: "long" });
 
-  const renderCards = (list: typeof cards) => (
-    <View style={[s.grid, { gap: GAP }]}>
-      {list.map(c => (
-        <ActionCard
-          key={c.route}
-          label={c.label}
-          caption={c.caption}
-          captionActive={c.captionActive}
-          icon={c.icon}
-          accent={c.accent}
-          badge={c.route === "admin" ? pendingCount || undefined : undefined}
-          width={cardW}
-          isRTL={isRTL}
-          onPress={() => go(c.route)}
-        />
-      ))}
-    </View>
+  // ── Shared blocks ────────────────────────────────────────────────────────────
+  const heroCard = (
+    <LinearGradient colors={[Colors.espressoMid, Colors.espressoDeep]} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={m.hero}>
+      <View style={m.heroAccent} />
+      <View style={m.heroTop}>
+        <View style={{ flex: 1, gap: 3 }}>
+          <Text style={m.heroGreet} numberOfLines={1}>
+            {greeting}{firstName ? `${isRTL ? "،" : ","} ${firstName}` : ""}
+          </Text>
+          <Text style={m.heroDate}>{fmtDay}</Text>
+        </View>
+        <View style={m.heroClock}>
+          <Feather name="clock" size={12} color={Colors.goldLight} />
+          <Text style={m.heroClockTxt}>{fmtNow}</Text>
+        </View>
+      </View>
+
+      <View style={m.heroMid}>
+        {canSeeMoney ? (
+        <Pressable
+          style={{ gap: 2 }}
+          onPress={() => setShowRevenue((v) => !v)}
+          accessibilityRole="button"
+          accessibilityLabel={showRevenue ? tr("إخفاء الإيراد", "Hide revenue") : tr("إظهار الإيراد", "Show revenue")}
+        >
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <Text style={m.heroLbl}>{t("revenueToday")}</Text>
+            <Feather name={showRevenue ? "eye-off" : "eye"} size={13} color="rgba(255,255,255,0.55)" />
+          </View>
+          {showRevenue ? (
+            <Text style={m.heroRevenue}>
+              {fmtNum(todayRevenue)} <Text style={m.heroCur}>{t("sarCurrency")}</Text>
+            </Text>
+          ) : (
+            <Text style={[m.heroRevenue, { letterSpacing: 4 }]}>
+              •••• <Text style={[m.heroCur, { letterSpacing: 0 }]}>{tr("اضغط للعرض", "Tap to show")}</Text>
+            </Text>
+          )}
+        </Pressable>
+        ) : <View />}
+        <View style={m.heroOrders}>
+          <Text style={m.heroOrdersNum}>{fmtNum(todayOrders.length)}</Text>
+          <Text style={m.heroLbl}>{t("homeOrdersToday")}</Text>
+        </View>
+      </View>
+
+      {/* Segmented progress */}
+      <View style={m.progress}>
+        {todayOrders.length === 0 ? (
+          <View style={{ flex: 1, backgroundColor: "rgba(255,255,255,0.08)" }} />
+        ) : (
+          <>
+            {doneCnt > 0       && <View style={{ flex: doneCnt / total,       backgroundColor: HERO_DONE }} />}
+            {inProgressCnt > 0 && <View style={{ flex: inProgressCnt / total, backgroundColor: HERO_PROG }} />}
+            {pendingCnt > 0    && <View style={{ flex: pendingCnt / total,    backgroundColor: HERO_WAIT }} />}
+          </>
+        )}
+      </View>
+
+      <View style={m.heroStats}>
+        {[
+          { n: pendingCnt,    l: t("statusWaiting"),   c: HERO_WAIT },
+          { n: inProgressCnt, l: t("inProgressShort"), c: HERO_PROG },
+          { n: doneCnt,       l: t("statusReady"),     c: HERO_DONE },
+        ].map(x => (
+          <View key={x.l} style={m.heroStat}>
+            <View style={[m.heroStatDot, { backgroundColor: x.c }]} />
+            <Text style={[m.heroStatNum, { color: x.c }]}>{fmtNum(x.n)}</Text>
+            <Text style={m.heroStatLbl}>{x.l}</Text>
+          </View>
+        ))}
+      </View>
+    </LinearGradient>
   );
 
-  const sections = (
-    <>
-      {opsCards.length > 0 && (
-        <View style={s.section}>
-          <SectionHeader title={t("homeOperations")} />
-          {renderCards(opsCards)}
+  const ctaButton = canInvoice && (
+    <PressScale onPress={() => go("cashier")}>
+      <LinearGradient colors={[Colors.gold, Colors.gold]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={m.cta}>
+        <View style={m.ctaIcon}><Feather name="plus" size={20} color={Colors.gold} /></View>
+        <View style={{ flex: 1, gap: 1 }}>
+          <Text style={m.ctaTxt}>{t("newInvoice")}</Text>
+          <Text style={m.ctaSub}>{t("homeNewInvoiceSub")}</Text>
+        </View>
+        <Feather name={isRTL ? "arrow-left" : "arrow-right"} size={20} color="#fff" />
+      </LinearGradient>
+    </PressScale>
+  );
+
+  const modules = (
+    <View style={{ gap: 22 }}>
+      {opsMods.length > 0 && (
+        <View style={{ gap: 10 }}>
+          <SectionTitle title={t("homeSecOperations")} />
+          <View style={[m.grid, { gap: GAP }]}>
+            {opsMods.map(d => (
+              <OpsCard
+                key={d.route}
+                label={t(d.labelKey)}
+                caption={d.capKey ? t(d.capKey) : undefined}
+                icon={d.icon}
+                accent={d.accent}
+                primary={d.primary}
+                width={!isWide && d.primary && opsMods.length % 2 === 1 ? contentW : colW(opsCols)}
+                onPress={() => go(d.route)}
+              />
+            ))}
+          </View>
         </View>
       )}
-      {prodCards.length > 0 && (
-        <View style={s.section}>
-          <SectionHeader title={t("homeProduction")} count={prodActiveTotal || undefined} />
-          {renderCards(prodCards)}
+
+      {deptMods.length > 0 && (
+        <View style={{ gap: 10 }}>
+          <SectionTitle
+            title={t("homeSecDepartments")}
+            right={`${fmtNum(DEPARTMENTS.reduce((s, d) => s + deptQueues[d].queue, 0))} ${t("homeDeptQueue")}`}
+          />
+          <View style={[m.grid, { gap: GAP }]}>
+            {deptMods.map(d => {
+              const q = d.route === "writing" ? writingQueue : (deptQueues[d.route as Department] ?? { queue: 0, active: 0 });
+              return (
+                <DeptCard
+                  key={d.route}
+                  label={t(d.labelKey)}
+                  icon={d.icon}
+                  accent={d.accent}
+                  queue={q.queue}
+                  queueLabel={fmtNum(q.queue)}
+                  active={q.active}
+                  width={deptMods.length === 1 ? contentW : colW(deptCols)}
+                  queueTxt={`${fmtNum(q.queue)} ${t("homeDeptQueue")}`}
+                  clearTxt={t("homeDeptClear")}
+                  onPress={() => go(d.route)}
+                />
+              );
+            })}
+          </View>
         </View>
       )}
-    </>
+
+      {adminMod && (
+        <View style={{ gap: 10 }}>
+          <SectionTitle title={t("homeSecManagement")} />
+          <AdminRow
+            label={t("tabAdmin")}
+            caption={t("homeCapAdmin")}
+            badge={pendingCount || undefined}
+            isRTL={isRTL}
+            onPress={() => go("admin")}
+          />
+        </View>
+      )}
+    </View>
   );
 
   // ── Wide layout ──────────────────────────────────────────────────────────────
   if (isWide) {
     return (
-      <View style={s.screen}>
-        <View style={s.wideLayout}>
-
-          {/* ── Card grid (main area) ──────────────────────────────────────── */}
-          <ScrollView
-            style={{ flex: 1 }}
-            contentContainerStyle={{ padding: PAD, gap: 24 }}
-            showsVerticalScrollIndicator={false}
-          >
-            <View style={s.wideHead}>
-              <View style={{ flex: 1, gap: 4 }}>
-                <Text style={s.wideGreeting}>
-                  {greeting}{currentEmployee ? `، ${currentEmployee.name}` : ""}
-                </Text>
-                <Text style={s.wideDate}>{fmtDate(now, locale)}</Text>
-              </View>
-            </View>
-
-            <NewInvoiceButton title={t("newInvoice")} sub={t("newInvoiceSub")} isRTL={isRTL} onPress={() => go("cashier")} />
-
-            {sections}
+      <View style={m.screen}>
+        <View style={{ flex: 1, flexDirection: "row" }}>
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: PAD, gap: 18, maxWidth: 1100 + PAD * 2, width: "100%", alignSelf: "center" }} showsVerticalScrollIndicator={false}>
+            {heroCard}
+            <SyncStatusBanner />
+            <AttentionBanner />
+            {ctaButton}
+            {modules}
           </ScrollView>
 
-          {/* ── Info panel ────────────────────────────────────────────────── */}
-          <LinearGradient
-            colors={[heroColors[2], heroColors[1], heroColors[0]]}
-            style={[s.infoPanel, { width: INFO_W }]}
-            start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}
-          >
+          {/* Info panel */}
+          <LinearGradient colors={[Colors.espressoDeep, Colors.espressoMid, Colors.espressoSoft]} style={[s.infoPanel, { width: INFO_W }]} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}>
             <ScrollView contentContainerStyle={s.infoPanelContent} showsVerticalScrollIndicator={false}>
-
-              {/* Brand */}
               {isLavi ? (
                 <View style={s.laviWrap}>
                   <Image source={{ uri: "/laviviane-logo.png" }} style={s.laviLogo} contentFit="contain" />
@@ -440,20 +578,13 @@ export default function HomeScreen() {
                 </View>
               )}
 
-              {/* Gold rule */}
-              <LinearGradient
-                colors={["transparent", Colors.gold + "80", "transparent"]}
-                style={s.goldRule}
-                start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-              />
+              <LinearGradient colors={["transparent", Colors.gold + "80", "transparent"]} style={s.goldRule} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} />
 
-              {/* Employee */}
               <View style={s.empSection}>
                 <View style={s.liveRow}>
                   <View style={s.liveDot} />
                   <Text style={s.liveTxt}>{t("onlineNow")}</Text>
                 </View>
-
                 {currentEmployee ? (
                   <View style={s.empCard}>
                     <View style={[s.empAvatar, { backgroundColor: empColor + "25", borderColor: empColor }]}>
@@ -462,9 +593,7 @@ export default function HomeScreen() {
                     <View style={s.empInfo}>
                       <Text style={s.empName} numberOfLines={1}>{currentEmployee.name}</Text>
                       <View style={[s.empRoleBadge, { backgroundColor: empColor + "25" }]}>
-                        <Text style={[s.empRoleTxt, { color: empColor }]}>
-                          {rl(currentEmployee.role)}
-                        </Text>
+                        <Text style={[s.empRoleTxt, { color: empColor }]}>{rl(currentEmployee.role)}</Text>
                       </View>
                     </View>
                   </View>
@@ -473,28 +602,16 @@ export default function HomeScreen() {
                 )}
               </View>
 
-              {/* Stats grid */}
               <View style={s.statsSection}>
                 <Text style={s.statsTitle}>{t("todayStatsTitle")}</Text>
                 <View style={s.statsGrid}>
-                  <StatCard label={t("total")}        value={todayOrders.length} color={Colors.gold}  icon="list" />
-                  <StatCard label={t("statusWaiting")} value={pendingCnt}         color={UI.pending}    icon="clock" />
-                  <StatCard label={t("inProgress")}    value={inProgressCnt}      color={UI.active}     icon="zap" />
-                  <StatCard label={t("statusReady")}   value={doneCnt}            color={UI.done}       icon="check-circle" />
+                  <StatCard label={t("total")}         value={todayOrders.length} color={Colors.gold} icon="list" />
+                  <StatCard label={t("statusWaiting")} value={pendingCnt}         color={HERO_WAIT}     icon="clock" />
+                  <StatCard label={t("inProgress")}    value={inProgressCnt}      color={HERO_PROG}     icon="zap" />
+                  <StatCard label={t("statusReady")}   value={doneCnt}            color={HERO_DONE}     icon="check-circle" />
                 </View>
               </View>
 
-              {/* Revenue */}
-              <View style={s.revenueSection}>
-                <Text style={s.revenueLabel}>{t("revenueToday")}</Text>
-                <Text style={s.revenueValue}>
-                  {fmtMoney(todayRevenue)} <Text style={s.revenueCur}>{t("sarCurrency")}</Text>
-                </Text>
-              </View>
-
-              <View style={s.thinRule} />
-
-              {/* Cashier order tracker */}
               {isCashierRole && (
                 <View style={s.trackerSection}>
                   <Text style={s.trackerTitle}>{t("orderTrackerTitle")}</Text>
@@ -502,98 +619,39 @@ export default function HomeScreen() {
                 </View>
               )}
 
-              {/* Clock */}
               <View style={s.clockSection}>
-                <Text style={s.clockTime}>{fmtClock(now, locale)}</Text>
-                <Text style={s.clockSecs}>{fmtSecs(now, locale)}</Text>
-                <Text style={s.clockDate}>{fmtDate(now, locale)}</Text>
+                <Text style={s.clockTime}>{fmtClock(now)}</Text>
+                <Text style={s.clockSecs}>{fmtSecs(now)}</Text>
+                <Text style={s.clockDate}>{fmtDate(now)}</Text>
               </View>
-
             </ScrollView>
           </LinearGradient>
-
         </View>
       </View>
     );
   }
 
-  // ── Narrow layout ─────────────────────────────────────────────────────────
-  const flowTotal = pendingCnt + inProgressCnt + doneCnt;
-  const stats = [
-    { num: todayOrders.length, lbl: t("todayShort"),      color: UI.goldHi  },
-    { num: pendingCnt,          lbl: t("statusWaiting"),   color: UI.pending },
-    { num: inProgressCnt,       lbl: t("inProgressShort"), color: UI.active  },
-    { num: doneCnt,             lbl: t("statusReady"),     color: UI.done    },
-  ];
-
+  // ── Narrow (mobile) layout ───────────────────────────────────────────────────
   return (
-    <View style={s.screen}>
+    <View style={m.screen}>
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ padding: PAD, gap: 22, paddingBottom: insets.bottom + 96 }}
+        contentContainerStyle={{ padding: PAD, gap: 16, paddingBottom: insets.bottom + 100 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Hero: greeting, revenue, live flow ─────────────────────────── */}
-        <LinearGradient colors={heroColors} style={s.hero} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-          {/* decorative glow */}
-          <View style={s.heroGlow} pointerEvents="none" />
+        {heroCard}
+        <SyncStatusBanner />
+        <AttentionBanner />
+        {ctaButton}
 
-          <View style={s.heroTop}>
-            <View style={{ flex: 1, gap: 2 }}>
-              <Text style={s.heroDate}>{greeting} · {fmtDate(now, locale)}</Text>
-              <Text style={s.heroGreeting} numberOfLines={1}>
-                {currentEmployee?.name ?? company.name}
-              </Text>
-            </View>
-            <View style={s.clockPill}>
-              <View style={s.liveDot} />
-              <Text style={s.clockPillTxt}>{fmtClock(now, locale)}</Text>
-            </View>
-          </View>
-
-          <View style={{ gap: 2 }}>
-            <Text style={s.heroLabel}>{t("revenueToday")}</Text>
-            <Text style={s.heroRevenue}>
-              {fmtMoney(todayRevenue)}
-              <Text style={s.heroCur}>  {t("sarCurrency")}</Text>
-            </Text>
-          </View>
-
-          {/* Order flow bar */}
-          <View style={s.flowTrack}>
-            {flowTotal > 0 ? (
-              <>
-                {pendingCnt    > 0 && <View style={{ flex: pendingCnt,    backgroundColor: UI.pending }} />}
-                {inProgressCnt > 0 && <View style={{ flex: inProgressCnt, backgroundColor: UI.active  }} />}
-                {doneCnt       > 0 && <View style={{ flex: doneCnt,       backgroundColor: UI.done    }} />}
-              </>
-            ) : null}
-          </View>
-
-          <View style={s.heroStats}>
-            {stats.map(item => (
-              <View key={item.lbl} style={s.heroStat}>
-                <Text style={[s.heroStatNum, { color: item.color }]}>{item.num}</Text>
-                <View style={s.heroStatLblRow}>
-                  <View style={[s.heroStatDot, { backgroundColor: item.color }]} />
-                  <Text style={s.heroStatLbl} numberOfLines={1}>{item.lbl}</Text>
-                </View>
-              </View>
-            ))}
-          </View>
-
-          <NewInvoiceButton title={t("newInvoice")} sub={t("newInvoiceSub")} isRTL={isRTL} onPress={() => go("cashier")} />
-        </LinearGradient>
-
-        {/* Cashier order tracker — mobile */}
         {isCashierRole && (
-          <View style={s.section}>
-            <SectionHeader title={t("orderTrackerMobile")} count={todayOrders.length || undefined} />
+          <View style={{ gap: 10 }}>
+            <SectionTitle title={t("orderTrackerMobile")} />
             <CashierOrderTracker orders={todayOrders} isDark={false} />
           </View>
         )}
 
-        {sections}
+        {modules}
       </ScrollView>
     </View>
   );
@@ -601,124 +659,107 @@ export default function HomeScreen() {
 
 // ── Styles ─────────────────────────────────────────────────────────────────────
 
-const softShadow = {
-  shadowColor: "#3B2F1E",
-  shadowOpacity: 0.07,
-  shadowRadius: 14,
-  shadowOffset: { width: 0, height: 6 },
+const CARD_SHADOW = {
+  shadowColor: Colors.primary,
+  shadowOpacity: 0.04,
+  shadowRadius: 16,
+  shadowOffset: { width: 0, height: 4 },
   elevation: 2,
 } as const;
 
+const m = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: Colors.background },
+  grid:   { flexDirection: "row", flexWrap: "wrap" },
+
+  // Hero
+  hero:        { borderRadius: 24, padding: 20, gap: 18, overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.06)" },
+  heroAccent:  { position: "absolute", top: 0, right: 24, width: 56, height: 3, borderBottomLeftRadius: 3, borderBottomRightRadius: 3, backgroundColor: Colors.gold },
+  heroTop:     { flexDirection: "row", alignItems: "center", gap: 12 },
+  heroGreet:   { color: "#fff", fontSize: 19, fontWeight: "700", letterSpacing: -0.2 },
+  heroDate:    { color: "rgba(255,255,255,0.5)", fontSize: 12, fontWeight: "600" },
+  heroClock:   { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "rgba(255,255,255,0.08)", paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999 },
+  heroClockTxt:{ color: "#fff", fontSize: 12, fontWeight: "700", fontVariant: ["tabular-nums" as any] },
+  heroMid:     { flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between" },
+  heroLbl:     { color: "rgba(255,255,255,0.5)", fontSize: 11, fontWeight: "600" },
+  heroRevenue: { color: "#fff", fontSize: 34, fontWeight: "700", letterSpacing: -0.8, fontVariant: ["tabular-nums" as any] },
+  heroCur:     { fontSize: 14, fontWeight: "600", color: Colors.goldLight, letterSpacing: 0 },
+  heroOrders:  { alignItems: "center", gap: 2 },
+  heroOrdersNum:{ color: "#fff", fontSize: 26, fontWeight: "700", letterSpacing: -0.5, fontVariant: ["tabular-nums" as any] },
+  progress:    { height: 4, borderRadius: 2, overflow: "hidden", flexDirection: "row", backgroundColor: "rgba(255,255,255,0.08)", gap: 2 },
+  heroStats:   { flexDirection: "row", gap: 8 },
+  heroStat:    { flex: 1, flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 14, paddingHorizontal: 10, paddingVertical: 8 },
+  heroStatDot: { width: 6, height: 6, borderRadius: 3 },
+  heroStatNum: { fontSize: 15, fontWeight: "900", fontVariant: ["tabular-nums" as any] },
+  heroStatLbl: { color: "rgba(255,255,255,0.55)", fontSize: 11, fontWeight: "600", flexShrink: 1 },
+
+  // CTA
+  cta:     { flexDirection: "row", alignItems: "center", gap: 12, borderRadius: 20, paddingVertical: 15, paddingHorizontal: 16, ...CARD_SHADOW, shadowColor: Colors.gold, shadowOpacity: 0.22 },
+  ctaIcon: { width: 40, height: 40, borderRadius: 14, backgroundColor: "#fff", alignItems: "center", justifyContent: "center" },
+  ctaTxt:  { color: "#fff", fontSize: 16, fontWeight: "700" },
+  ctaSub:  { color: "rgba(255,255,255,0.78)", fontSize: 11, fontWeight: "500" },
+
+  // Section heading
+  secHead:  { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 2 },
+  secTitle: { color: Colors.text, fontSize: 16, fontWeight: "700", letterSpacing: -0.2 },
+  secRight: { color: Colors.textSecondary, fontSize: 12, fontWeight: "600" },
+
+  // Ops cards
+  opsCard:        { backgroundColor: Colors.surface, borderRadius: 20, padding: 14, gap: 12, borderWidth: 1, borderColor: Colors.borderLight, ...CARD_SHADOW },
+  opsCardPrimary: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  opsIcon:        { width: 42, height: 42, borderRadius: 14, alignItems: "center", justifyContent: "center" },
+  opsLabel:       { color: Colors.text, fontSize: 14, fontWeight: "700" },
+  opsCap:         { color: Colors.textMuted, fontSize: 11, fontWeight: "600" },
+
+  // Dept cards
+  deptCard:      { backgroundColor: Colors.surface, borderRadius: 18, padding: 12, paddingTop: 14, gap: 8, borderWidth: 1, borderColor: Colors.borderLight, overflow: "hidden", ...CARD_SHADOW },
+  deptStrip:     { position: "absolute", top: 0, left: 0, right: 0, height: 3 },
+  deptTop:       { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  deptIcon:      { width: 36, height: 36, borderRadius: 11, alignItems: "center", justifyContent: "center" },
+  deptCount:     { minWidth: 22, height: 22, borderRadius: 11, paddingHorizontal: 6, alignItems: "center", justifyContent: "center" },
+  deptCountTxt:  { color: "#fff", fontSize: 11, fontWeight: "900" },
+  deptLabel:     { color: Colors.text, fontSize: 13, fontWeight: "700" },
+  deptStatusRow: { flexDirection: "row", alignItems: "center", gap: 5 },
+  deptDot:       { width: 6, height: 6, borderRadius: 3 },
+  deptStatus:    { color: Colors.textSecondary, fontSize: 10.5, fontWeight: "600", flexShrink: 1 },
+
+  // Admin row
+  adminRow:      { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: Colors.surface, borderRadius: 20, padding: 14, borderWidth: 1, borderColor: Colors.borderLight, ...CARD_SHADOW },
+  adminBadge:    { minWidth: 22, height: 22, borderRadius: 11, paddingHorizontal: 6, backgroundColor: Colors.accent, alignItems: "center", justifyContent: "center" },
+  adminBadgeTxt: { color: "#fff", fontSize: 11, fontWeight: "900" },
+});
+
+// Wide-layout info panel styles (unchanged look)
 const s = StyleSheet.create({
-  screen:      { flex: 1, backgroundColor: UI.bg },
-  wideLayout:  { flex: 1, flexDirection: "row" },
-
-  section:     { gap: 12 },
-  grid:        { flexDirection: "row", flexWrap: "wrap" },
-
-  // Wide header
-  wideHead:     { flexDirection: "row", alignItems: "flex-end" },
-  wideGreeting: { color: UI.ink, fontSize: 24, fontWeight: "900" },
-  wideDate:     { color: UI.muted, fontSize: 13, fontWeight: "600" },
-
-  // Hero (narrow)
-  hero:         { borderRadius: 26, padding: 18, gap: 16, overflow: "hidden", ...softShadow, shadowOpacity: 0.18 },
-  heroGlow:     { position: "absolute", top: -120, end: -100, width: 240, height: 240, borderRadius: 120, backgroundColor: "rgba(232,201,106,0.06)" },
-  heroTop:      { flexDirection: "row", alignItems: "center", gap: 12 },
-  heroGreeting: { color: "#FFFFFF", fontSize: 18, fontWeight: "900" },
-  heroDate:     { color: "rgba(255,255,255,0.55)", fontSize: 12, fontWeight: "600" },
-  clockPill:    { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.08)", borderWidth: 1, borderColor: "rgba(255,255,255,0.12)" },
-  clockPillTxt: { color: "#FFFFFF", fontSize: 12, fontWeight: "800", fontVariant: ["tabular-nums" as any] },
-  heroLabel:    { color: "rgba(255,255,255,0.55)", fontSize: 12, fontWeight: "700" },
-  heroRevenue:  { color: UI.goldHi, fontSize: 34, fontWeight: "900", fontVariant: ["tabular-nums" as any], letterSpacing: 0.5 },
-  heroCur:      { color: "rgba(232,201,106,0.7)", fontSize: 14, fontWeight: "700" },
-  flowTrack:    { flexDirection: "row", height: 6, borderRadius: 3, overflow: "hidden", backgroundColor: "rgba(255,255,255,0.1)", gap: 2 },
-  heroStats:    { flexDirection: "row", gap: 8 },
-  heroStat:     { flex: 1, paddingVertical: 10, paddingHorizontal: 8, borderRadius: 14, backgroundColor: "rgba(255,255,255,0.06)", borderWidth: 1, borderColor: "rgba(255,255,255,0.08)", alignItems: "center", gap: 4 },
-  heroStatNum:  { fontSize: 20, fontWeight: "900", fontVariant: ["tabular-nums" as any] },
-  heroStatLblRow: { flexDirection: "row", alignItems: "center", gap: 4 },
-  heroStatDot:  { width: 5, height: 5, borderRadius: 3 },
-  heroStatLbl:  { color: "rgba(255,255,255,0.6)", fontSize: 10, fontWeight: "700" },
-
-  // Info panel
-  infoPanel:        { flexShrink: 0, borderStartWidth: 1, borderStartColor: "rgba(255,255,255,0.06)" },
+  infoPanel:        { flexShrink: 0, borderLeftWidth: 1, borderLeftColor: "rgba(255,255,255,0.06)" },
   infoPanelContent: { padding: 22, gap: 18 },
-
-  // Brand
   laviWrap:     { alignItems: "center", paddingTop: 8, paddingBottom: 4 },
   laviLogo:     { width: 190, height: 72 },
   brandWrap:    { alignItems: "center", gap: 10, paddingTop: 8 },
   brandBadge:   { width: 52, height: 52, borderRadius: 16, alignItems: "center", justifyContent: "center" },
-  brandBadgeTxt:{ fontSize: 26, fontWeight: "900", color: "#0A1628" },
+  brandBadgeTxt:{ fontSize: 26, fontWeight: "900", color: Colors.primary },
   brandName:    { color: "#fff", fontSize: 15, fontWeight: "800", textAlign: "center" },
-
-  goldRule: { height: 1, borderRadius: 1 },
-
-  // Employee
-  empSection: { gap: 10 },
-  liveRow:    { flexDirection: "row", alignItems: "center", gap: 7 },
-  liveDot:    { width: 7, height: 7, borderRadius: 4, backgroundColor: "#34D399" },
-  liveTxt:    { color: "#34D399", fontSize: 11, fontWeight: "700" },
-  empCard:    { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: "rgba(255,255,255,0.05)", borderRadius: 12, padding: 12, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" },
-  empAvatar:  { width: 42, height: 42, borderRadius: 21, borderWidth: 2, alignItems: "center", justifyContent: "center" },
-  empAvatarTxt:{ fontSize: 18, fontWeight: "900" },
-  empInfo:    { flex: 1, gap: 4 },
-  empName:    { color: "#fff", fontSize: 14, fontWeight: "700" },
-  empRoleBadge:{ alignSelf: "flex-start", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
-  empRoleTxt: { fontSize: 10, fontWeight: "700" },
-  noEmp:      { color: "rgba(255,255,255,0.3)", fontSize: 12, fontStyle: "italic" },
-
-  // Stats
+  goldRule:     { height: 1, borderRadius: 1 },
+  empSection:   { gap: 10 },
+  liveRow:      { flexDirection: "row", alignItems: "center", gap: 7 },
+  liveDot:      { width: 8, height: 8, borderRadius: 4, backgroundColor: HERO_DONE },
+  liveTxt:      { color: HERO_DONE, fontSize: 11, fontWeight: "700" },
+  empCard:      { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: "rgba(255,255,255,0.05)", borderRadius: 12, padding: 12, borderWidth: 1, borderColor: "rgba(255,255,255,0.08)" },
+  empAvatar:    { width: 42, height: 42, borderRadius: 21, borderWidth: 2, alignItems: "center", justifyContent: "center" },
+  empAvatarTxt: { fontSize: 18, fontWeight: "900" },
+  empInfo:      { flex: 1, gap: 4 },
+  empName:      { color: "#fff", fontSize: 14, fontWeight: "700" },
+  empRoleBadge: { alignSelf: "flex-start", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
+  empRoleTxt:   { fontSize: 10, fontWeight: "700" },
+  noEmp:        { color: "rgba(255,255,255,0.3)", fontSize: 12, fontStyle: "italic" },
   statsSection: { gap: 8 },
   statsTitle:   { color: "rgba(255,255,255,0.35)", fontSize: 10, fontWeight: "700", letterSpacing: 1 },
   statsGrid:    { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-
-  // Revenue
-  revenueSection: { backgroundColor: "rgba(201,168,76,0.08)", borderRadius: 12, padding: 14, borderWidth: 1, borderColor: "rgba(201,168,76,0.2)", gap: 4 },
-  revenueLabel:   { color: "rgba(255,255,255,0.4)", fontSize: 10, fontWeight: "600" },
-  revenueValue:   { color: Colors.gold, fontSize: 22, fontWeight: "900", fontVariant: ["tabular-nums" as any] },
-  revenueCur:     { fontSize: 13, fontWeight: "600" },
-
-  thinRule: { height: StyleSheet.hairlineWidth, backgroundColor: "rgba(255,255,255,0.1)" },
-
-  // Clock
+  trackerSection:{ gap: 10 },
+  trackerTitle: { color: "rgba(255,255,255,0.35)", fontSize: 10, fontWeight: "700", letterSpacing: 1 },
   clockSection: { alignItems: "center", gap: 4 },
   clockTime:    { color: "#fff", fontSize: 36, fontWeight: "900", fontVariant: ["tabular-nums" as any], letterSpacing: 1 },
   clockSecs:    { color: "rgba(255,255,255,0.35)", fontSize: 13, fontVariant: ["tabular-nums" as any] },
   clockDate:    { color: "rgba(255,255,255,0.35)", fontSize: 11, marginTop: 2 },
-
-  // Cashier tracker — desktop info panel
-  trackerSection:  { gap: 10 },
-  trackerTitle:    { color: "rgba(255,255,255,0.35)", fontSize: 10, fontWeight: "700", letterSpacing: 1 },
-});
-
-const ac = StyleSheet.create({
-  card:        { backgroundColor: UI.card, borderRadius: 20, padding: 14, gap: 14, borderWidth: 1, borderColor: UI.line, ...softShadow },
-  cardPressed: { transform: [{ scale: 0.97 }], backgroundColor: "#FBF9F5" },
-  top:         { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between" },
-  iconBox:     { width: 44, height: 44, borderRadius: 14, alignItems: "center", justifyContent: "center" },
-  badge:       { minWidth: 22, height: 22, borderRadius: 11, paddingHorizontal: 6, alignItems: "center", justifyContent: "center" },
-  badgeTxt:    { color: "#fff", fontSize: 11, fontWeight: "900" },
-  label:       { color: UI.ink, fontSize: 15, fontWeight: "800" },
-  captionRow:  { flexDirection: "row", alignItems: "center", gap: 5 },
-  captionDot:  { width: 6, height: 6, borderRadius: 3 },
-  caption:     { color: UI.muted, fontSize: 12, fontWeight: "500", flexShrink: 1 },
-});
-
-const cta = StyleSheet.create({
-  wrap:       { borderRadius: 18, overflow: "hidden", shadowColor: UI.goldDeep, shadowOpacity: 0.35, shadowRadius: 16, shadowOffset: { width: 0, height: 8 }, elevation: 4 },
-  inner:      { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 14, paddingHorizontal: 14 },
-  iconCircle: { width: 42, height: 42, borderRadius: 21, backgroundColor: "rgba(255,255,255,0.35)", alignItems: "center", justifyContent: "center" },
-  title:      { color: "#1A1206", fontSize: 16, fontWeight: "900" },
-  sub:        { color: "rgba(26,18,6,0.65)", fontSize: 12, fontWeight: "600" },
-});
-
-const sh = StyleSheet.create({
-  row:      { flexDirection: "row", alignItems: "center", gap: 8 },
-  title:    { color: UI.ink, fontSize: 16, fontWeight: "900" },
-  countPill:{ minWidth: 22, height: 22, borderRadius: 11, paddingHorizontal: 7, backgroundColor: UI.ink, alignItems: "center", justifyContent: "center" },
-  countTxt: { color: "#fff", fontSize: 11, fontWeight: "800" },
-  line:     { flex: 1, height: 1, backgroundColor: UI.line },
 });
 
 const sc2 = StyleSheet.create({
@@ -731,7 +772,7 @@ const sc2 = StyleSheet.create({
 const ct = StyleSheet.create({
   emptyTxt:    { fontSize: 12, marginTop: 8 },
   card:        { borderRadius: 10, borderWidth: 1, padding: 10, gap: 7, overflow: "hidden" as const, position: "relative" as const },
-  doneLine:    { position: "absolute", top: 0, left: 0, right: 0, height: 2, backgroundColor: "#34D399" },
+  doneLine:    { position: "absolute", top: 0, left: 0, right: 0, height: 2, backgroundColor: Colors.statusDone },
   cardHead:    { flexDirection: "row", alignItems: "center", gap: 8 },
   orderNum:    { fontSize: 13, fontWeight: "800", minWidth: 36 },
   custName:    { flex: 1, fontSize: 12, fontWeight: "600" },

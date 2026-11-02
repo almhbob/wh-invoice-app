@@ -1,3 +1,5 @@
+import { LiveAlertsHost } from "@/components/LiveAlertsHost";
+import { HrReminderHost } from "@/components/hr/HrReminderHost";
 import { Feather } from "@expo/vector-icons";
 import { BlurView } from "expo-blur";
 import { Image } from "expo-image";
@@ -26,9 +28,9 @@ import { PLATFORM_OWNER } from "@/constants/platform";
 import {
   canAccessDept, canDo,
   ROLE_CAN_ACCESS_ADMIN,
-  ROLE_CAN_VIEW_ARCHIVE, ROLE_CAN_VIEW_BRANCH_FEATURES,
+  ROLE_CAN_VIEW_ARCHIVE, ROLE_CAN_VIEW_BRANCH_FEATURES, ROLE_CAN_VIEW_WINDOW_ORDER,
   ROLE_CAN_VIEW_CASHIER, ROLE_CAN_VIEW_CUSTOMERS,
-  ROLE_CAN_VIEW_DELIVERY, ROLE_CAN_VIEW_REPORTS,
+  ROLE_CAN_VIEW_DELIVERY, ROLE_CAN_VIEW_ONLINE_ORDERS, ROLE_CAN_VIEW_REPORTS,
   ROLE_CAN_VIEW_TRAYS,
 } from "@/constants/rbac";
 import { useCompany } from "@/context/CompanyContext";
@@ -43,9 +45,11 @@ const ROLE_COLORS: Record<string, string> = {
   chocolate: Colors.chocolate,
   cake: Colors.cake,
   packaging: Colors.packaging,
+  calligrapher: Colors.purple,
+  driver: Colors.success,
   admin: Colors.primaryLight,
-  branch_supervisor: "#0d9488",
-  dept_supervisor: "#0891b2",
+  branch_supervisor: Colors.success,
+  dept_supervisor: Colors.info,
   guest: Colors.textMuted,
 };
 
@@ -54,8 +58,8 @@ const TENANT_BRANDS: Record<string, { name: string; subtitle: string; logoText: 
     name: "Laviviane",
     subtitle: "Maison de Pâtisserie",
     logoText: "L",
-    primary: "#2f241d",
-    accent: "#d6b56d",
+    primary: Colors.espressoMid,
+    accent: Colors.goldLight,
   },
   "select-company": {
     name: PLATFORM_OWNER.nameAr,
@@ -70,7 +74,6 @@ interface LogoHeaderProps {
   titleKey: string;
   accentColor?: string;
   isDesktop?: boolean;
-  hideBadge?: boolean;
 }
 
 function FawtaraMark() {
@@ -107,7 +110,7 @@ function TenantLogoMark({ logoText, primary, accent, small }: { logoText: string
   );
 }
 
-function LogoHeader({ titleKey, accentColor, isDesktop, hideBadge }: LogoHeaderProps) {
+function LogoHeader({ titleKey, accentColor, isDesktop }: LogoHeaderProps) {
   const insets = useSafeAreaInsets();
   const topInset = Platform.OS === "web" ? 0 : insets.top;
   const { company } = useCompany();
@@ -175,11 +178,9 @@ function LogoHeader({ titleKey, accentColor, isDesktop, hideBadge }: LogoHeaderP
               )}
             </TouchableOpacity>
           )}
-          {!hideBadge && (
-            <View style={[styles.screenBadge, { borderColor: accentColor ?? tenantBrand.accent }]}>
-              <Text style={styles.screenBadgeText} numberOfLines={1}>{titleKey}</Text>
-            </View>
-          )}
+          <View style={[styles.screenBadge, { backgroundColor: accentColor ?? tenantBrand.accent }]}>
+            <Text style={styles.screenBadgeText} numberOfLines={1}>{titleKey}</Text>
+          </View>
         </View>
         <View style={[styles.goldLine, { backgroundColor: tenantBrand.accent }]} />
       </View>
@@ -196,14 +197,18 @@ const DEPT_TABS: TabDef[] = [
   { name: "chocolate", labelKey: "tabChocolate",  titleKey: "titleChocolate", icon: "gift",     sf: "gift",                         accent: Colors.chocolate },
   { name: "cake",      labelKey: "tabCake",       titleKey: "titleCake",      icon: "layers",   sf: "birthday.cake",                accent: Colors.cake },
   { name: "packaging", labelKey: "tabPackaging",  titleKey: "titlePackaging", icon: "box",      sf: "shippingbox",                  accent: Colors.packaging },
+  { name: "writing",   labelKey: "tabWriting",    titleKey: "titleWriting",   icon: "edit-3",   sf: "pencil",                       accent: Colors.purple },
 ];
 
 const MORE_TABS: TabDef[] = [
   { name: "branch-orders",    labelKey: "tabBranchOrders",    titleKey: "titleBranchOrders",    icon: "clipboard",    sf: "list.clipboard",                   accent: Colors.gold },
-  { name: "branch-inventory", labelKey: "tabBranchInventory", titleKey: "titleBranchInventory", icon: "bar-chart-2",  sf: "chart.bar",                        accent: "#2563eb" },
-  { name: "branches",         labelKey: "tabBranches",        titleKey: "titleManageBranches",  icon: "git-branch",   sf: "building.2",                       accent: "#0d9488" },
-  { name: "customers",        labelKey: "tabCustomers",       titleKey: "titleCustomers",       icon: "users",        sf: "person.2",                         accent: "#0891b2" },
-  { name: "delivery",         labelKey: "tabDelivery",        titleKey: "titleDelivery",        icon: "truck",        sf: "shippingbox.and.arrow.backward",   accent: "#0d9488" },
+  { name: "branch-inventory", labelKey: "tabBranchInventory", titleKey: "titleBranchInventory", icon: "bar-chart-2",  sf: "chart.bar",                        accent: Colors.info },
+  { name: "branches",         labelKey: "tabBranches",        titleKey: "titleManageBranches",  icon: "git-branch",   sf: "building.2",                       accent: Colors.success },
+  { name: "customers",        labelKey: "tabCustomers",       titleKey: "titleCustomers",       icon: "users",        sf: "person.2",                         accent: Colors.packaging },
+  { name: "online",           labelKey: "tabOnline",          titleKey: "titleOnline",          icon: "globe",        sf: "globe",                            accent: Colors.info },
+  { name: "driver",           labelKey: "tabMyDeliveries",    titleKey: "titleMyDeliveries",    icon: "truck",        sf: "car",                              accent: Colors.success },
+  { name: "tracking",         labelKey: "tabTracking",        titleKey: "titleTracking",        icon: "navigation",   sf: "location",                         accent: Colors.gold },
+  { name: "delivery",         labelKey: "tabDelivery",        titleKey: "titleDelivery",        icon: "truck",        sf: "shippingbox.and.arrow.backward",   accent: Colors.success },
   { name: "trays",            labelKey: "tabTrays",           titleKey: "titleTrays",           icon: "layers",       sf: "tray.2",                           accent: Colors.gold },
   { name: "admin",            labelKey: "tabAdmin",           titleKey: "titleAdmin",           icon: "settings",     sf: "gearshape",                        accent: Colors.primaryLight },
   { name: "settings",         labelKey: "tabSettings",        titleKey: "tabSettings",          icon: "sliders",      sf: "gearshape.2",                      accent: Colors.primary },
@@ -245,9 +250,12 @@ function DesktopSidebar({ activePath, navigate, isRTL }: { activePath: string; n
   const showReportsNav = !hasRole || canDo(role, ROLE_CAN_VIEW_REPORTS);
   const visibleDepts = !hasRole ? DEPT_TABS : DEPT_TABS.filter(d => canAccessDept(role, d.name));
   const visibleMore = (!hasRole ? MORE_TABS : MORE_TABS.filter(m => {
-    if (["branch-orders", "branch-inventory", "branches"].includes(m.name)) return canDo(role, ROLE_CAN_VIEW_BRANCH_FEATURES);
+    if (m.name === "branch-orders") return canDo(role, ROLE_CAN_VIEW_WINDOW_ORDER);
+    if (["branch-inventory", "branches"].includes(m.name)) return canDo(role, ROLE_CAN_VIEW_BRANCH_FEATURES);
     if (m.name === "customers") return canDo(role, ROLE_CAN_VIEW_CUSTOMERS);
-    if (m.name === "delivery") return canDo(role, ROLE_CAN_VIEW_DELIVERY);
+    if (m.name === "delivery" || m.name === "tracking") return canDo(role, ROLE_CAN_VIEW_DELIVERY);
+    if (m.name === "online") return canDo(role, ROLE_CAN_VIEW_ONLINE_ORDERS);
+    if (m.name === "driver") return role === "driver";
     if (m.name === "trays") return canDo(role, ROLE_CAN_VIEW_TRAYS);
     if (m.name === "admin") return canDo(role, ROLE_CAN_ACCESS_ADMIN);
     return true;
@@ -302,6 +310,7 @@ function DesktopSidebar({ activePath, navigate, isRTL }: { activePath: string; n
         {/* Navigation */}
         <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingVertical: 8 }}>
           <SideNavItem label={t("tabLiveOrders")} icon="activity" active={isHome} accent={Colors.gold} onPress={() => navigate("home")} />
+          {role === "driver" && <SideNavItem label={t("tabMyDeliveries")} icon="truck" active={activePath.includes("driver")} accent={Colors.success} onPress={() => navigate("driver")} />}
           {showCashierNav && <SideNavItem label={t("tabCashier")} icon="file-text" active={isCashier} accent={Colors.gold} onPress={() => navigate("cashier")} />}
 
           {visibleDepts.length > 0 && (
@@ -320,8 +329,8 @@ function DesktopSidebar({ activePath, navigate, isRTL }: { activePath: string; n
             />
           ))}
 
-          {showArchiveNav && <SideNavItem label={t("tabArchive")} icon="archive" active={isArchive} accent={Colors.primaryLight} onPress={() => navigate("archive")} />}
-          {showReportsNav && <SideNavItem label={t("tabReports")} icon="pie-chart" active={isReports} accent="#8b5cf6" onPress={() => navigate("reports")} />}
+          {showArchiveNav && <SideNavItem label={t("tabArchive")} icon="archive" active={isArchive} accent={Colors.info} onPress={() => navigate("archive")} />}
+          {showReportsNav && <SideNavItem label={t("tabReports")} icon="pie-chart" active={isReports} accent={Colors.purple} onPress={() => navigate("reports")} />}
 
           {visibleMore.length > 0 && (
             <SideNavItem
@@ -435,9 +444,12 @@ function CustomTabBar() {
   const showReportsTab = !hasRole || canDo(role, ROLE_CAN_VIEW_REPORTS);
   const visibleDeptsTab = !hasRole ? DEPT_TABS : DEPT_TABS.filter(d => canAccessDept(role, d.name));
   const visibleMoreTab = (!hasRole ? MORE_TABS : MORE_TABS.filter(m => {
-    if (["branch-orders", "branch-inventory", "branches"].includes(m.name)) return canDo(role, ROLE_CAN_VIEW_BRANCH_FEATURES);
+    if (m.name === "branch-orders") return canDo(role, ROLE_CAN_VIEW_WINDOW_ORDER);
+    if (["branch-inventory", "branches"].includes(m.name)) return canDo(role, ROLE_CAN_VIEW_BRANCH_FEATURES);
     if (m.name === "customers") return canDo(role, ROLE_CAN_VIEW_CUSTOMERS);
-    if (m.name === "delivery") return canDo(role, ROLE_CAN_VIEW_DELIVERY);
+    if (m.name === "delivery" || m.name === "tracking") return canDo(role, ROLE_CAN_VIEW_DELIVERY);
+    if (m.name === "online") return canDo(role, ROLE_CAN_VIEW_ONLINE_ORDERS);
+    if (m.name === "driver") return role === "driver";
     if (m.name === "trays") return canDo(role, ROLE_CAN_VIEW_TRAYS);
     if (m.name === "admin") return canDo(role, ROLE_CAN_ACCESS_ADMIN);
     return true;
@@ -451,8 +463,8 @@ function CustomTabBar() {
   const isMore = visibleMoreTab.some((m) => pathname.includes(m.name));
   const activeDeptAccent = visibleDeptsTab.find((d) => pathname.includes(d.name))?.accent ?? Colors.primary;
   const activeMoreAccent = visibleMoreTab.find((m) => pathname.includes(m.name))?.accent ?? Colors.primary;
-  const bg = isDark ? "#0d1117" : "#ffffff";
-  const border = isDark ? "rgba(255,255,255,0.08)" : "#ECE6DB";
+  const bg = isDark ? Colors.espressoDeep : Colors.surface;
+  const border = isDark ? "rgba(217,192,143,0.12)" : Colors.border;
   const tabH = 64;
   const pb = Platform.OS === "ios" ? insets.bottom : 8;
   const isWeb = Platform.OS === "web";
@@ -464,10 +476,11 @@ function CustomTabBar() {
         {isIOS && <BlurView intensity={90} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />}
         {!isIOS && <View style={[StyleSheet.absoluteFill, { backgroundColor: bg }]} />}
         <BarItem label={t("tabHome")} icon="activity" sf="list.bullet.rectangle" active={isHome} accent={Colors.gold} onPress={() => navigate("home")} />
+        {role === "driver" && <BarItem label={t("tabMyDeliveries")} icon="truck" sf="car" active={pathname.includes("driver")} accent={Colors.success} onPress={() => navigate("driver")} />}
         {showCashierTab && <BarItem label={t("tabCashier")} icon="file-text" sf="doc.text" active={isCashier} accent={Colors.gold} onPress={() => navigate("cashier")} />}
         {visibleDeptsTab.length > 0 && <BarItem label={t("tabDepts")} icon="grid" sf="square.grid.2x2" active={isDept} accent={activeDeptAccent} badge={showDepts ? "▲" : "▼"} onPress={() => setShowDepts((v) => !v)} />}
-        {showArchiveTab && <BarItem label={t("tabArchive")} icon="archive" sf="archivebox" active={isArchive} accent={Colors.primaryLight} onPress={() => navigate("archive")} />}
-        {showReportsTab && <BarItem label={t("tabReports")} icon="pie-chart" sf="chart.pie" active={isReports} accent="#8b5cf6" onPress={() => navigate("reports")} />}
+        {showArchiveTab && <BarItem label={t("tabArchive")} icon="archive" sf="archivebox" active={isArchive} accent={Colors.info} onPress={() => navigate("archive")} />}
+        {showReportsTab && <BarItem label={t("tabReports")} icon="pie-chart" sf="chart.pie" active={isReports} accent={Colors.purple} onPress={() => navigate("reports")} />}
         {visibleMoreTab.length > 0 && <BarItem label={t("tabMore")} icon="more-horizontal" sf="ellipsis" active={isMore} accent={activeMoreAccent} badge={showMore ? "▲" : "▼"} onPress={() => setShowMore((v) => !v)} />}
       </View>
     </>
@@ -478,7 +491,7 @@ function BarItem({ label, icon, sf, active, accent, badge, onPress }: {
   label: string; icon: string; sf?: string; active: boolean; accent: string; badge?: string; onPress: () => void;
 }) {
   const isIOS = Platform.OS === "ios";
-  const iconColor = active ? accent : "#78716C";
+  const iconColor = active ? accent : Colors.textSecondary;
   return (
     <TouchableOpacity style={styles.barItem} onPress={onPress} activeOpacity={0.7}>
       {active && <View style={[styles.activePill, { backgroundColor: accent }]} />}
@@ -494,7 +507,7 @@ function BarItem({ label, icon, sf, active, accent, badge, onPress }: {
 // ── Root layout ────────────────────────────────────────────────────────────────
 
 const SCREEN_META: Record<string, { titleKey: string; accent: string }> = {
-  home:             { titleKey: "titleLiveOrders", accent: Colors.gold },
+  home:             { titleKey: "titleLiveOrders", accent: Colors.primary },
   cashier:          { titleKey: "titleCashier",   accent: Colors.gold },
   halwa:            { titleKey: "titleHalwa",      accent: Colors.halwa },
   mawali:           { titleKey: "titleMawali",     accent: Colors.mawali },
@@ -502,13 +515,17 @@ const SCREEN_META: Record<string, { titleKey: string; accent: string }> = {
   cake:             { titleKey: "titleCake",       accent: Colors.cake },
   packaging:        { titleKey: "titlePackaging",  accent: Colors.packaging },
   archive:          { titleKey: "titleArchive",    accent: Colors.primaryLight },
-  reports:          { titleKey: "titleReports",    accent: "#8b5cf6" },
-  developer:        { titleKey: "titleDeveloper",      accent: "#7c3aed" },
+  reports:          { titleKey: "titleReports",    accent: Colors.purple },
+  developer:        { titleKey: "titleDeveloper",      accent: Colors.purple },
   "branch-orders":  { titleKey: "titleBranchOrders",   accent: Colors.gold },
-  "branch-inventory": { titleKey: "titleBranchInventory", accent: "#2563eb" },
-  branches:         { titleKey: "titleManageBranches", accent: "#0d9488" },
-  customers:        { titleKey: "titleCustomers",  accent: "#0891b2" },
-  delivery:         { titleKey: "titleDelivery",   accent: "#0d9488" },
+  "branch-inventory": { titleKey: "titleBranchInventory", accent: Colors.info },
+  branches:         { titleKey: "titleManageBranches", accent: Colors.success },
+  customers:        { titleKey: "titleCustomers",  accent: Colors.packaging },
+  tracking:         { titleKey: "titleTracking",   accent: Colors.gold },
+  writing:          { titleKey: "titleWriting",    accent: Colors.purple },
+  driver:           { titleKey: "titleMyDeliveries", accent: Colors.success },
+  online:           { titleKey: "titleOnline",     accent: Colors.info },
+  delivery:         { titleKey: "titleDelivery",   accent: Colors.success },
   trays:            { titleKey: "titleTrays",      accent: Colors.gold },
   admin:            { titleKey: "titleAdmin",      accent: Colors.primaryLight },
   settings:         { titleKey: "tabSettings",      accent: Colors.primary },
@@ -550,6 +567,10 @@ export default function TabLayout() {
       <Tabs.Screen name="branches"         options={{ title: t("titleManageBranches"), headerShown: false }} />
       <Tabs.Screen name="customers"        options={{ title: t("titleCustomers"), headerShown: false }} />
       <Tabs.Screen name="delivery"         options={{ title: t("titleDelivery"),  headerShown: false }} />
+      <Tabs.Screen name="tracking"         options={{ title: t("titleTracking"),  headerShown: false }} />
+      <Tabs.Screen name="writing"          options={{ title: t("titleWriting"),   headerShown: false }} />
+      <Tabs.Screen name="driver"           options={{ title: t("titleMyDeliveries"), headerShown: false }} />
+      <Tabs.Screen name="online"           options={{ title: t("titleOnline"),    headerShown: false }} />
       <Tabs.Screen name="trays"            options={{ title: t("titleTrays"),     headerShown: false }} />
       <Tabs.Screen name="admin"            options={{ title: t("titleAdmin"),     headerShown: false }} />
       <Tabs.Screen name="settings"         options={{ title: t("tabSettings"),    headerShown: false }} />
@@ -563,6 +584,8 @@ export default function TabLayout() {
         <DesktopSidebar activePath={pathname} navigate={navigate} isRTL={isRTL} />
         <View style={ds.content}>
           <OfflineBanner />
+          <LiveAlertsHost />
+          <HrReminderHost />
           <View style={[ds.contentHeader, ds.rowLTR]}>
             <View style={[ds.contentBadge, { backgroundColor: screenAccent }]}>
               <Text style={ds.contentBadgeText}>{screenTitle}</Text>
@@ -578,13 +601,9 @@ export default function TabLayout() {
 
   return (
     <View style={{ flex: 1 }}>
-      <LogoHeader
-        titleKey={screenTitle}
-        accentColor={screenAccent}
-        isDesktop={false}
-        hideBadge={pathname.includes("home") || pathname === "/" || pathname === "/(tabs)"}
-      />
+      <LogoHeader titleKey={screenTitle} accentColor={screenAccent} isDesktop={false} />
       <OfflineBanner />
+      <LiveAlertsHost />
       <Tabs tabBar={() => <CustomTabBar />} screenOptions={{ headerShown: false }}>
         {screens}
       </Tabs>
@@ -595,24 +614,24 @@ export default function TabLayout() {
 // ── Styles ─────────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  headerContainer: { shadowColor: "#000", shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.18, shadowRadius: 8, elevation: 8 },
+  headerContainer: { shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 4 },
   headerInner: { alignItems: "center", paddingHorizontal: 12, paddingVertical: 10, gap: 8 },
   rowLTR: { flexDirection: "row" },
   logoBox: { width: 46, height: 46, borderRadius: 10, overflow: "hidden", borderWidth: 2, backgroundColor: "#fff", alignItems: "center", justifyContent: "center" },
   laviLogoBox: { height: 46, width: 120, borderRadius: 8, overflow: "hidden", backgroundColor: "#fff", alignItems: "center", justifyContent: "center", paddingHorizontal: 4 },
   laviLogoImg: { width: 112, height: 42 },
   fawtaraMark: { width: 31, height: 31, position: "relative" },
-  markBlueStem: { position: "absolute", left: 0, top: 0, width: 10, height: 31, backgroundColor: "#132446" },
-  markBlueFoot: { position: "absolute", left: 0, bottom: 0, width: 22, height: 12, backgroundColor: "#132446" },
-  markGoldTop: { position: "absolute", right: 0, top: 0, width: 24, height: 9, backgroundColor: "#c79a35" },
-  markGoldMid: { position: "absolute", right: 6, top: 13, width: 18, height: 9, backgroundColor: "#c79a35" },
+  markBlueStem: { position: "absolute", left: 0, top: 0, width: 10, height: 31, backgroundColor: "#1F1F1E" },
+  markBlueFoot: { position: "absolute", left: 0, bottom: 0, width: 22, height: 12, backgroundColor: "#1F1F1E" },
+  markGoldTop: { position: "absolute", right: 0, top: 0, width: 24, height: 9, backgroundColor: "#D9602B" },
+  markGoldMid: { position: "absolute", right: 6, top: 13, width: 18, height: 9, backgroundColor: "#D9602B" },
   tenantLogoMark: { width: 38, height: 38, borderRadius: 10, borderWidth: 1.5, alignItems: "center", justifyContent: "center" },
   tenantLogoMarkSmall: { width: 32, height: 32, borderRadius: 8 },
-  tenantLogoText: { fontSize: 22, fontWeight: "900", fontFamily: Platform.OS === "ios" ? "Georgia" : "serif" },
+  tenantLogoText: { fontSize: 21, fontWeight: "700", letterSpacing: -0.5 },
   tenantLogoTextSmall: { fontSize: 18 },
   tenantLogoLine: { width: 18, height: 2, borderRadius: 2, marginTop: 1 },
   brandBlock: { gap: 1, flexShrink: 1, minWidth: 0 },
-  brandName: { fontSize: 16, fontWeight: "900", letterSpacing: 0.3, fontFamily: Platform.OS === "ios" ? "Georgia" : "serif" },
+  brandName: { fontSize: 15, fontWeight: "700", letterSpacing: 1.2 },
   brandSub: { color: "rgba(255,255,255,0.75)", fontSize: 10, fontWeight: "600" },
   langBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.15)", borderWidth: 1, borderColor: "rgba(255,255,255,0.3)", alignItems: "center", justifyContent: "center" },
   langBtnText: { color: "#fff", fontSize: 12, fontWeight: "800" },
@@ -623,24 +642,24 @@ const styles = StyleSheet.create({
   empName: { color: "#fff", fontSize: 11, fontWeight: "600" },
   empId: { color: "rgba(255,255,255,0.7)", fontSize: 10 },
   loginText: { color: "rgba(255,255,255,0.85)", fontSize: 11, fontWeight: "600" },
-  screenBadge: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, flexShrink: 1, maxWidth: 120, backgroundColor: "rgba(255,255,255,0.12)", borderWidth: 1 },
+  screenBadge: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, flexShrink: 1, maxWidth: 120 },
   screenBadgeText: { color: "#fff", fontSize: 11, fontWeight: "700" },
-  goldLine: { height: 2, opacity: 0.75 },
+  goldLine: { height: 1, opacity: 0.9 },
   bar: { flexDirection: "row", borderTopWidth: StyleSheet.hairlineWidth, zIndex: 100, overflow: "hidden" },
   nativeBar: { position: "absolute", bottom: 0, left: 0, right: 0 },
   webBar: { position: "relative", left: 0, right: 0 },
   barItem: { flex: 1, alignItems: "center", justifyContent: "center", paddingTop: 6, gap: 3, position: "relative" },
-  activePill: { position: "absolute", top: 0, width: 32, height: 3, borderRadius: 2 },
+  activePill: { position: "absolute", top: 0, width: 24, height: 3, borderBottomLeftRadius: 3, borderBottomRightRadius: 3 },
   barIconWrap: { flexDirection: "row", alignItems: "center", gap: 2 },
   arrowBadge: { marginTop: 6 },
-  barLabel: { fontSize: 11, fontWeight: "600", color: "#78716C", letterSpacing: 0.1, paddingHorizontal: 2 },
+  barLabel: { fontSize: 11, fontWeight: "600", color: Colors.textSecondary, letterSpacing: 0.1, paddingHorizontal: 2 },
   sheetBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)" },
-  sheetContainer: { backgroundColor: "#F5F2EC", borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingTop: 12, paddingHorizontal: 16, shadowColor: "#000", shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.12, shadowRadius: 16, elevation: 20 },
-  sheetHandle: { alignSelf: "center", width: 40, height: 4, borderRadius: 2, backgroundColor: "#d1d5db", marginBottom: 18 },
+  sheetContainer: { backgroundColor: "#fff", borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingTop: 12, paddingHorizontal: 16, shadowColor: "#000", shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.12, shadowRadius: 16, elevation: 20 },
+  sheetHandle: { alignSelf: "center", width: 40, height: 4, borderRadius: 2, backgroundColor: Colors.border, marginBottom: 18 },
   sheetGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12, justifyContent: "center", paddingBottom: 8 },
-  sheetItem: { width: 88, alignItems: "center", gap: 8, paddingVertical: 14, paddingHorizontal: 8, borderRadius: 20, borderWidth: 1.5, borderColor: "#ECE6DB", backgroundColor: "#fff", position: "relative" },
-  sheetIconCircle: { width: 52, height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center" },
-  sheetItemLabel: { fontSize: 12, fontWeight: "700", color: "#1C1917", textAlign: "center" },
+  sheetItem: { width: 88, alignItems: "center", gap: 8, paddingVertical: 14, paddingHorizontal: 8, borderRadius: 18, borderWidth: 1.5, borderColor: "transparent", backgroundColor: Colors.surfaceSecondary, position: "relative" },
+  sheetIconCircle: { width: 52, height: 52, borderRadius: 16, alignItems: "center", justifyContent: "center" },
+  sheetItemLabel: { fontSize: 12, fontWeight: "700", color: Colors.text, textAlign: "center" },
   sheetActiveDot: { position: "absolute", top: 8, end: 10, width: 7, height: 7, borderRadius: 4 },
 });
 
@@ -653,10 +672,10 @@ const ds = StyleSheet.create({
   brand: { alignItems: "center", gap: 10, paddingHorizontal: 16, paddingTop: 20, paddingBottom: 14 },
   laviBrand: { alignItems: "center", justifyContent: "center", paddingTop: 20, paddingBottom: 14, paddingHorizontal: 12 },
   laviSidebarLogo: { width: 188, height: 72 },
-  brandName: { fontSize: 15, fontWeight: "900", fontFamily: Platform.OS === "ios" ? "Georgia" : "serif" },
+  brandName: { fontSize: 15, fontWeight: "700", letterSpacing: 1.2 },
   brandSub: { color: "rgba(255,255,255,0.45)", fontSize: 10, marginTop: 1 },
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: "rgba(255,255,255,0.12)", marginHorizontal: 12, marginVertical: 4 },
-  navItem: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 10, paddingHorizontal: 14, marginHorizontal: 8, marginVertical: 1, borderRadius: 10, position: "relative" },
+  navItem: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 10, paddingHorizontal: 14, marginHorizontal: 10, marginVertical: 1, borderRadius: 12, position: "relative" },
   navIndent: { paddingStart: 28, marginStart: 12 },
   navActiveLine: { position: "absolute", start: 0, top: "15%" as any, width: 3, height: "70%" as any, borderRadius: 2 },
   navLabel: { fontSize: 13, color: "rgba(255,255,255,0.65)", flex: 1 },
