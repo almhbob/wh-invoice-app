@@ -2,18 +2,39 @@ import { collection, doc, onSnapshot, orderBy, query, runTransaction, setDoc, wh
 
 import { db } from "@/lib/firebase";
 import {
-  canEditOrder, dispatchPatch, FactoryDept, DeptLineStatus, initialDepts, isLateDept, lateDeptPatch, normalizeItems, orderStage,
-  receiptDiff, SalesWindow, WindowOrder, WindowOrderItem, windowOrderId,
+  dispatchPatch, editBlock, FactoryDept, DeptLineStatus, isLateDept, lateDeptPatch, lockedLineChanges, mergeDepts, normalizeCutoff,
+  normalizeItems, orderStage, receiptDiff, SalesWindow, WindowOrder, WindowOrderItem, windowOrderId, WindowSettings,
 } from "@/utils/windowOrders";
 
 export class WindowOrderError extends Error {
-  constructor(public code: "locked" | "not_found" | "not_ready" | "not_dispatched" | "empty" | "already_dispatched" | "not_late") { super(code); }
+  constructor(public code: "locked" | "locked_dept" | "locked_day" | "past_cutoff" | "changed" | "not_found" | "not_ready" | "not_dispatched" | "empty" | "already_dispatched" | "not_late") { super(code); }
 }
 
 const windowsCol = (companyId: string) => collection(db, "companies", companyId, "windows");
 const ordersCol = (companyId: string) => collection(db, "companies", companyId, "windowOrders");
 const orderRef = (companyId: string, id: string) => doc(db, "companies", companyId, "windowOrders", id);
+const settingsRef = (companyId: string) => doc(db, "companies", companyId, "windowSettings", "main");
 const now = () => new Date().toISOString();
+
+export function subscribeWindowSettings(companyId: string, cb: (s: WindowSettings) => void, onError?: () => void) {
+  return onSnapshot(settingsRef(companyId), (snap) => cb((snap.data() as WindowSettings | undefined) ?? {}), () => onError?.());
+}
+
+/** Managers: the evening cutoff for window orders (HH:mm, Riyadh). */
+export async function saveWindowCutoff(companyId: string, cutoff: string) {
+  await setDoc(settingsRef(companyId), { cutoff: normalizeCutoff(cutoff), updatedAt: now() }, { merge: true });
+}
+
+/** Managers: lock a day's window orders (numbers final for production) or unlock it. */
+export async function setDayLock(companyId: string, date: string, locked: boolean, by: string) {
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(settingsRef(companyId));
+    const cur = ((snap.data() as WindowSettings | undefined)?.locked ?? {});
+    const next = { ...cur };
+    if (locked) next[date] = { by, at: now() }; else delete next[date];
+    tx.set(settingsRef(companyId), { locked: next, updatedAt: now() }, { merge: true });
+  });
+}
 
 export function subscribeWindows(companyId: string, cb: (w: SalesWindow[]) => void, onError?: () => void) {
   return onSnapshot(query(windowsCol(companyId), orderBy("sort")), (snap) => {
@@ -33,17 +54,31 @@ export function subscribeWindowOrders(companyId: string, date: string, cb: (o: W
   }, () => onError?.());
 }
 
-/** Send (or change, while no department has started) a window's order for a day. */
-export async function sendWindowOrder(companyId: string, p: { window: SalesWindow; date: string; items: WindowOrderItem[]; note?: string; by: string }) {
+/**
+ * Send or change a window's order for a day. Before dispatch the window may
+ * top up: lines of departments that already started stay as they were, the
+ * rest can change. Blocked after the cutoff or when the day is locked
+ * (managers may override). `baseUpdatedAt` guards against two people editing
+ * the same order at once.
+ */
+export async function sendWindowOrder(companyId: string, p: {
+  window: SalesWindow; date: string; items: WindowOrderItem[]; note?: string; by: string; manager?: boolean; baseUpdatedAt?: string | null;
+}) {
   const items = normalizeItems(p.items);
   if (!items.length) throw new WindowOrderError("empty");
   const id = windowOrderId(p.window.id, p.date);
   await runTransaction(db, async (tx) => {
     const snap = await tx.get(orderRef(companyId, id));
+    const settingsSnap = await tx.get(settingsRef(companyId));
     const prev = snap.exists() ? (snap.data() as WindowOrder) : null;
-    if (prev && !canEditOrder(prev)) throw new WindowOrderError("locked");
+    const settings = (settingsSnap.data() as WindowSettings | undefined) ?? {};
+    const block = editBlock(prev, p.date, settings, { manager: p.manager });
+    if (block === "dispatched") throw new WindowOrderError("locked");
+    if (block) throw new WindowOrderError(block);
+    if (p.baseUpdatedAt !== undefined && (prev?.updatedAt ?? null) !== p.baseUpdatedAt) throw new WindowOrderError("changed");
+    if (lockedLineChanges(prev, items).length) throw new WindowOrderError("locked_dept");
     const data: Record<string, unknown> = {
-      windowId: p.window.id, windowName: p.window.name, date: p.date, status: "sent", items, depts: initialDepts(items),
+      windowId: p.window.id, windowName: p.window.name, date: p.date, status: "sent", items, depts: mergeDepts(prev, items),
       createdBy: prev?.createdBy ?? p.by, sentAt: prev?.sentAt ?? now(), updatedAt: now(), companyId,
     };
     if (p.note?.trim()) data.note = p.note.trim().slice(0, 300);

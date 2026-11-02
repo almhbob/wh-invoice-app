@@ -136,7 +136,7 @@ await t("platform leads: server-created, staff follow up, tenants can't see them
   await assertFails(setDoc(doc(nobody, "platformLeads/L3"), { shopName: "x" }));
 });
 
-await t("sales windows: managers set up, staff order, only managers delete", async () => {
+await t("sales windows: managers set up, staff order, only the admin deletes", async () => {
   await assertSucceeds(setDoc(doc(sup, `companies/${C}/windows/w1`), { name: "نافذة العليا", active: true, sort: 1 }));
   await assertFails(setDoc(doc(cashier, `companies/${C}/windows/w2`), { name: "x", active: true, sort: 2 }));
   await assertSucceeds(getDoc(doc(cashier, `companies/${C}/windows/w1`)));
@@ -144,10 +144,78 @@ await t("sales windows: managers set up, staff order, only managers delete", asy
   await assertSucceeds(setDoc(doc(cashier, `companies/${C}/windowOrders/w1_2026-11-02`), order));
   await assertFails(setDoc(doc(cashier, `companies/${C}/windowOrders/other`), order));
   await assertFails(setDoc(doc(cashier, `companies/${C}/windowOrders/w1_2026-11-03`), { ...order, date: "2026-11-03", status: "deleted" }));
-  await assertSucceeds(updateDoc(doc(cashier, `companies/${C}/windowOrders/w1_2026-11-02`), { "depts.cake": { status: "ready" } }));
   await assertFails(deleteDoc(doc(cashier, `companies/${C}/windowOrders/w1_2026-11-02`)));
+  await assertFails(deleteDoc(doc(sup, `companies/${C}/windowOrders/w1_2026-11-02`)));
   await assertSucceeds(deleteDoc(doc(admin, `companies/${C}/windowOrders/w1_2026-11-02`)));
   await assertFails(getDoc(doc(admin, `companies/${OTHER}/windowOrders/w1_2026-11-02`)));
+});
+
+await t("window order workflow is enforced server-side", async () => {
+  const cake = as("dc", { companyId: C, role: "cake", eid: "dc" });
+  const halwa = as("dh", { companyId: C, role: "halwa", eid: "dh" });
+  const packer = as("dp", { companyId: C, role: "packaging", eid: "dp" });
+  const ref = (db) => doc(db, `companies/${C}/windowOrders/w1_2026-11-05`);
+  const items = [
+    { productId: "p1", name: "كيك", department: "cake", qty: 4 },
+    { productId: "p2", name: "بسبوسة", department: "halwa", qty: 10 },
+  ];
+  const sent = { windowId: "w1", windowName: "نافذة", date: "2026-11-05", status: "sent", items, depts: { cake: { status: "pending" }, halwa: { status: "pending" } }, updatedAt: "t0" };
+
+  // A factory department can't create or edit a window's order.
+  await assertFails(setDoc(ref(cake), sent));
+  await assertSucceeds(setDoc(ref(cashier), sent));
+  await assertFails(updateDoc(ref(cake), { items: [], updatedAt: "t1" }));
+
+  // Each department moves only its own part.
+  await assertSucceeds(updateDoc(ref(cake), { "depts.cake": { status: "ready", by: "c" }, updatedAt: "t1" }));
+  await assertFails(updateDoc(ref(cake), { "depts.halwa": { status: "ready", by: "c" }, updatedAt: "t2" }));
+
+  // The window can top up before dispatch (the app rewrites the whole order in a transaction), but can't dispatch.
+  await assertSucceeds(setDoc(ref(cashier), {
+    ...sent, items: [...items, { productId: "p3", name: "كنافة", department: "halwa", qty: 5 }],
+    depts: { cake: { status: "ready", by: "c" }, halwa: { status: "pending" } }, note: "زيادة", updatedAt: "t2",
+  }));
+  await assertFails(updateDoc(ref(cashier), { status: "dispatched", dispatchedAt: "t3", updatedAt: "t3" }));
+  await assertFails(updateDoc(ref(cake), { status: "dispatched", dispatchedAt: "t3", updatedAt: "t3" }));
+
+  // Packaging dispatches what's ready; halwa is left behind.
+  await assertSucceeds(updateDoc(ref(packer), {
+    status: "dispatched", dispatchedAt: "t3", dispatchedBy: "p", updatedAt: "t3", lateDepts: ["halwa"],
+    items: [{ ...items[0], sentQty: 4 }, { ...items[1], sentQty: 0 }],
+  }));
+  // After dispatch the window can't change the lines any more.
+  await assertFails(updateDoc(ref(cashier), { note: "x", updatedAt: "t4" }));
+  // Only the late department may send its part; cake is not late.
+  await assertFails(updateDoc(ref(cake), { lateDepts: [], updatedAt: "t4" }));
+  await assertSucceeds(updateDoc(ref(halwa), {
+    lateDepts: [], "depts.halwa": { status: "ready", by: "h" }, updatedAt: "t4",
+    items: [{ ...items[0], sentQty: 4 }, { ...items[1], sentQty: 10 }],
+  }));
+  await assertFails(updateDoc(ref(halwa), { lateDepts: ["halwa"], updatedAt: "t5" }));
+
+  // The window confirms receipt; a department can't, and can't sneak in other fields.
+  await assertFails(updateDoc(ref(cake), { status: "received", receivedAt: "t5", updatedAt: "t5" }));
+  await assertFails(updateDoc(ref(cashier), { status: "received", receivedAt: "t5", updatedAt: "t5", dispatchedBy: "me" }));
+  await assertSucceeds(updateDoc(ref(cashier), { status: "received", receivedAt: "t5", receivedBy: "w", shortageCount: 0, updatedAt: "t5" }));
+
+  // Received is final, except for an admin correction.
+  await assertFails(updateDoc(ref(cashier), { shortageCount: 3, updatedAt: "t6" }));
+  await assertFails(updateDoc(ref(sup), { status: "dispatched", updatedAt: "t6" }));
+  await assertSucceeds(updateDoc(ref(admin), { receiveNote: "تصحيح", updatedAt: "t6" }));
+});
+
+await t("window settings: managers set the cutoff and lock days; a locked day blocks window edits", async () => {
+  const sref = (db) => doc(db, `companies/${C}/windowSettings/main`);
+  await assertFails(setDoc(sref(cashier), { cutoff: "23:59" }));
+  await assertFails(setDoc(doc(sup, `companies/${C}/windowSettings/other`), { cutoff: "22:00" }));
+  await assertSucceeds(setDoc(sref(sup), { cutoff: "22:00", locked: { "2026-11-06": { by: "s" } } }));
+  await assertSucceeds(getDoc(sref(cashier)));
+
+  const order = { windowId: "w1", windowName: "نافذة", date: "2026-11-06", status: "sent", items: [], depts: {}, updatedAt: "t0" };
+  await assertFails(setDoc(doc(cashier, `companies/${C}/windowOrders/w1_2026-11-06`), order));
+  await assertSucceeds(setDoc(doc(sup, `companies/${C}/windowOrders/w1_2026-11-06`), order));
+  await assertFails(updateDoc(doc(cashier, `companies/${C}/windowOrders/w1_2026-11-06`), { note: "x", updatedAt: "t1" }));
+  await assertSucceeds(updateDoc(doc(sup, `companies/${C}/windowOrders/w1_2026-11-06`), { note: "x", updatedAt: "t1" }));
 });
 
 await t("staff files and payroll are admin-only", async () => {
@@ -163,5 +231,5 @@ await t("staff files and payroll are admin-only", async () => {
 });
 
 await env.cleanup();
-assert.equal(n, 13);
+assert.equal(n, 15);
 console.log(`All ${n} rule suites passed`);

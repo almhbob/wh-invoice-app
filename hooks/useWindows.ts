@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 
 import { useCompany } from "@/context/CompanyContext";
 import { useEmployee } from "@/context/EmployeeContext";
-import { subscribeWindowOrders, subscribeWindows } from "@/lib/windowOrders";
-import { SalesWindow, WindowOrder } from "@/utils/windowOrders";
+import { subscribeWindowOrders, subscribeWindows, subscribeWindowSettings } from "@/lib/windowOrders";
+import { SalesWindow, WindowOrder, WindowSettings } from "@/utils/windowOrders";
 
 /** The company's sales windows (branches), live. */
 export function useWindows() {
@@ -39,4 +39,12 @@ export function useMyWindow() {
   const assigned = windows.find((w) => w.id === branchId && w.active) ?? null;
   const canPickAny = currentEmployee?.role === "admin" || currentEmployee?.role === "branch_supervisor";
   return { assigned, canPickAny, active, loading };
+}
+
+/** Window-order settings (cutoff, locked days), live. */
+export function useWindowSettings() {
+  const { companyId } = useCompany();
+  const [settings, setSettings] = useState<WindowSettings>({});
+  useEffect(() => subscribeWindowSettings(companyId, setSettings, () => setSettings({})), [companyId]);
+  return settings;
 }

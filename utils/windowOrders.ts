@@ -188,3 +188,76 @@ export function expectedQty(it: WindowOrderItem): number {
 export function isLateDept(o: WindowOrder, d: FactoryDept): boolean {
   return o.status === "dispatched" && (o.lateDepts ?? []).includes(d);
 }
+
+// ── Cutoff, day lock and top-ups ──────────────────────────────────────────────
+
+export const DEFAULT_CUTOFF = "22:00";
+
+export interface WindowSettings {
+  /** Last time (HH:mm, Riyadh) the evening before a day to send or change that day's order. */
+  cutoff?: string;
+  /** Days the factory has locked (numbers final): date → who/when. */
+  locked?: Record<string, { by?: string; at?: string }>;
+}
+
+export function normalizeCutoff(raw: string | undefined | null): string {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(raw ?? "").trim());
+  if (!m) return DEFAULT_CUTOFF;
+  const h = Math.min(23, +m[1]), min = Math.min(59, +m[2]);
+  return `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
+}
+
+/** Epoch ms of the deadline for a day's order: the evening before, at the cutoff, Riyadh time (UTC+3). */
+export function orderDeadline(date: string, cutoff: string = DEFAULT_CUTOFF): number {
+  const [y, mo, d] = date.split("-").map(Number);
+  const [h, mi] = normalizeCutoff(cutoff).split(":").map(Number);
+  return Date.UTC(y, mo - 1, d - 1, h - 3, mi);
+}
+
+export function isPastCutoff(date: string, cutoff: string | undefined, now: Date = new Date()): boolean {
+  return now.getTime() > orderDeadline(date, cutoff ?? DEFAULT_CUTOFF);
+}
+
+export function isDayLocked(settings: WindowSettings | null | undefined, date: string): boolean {
+  return !!settings?.locked?.[date];
+}
+
+/** Departments that have started on the order: their lines can no longer change. */
+export function startedDepts(o: WindowOrder | null | undefined): FactoryDept[] {
+  if (!o) return [];
+  return deptsOf(o.items).filter((d) => deptStatus(o, d) !== "pending");
+}
+
+const lineKey = (items: WindowOrderItem[], d: FactoryDept) =>
+  items.filter((i) => i.department === d && i.qty > 0).map((i) => `${i.productId}:${i.qty}`).sort().join("|");
+
+/**
+ * A top-up keeps every started department's lines exactly as they were and
+ * may change anything else. Returns the departments whose locked lines were
+ * changed (empty = the edit is allowed).
+ */
+export function lockedLineChanges(prev: WindowOrder | null | undefined, next: WindowOrderItem[]): FactoryDept[] {
+  if (!prev) return [];
+  return startedDepts(prev).filter((d) => lineKey(prev.items, d) !== lineKey(next, d));
+}
+
+/** Department progress after an edit: started departments keep theirs, the rest start pending. */
+export function mergeDepts(prev: WindowOrder | null | undefined, next: WindowOrderItem[]): Partial<Record<FactoryDept, DeptProgress>> {
+  const out: Partial<Record<FactoryDept, DeptProgress>> = {};
+  for (const d of deptsOf(next)) out[d] = prev && deptStatus(prev, d) !== "pending" && prev.depts?.[d] ? prev.depts[d]! : { status: "pending" };
+  return out;
+}
+
+export type EditBlock = "dispatched" | "locked_day" | "past_cutoff" | null;
+
+/**
+ * Why the window can't send/change this day's order, or null when it can.
+ * Managers may override the cutoff and the day lock.
+ */
+export function editBlock(o: WindowOrder | null | undefined, date: string, settings: WindowSettings | null | undefined, opts: { manager?: boolean; now?: Date } = {}): EditBlock {
+  if (o && o.status !== "sent") return "dispatched";
+  if (opts.manager) return null;
+  if (isDayLocked(settings, date)) return "locked_day";
+  if (isPastCutoff(date, settings?.cutoff, opts.now)) return "past_cutoff";
+  return null;
+}
