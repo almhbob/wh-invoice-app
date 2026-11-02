@@ -11,7 +11,7 @@ import { deleteWorker, saveWorker } from "@/lib/hr";
 import { openWhatsApp } from "@/utils/orderFlow";
 import {
   DEFAULT_WARN_DAYS, DocKind, DOC_KINDS, endOfServiceGratuity, EXPIRY_FIELD, expiryAlerts, expiryState, ExpiryState, HrWorker, isValidIqama,
-  monthlyGross, parseDateInput, recordRenewals, ServiceEndReason,
+  isValidSaIban, monthlyGross, parseDateInput, recordRenewals, ServiceEndReason,
 } from "@/utils/hr";
 import { riyadhDate } from "@/utils/windowOrders";
 import { HrDateField } from "@/components/hr/HrDateField";
@@ -171,6 +171,7 @@ function WorkerForm({ worker, onClose, companyId }: { worker: HrWorker; onClose:
   const save = async () => {
     if ((f.name ?? "").trim().length < 2) { setErr(tr("اكتب اسم العامل.", "Enter the worker's name.")); return; }
     if (f.iqamaNumber?.trim() && !isValidIqama(f.iqamaNumber)) { setErr(tr("رقم الإقامة ١٠ أرقام ويبدأ بـ ٢.", "The iqama number is 10 digits starting with 2.")); return; }
+    if (f.bankIban?.trim() && !isValidSaIban(f.bankIban)) { setErr(tr("الآيبان غير صحيح. الآيبان السعودي 24 خانة ويبدأ بـ SA.", "Invalid IBAN. A Saudi IBAN is 24 characters starting with SA.")); return; }
     const dates: Record<string, string> = {};
     for (const k of ["iqamaExpiry", "passportExpiry", "healthExpiry", "contractExpiry", "startDate"]) {
       const raw = (f[k] ?? "").trim();

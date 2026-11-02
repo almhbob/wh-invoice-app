@@ -8,7 +8,7 @@ import { useHrWorkers, usePayroll } from "@/hooks/useHr";
 import { currentLang, tr, trf } from "@/lib/i18n";
 import { showPlatformAlert } from "@/lib/platformAlert";
 import { deletePayrollLine, generatePayroll, savePayrollLine } from "@/lib/hr";
-import { computeNet, monthKey, PayrollLine, payrollCsv, payrollTotals, payslipText, shiftMonth, toMoney } from "@/utils/hr";
+import { computeNet, monthKey, PayrollLine, payrollCsv, payrollTotals, payslipText, shiftMonth, toMoney, WpsProblem, wpsCsv, wpsRows } from "@/utils/hr";
 import { openWhatsApp } from "@/utils/orderFlow";
 import { s } from "@/components/hr/HrStaffPanel";
 
@@ -40,12 +40,28 @@ export function HrPayrollPanel() {
     } finally { setBusy(false); }
   };
 
-  const exportCsv = () => {
+  const download = (csv: string, name: string) => {
     if (Platform.OS !== "web" || typeof document === "undefined") return;
-    const url = URL.createObjectURL(new Blob([payrollCsv(lines)], { type: "text/csv;charset=utf-8" }));
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
     const a = document.createElement("a");
-    a.href = url; a.download = `payroll-${company.slug || companyId}-${month}.csv`; a.click();
+    a.href = url; a.download = name; a.click();
     setTimeout(() => URL.revokeObjectURL(url), 2000);
+  };
+
+  const exportCsv = () => download(payrollCsv(lines), `payroll-${company.slug || companyId}-${month}.csv`);
+
+  // Wage Protection (WPS) file for the bank / Mudad: only lines the bank can accept
+  const exportWps = () => {
+    const { rows, problems } = wpsRows(lines, workers);
+    if (!rows.length) {
+      showPlatformAlert(tr("لا يمكن إنشاء الملف", "Can't create the file"), problemText(problems));
+      return;
+    }
+    if (problems.length) {
+      const msg = `${problemText(problems)}\n\n${trf("سيُصدَّر الملف بـ {n} عامل فقط. متابعة؟", "The file will include {n} workers only. Continue?", { n: rows.length })}`;
+      if (typeof window !== "undefined" && typeof window.confirm === "function" && !window.confirm(msg)) return;
+    }
+    download(wpsCsv(rows, month, company.name), `wps-${company.slug || companyId}-${month}.csv`);
   };
 
   return (
@@ -74,6 +90,11 @@ export function HrPayrollPanel() {
           {lines.length && Platform.OS === "web" ? (
             <Pressable onPress={exportCsv} style={[s.addBtn, { backgroundColor: Colors.surfaceSecondary, flexGrow: 1, justifyContent: "center" }]}>
               <Feather name="download" size={15} color={Colors.text} /><Text style={[s.addTxt, { color: Colors.text }]}>{tr("تصدير Excel", "Export to Excel")}</Text>
+            </Pressable>
+          ) : null}
+          {lines.length && Platform.OS === "web" ? (
+            <Pressable onPress={exportWps} style={[s.addBtn, { backgroundColor: Colors.surfaceSecondary, flexGrow: 1, justifyContent: "center" }]}>
+              <Feather name="shield" size={15} color={Colors.text} /><Text style={[s.addTxt, { color: Colors.text }]}>{tr("ملف حماية الأجور (WPS)", "Wage protection file (WPS)")}</Text>
             </Pressable>
           ) : null}
         </View>
@@ -219,4 +240,13 @@ function LineForm({ line, companyId, onClose }: { line: PayrollLine; companyId: 
       </View>
     </Modal>
   );
+}
+
+function problemText(problems: WpsProblem[]): string {
+  const why = (p: WpsProblem) =>
+    p.reason === "missing_iban" ? tr("لا يوجد آيبان", "no IBAN")
+      : p.reason === "invalid_iban" ? tr("الآيبان غير صحيح", "invalid IBAN")
+        : p.reason === "missing_id" ? tr("لا يوجد رقم إقامة", "no iqama number")
+          : tr("الصافي صفر", "net is zero");
+  return `${tr("هؤلاء العاملون لن يُضافوا لأن البنك سيرفضهم:", "These workers are left out because the bank would reject them:")}\n${problems.map((p) => `• ${p.name}: ${why(p)}`).join("\n")}\n${tr("أكمل بياناتهم من «العاملون والإقامات».", "Complete their details in “Staff & iqamas”.")}`;
 }
