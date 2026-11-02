@@ -25,6 +25,8 @@ export interface WindowOrderItem {
   name: string;
   department: FactoryDept;
   qty: number;
+  /** What the factory actually sent (set at dispatch; 0 for a department that wasn't ready). */
+  sentQty?: number;
   receivedQty?: number;
 }
 
@@ -53,6 +55,8 @@ export interface WindowOrder {
   receivedBy?: string;
   receiveNote?: string;
   shortageCount?: number;
+  /** Departments that weren't ready when the order was dispatched; they can still send their part. */
+  lateDepts?: FactoryDept[];
 }
 
 /** What the window and the factory see. */
@@ -151,8 +155,36 @@ export function deptTotals(orders: WindowOrder[], dept: FactoryDept): DeptProduc
 /** Lines received short (or over) once the window confirms. */
 export function receiptDiff(items: WindowOrderItem[], received: Record<string, number>) {
   const lines = items.map((it) => {
-    const got = Math.max(0, Math.floor(Number(received[it.productId] ?? it.qty)));
+    const got = Math.max(0, Math.floor(Number(received[it.productId] ?? expectedQty(it))));
     return { ...it, receivedQty: got, diff: got - it.qty };
   });
   return { lines, shortageCount: lines.filter((l) => l.diff < 0).length, shortQty: lines.reduce((s, l) => s + Math.max(0, -l.diff), 0) };
+}
+
+// ── Partial dispatch ──────────────────────────────────────────────────────────
+
+/**
+ * What a dispatch writes: every line gets `sentQty` — its full quantity when
+ * its department is ready, 0 otherwise — and the unready departments are
+ * listed so they can send their part later.
+ */
+export function dispatchPatch(o: WindowOrder): { items: WindowOrderItem[]; lateDepts: FactoryDept[] } {
+  const late = deptsOf(o.items).filter((d) => deptStatus(o, d) !== "ready");
+  const items = o.items.map((it) => ({ ...it, sentQty: late.includes(it.department) ? 0 : it.qty }));
+  return { items, lateDepts: late };
+}
+
+/** A late department sends its lines after the main dispatch (before the window confirms receipt). */
+export function lateDeptPatch(o: WindowOrder, dept: FactoryDept): { items: WindowOrderItem[]; lateDepts: FactoryDept[] } {
+  const items = o.items.map((it) => (it.department === dept ? { ...it, sentQty: it.qty } : it));
+  return { items, lateDepts: (o.lateDepts ?? []).filter((d) => d !== dept) };
+}
+
+/** Quantity the window should expect: what was sent, or the ordered amount for orders dispatched before sentQty existed. */
+export function expectedQty(it: WindowOrderItem): number {
+  return typeof it.sentQty === "number" ? it.sentQty : it.qty;
+}
+
+export function isLateDept(o: WindowOrder, d: FactoryDept): boolean {
+  return o.status === "dispatched" && (o.lateDepts ?? []).includes(d);
 }

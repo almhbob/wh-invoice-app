@@ -12,6 +12,8 @@ import { useLang } from "@/context/LanguageContext";
 import { tr, trf } from "@/lib/i18n";
 import { useOnlineOrders } from "@/hooks/useOnlineOrders";
 import { hasOpenDriverRequest, hasWriting, isProductionDone } from "@/utils/orderFlow";
+import { useWindowOrders } from "@/hooks/useWindows";
+import { deptStatus, isFactoryDept, isLateDept, orderStage, riyadhDate, WindowOrder } from "@/utils/windowOrders";
 
 /**
  * App-wide live alerts: whatever screen an employee is on, they hear and see
@@ -64,6 +66,32 @@ function alertsFor(role: string, me: string, orders: Order[]): Alert[] {
   return out;
 }
 
+const DISPATCH_ROLES = new Set(["admin", "branch_supervisor", "dept_supervisor", "packaging"]);
+
+/** Window ↔ factory alerts: new/changed orders for a department, late parts, ready to dispatch, and "on the way" for the window. */
+function windowAlertsFor(role: string, branchId: string | undefined, orders: WindowOrder[]): Alert[] {
+  const out: Alert[] = [];
+  for (const o of orders) {
+    if (isFactoryDept(role) && role !== "packaging") {
+      const lines = o.items.filter((i) => i.department === role);
+      if (lines.length && o.status === "sent" && deptStatus(o, role) === "pending") {
+        const sig = `${lines.length}-${lines.reduce((n, i) => n + i.qty, 0)}`;
+        out.push({ key: `wo:${o.id}:${sig}`, title: tr("طلبية نافذة لقسمك", "Window order for your department"), body: `${o.windowName} · ${o.date}`, route: `/${role}`, icon: "shopping-bag" });
+      }
+      if (isLateDept(o, role)) {
+        out.push({ key: `wol:${o.id}:${role}`, title: tr("أُرسلت طلبية بدون نصيب قسمك", "An order left without your part"), body: `${o.windowName} · ${o.date}`, route: `/${role}`, icon: "alert-triangle" });
+      }
+    }
+    if (DISPATCH_ROLES.has(role) && o.status === "sent" && orderStage(o) === "ready") {
+      out.push({ key: `wor:${o.id}`, title: tr("طلبية نافذة جاهزة للإرسال", "Window order ready to dispatch"), body: `${o.windowName} · ${o.date}`, route: role === "packaging" ? "/packaging" : "/branches", icon: "truck" });
+    }
+    if (branchId && o.windowId === branchId && o.status === "dispatched") {
+      out.push({ key: `wod:${o.id}:${(o.lateDepts ?? []).length}`, title: tr("طلبيتك في الطريق", "Your order is on the way"), body: o.date, route: "/branch-orders", icon: "truck" });
+    }
+  }
+  return out;
+}
+
 export function LiveAlertsHost() {
   const router = useRouter();
   const { currentEmployee } = useEmployee();
@@ -73,17 +101,21 @@ export function LiveAlertsHost() {
   const me = currentEmployee?.employeeId ?? "";
   const counter = canDo(currentEmployee?.role, ROLE_CAN_VIEW_ONLINE_ORDERS);
   const { pending: online, loading: onlineLoading } = useOnlineOrders(Boolean(currentEmployee) && counter);
+  const { orders: woToday, loading: woLoadingToday } = useWindowOrders(riyadhDate());
+  const { orders: woTomorrow, loading: woLoadingTomorrow } = useWindowOrders(riyadhDate(new Date(), 1));
+  const windowLoading = woLoadingToday || woLoadingTomorrow;
 
   const current = useMemo(() => {
     if (!currentEmployee) return [] as Alert[];
     const list = alertsFor(role, me, orders);
+    list.push(...windowAlertsFor(role, currentEmployee.branchId, [...woToday, ...woTomorrow]));
     if (counter) {
       for (const o of online) {
         list.push({ key: `on:${o.id}`, title: tr("طلب أونلاين جديد", "New online order"), body: `${o.customerName} · ${Math.round(o.total ?? o.subtotal)} ${tr("ر.س", "SAR")}`, route: "/online", icon: "globe" });
       }
     }
     return list;
-  }, [counter, currentEmployee, me, online, orders, role]);
+  }, [counter, currentEmployee, me, online, orders, role, woToday, woTomorrow]);
 
   // Seed with what is already there (no alert on first load / after login), then
   // alert only for keys that appear later.
@@ -94,7 +126,7 @@ export function LiveAlertsHost() {
   useEffect(() => {
     const who = `${me}|${role}`;
     if (!currentEmployee) { seen.current = null; seededFor.current = ""; return; }
-    if (counter && onlineLoading) return;
+    if ((counter && onlineLoading) || windowLoading) return;
     if (seededFor.current !== who || !seen.current) {
       seen.current = new Set(current.map((a) => a.key));
       seededFor.current = who;
@@ -106,7 +138,7 @@ export function LiveAlertsHost() {
     const first = fresh[0];
     ringAlert(first.title, fresh.length > 1 ? `${first.body} (+${fresh.length - 1})` : first.body, first.key.split(":")[0]);
     setToast({ ...first, more: fresh.length - 1 });
-  }, [counter, current, currentEmployee, me, onlineLoading, role]);
+  }, [counter, current, currentEmployee, me, onlineLoading, role, windowLoading]);
 
   // Tab title badge while the app is in the background (web).
   useEffect(() => {

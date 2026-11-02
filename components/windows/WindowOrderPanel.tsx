@@ -11,13 +11,13 @@ import { Product, useProducts } from "@/context/ProductsContext";
 import { useMyWindow, useWindowOrders } from "@/hooks/useWindows";
 import { tr, trf } from "@/lib/i18n";
 import { showPlatformAlert } from "@/lib/platformAlert";
-import { getWindowOrder, receiveWindowOrder, sendWindowOrder, WindowOrderError } from "@/lib/windowOrders";
+import { getWindowOrder, receiveWindowOrder, sendWindowOrder, subscribeAwaitingReceipt, WindowOrderError } from "@/lib/windowOrders";
 import { DEPT_COLOR } from "@/utils/orderFlow";
 import {
-  canEditOrder, deptsOf, deptStatus, FACTORY_DEPTS, FactoryDept, isFactoryDept, orderStage, riyadhDate, SalesWindow,
+  canEditOrder, deptsOf, deptStatus, expectedQty, FACTORY_DEPTS, FactoryDept, isFactoryDept, orderStage, riyadhDate, SalesWindow,
   STAGE_ORDER, WindowOrder, WindowOrderItem,
 } from "@/utils/windowOrders";
-import { DeptName, StageBadge } from "@/components/windows/windowUi";
+import { DeptName, deptLabel, StageBadge } from "@/components/windows/windowUi";
 
 type Mode = "view" | "edit" | "receive";
 
@@ -46,8 +46,15 @@ export function WindowOrderPanel() {
   const [received, setReceived] = useState<Record<string, string>>({});
   const [receiveNote, setReceiveNote] = useState("");
   const [busy, setBusy] = useState(false);
+  // The order being received — can be from an earlier day (late delivery).
+  const [receiving, setReceiving] = useState<WindowOrder | null>(null);
+  const [awaiting, setAwaiting] = useState<WindowOrder[]>([]);
 
   useEffect(() => { setMode("view"); }, [win?.id, date]);
+  useEffect(() => {
+    if (!win) { setAwaiting([]); return; }
+    return subscribeAwaitingReceipt(companyId, win.id, setAwaiting, () => setAwaiting([]));
+  }, [companyId, win?.id]);
 
   const by = currentEmployee ? `${currentEmployee.name} #${currentEmployee.employeeId}` : "";
   const lines: WindowOrderItem[] = useMemo(
@@ -86,18 +93,21 @@ export function WindowOrderPanel() {
     } finally { setBusy(false); }
   };
 
-  const startReceive = () => {
-    setReceived(Object.fromEntries((order?.items ?? []).map((i) => [i.productId, String(i.qty)])));
+  const startReceive = (o: WindowOrder | null = order) => {
+    if (!o) return;
+    // Prefill with what the factory actually sent, not what was ordered.
+    setReceived(Object.fromEntries(o.items.map((i) => [i.productId, String(expectedQty(i))])));
     setReceiveNote("");
+    setReceiving(o);
     setMode("receive");
   };
 
   const confirmReceive = async () => {
-    if (!order) return;
+    if (!receiving) return;
     setBusy(true);
     try {
       const map = Object.fromEntries(Object.entries(received).map(([k, v]) => [k, Number(v.replace(/[^\d]/g, "")) || 0]));
-      await receiveWindowOrder(companyId, order.id, map, by, receiveNote);
+      await receiveWindowOrder(companyId, receiving.id, map, by, receiveNote);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
       setMode("view");
     } catch {
@@ -153,6 +163,23 @@ export function WindowOrderPanel() {
         <Text style={s.muted}>{date}</Text>
       </View>
 
+      {mode === "view" && awaiting.some((o) => o.id !== order?.id) ? (
+        <View style={[s.card, { borderColor: Colors.gold + "66" }]}>
+          <Text style={s.title}>{tr("بانتظار تأكيد الاستلام", "Waiting for receipt")}</Text>
+          {awaiting.filter((o) => o.id !== order?.id).map((o) => (
+            <View key={o.id} style={s.line}>
+              <View style={{ flex: 1 }}>
+                <Text style={s.lineName}>{o.date}</Text>
+                <Text style={s.muted}>{trf("{n} صنف", "{n} items", { n: o.items.length })}{(o.lateDepts ?? []).length ? ` · ${tr("بعض الأقسام لم تُرسل بعد", "some departments still to send")}` : ""}</Text>
+              </View>
+              <Pressable onPress={() => startReceive(o)} style={[s.primary, { backgroundColor: Colors.success, flexGrow: 0 }]}>
+                <Feather name="check-circle" size={15} color="#fff" /><Text style={s.primaryTxt}>{tr("تأكيد الاستلام", "Confirm receipt")}</Text>
+              </Pressable>
+            </View>
+          ))}
+        </View>
+      ) : null}
+
       {loading ? <ActivityIndicator color={Colors.gold} /> : mode === "edit" ? (
         <View style={s.card}>
           <View style={s.rowBetween}>
@@ -182,19 +209,25 @@ export function WindowOrderPanel() {
             </Pressable>
           </View>
         </View>
-      ) : mode === "receive" && order ? (
+      ) : mode === "receive" && receiving ? (
         <View style={s.card}>
-          <Text style={s.title}>{tr("تأكيد الاستلام", "Confirm receipt")}</Text>
-          <Text style={s.muted}>{tr("عدّل الكمية إذا وصل أقل من المطلوب.", "Change the quantity if less arrived than ordered.")}</Text>
-          {order.items.map((i) => {
-            const got = Number(received[i.productId] ?? i.qty);
+          <Text style={s.title}>{tr("تأكيد الاستلام", "Confirm receipt")}{receiving.date !== date ? ` · ${receiving.date}` : ""}</Text>
+          <Text style={s.muted}>{tr("الكميات معبأة بما أرسله المصنع فعلاً. عدّلها إذا وصل غير ذلك.", "Quantities are filled with what the factory actually sent. Change them if something else arrived.")}</Text>
+          {(receiving.lateDepts ?? []).length ? (
+            <Text style={[s.note, { color: Colors.warning }]}>
+              {trf("لم يُرسل بعد نصيب: {d}. إذا أكدت الاستلام الآن يُسجَّل كنقص.", "Not sent yet: {d}. Confirming now records it as a shortage.", { d: (receiving.lateDepts ?? []).map(deptLabel).join("، ") })}
+            </Text>
+          ) : null}
+          {receiving.items.map((i) => {
+            const exp = expectedQty(i);
+            const got = Number(received[i.productId] ?? exp);
             return (
               <View key={i.productId} style={s.line}>
                 <Text style={s.lineName} numberOfLines={1}>{i.name}</Text>
-                <Text style={s.muted}>{trf("طُلب {n}", "Ordered {n}", { n: i.qty })}</Text>
+                <Text style={s.muted}>{exp === i.qty ? trf("طُلب {n}", "Ordered {n}", { n: i.qty }) : trf("طُلب {n} · أُرسل {m}", "Ordered {n} · sent {m}", { n: i.qty, m: exp })}</Text>
                 <TextInput
                   style={[s.qtyInput, got < i.qty && { borderColor: Colors.accent, color: Colors.accent }]}
-                  value={received[i.productId] ?? String(i.qty)}
+                  value={received[i.productId] ?? String(exp)}
                   onChangeText={(v) => setReceived((m) => ({ ...m, [i.productId]: v.replace(/[^\d٠-٩]/g, "").replace(/[٠-٩]/g, (c) => String(c.charCodeAt(0) - 0x660)) }))}
                   keyboardType="number-pad"
                   maxLength={4}
@@ -244,6 +277,8 @@ export function WindowOrderPanel() {
               <Text style={s.lineName} numberOfLines={1}>{i.name}</Text>
               {order.status === "received" && i.receivedQty != null && i.receivedQty !== i.qty ? (
                 <Text style={[s.lineQty, { color: Colors.accent }]}>{trf("{r} من {q}", "{r} of {q}", { r: i.receivedQty, q: i.qty })}</Text>
+              ) : order.status === "dispatched" && expectedQty(i) !== i.qty ? (
+                <Text style={[s.lineQty, { color: Colors.warning }]}>{trf("أُرسل {r} من {q}", "Sent {r} of {q}", { r: expectedQty(i), q: i.qty })}</Text>
               ) : <Text style={s.lineQty}>× {i.qty}</Text>}
             </View>
           ))}
@@ -252,8 +287,13 @@ export function WindowOrderPanel() {
           {editable ? (
             <Pressable onPress={() => startEdit(null)} style={s.ghost}><Feather name="edit-2" size={14} color={Colors.primary} /><Text style={s.ghostTxt}>{tr("تعديل الطلبية", "Edit order")}</Text></Pressable>
           ) : null}
+          {order.status === "dispatched" && (order.lateDepts ?? []).length ? (
+            <Text style={[s.note, { color: Colors.warning }]}>
+              {trf("في الطريق بدون نصيب: {d} — سيُرسل لاحقاً.", "On the way without: {d} — it will follow.", { d: (order.lateDepts ?? []).map(deptLabel).join("، ") })}
+            </Text>
+          ) : null}
           {order.status === "dispatched" ? (
-            <Pressable onPress={startReceive} style={[s.primary, { backgroundColor: Colors.success }]}><Feather name="truck" size={16} color="#fff" /><Text style={s.primaryTxt}>{tr("وصلت الطلبية — تأكيد الاستلام", "Order arrived — confirm receipt")}</Text></Pressable>
+            <Pressable onPress={() => startReceive(order)} style={[s.primary, { backgroundColor: Colors.success }]}><Feather name="truck" size={16} color="#fff" /><Text style={s.primaryTxt}>{tr("وصلت الطلبية — تأكيد الاستلام", "Order arrived — confirm receipt")}</Text></Pressable>
           ) : null}
         </View>
       )}
