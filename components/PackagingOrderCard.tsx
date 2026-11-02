@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 4,
   },
   statusStripe: {
-    flexDirection: "row-reverse",
+    flexDirection: "row",
     alignItems: "center",
     gap: 6,
     paddingHorizontal: 14,
@@ -309,7 +309,7 @@ const styles = StyleSheet.create({
   statusLabel: { fontSize: 13, fontWeight: "700" },
   orderNum: { fontSize: 12, color: Colors.textMuted, fontWeight: "600" },
   section: { paddingHorizontal: 14, paddingVertical: 10, gap: 6 },
-  row: { flexDirection: "row-reverse", alignItems: "center", gap: 8, flexWrap: "wrap" },
+  row: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
   customerName: { fontSize: 16, fontWeight: "800", color: Colors.text, flex: 1, textAlign: "right" },
   orderTypeBadge: {
     backgroundColor: Colors.primary + "18",
@@ -317,15 +317,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8, paddingVertical: 3,
   },
   orderTypeTxt: { fontSize: 11, color: Colors.primary, fontWeight: "600" },
-  phonesRow: { flexDirection: "row-reverse", gap: 8, flexWrap: "wrap" },
+  phonesRow: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
   phoneChip: {
-    flexDirection: "row-reverse", alignItems: "center", gap: 4,
+    flexDirection: "row", alignItems: "center", gap: 4,
     backgroundColor: Colors.background,
     borderRadius: 10, paddingHorizontal: 8, paddingVertical: 3,
   },
   phoneText: { fontSize: 12, color: Colors.textSecondary },
   deliveryRow: {
-    flexDirection: "row-reverse", alignItems: "center", gap: 5,
+    flexDirection: "row", alignItems: "center", gap: 5,
     backgroundColor: Colors.packaging + "18", borderRadius: 8,
     paddingHorizontal: 8, paddingVertical: 4, alignSelf: "flex-end",
   },
@@ -333,13 +333,13 @@ const styles = StyleSheet.create({
   divider: { height: 1, backgroundColor: Colors.border, marginHorizontal: 14 },
   deptGroup: { marginVertical: 6, marginHorizontal: 10, borderRadius: 10, overflow: "hidden" },
   deptHeader: {
-    flexDirection: "row-reverse", alignItems: "center", justifyContent: "space-between",
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
     paddingHorizontal: 12, paddingVertical: 6,
   },
   deptHeaderLabel: { fontSize: 13, fontWeight: "700", color: "#fff" },
   deptHeaderCount: { fontSize: 11, color: "rgba(255,255,255,0.8)" },
   itemRow: {
-    flexDirection: "row-reverse", alignItems: "flex-start", justifyContent: "space-between",
+    flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between",
     paddingHorizontal: 12, paddingVertical: 7,
     borderBottomWidth: 0.5, borderBottomColor: "rgba(0,0,0,0.06)",
   },
@@ -353,7 +353,7 @@ const styles = StyleSheet.create({
     margin: 10, backgroundColor: Colors.background,
     borderRadius: 10, padding: 12, gap: 5,
   },
-  finRow: { flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" },
+  finRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   finLabel: { fontSize: 13, color: Colors.textSecondary },
   finValue: { fontSize: 13, color: Colors.text, fontWeight: "600" },
   finTotalRow: {
@@ -363,14 +363,14 @@ const styles = StyleSheet.create({
   finTotalLabel: { fontSize: 15, fontWeight: "800", color: Colors.primary },
   finTotalValue: { fontSize: 15, fontWeight: "800", color: Colors.primary },
   insuranceNoteBox: {
-    flexDirection: "row-reverse", alignItems: "flex-start", gap: 6,
+    flexDirection: "row", alignItems: "flex-start", gap: 6,
     marginHorizontal: 12, marginBottom: 6,
     backgroundColor: Colors.gold + "18", borderRadius: 8,
     paddingHorizontal: 10, paddingVertical: 6,
   },
   insuranceNoteText: { flex: 1, fontSize: 12, color: Colors.text, textAlign: "right" },
   notesBox: {
-    flexDirection: "row-reverse", alignItems: "flex-start", gap: 6,
+    flexDirection: "row", alignItems: "flex-start", gap: 6,
     marginHorizontal: 12, marginBottom: 10,
     backgroundColor: Colors.background, borderRadius: 8,
     paddingHorizontal: 10, paddingVertical: 6,
@@ -379,11 +379,11 @@ const styles = StyleSheet.create({
   actionBtn: {
     margin: 12, marginTop: 4,
     borderRadius: 12, paddingVertical: 12,
-    flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 8,
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8,
   },
   actionBtnText: { color: "#fff", fontSize: 15, fontWeight: "800" },
   doneStamp: {
-    flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 5,
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5,
     paddingVertical: 10, paddingBottom: 14,
   },
   doneStampText: { fontSize: 13, color: Colors.statusDone, fontWeight: "700" },

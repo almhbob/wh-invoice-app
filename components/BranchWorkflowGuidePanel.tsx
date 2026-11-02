@@ -76,19 +76,19 @@ export function BranchWorkflowGuidePanel() {
 
 const styles = StyleSheet.create({
   card: { backgroundColor: "#fff", borderRadius: 24, padding: 16, gap: 14, borderWidth: 1, borderColor: Colors.border },
-  headerRow: { flexDirection: "row-reverse", gap: 12, alignItems: "center" },
+  headerRow: { flexDirection: "row", gap: 12, alignItems: "center" },
   iconCircle: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: Colors.primary + "12" },
   headerTextBlock: { flex: 1, gap: 3 },
   title: { fontSize: 18, fontWeight: "900", color: Colors.primary, textAlign: "right" },
   subtitle: { fontSize: 12, fontWeight: "600", color: Colors.textMuted, textAlign: "right", lineHeight: 19 },
   stepsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   stepCard: { flexGrow: 1, flexBasis: 220, gap: 8, borderRadius: 18, padding: 12, backgroundColor: "#FAFAF8", borderWidth: 1, borderColor: Colors.border },
-  stepHeader: { flexDirection: "row-reverse", alignItems: "center", gap: 8 },
+  stepHeader: { flexDirection: "row", alignItems: "center", gap: 8 },
   stepIcon: { width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center", backgroundColor: Colors.primary + "10" },
   stepTitle: { flex: 1, fontSize: 13, fontWeight: "900", color: Colors.primary, textAlign: "right" },
   stepDescription: { fontSize: 11, color: Colors.textSecondary, textAlign: "right", lineHeight: 18, fontWeight: "700" },
   rulesBox: { gap: 8, borderRadius: 18, padding: 12, backgroundColor: Colors.success + "08", borderWidth: 1, borderColor: Colors.success + "22" },
   rulesTitle: { fontSize: 13, fontWeight: "900", color: Colors.primary, textAlign: "right" },
-  ruleRow: { flexDirection: "row-reverse", alignItems: "center", gap: 8 },
+  ruleRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   ruleText: { flex: 1, fontSize: 11, color: Colors.textSecondary, textAlign: "right", lineHeight: 18, fontWeight: "700" },
 });

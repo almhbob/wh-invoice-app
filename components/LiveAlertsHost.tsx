@@ -191,7 +191,7 @@ export function LiveAlertsHost() {
 const s = StyleSheet.create({
   toastWrap: { position: "absolute", top: 12, left: 12, right: 12, zIndex: 1000, alignItems: "center" },
   toast: {
-    width: "100%", maxWidth: 560, flexDirection: "row-reverse", alignItems: "center", gap: 12,
+    width: "100%", maxWidth: 560, flexDirection: "row", alignItems: "center", gap: 12,
     backgroundColor: Colors.espressoMid, borderRadius: 18, paddingVertical: 12, paddingHorizontal: 14,
     borderWidth: 1, borderColor: "rgba(255,255,255,0.08)",
     shadowColor: "#000", shadowOpacity: 0.25, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 12,
@@ -201,7 +201,7 @@ const s = StyleSheet.create({
   toastBody: { color: "rgba(255,255,255,0.65)", fontSize: 12, textAlign: "right" },
   toastOpen: { color: Colors.goldLight, fontSize: 13, fontWeight: "700" },
   permBar: {
-    flexDirection: "row-reverse", alignItems: "center", gap: 10, marginHorizontal: 12, marginTop: 8,
+    flexDirection: "row", alignItems: "center", gap: 10, marginHorizontal: 12, marginTop: 8,
     backgroundColor: Colors.surface, borderRadius: 14, paddingVertical: 10, paddingHorizontal: 12,
     borderWidth: 1, borderColor: Colors.border,
   },

@@ -24,6 +24,7 @@ import React, {
 } from "react";
 
 import { useCompany } from "@/context/CompanyContext";
+import { localDayKey } from "@/utils/dateUtils";
 import { db } from "@/lib/firebase";
 import { Alert } from "react-native";
 import { t as t_ } from "@/constants/translations";
@@ -137,6 +138,8 @@ export interface Order {
   totalAmount?: number;
   paymentMethod?: PaymentMethod;
   discount?: Discount;
+  /** Discount given in riyals (manual discount, capped at the subtotal). Saved since v1.1. */
+  discountAmount?: number;
   imageUri?: string;
   referenceImages?: string[];
   notes?: string;
@@ -597,8 +600,9 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
       orderData: Omit<Order, "id" | "companyId" | "orderNumber" | "createdAt" | "updatedAt" | "departmentStatuses" | "departmentReceivers">
     ): Promise<Order> => {
       if (company.maxInvoicesPerMonth) {
-        const thisMonth = new Date().toISOString().slice(0, 7);
-        const monthCount = allOrders.filter((o) => !o.deleted && o.createdAt.startsWith(thisMonth)).length;
+        // Local calendar month (UTC would shift orders made around midnight on the 1st)
+        const thisMonth = localDayKey().slice(0, 7);
+        const monthCount = allOrders.filter((o) => !o.deleted && localDayKey(o.createdAt).slice(0, 7) === thisMonth).length;
         if (monthCount >= company.maxInvoicesPerMonth) {
           const msg = t_("limitMaxInvMsg", "ar").replace("{n}", String(company.maxInvoicesPerMonth));
           Alert.alert(t_("limitMaxInvTitle", "ar"), msg);
@@ -679,6 +683,10 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
         const items = o.items.map((item) => (transfer.itemIds.includes(item.id) ? { ...item, department: transfer.toDept } : item));
         const statuses = { ...o.departmentStatuses };
         if (!statuses[transfer.toDept]) statuses[transfer.toDept] = "pending";
+        // All items left the source department — don't leave it "pending" forever
+        if (transfer.fromDept !== "packaging" && !items.some((i) => i.department === transfer.fromDept)) {
+          statuses[transfer.fromDept] = "done";
+        }
         return { ...o, items, departmentStatuses: statuses, branchTransfer: transfer, updatedAt: new Date().toISOString() };
       };
       await patchOrder(orderId, apply, (o) => {

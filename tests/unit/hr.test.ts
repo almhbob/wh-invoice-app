@@ -65,3 +65,52 @@ describe("payroll", () => {
     expect(csv).toContain('"سلفة, شهر"');
   });
 });
+
+import { endOfServiceGratuity, payslipText, recordRenewals } from "../../utils/hr";
+
+describe("renewals", () => {
+  test("records only expiries that moved forward", () => {
+    const prev = { iqamaExpiry: "2026-11-10", passportExpiry: "2028-01-01", healthExpiry: "2026-12-01" };
+    const next = { iqamaExpiry: "2027-11-10", passportExpiry: "2027-12-01", healthExpiry: "2026-12-01" };
+    const r = recordRenewals(prev, next, "2026-11-02T08:00:00.000Z");
+    expect(r).toEqual([{ kind: "iqama", from: "2026-11-10", to: "2027-11-10", at: "2026-11-02T08:00:00.000Z" }]);
+  });
+  test("first date entered is not a renewal and history is kept", () => {
+    const old = [{ kind: "health" as const, from: "2025-01-01", to: "2026-01-01", at: "x" }];
+    expect(recordRenewals({ renewals: old }, { iqamaExpiry: "2027-01-01" }, "y")).toEqual(old);
+  });
+});
+
+describe("end of service", () => {
+  const base = { basicSalary: 3000, housing: 750, transport: 250, otherAllowance: 0 }; // wage 4000
+  test("termination after 3 years: half a month per year", () => {
+    const g = endOfServiceGratuity({ ...base, startDate: "2023-01-01" }, "2025-12-31", "termination")!;
+    expect(g.wage).toBe(4000);
+    expect(Math.round(g.amount)).toBe(6000);
+  });
+  test("termination after 8 years: 5 × half + 3 × full", () => {
+    const g = endOfServiceGratuity({ ...base, startDate: "2018-01-01" }, "2026-01-01", "termination")!;
+    expect(Math.round(g.full / 100) * 100).toBe(22000);
+  });
+  test("resignation rules", () => {
+    expect(endOfServiceGratuity({ ...base, startDate: "2025-01-01" }, "2026-06-01", "resignation")!.amount).toBe(0);
+    const g3 = endOfServiceGratuity({ ...base, startDate: "2023-01-01" }, "2026-01-01", "resignation")!;
+    expect(g3.factor).toBeCloseTo(1 / 3);
+    const g12 = endOfServiceGratuity({ ...base, startDate: "2014-01-01" }, "2026-01-01", "resignation")!;
+    expect(g12.factor).toBe(1);
+  });
+  test("needs a start date before the end date", () => {
+    expect(endOfServiceGratuity({ ...base }, "2026-01-01", "termination")).toBeNull();
+    expect(endOfServiceGratuity({ ...base, startDate: "2027-01-01" }, "2026-01-01", "termination")).toBeNull();
+  });
+});
+
+describe("payslip", () => {
+  test("lists the components and the net", () => {
+    const t = payslipText({ id: "m_w", month: "2026-10", workerId: "w", name: "أحمد", basic: 3000, allowances: 1000, additions: 200, deductions: 100, advance: 0, net: 4100, status: "paid", method: "transfer", paidAt: "2026-10-28T10:00:00Z" }, { company: "Laviviane", monthLabel: "أكتوبر 2026" });
+    expect(t).toContain("أحمد");
+    expect(t).toContain("الصافي: 4,100 ر.س");
+    expect(t).toContain("تم الدفع بالتحويل بتاريخ 2026-10-28");
+    expect(t).not.toContain("سلفة");
+  });
+});

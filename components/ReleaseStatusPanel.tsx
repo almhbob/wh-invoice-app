@@ -43,7 +43,7 @@ export function ReleaseStatusPanel() {
 
 const styles = StyleSheet.create({
   container: { gap: 10, backgroundColor: "#fff", borderRadius: 18, padding: 16, borderWidth: 1, borderColor: "rgba(0,0,0,0.06)" },
-  head: { flexDirection: "row-reverse", alignItems: "center", gap: 10 },
+  head: { flexDirection: "row", alignItems: "center", gap: 10 },
   iconBox: { width: 38, height: 38, borderRadius: 19, backgroundColor: Colors.primary, alignItems: "center", justifyContent: "center" },
   title: { fontSize: 16, fontWeight: "900", color: Colors.primary, textAlign: "right" },
   version: { fontSize: 11, color: Colors.textMuted, textAlign: "right", marginTop: 2 },
@@ -54,6 +54,6 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 12, fontWeight: "900", color: Colors.text, textAlign: "right" },
   routeText: { fontSize: 11, color: Colors.textMuted, textAlign: "right" },
   notesBox: { gap: 6 },
-  noteRow: { flexDirection: "row-reverse", alignItems: "flex-start", gap: 6 },
+  noteRow: { flexDirection: "row", alignItems: "flex-start", gap: 6 },
   noteText: { flex: 1, fontSize: 11, color: Colors.textSecondary, textAlign: "right", lineHeight: 17 },
 });

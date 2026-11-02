@@ -53,9 +53,9 @@ const styles = StyleSheet.create({
   section: { gap: 8, padding: 12, borderRadius: 14, backgroundColor: "#FAFAF8" },
   dangerSection: { gap: 8, padding: 12, borderRadius: 14, backgroundColor: Colors.accent + "08" },
   sectionTitle: { fontSize: 14, fontWeight: "900", color: Colors.text, textAlign: "right" },
-  row: { flexDirection: "row-reverse", alignItems: "center", gap: 8 },
+  row: { flexDirection: "row", alignItems: "center", gap: 8 },
   rowText: { flex: 1, fontSize: 12, color: Colors.text, textAlign: "right", lineHeight: 18 },
-  chips: { flexDirection: "row-reverse", flexWrap: "wrap", gap: 8 },
+  chips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   chip: { paddingHorizontal: 10, paddingVertical: 7, borderRadius: 20, backgroundColor: Colors.primary + "10", borderWidth: 1, borderColor: Colors.primary + "25" },
   chipText: { fontSize: 11, fontWeight: "800", color: Colors.primary },
 });

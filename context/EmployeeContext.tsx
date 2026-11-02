@@ -438,6 +438,20 @@ export function EmployeeProvider({ children }: { children: React.ReactNode }) {
 
   const updateEmployee = useCallback(
     async (id: string, rawChanges: Partial<Pick<Employee, "name" | "role" | "status" | "pinCode" | "phone" | "branchId">>) => {
+      // Same guards as add/remove: a branch supervisor can't touch protected
+      // roles or promote anyone (including themselves) to one.
+      const existing = employees.find((e) => e.id === id);
+      if (currentEmployee?.role === "branch_supervisor") {
+        if (existing && !canBranchSupervisorManageRole(existing.role)) {
+          throw new Error("BRANCH_SUPERVISOR_CANNOT_MANAGE_PROTECTED_ROLE");
+        }
+        if (rawChanges.role && !canBranchSupervisorAssignRole(rawChanges.role)) {
+          throw new Error("BRANCH_SUPERVISOR_CANNOT_ASSIGN_PROTECTED_ROLE");
+        }
+      } else if (currentEmployee && currentEmployee.role !== "admin" && currentEmployee.id !== id) {
+        throw new Error("FORBIDDEN");
+      }
+
       let changes = rawChanges;
       if (isSecure && rawChanges.pinCode !== undefined) {
         const { pinCode, ...rest } = rawChanges;

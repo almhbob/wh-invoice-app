@@ -124,7 +124,7 @@ function Badge({ label, color }: { label: string; color: string }) {
 
 const styles = StyleSheet.create({
   card: { backgroundColor: "#fff", borderRadius: 24, padding: 16, gap: 14, borderWidth: 1, borderColor: Colors.border },
-  headerRow: { flexDirection: "row-reverse", alignItems: "center", gap: 10 },
+  headerRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   iconCircle: { width: 42, height: 42, borderRadius: 21, alignItems: "center", justifyContent: "center", backgroundColor: Colors.info + "14" },
   headerTextBlock: { flex: 1, gap: 3 },
   title: { fontSize: 17, fontWeight: "900", color: Colors.primary, textAlign: "right" },
@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
   metricLabel: { fontSize: 10, color: Colors.textMuted, fontWeight: "800" },
   snapshotRow: { gap: 8, padding: 10, borderRadius: 16, backgroundColor: "#FAFAF8", borderWidth: 1, borderColor: Colors.border },
   snapshotTitle: { fontSize: 13, fontWeight: "900", color: Colors.primary, textAlign: "right" },
-  badgesRow: { flexDirection: "row-reverse", flexWrap: "wrap", gap: 6 },
+  badgesRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
   badge: { borderRadius: 12, paddingHorizontal: 9, paddingVertical: 5 },
   badgeText: { fontSize: 10, fontWeight: "900" },
   note: { fontSize: 11, color: Colors.textSecondary, textAlign: "right", lineHeight: 18, fontWeight: "700" },

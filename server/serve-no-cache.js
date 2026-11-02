@@ -59,7 +59,12 @@ function sendJson(res, statusCode, payload) {
 }
 
 function safeJoin(root, urlPath) {
-  const decoded = decodeURIComponent(urlPath.split('?')[0]);
+  let decoded;
+  try {
+    decoded = decodeURIComponent(urlPath.split('?')[0]);
+  } catch {
+    return null; // malformed percent-encoding (e.g. /%E0%A4%A) must not crash the server
+  }
   const normalized = path.normalize(decoded).replace(/^(\.\.(\/|\\|$))+/, '');
   const filePath = path.join(root, normalized);
   return filePath.startsWith(root) ? filePath : null;
@@ -89,7 +94,7 @@ function serveStatic(req, res) {
   if (!fs.existsSync(STATIC_ROOT)) {
     return sendJson(res, 503, { status: 'error', message: 'static-build missing', diagnostics: diagnostics() });
   }
-  const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
+  const url = new URL(req.url || '/', 'http://localhost');
   const pathname = url.pathname === '/' ? '/index.html' : url.pathname;
   const requestedPath = safeJoin(STATIC_ROOT, pathname);
   if (!requestedPath) return sendJson(res, 403, { status: 'error', message: 'Forbidden' });
@@ -100,11 +105,17 @@ function serveStatic(req, res) {
 }
 
 const server = http.createServer((req, res) => {
-  const url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
-  if (url.pathname === '/healthz' || url.pathname === '/api/healthz' || url.pathname === '/api/diagnostics') {
-    return sendJson(res, 200, diagnostics());
+  try {
+    const url = new URL(req.url || '/', 'http://localhost');
+    if (url.pathname === '/healthz' || url.pathname === '/api/healthz' || url.pathname === '/api/diagnostics') {
+      return sendJson(res, 200, diagnostics());
+    }
+    serveStatic(req, res);
+  } catch (err) {
+    // One malformed request must never take the whole server down
+    if (!res.headersSent) sendJson(res, 400, { status: 'error', message: 'Bad request' });
+    else res.end();
   }
-  serveStatic(req, res);
 });
 
 server.listen(PORT, '0.0.0.0', () => {

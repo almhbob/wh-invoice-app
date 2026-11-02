@@ -605,7 +605,7 @@ const styles = StyleSheet.create({
   productInfo: { padding: 10, gap: 4, flex: 1 },
   productName: { fontSize: 13, fontWeight: "800", color: Colors.text, lineHeight: 18, textAlign: "right" },
   productDesc: { fontSize: 11, color: Colors.textMuted, textAlign: "right" },
-  priceRow: { flexDirection: "row-reverse", alignItems: "center", marginTop: 2 },
+  priceRow: { flexDirection: "row", alignItems: "center", marginTop: 2 },
   productPrice: { fontSize: 14, fontWeight: "900", color: Colors.gold },
   addToOrderBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 5, marginHorizontal: 10, marginBottom: 10, paddingVertical: 9, borderRadius: 12 },
   addToOrderText: { color: "#fff", fontSize: 13, fontWeight: "800" },

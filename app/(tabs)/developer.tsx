@@ -77,7 +77,7 @@ export default function DeveloperScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#F4F4F2" },
   content: { padding: 18, gap: 16, maxWidth: 920, width: "100%", alignSelf: "center" },
-  heading: { flexDirection: "row-reverse", alignItems: "center", gap: 12, paddingVertical: 8 },
+  heading: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 8 },
   icon: { width: 44, height: 44, borderRadius: 14, backgroundColor: "#fff", borderWidth: 1, borderColor: Colors.border, alignItems: "center", justifyContent: "center" },
   headingText: { flex: 1, gap: 4 },
   title: { fontSize: 21, fontWeight: "900", color: Colors.primary, textAlign: "right" },

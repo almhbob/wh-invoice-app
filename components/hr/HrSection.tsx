@@ -24,7 +24,7 @@ export function HrSection() {
     <View style={{ gap: 12 }}>
       <View style={[s.seg, { alignSelf: "stretch" }]}>
         {([["staff", tr("العاملون والإقامات", "Staff & iqamas"), "users"], ["payroll", tr("الرواتب", "Payroll"), "credit-card"]] as const).map(([k, l, icon]) => (
-          <Pressable key={k} onPress={() => setTab(k)} style={[s.segBtn, { flex: 1, flexDirection: "row-reverse", gap: 6, justifyContent: "center", alignItems: "center" }, tab === k && s.segOn]}>
+          <Pressable key={k} onPress={() => setTab(k)} style={[s.segBtn, { flex: 1, flexDirection: "row", gap: 6, justifyContent: "center", alignItems: "center" }, tab === k && s.segOn]}>
             <Feather name={icon} size={14} color={tab === k ? Colors.text : Colors.textSecondary} />
             <Text style={[s.segTxt, tab === k && s.segTxtOn]}>{l}</Text>
           </Pressable>

@@ -43,6 +43,9 @@ export function employeeCredentialErrorMessage(error: unknown) {
   if (message.includes("BRANCH_SUPERVISOR_CANNOT_ASSIGN_PROTECTED_ROLE")) {
     return "مشرف الفرع لا يستطيع إنشاء مشرف عام أو مشرف فرع آخر. اختر دورًا تشغيليًا أو مشرف قسم.";
   }
+  if (message.includes("BRANCH_SUPERVISOR_CANNOT_MANAGE_PROTECTED_ROLE") || message.includes("FORBIDDEN")) {
+    return "لا تملك صلاحية تعديل هذا الموظف.";
+  }
   if (message.includes("permission-denied")) {
     return "لا توجد صلاحية كافية في Firebase لإضافة الموظف. راجع قواعد Firestore أو أكمل ربط Firebase Auth.";
   }

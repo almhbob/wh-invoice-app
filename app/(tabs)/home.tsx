@@ -1,3 +1,4 @@
+import { orderNetSales } from "@/utils/orderMoney";
 import { tr } from "@/lib/i18n";
 import { Feather } from "@expo/vector-icons";
 import { Image } from "expo-image";
@@ -326,7 +327,7 @@ export default function HomeScreen() {
     const timer = setTimeout(() => setShowRevenue(false), 15000);
     return () => clearTimeout(timer);
   }, [showRevenue]);
-  const todayRevenue  = useMemo(() => todayOrders.reduce((s, o) => s + (o.totalAmount ?? 0), 0), [todayOrders]);
+  const todayRevenue  = useMemo(() => todayOrders.reduce((s, o) => s + orderNetSales(o), 0), [todayOrders]);
   const pendingCnt    = useMemo(() => todayOrders.filter(o => overallStatus(o) === "pending").length,     [todayOrders]);
   const inProgressCnt = useMemo(() => todayOrders.filter(o => overallStatus(o) === "in_progress").length, [todayOrders]);
   const doneCnt       = useMemo(() => todayOrders.filter(o => overallStatus(o) === "done").length,        [todayOrders]);

@@ -167,7 +167,7 @@ export function TenantAccessGate({ children }: { children: React.ReactNode }) {
   const { lang, isRTL } = useLang();
   const tx = (key: Parameters<typeof tenantAccessText>[0]) => tenantAccessText(key, lang);
   const textAlign = isRTL ? "right" : "left";
-  const rowDirection = isRTL ? "row-reverse" : "row";
+  const rowDirection = "row" as const; // RN mirrors "row" under RTL
   const { company, setCompany, switchCompanyById } = useCompany();
   const { employees, currentEmployee, setCurrentEmployee, checkAndLogin, addEmployee, isLoading, authMode } = useEmployee();
   const isSecure = authMode === "secure";

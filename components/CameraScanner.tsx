@@ -209,7 +209,7 @@ export function CameraScanner({
 const s = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.75)", justifyContent: "center", padding: 16 },
   sheet: { width: "100%", maxWidth: 480, alignSelf: "center", backgroundColor: Colors.espressoMid, borderRadius: 24, padding: 16, gap: 12 },
-  head: { flexDirection: "row-reverse", alignItems: "center", justifyContent: "space-between" },
+  head: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   title: { color: "#fff", fontSize: 16, fontWeight: "700" },
   stage: { width: "100%", aspectRatio: 3 / 4, maxHeight: 520, borderRadius: 18, overflow: "hidden", backgroundColor: "#000" },
   frameWrap: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, alignItems: "center", justifyContent: "center" },

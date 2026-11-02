@@ -132,7 +132,7 @@ function LogoHeader({ titleKey, accentColor, isDesktop }: LogoHeaderProps) {
   return (
     <>
       <View style={[styles.headerContainer, { paddingTop: topInset, backgroundColor: tenantBrand.primary }]}>
-        <View style={[styles.headerInner, isRTL ? styles.rowRTL : styles.rowLTR]}>
+        <View style={[styles.headerInner, styles.rowLTR]}>
           {!isDesktop && isLaviviane && (
             <View style={styles.laviLogoBox}>
               <Image source={{ uri: "/laviviane-logo.png" }} style={styles.laviLogoImg} contentFit="contain" />
@@ -145,8 +145,8 @@ function LogoHeader({ titleKey, accentColor, isDesktop }: LogoHeaderProps) {
           )}
           {!isDesktop && !isLaviviane && (
             <View style={styles.brandBlock}>
-              <Text style={[styles.brandName, { color: tenantBrand.accent }]}>{tenantBrand.name}</Text>
-              <Text style={styles.brandSub}>
+              <Text style={[styles.brandName, { color: tenantBrand.accent }]} numberOfLines={1}>{tenantBrand.name}</Text>
+              <Text style={styles.brandSub} numberOfLines={1}>
                 {isNamedTenant ? tenantBrand.subtitle : `${PLATFORM_OWNER.nameEn} · ${tenantBrand.subtitle}`}
               </Text>
             </View>
@@ -259,7 +259,7 @@ function DesktopSidebar({ activePath, navigate, isRTL }: { activePath: string; n
     if (m.name === "trays") return canDo(role, ROLE_CAN_VIEW_TRAYS);
     if (m.name === "admin") return canDo(role, ROLE_CAN_ACCESS_ADMIN);
     return true;
-  }));
+  })).filter(m => m.name !== "settings"); // Settings has its own sidebar item
 
   const [showDepts, setShowDepts] = useState(() => visibleDepts.some(d => activePath.includes(d.name)));
   const [showMore, setShowMore]   = useState(() => visibleMore.some(m => activePath.includes(m.name)));
@@ -285,9 +285,7 @@ function DesktopSidebar({ activePath, navigate, isRTL }: { activePath: string; n
   const sideStyle = [
     ds.sidebar,
     { backgroundColor: tenantBrand.primary },
-    isRTL
-      ? { borderLeftWidth: 1, borderLeftColor: "rgba(255,255,255,0.08)", borderRightWidth: 0 }
-      : { borderRightWidth: 1, borderRightColor: "rgba(255,255,255,0.08)" },
+    { borderEndWidth: 1, borderEndColor: "rgba(255,255,255,0.08)" },
   ];
 
   return (
@@ -299,7 +297,7 @@ function DesktopSidebar({ activePath, navigate, isRTL }: { activePath: string; n
             <Image source={{ uri: "/laviviane-logo.png" }} style={ds.laviSidebarLogo} contentFit="contain" />
           </View>
         ) : (
-          <View style={[ds.brand, isRTL ? ds.rowRTL : ds.rowLTR]}>
+          <View style={[ds.brand, ds.rowLTR]}>
             <TenantLogoMark logoText={tenantBrand.logoText} primary={tenantBrand.primary} accent={tenantBrand.accent} small />
             <View style={{ flex: 1 }}>
               <Text style={[ds.brandName, { color: tenantBrand.accent }]}>{tenantBrand.name}</Text>
@@ -360,7 +358,7 @@ function DesktopSidebar({ activePath, navigate, isRTL }: { activePath: string; n
         <View style={ds.divider} />
 
         {/* Employee */}
-        <TouchableOpacity style={[ds.empRow, isRTL ? ds.rowRTL : ds.rowLTR]} onPress={() => setShowSelector(true)} activeOpacity={0.8}>
+        <TouchableOpacity style={[ds.empRow, ds.rowLTR]} onPress={() => setShowSelector(true)} activeOpacity={0.8}>
           {currentEmployee ? (
             <>
               <View style={[ds.empAvatar, { backgroundColor: ROLE_COLORS[currentEmployee.role] ?? Colors.primaryLight }]}>
@@ -381,7 +379,7 @@ function DesktopSidebar({ activePath, navigate, isRTL }: { activePath: string; n
         </TouchableOpacity>
 
         {/* Language toggle */}
-        <TouchableOpacity style={[ds.langRow, isRTL ? ds.rowRTL : ds.rowLTR]} onPress={toggleLang} activeOpacity={0.8}>
+        <TouchableOpacity style={[ds.langRow, ds.rowLTR]} onPress={toggleLang} activeOpacity={0.8}>
           <Feather name="globe" size={14} color="rgba(255,255,255,0.45)" />
           <Text style={ds.langLabel}>{LANG_NEXT[lang] ?? "EN"}</Text>
           <Text style={ds.langCurrent}>{lang.toUpperCase()}</Text>
@@ -477,7 +475,7 @@ function CustomTabBar() {
       <View style={[styles.bar, isWeb ? styles.webBar : styles.nativeBar, { height: tabH + pb, paddingBottom: pb, borderTopColor: border }]}>
         {isIOS && <BlurView intensity={90} tint={isDark ? "dark" : "light"} style={StyleSheet.absoluteFill} />}
         {!isIOS && <View style={[StyleSheet.absoluteFill, { backgroundColor: bg }]} />}
-        <BarItem label={t("tabLiveOrders")} icon="activity" sf="list.bullet.rectangle" active={isHome} accent={Colors.gold} onPress={() => navigate("home")} />
+        <BarItem label={t("tabHome")} icon="activity" sf="list.bullet.rectangle" active={isHome} accent={Colors.gold} onPress={() => navigate("home")} />
         {role === "driver" && <BarItem label={t("tabMyDeliveries")} icon="truck" sf="car" active={pathname.includes("driver")} accent={Colors.success} onPress={() => navigate("driver")} />}
         {showCashierTab && <BarItem label={t("tabCashier")} icon="file-text" sf="doc.text" active={isCashier} accent={Colors.gold} onPress={() => navigate("cashier")} />}
         {visibleDeptsTab.length > 0 && <BarItem label={t("tabDepts")} icon="grid" sf="square.grid.2x2" active={isDept} accent={activeDeptAccent} badge={showDepts ? "▲" : "▼"} onPress={() => setShowDepts((v) => !v)} />}
@@ -493,15 +491,15 @@ function BarItem({ label, icon, sf, active, accent, badge, onPress }: {
   label: string; icon: string; sf?: string; active: boolean; accent: string; badge?: string; onPress: () => void;
 }) {
   const isIOS = Platform.OS === "ios";
-  const iconColor = active ? accent : Colors.textMuted;
+  const iconColor = active ? accent : Colors.textSecondary;
   return (
     <TouchableOpacity style={styles.barItem} onPress={onPress} activeOpacity={0.7}>
       {active && <View style={[styles.activePill, { backgroundColor: accent }]} />}
       <View style={styles.barIconWrap}>
         {isIOS && sf ? <SymbolView name={sf as any} tintColor={iconColor} size={22} /> : <Feather name={icon as any} size={22} color={iconColor} />}
-        {badge && <Text style={[styles.arrowBadge, { color: active ? accent : Colors.textMuted }]}>{badge}</Text>}
+        {badge && <Feather name={badge === "▲" ? "chevron-up" : "chevron-down"} size={11} color={iconColor} style={styles.arrowBadge} />}
       </View>
-      <Text style={[styles.barLabel, active && { color: accent, fontWeight: "700" }]} numberOfLines={1}>{label}</Text>
+      <Text style={[styles.barLabel, active && { color: accent, fontWeight: "800" }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8}>{label}</Text>
     </TouchableOpacity>
   );
 }
@@ -582,14 +580,13 @@ export default function TabLayout() {
 
   if (isDesktop) {
     return (
-      <View style={[ds.root, isRTL ? ds.rootRTL : ds.rootLTR]}>
+      <View style={[ds.root, ds.rootLTR]}>
         <DesktopSidebar activePath={pathname} navigate={navigate} isRTL={isRTL} />
         <View style={ds.content}>
           <OfflineBanner />
           <LiveAlertsHost />
-      <HrReminderHost />
           <HrReminderHost />
-          <View style={[ds.contentHeader, isRTL ? ds.rowRTL : ds.rowLTR]}>
+          <View style={[ds.contentHeader, ds.rowLTR]}>
             <View style={[ds.contentBadge, { backgroundColor: screenAccent }]}>
               <Text style={ds.contentBadgeText}>{screenTitle}</Text>
             </View>
@@ -619,7 +616,7 @@ export default function TabLayout() {
 const styles = StyleSheet.create({
   headerContainer: { shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 12, elevation: 4 },
   headerInner: { alignItems: "center", paddingHorizontal: 12, paddingVertical: 10, gap: 8 },
-  rowRTL: { flexDirection: "row-reverse" }, rowLTR: { flexDirection: "row" },
+  rowLTR: { flexDirection: "row" },
   logoBox: { width: 46, height: 46, borderRadius: 10, overflow: "hidden", borderWidth: 2, backgroundColor: "#fff", alignItems: "center", justifyContent: "center" },
   laviLogoBox: { height: 46, width: 120, borderRadius: 8, overflow: "hidden", backgroundColor: "#fff", alignItems: "center", justifyContent: "center", paddingHorizontal: 4 },
   laviLogoImg: { width: 112, height: 42 },
@@ -633,19 +630,19 @@ const styles = StyleSheet.create({
   tenantLogoText: { fontSize: 21, fontWeight: "700", letterSpacing: -0.5 },
   tenantLogoTextSmall: { fontSize: 18 },
   tenantLogoLine: { width: 18, height: 2, borderRadius: 2, marginTop: 1 },
-  brandBlock: { gap: 1 },
+  brandBlock: { gap: 1, flexShrink: 1, minWidth: 0 },
   brandName: { fontSize: 15, fontWeight: "700", letterSpacing: 1.2 },
-  brandSub: { color: "rgba(255,255,255,0.65)", fontSize: 9, fontWeight: "600" },
+  brandSub: { color: "rgba(255,255,255,0.75)", fontSize: 10, fontWeight: "600" },
   langBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.15)", borderWidth: 1, borderColor: "rgba(255,255,255,0.3)", alignItems: "center", justifyContent: "center" },
   langBtnText: { color: "#fff", fontSize: 12, fontWeight: "800" },
-  empBtn: { flexDirection: "row", alignItems: "center", gap: 7, backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 22, paddingHorizontal: 10, paddingVertical: 6, borderWidth: 1, borderColor: "rgba(255,255,255,0.2)", maxWidth: 130 },
+  empBtn: { flexDirection: "row", alignItems: "center", gap: 7, backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 22, paddingHorizontal: 10, paddingVertical: 6, borderWidth: 1, borderColor: "rgba(255,255,255,0.2)", maxWidth: 124, flexShrink: 1 },
   empAvatar: { width: 26, height: 26, borderRadius: 13, alignItems: "center", justifyContent: "center" },
   empAvatarText: { color: "#fff", fontSize: 12, fontWeight: "800" },
   empTextBlock: { flex: 1 },
   empName: { color: "#fff", fontSize: 11, fontWeight: "600" },
-  empId: { color: "rgba(255,255,255,0.6)", fontSize: 9 },
+  empId: { color: "rgba(255,255,255,0.7)", fontSize: 10 },
   loginText: { color: "rgba(255,255,255,0.85)", fontSize: 11, fontWeight: "600" },
-  screenBadge: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20 },
+  screenBadge: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, flexShrink: 1, maxWidth: 120 },
   screenBadgeText: { color: "#fff", fontSize: 11, fontWeight: "700" },
   goldLine: { height: 1, opacity: 0.9 },
   bar: { flexDirection: "row", borderTopWidth: StyleSheet.hairlineWidth, zIndex: 100, overflow: "hidden" },
@@ -654,26 +651,24 @@ const styles = StyleSheet.create({
   barItem: { flex: 1, alignItems: "center", justifyContent: "center", paddingTop: 6, gap: 3, position: "relative" },
   activePill: { position: "absolute", top: 0, width: 24, height: 3, borderBottomLeftRadius: 3, borderBottomRightRadius: 3 },
   barIconWrap: { flexDirection: "row", alignItems: "center", gap: 2 },
-  arrowBadge: { fontSize: 7, fontWeight: "900", marginTop: 6 },
-  barLabel: { fontSize: 10, fontWeight: "500", color: Colors.textMuted, letterSpacing: 0.1 },
+  arrowBadge: { marginTop: 6 },
+  barLabel: { fontSize: 11, fontWeight: "600", color: Colors.textSecondary, letterSpacing: 0.1, paddingHorizontal: 2 },
   sheetBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)" },
   sheetContainer: { backgroundColor: "#fff", borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingTop: 12, paddingHorizontal: 16, shadowColor: "#000", shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.12, shadowRadius: 16, elevation: 20 },
   sheetHandle: { alignSelf: "center", width: 40, height: 4, borderRadius: 2, backgroundColor: Colors.border, marginBottom: 18 },
   sheetGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12, justifyContent: "center", paddingBottom: 8 },
   sheetItem: { width: 88, alignItems: "center", gap: 8, paddingVertical: 14, paddingHorizontal: 8, borderRadius: 18, borderWidth: 1.5, borderColor: "transparent", backgroundColor: Colors.surfaceSecondary, position: "relative" },
   sheetIconCircle: { width: 52, height: 52, borderRadius: 16, alignItems: "center", justifyContent: "center" },
-  sheetItemLabel: { fontSize: 11, fontWeight: "600", color: Colors.textMuted, textAlign: "center" },
-  sheetActiveDot: { position: "absolute", top: 8, right: 10, width: 7, height: 7, borderRadius: 4 },
+  sheetItemLabel: { fontSize: 12, fontWeight: "700", color: Colors.text, textAlign: "center" },
+  sheetActiveDot: { position: "absolute", top: 8, end: 10, width: 7, height: 7, borderRadius: 4 },
 });
 
 const ds = StyleSheet.create({
   root: { flex: 1 },
   rootLTR: { flexDirection: "row" },
-  rootRTL: { flexDirection: "row-reverse" },
   sidebar: { width: 220, flexDirection: "column" },
   content: { flex: 1, overflow: "hidden" as any },
   rowLTR: { flexDirection: "row" },
-  rowRTL: { flexDirection: "row-reverse" },
   brand: { alignItems: "center", gap: 10, paddingHorizontal: 16, paddingTop: 20, paddingBottom: 14 },
   laviBrand: { alignItems: "center", justifyContent: "center", paddingTop: 20, paddingBottom: 14, paddingHorizontal: 12 },
   laviSidebarLogo: { width: 188, height: 72 },
@@ -681,8 +676,8 @@ const ds = StyleSheet.create({
   brandSub: { color: "rgba(255,255,255,0.45)", fontSize: 10, marginTop: 1 },
   divider: { height: StyleSheet.hairlineWidth, backgroundColor: "rgba(255,255,255,0.12)", marginHorizontal: 12, marginVertical: 4 },
   navItem: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 10, paddingHorizontal: 14, marginHorizontal: 10, marginVertical: 1, borderRadius: 12, position: "relative" },
-  navIndent: { paddingLeft: 28, marginLeft: 12 },
-  navActiveLine: { position: "absolute", left: 0, top: "15%" as any, width: 3, height: "70%" as any, borderRadius: 2 },
+  navIndent: { paddingStart: 28, marginStart: 12 },
+  navActiveLine: { position: "absolute", start: 0, top: "15%" as any, width: 3, height: "70%" as any, borderRadius: 2 },
   navLabel: { fontSize: 13, color: "rgba(255,255,255,0.65)", flex: 1 },
   empRow: { alignItems: "center", gap: 10, paddingHorizontal: 14, paddingVertical: 13 },
   empAvatar: { width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center", flexShrink: 0 },

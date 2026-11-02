@@ -10,8 +10,8 @@ import { showPlatformAlert } from "@/lib/platformAlert";
 import { deleteWorker, saveWorker } from "@/lib/hr";
 import { openWhatsApp } from "@/utils/orderFlow";
 import {
-  DEFAULT_WARN_DAYS, DocKind, DOC_KINDS, EXPIRY_FIELD, expiryAlerts, expiryState, ExpiryState, HrWorker, isValidIqama,
-  monthlyGross, parseDateInput,
+  DEFAULT_WARN_DAYS, DocKind, DOC_KINDS, endOfServiceGratuity, EXPIRY_FIELD, expiryAlerts, expiryState, ExpiryState, HrWorker, isValidIqama,
+  monthlyGross, parseDateInput, recordRenewals, ServiceEndReason,
 } from "@/utils/hr";
 import { riyadhDate } from "@/utils/windowOrders";
 
@@ -156,6 +156,15 @@ function WorkerForm({ worker, onClose, companyId }: { worker: HrWorker; onClose:
   const [active, setActive] = useState(worker.active);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [endReason, setEndReason] = useState<ServiceEndReason>("termination");
+  const gratuity = useMemo(() => {
+    const start = parseDateInput(f.startDate);
+    if (!start) return null;
+    return endOfServiceGratuity({
+      startDate: start, basicSalary: Number(f.basicSalary) || 0, housing: Number(f.housing) || 0,
+      transport: Number(f.transport) || 0, otherAllowance: Number(f.otherAllowance) || 0,
+    }, riyadhDate(), endReason);
+  }, [f.startDate, f.basicSalary, f.housing, f.transport, f.otherAllowance, endReason]);
   const set = (k: string) => (v: string) => { setF((m) => ({ ...m, [k]: v })); setErr(""); };
 
   const save = async () => {
@@ -175,6 +184,8 @@ function WorkerForm({ worker, onClose, companyId }: { worker: HrWorker; onClose:
         id: worker.id, name: f.name.trim(), jobTitle: f.jobTitle, nationality: f.nationality, phone: f.phone,
         iqamaNumber: f.iqamaNumber?.replace(/\s/g, ""), passportNumber: f.passportNumber, bankIban: f.bankIban?.replace(/\s/g, "").toUpperCase(),
         notes: f.notes, createdAt: worker.createdAt, active,
+        // Keep the renewal log: a later expiry than before counts as a renewal
+        renewals: recordRenewals(worker, dates as Partial<HrWorker>, new Date().toISOString()),
         basicSalary: Number(f.basicSalary) || 0, housing: Number(f.housing) || 0, transport: Number(f.transport) || 0, otherAllowance: Number(f.otherAllowance) || 0,
         ...dates,
       } as HrWorker);
@@ -244,6 +255,34 @@ function WorkerForm({ worker, onClose, companyId }: { worker: HrWorker; onClose:
               {F({ k: "startDate", label: tr("تاريخ المباشرة", "Start date"), ph: "2025-01-15", ltr: true })}
             </View>
             {F({ k: "notes", label: tr("ملاحظات", "Notes") })}
+            {gratuity ? (
+              <View style={[s.card, { gap: 8 }]}>
+                <Text style={s.section}>{tr("مكافأة نهاية الخدمة (تقديرية حتى اليوم)", "End-of-service gratuity (estimate to date)")}</Text>
+                <View style={[s.seg, { alignSelf: "stretch" }]}>
+                  {([["termination", tr("انتهاء العقد / إنهاء", "Contract end / termination")], ["resignation", tr("استقالة", "Resignation")]] as const).map(([k, l]) => (
+                    <Pressable key={k} onPress={() => setEndReason(k)} style={[s.segBtn, { flex: 1, alignItems: "center" }, endReason === k && s.segOn]}>
+                      <Text style={[s.segTxt, endReason === k && s.segTxtOn]}>{l}</Text>
+                    </Pressable>
+                  ))}
+                </View>
+                <Text style={s.salary}>{gratuity.amount.toLocaleString("en-US", { maximumFractionDigits: 2 })} {tr("ر.س", "SAR")}</Text>
+                <Text style={s.muted}>
+                  {trf("مدة الخدمة {y} سنة · الأجر {w} ر.س", "Service {y} years · wage {w} SAR", { y: gratuity.years, w: gratuity.wage })}
+                  {gratuity.factor < 1 ? ` · ${trf("يُصرف {p}% عند الاستقالة", "{p}% due on resignation", { p: Math.round(gratuity.factor * 100) })}` : ""}
+                </Text>
+                <Text style={s.muted}>{tr("وفق المادتين 84 و85 من نظام العمل: نصف شهر عن كل سنة من الخمس الأولى وشهر عن كل سنة بعدها.", "Per Labor Law arts. 84–85: half a month per year for the first five years, a full month per year after.")}</Text>
+              </View>
+            ) : null}
+            {worker.renewals?.length ? (
+              <View style={[s.card, { gap: 6 }]}>
+                <Text style={s.section}>{tr("سجل التجديدات", "Renewal history")}</Text>
+                {[...worker.renewals].reverse().map((r, i) => (
+                  <Text key={`${r.at}-${i}`} style={s.muted}>
+                    {docLabel(r.kind)}: {r.from ?? "—"} ← {r.to} · {r.at.slice(0, 10)}
+                  </Text>
+                ))}
+              </View>
+            ) : null}
             <View style={s.rowBetween}>
               <Text style={s.label}>{tr("على رأس العمل", "Currently employed")}</Text>
               <Switch value={active} onValueChange={setActive} trackColor={{ true: Colors.success, false: Colors.border }} />
@@ -267,7 +306,7 @@ function WorkerForm({ worker, onClose, companyId }: { worker: HrWorker; onClose:
 
 export const s = StyleSheet.create({
   card: { backgroundColor: Colors.surface, borderRadius: 18, borderWidth: 1, borderColor: Colors.borderLight, padding: 14, gap: 8 },
-  rowBetween: { flexDirection: "row-reverse", alignItems: "center", justifyContent: "space-between", gap: 10 },
+  rowBetween: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 },
   icon: { width: 38, height: 38, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   big: { fontSize: 18, fontWeight: "900", color: Colors.text, textAlign: "right", flex: 1 },
   title: { fontSize: 15, fontWeight: "800", color: Colors.text, textAlign: "right" },
@@ -275,25 +314,25 @@ export const s = StyleSheet.create({
   section: { fontSize: 13, fontWeight: "900", color: Colors.primary, textAlign: "right", marginTop: 6 },
   label: { fontSize: 12, fontWeight: "700", color: Colors.textSecondary, textAlign: "right" },
   err: { color: Colors.accent, fontSize: 13, fontWeight: "700", textAlign: "right" },
-  alertRow: { flexDirection: "row-reverse", alignItems: "center", gap: 10, paddingTop: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: Colors.borderLight },
+  alertRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingTop: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: Colors.borderLight },
   alertName: { fontSize: 14, fontWeight: "700", color: Colors.text, textAlign: "right" },
   dot: { width: 9, height: 9, borderRadius: 5 },
   waBtn: { width: 34, height: 34, borderRadius: 10, backgroundColor: Colors.success, alignItems: "center", justifyContent: "center" },
-  seg: { flexDirection: "row-reverse", backgroundColor: Colors.surfaceSecondary, borderRadius: 12, padding: 3, flexShrink: 1 },
+  seg: { flexDirection: "row", backgroundColor: Colors.surfaceSecondary, borderRadius: 12, padding: 3, flexShrink: 1 },
   segBtn: { paddingHorizontal: 11, paddingVertical: 7, borderRadius: 10 },
   segOn: { backgroundColor: Colors.surface },
   segTxt: { fontSize: 12, color: Colors.textSecondary, fontWeight: "700" },
   segTxtOn: { color: Colors.text, fontWeight: "900" },
-  addBtn: { flexDirection: "row-reverse", alignItems: "center", gap: 6, backgroundColor: Colors.primary, borderRadius: 12, minHeight: 40, paddingHorizontal: 12 },
+  addBtn: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: Colors.primary, borderRadius: 12, minHeight: 40, paddingHorizontal: 12 },
   addTxt: { color: "#fff", fontSize: 13, fontWeight: "800" },
   input: { minHeight: 44, borderRadius: 12, borderWidth: 1, borderColor: Colors.border, backgroundColor: "#FAFAF8", paddingHorizontal: 12, color: Colors.text, fontSize: 14 },
   salary: { fontSize: 14, fontWeight: "900", color: Colors.text },
-  chips: { flexDirection: "row-reverse", flexWrap: "wrap", gap: 6 },
+  chips: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
   docChip: { borderWidth: 1, borderRadius: 999, paddingHorizontal: 9, paddingVertical: 3 },
   docTxt: { fontSize: 11, fontWeight: "800" },
   backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", padding: 16 },
   sheet: { width: "100%", maxWidth: 620, maxHeight: "92%", alignSelf: "center", backgroundColor: Colors.surface, borderRadius: 22, padding: 18, gap: 12 },
-  grid: { flexDirection: "row-reverse", flexWrap: "wrap", gap: 10 },
-  saveBtn: { flex: 1, flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: Colors.primary, borderRadius: 14, minHeight: 48 },
+  grid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  saveBtn: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: Colors.primary, borderRadius: 14, minHeight: 48 },
   delBtn: { width: 48, height: 48, borderRadius: 14, borderWidth: 1, borderColor: Colors.accent + "55", alignItems: "center", justifyContent: "center" },
 });

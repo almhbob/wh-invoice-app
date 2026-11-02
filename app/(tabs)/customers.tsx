@@ -1,3 +1,4 @@
+import { orderNetSales } from "@/utils/orderMoney";
 import { tr, trf } from "@/lib/i18n";
 import { AdjustPointsModal, LoyaltySettingsModal } from "@/components/LoyaltyAdminModal";
 import { loyaltyKey, pointsValue, tierFor } from "@/constants/loyalty";
@@ -374,7 +375,7 @@ export default function CustomersScreen() {
       }
       const c = map.get(phone)!;
       c.orders.push(o);
-      c.totalSpent += o.totalAmount ?? 0;
+      c.totalSpent += orderNetSales(o);
       if (o.createdAt > c.lastOrderAt) {
         c.lastOrderAt = o.createdAt;
         c.name = o.customerName;
@@ -766,21 +767,21 @@ export default function CustomersScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  loyaltyBar: { flexDirection: "row-reverse", alignItems: "center", gap: 10, marginHorizontal: 16, marginTop: 12, marginBottom: 4, backgroundColor: Colors.surface, borderRadius: 18, padding: 12, borderWidth: 1, borderColor: Colors.borderLight },
+  loyaltyBar: { flexDirection: "row", alignItems: "center", gap: 10, marginHorizontal: 16, marginTop: 12, marginBottom: 4, backgroundColor: Colors.surface, borderRadius: 18, padding: 12, borderWidth: 1, borderColor: Colors.borderLight },
   loyaltyIcon: { width: 36, height: 36, borderRadius: 12, backgroundColor: Colors.gold + "18", alignItems: "center", justifyContent: "center" },
   loyaltyTitle: { color: Colors.text, fontSize: 13, fontWeight: "700", textAlign: "right" },
   loyaltySub: { color: Colors.textSecondary, fontSize: 11, textAlign: "right" },
-  loyaltyBtn: { flexDirection: "row-reverse", alignItems: "center", gap: 5, backgroundColor: Colors.surfaceSecondary, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7 },
+  loyaltyBtn: { flexDirection: "row", alignItems: "center", gap: 5, backgroundColor: Colors.surfaceSecondary, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7 },
   loyaltyBtnTxt: { color: Colors.text, fontSize: 12, fontWeight: "700" },
   custPoints: { color: Colors.gold, fontSize: 11, fontWeight: "700", marginTop: 2 },
-  occCard: { flexDirection: "row-reverse", alignItems: "center", gap: 12, backgroundColor: Colors.surface, borderRadius: 18, padding: 14, borderWidth: 1, borderColor: Colors.borderLight },
+  occCard: { flexDirection: "row", alignItems: "center", gap: 12, backgroundColor: Colors.surface, borderRadius: 18, padding: 14, borderWidth: 1, borderColor: Colors.borderLight },
   occDays: { width: 52, height: 52, borderRadius: 16, backgroundColor: Colors.gold + "18", alignItems: "center", justifyContent: "center" },
   occDaysNum: { color: Colors.gold, fontSize: 18, fontWeight: "700" },
   occDaysLbl: { color: Colors.gold, fontSize: 10, fontWeight: "600" },
   occName: { color: Colors.text, fontSize: 14, fontWeight: "700", textAlign: "right" },
   occText: { color: Colors.purple, fontSize: 12, fontWeight: "600", textAlign: "right" },
   occMeta: { color: Colors.textMuted, fontSize: 11, textAlign: "right" },
-  occWa: { flexDirection: "row-reverse", alignItems: "center", gap: 6, backgroundColor: "#25D366", borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8 },
+  occWa: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "#25D366", borderRadius: 999, paddingHorizontal: 12, paddingVertical: 8 },
   occWaTxt: { color: "#fff", fontSize: 12, fontWeight: "700" },
   container: { flex: 1, backgroundColor: Colors.background },
 

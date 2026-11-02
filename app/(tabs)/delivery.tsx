@@ -1,3 +1,4 @@
+import { orderNetSales } from "@/utils/orderMoney";
 import { tr } from "@/lib/i18n";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -22,7 +23,7 @@ import { canDo, ROLE_CAN_VIEW_DELIVERY } from "@/constants/rbac";
 import { useEmployee } from "@/context/EmployeeContext";
 import { useLang } from "@/context/LanguageContext";
 import { Order, useOrders } from "@/context/OrdersContext";
-import { fmtDate } from "@/utils/dateUtils";
+import { fmtDate, localDayKey } from "@/utils/dateUtils";
 import { DriversModal } from "@/components/DriversModal";
 import { OrderDetailsSheet } from "@/components/OrderDetailsSheet";
 import { StageBadge } from "@/components/OrderTracker";
@@ -69,14 +70,14 @@ function fmtCurrency(n: number) {
 }
 function isDelivered(o: Order) { return o.deliveryStatus === "delivered"; }
 function isUnassigned(o: Order) { return !o.deliveryDriver?.employeeId && !isDelivered(o); }
-function isToday(ds: string) { return ds?.slice(0, 10) === new Date().toISOString().slice(0, 10); }
+function isToday(ds: string) { return ds?.slice(0, 10) === localDayKey(); }
 
 function parseDeliveryDT(dt?: string): Date | null {
   if (!dt) return null;
   const full = dt.match(/^(\d{4}-\d{2}-\d{2})\s+(\d{2}:\d{2})$/);
   if (full) return new Date(`${full[1]}T${full[2]}:00`);
   const timeOnly = dt.match(/^(\d{2}:\d{2})$/);
-  if (timeOnly) return new Date(`${new Date().toISOString().slice(0, 10)}T${timeOnly[1]}:00`);
+  if (timeOnly) return new Date(`${localDayKey()}T${timeOnly[1]}:00`);
   return null;
 }
 
@@ -148,7 +149,7 @@ function StatsHeader({ orders }: { orders: Order[] }) {
   const unassignedCount = orders.filter(isUnassigned).length;
   const readyCount = orders.filter(isReadyForDelivery).length;
   const overdueCount = orders.filter((o) => getUrgency(o) === "overdue").length;
-  const revenue = orders.reduce((s, o) => s + (o.totalAmount ?? 0), 0);
+  const revenue = orders.reduce((s, o) => s + orderNetSales(o), 0);
   const pct = orders.length > 0 ? Math.round((deliveredCount / orders.length) * 100) : 0;
 
   return (

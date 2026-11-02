@@ -31,8 +31,20 @@ export interface HrWorker {
   startDate?: string;
   active: boolean;
   notes?: string;
+  /** Document renewals, newest last (recorded when an expiry date moves forward). */
+  renewals?: RenewalEntry[];
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface RenewalEntry {
+  kind: DocKind;
+  /** Previous expiry (YYYY-MM-DD), when there was one. */
+  from?: string;
+  /** New expiry (YYYY-MM-DD). */
+  to: string;
+  /** When the renewal was recorded (ISO). */
+  at: string;
 }
 
 export const EXPIRY_FIELD: Record<DocKind, keyof HrWorker> = {
@@ -178,4 +190,84 @@ export function payrollCsv(lines: PayrollLine[]): string {
   const rows = lines.map((l) => [l.month, l.name, l.basic, l.allowances, l.additions, l.deductions, l.advance, l.net,
     l.status === "paid" ? "مدفوع" : "غير مدفوع", l.method === "transfer" ? "تحويل" : l.method === "cash" ? "نقداً" : "", l.paidAt?.slice(0, 10) ?? "", l.note ?? ""]);
   return "﻿" + [head, ...rows].map((r) => r.map(esc).join(",")).join("\n");
+}
+
+// ── Renewals ──────────────────────────────────────────────────────────────────
+
+const MAX_RENEWALS = 40;
+
+/**
+ * Appends a renewal entry for every document whose expiry moved to a later
+ * date (a correction to an earlier date is not a renewal). Keeps the last 40.
+ */
+export function recordRenewals(prev: Partial<HrWorker>, next: Partial<HrWorker>, at: string): RenewalEntry[] {
+  const out = [...(prev.renewals ?? [])];
+  for (const kind of DOC_KINDS) {
+    const field = EXPIRY_FIELD[kind];
+    const from = prev[field] as string | undefined;
+    const to = next[field] as string | undefined;
+    if (!to || !from || to <= from) continue;
+    out.push({ kind, from, to, at });
+  }
+  return out.slice(-MAX_RENEWALS);
+}
+
+// ── End-of-service gratuity (Saudi Labor Law, arts. 84–85) ────────────────────
+
+export type ServiceEndReason = "termination" | "resignation";
+
+export interface Gratuity {
+  years: number;          // service in years (fractional)
+  wage: number;           // last monthly wage used (basic + allowances)
+  full: number;           // entitlement before the resignation reduction
+  factor: number;         // 1, 2/3, 1/3 or 0 on resignation
+  amount: number;         // what is due
+}
+
+/**
+ * Half a month's wage for each of the first five years, a full month for each
+ * year after, pro-rated for part years (art. 84). On resignation (art. 85):
+ * nothing under 2 years, a third for 2–5, two thirds for 5–10, all from 10.
+ * Wage = basic + housing + transport + other allowances (the last actual wage).
+ */
+export function endOfServiceGratuity(
+  w: Pick<HrWorker, "startDate" | "basicSalary" | "housing" | "transport" | "otherAllowance">,
+  endDate: string,
+  reason: ServiceEndReason,
+): Gratuity | null {
+  if (!w.startDate || !endDate || endDate <= w.startDate) return null;
+  const days = (Date.parse(`${endDate}T00:00:00Z`) - Date.parse(`${w.startDate}T00:00:00Z`)) / 86400_000;
+  if (!Number.isFinite(days) || days <= 0) return null;
+  const years = days / 365;
+  const wage = monthlyGross(w);
+  const firstFive = Math.min(years, 5);
+  const after = Math.max(0, years - 5);
+  const full = Math.round((firstFive * wage / 2 + after * wage) * 100) / 100;
+  let factor = 1;
+  if (reason === "resignation") factor = years < 2 ? 0 : years < 5 ? 1 / 3 : years < 10 ? 2 / 3 : 1;
+  return { years: Math.round(years * 100) / 100, wage, full, factor, amount: Math.round(full * factor * 100) / 100 };
+}
+
+// ── Payslip ───────────────────────────────────────────────────────────────────
+
+/** Plain-text payslip for WhatsApp. */
+export function payslipText(l: PayrollLine, opts: { company?: string; monthLabel?: string } = {}): string {
+  const r = (n: number) => `${(Math.round(n * 100) / 100).toLocaleString("en-US")} ر.س`;
+  const rows = [
+    opts.company ? `*${opts.company}*` : "",
+    `قسيمة راتب — ${opts.monthLabel ?? l.month}`,
+    `الاسم: ${l.name}`,
+    "",
+    `الراتب الأساسي: ${r(l.basic)}`,
+    l.allowances ? `البدلات: ${r(l.allowances)}` : "",
+    l.additions ? `الإضافات: ${r(l.additions)}` : "",
+    l.deductions ? `الخصومات: -${r(l.deductions)}` : "",
+    l.advance ? `استرداد سلفة: -${r(l.advance)}` : "",
+    `*الصافي: ${r(l.net)}*`,
+    l.status === "paid"
+      ? `تم الدفع${l.method === "transfer" ? " بالتحويل" : l.method === "cash" ? " نقداً" : ""}${l.paidAt ? ` بتاريخ ${l.paidAt.slice(0, 10)}` : ""}`
+      : "الحالة: لم يُدفع بعد",
+    l.note ? `ملاحظة: ${l.note}` : "",
+  ];
+  return rows.filter((x, i) => x !== "" || i === 3).join("\n");
 }
