@@ -111,3 +111,45 @@ describe("partial dispatch", () => {
     expect(receiptDiff(base().items, {}).shortageCount).toBe(0);
   });
 });
+
+import { editBlock, isPastCutoff, lockedLineChanges, mergeDepts, normalizeCutoff, orderDeadline, startedDepts } from "../../utils/windowOrders";
+
+describe("cutoff and day lock", () => {
+  test("deadline is the evening before at the cutoff, Riyadh time", () => {
+    // 22:00 Riyadh on Nov 1 = 19:00 UTC
+    expect(new Date(orderDeadline("2026-11-02", "22:00")).toISOString()).toBe("2026-11-01T19:00:00.000Z");
+    expect(new Date(orderDeadline("2026-11-01", "01:30")).toISOString()).toBe("2026-10-30T22:30:00.000Z"); // 01:30 Oct 31 Riyadh
+    expect(normalizeCutoff("7:05")).toBe("07:05");
+    expect(normalizeCutoff("bad")).toBe("22:00");
+  });
+  test("past the cutoff", () => {
+    expect(isPastCutoff("2026-11-02", "22:00", new Date("2026-11-01T18:59:00Z"))).toBe(false);
+    expect(isPastCutoff("2026-11-02", "22:00", new Date("2026-11-01T19:01:00Z"))).toBe(true);
+  });
+  test("why the window can't edit; managers override cutoff and lock", () => {
+    const late = new Date("2026-11-01T20:00:00Z");
+    expect(editBlock(null, "2026-11-02", {}, { now: late })).toBe("past_cutoff");
+    expect(editBlock(null, "2026-11-02", {}, { now: late, manager: true })).toBeNull();
+    expect(editBlock(null, "2026-11-02", { locked: { "2026-11-02": {} } }, { now: new Date("2026-11-01T10:00:00Z") })).toBe("locked_day");
+    expect(editBlock(base({ status: "dispatched" }), "2026-11-02", {}, { manager: true })).toBe("dispatched");
+    expect(editBlock(base(), "2026-11-02", {}, { now: new Date("2026-11-01T10:00:00Z") })).toBeNull();
+  });
+});
+
+describe("top-ups", () => {
+  const started = base({ depts: { cake: { status: "preparing", by: "x" }, halwa: { status: "pending" } } });
+  test("started departments' lines are locked, others can change", () => {
+    expect(startedDepts(started)).toEqual(["cake"]);
+    const addHalwa = normalizeItems([...started.items, { productId: "p3", name: "كنافة", department: "halwa", qty: 5 }]);
+    expect(lockedLineChanges(started, addHalwa)).toEqual([]);
+    const moreCake = normalizeItems([...started.items, { productId: "p1", name: "كيك شوكولاتة", department: "cake", qty: 1 }]);
+    expect(lockedLineChanges(started, moreCake)).toEqual(["cake"]);
+  });
+  test("progress is kept for started departments, new ones start pending", () => {
+    const next = normalizeItems([...started.items, { productId: "p4", name: "كرواسون", department: "mawali", qty: 6 }]);
+    const d = mergeDepts(started, next);
+    expect(d.cake?.status).toBe("preparing");
+    expect(d.halwa?.status).toBe("pending");
+    expect(d.mawali?.status).toBe("pending");
+  });
+});

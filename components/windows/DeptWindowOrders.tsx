@@ -6,12 +6,12 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-nati
 import { Colors } from "@/constants/colors";
 import { useCompany } from "@/context/CompanyContext";
 import { useEmployee } from "@/context/EmployeeContext";
-import { useWindowOrders } from "@/hooks/useWindows";
+import { useWindowOrders, useWindowSettings } from "@/hooks/useWindows";
 import { tr, trf } from "@/lib/i18n";
 import { confirmPlatform, showPlatformAlert } from "@/lib/platformAlert";
 import { dispatchWindowOrder, sendLateDeptPart, setDeptProgress, WindowOrderError } from "@/lib/windowOrders";
 import { DEPT_COLOR } from "@/utils/orderFlow";
-import { deptsOf, deptStatus, deptTotals, DeptLineStatus, FactoryDept, isLateDept, orderStage, readyDeptCount, riyadhDate, WindowOrder } from "@/utils/windowOrders";
+import { deptsOf, deptStatus, deptTotals, DeptLineStatus, FactoryDept, isDayLocked, isLateDept, isPastCutoff, orderStage, readyDeptCount, riyadhDate, WindowOrder } from "@/utils/windowOrders";
 import { deptLabel, StageBadge } from "@/components/windows/windowUi";
 
 const CAN_DISPATCH = new Set(["admin", "branch_supervisor", "dept_supervisor", "packaging"]);
@@ -53,6 +53,8 @@ export function DeptWindowOrders({ department }: { department: FactoryDept }) {
   const [dayOffset, setDayOffset] = useState<0 | 1>(0);
   const date = riyadhDate(new Date(), dayOffset);
   const { orders, loading, failed } = useWindowOrders(date);
+  const settings = useWindowSettings();
+  const final = isDayLocked(settings, date) || isPastCutoff(date, settings.cutoff);
   const [busy, setBusy] = useState<string>("");
   const by = currentEmployee ? `${currentEmployee.name} #${currentEmployee.employeeId}` : "";
 
@@ -108,6 +110,11 @@ export function DeptWindowOrders({ department }: { department: FactoryDept }) {
         </View>
         <Text style={s.muted}>{date}</Text>
       </View>
+      <Text style={[s.muted, final && { color: Colors.success, fontWeight: "800" }]}>
+        {final
+          ? tr("✓ الأرقام نهائية — أُقفلت الطلبات لهذا اليوم", "✓ Numbers are final — orders are closed for this day")
+          : tr("قد تتغير الأرقام حتى موعد إقفال الطلبات", "Numbers may still change until the ordering deadline")}
+      </Text>
 
       {loading ? <ActivityIndicator color={color} /> : failed ? (
         <Text style={s.muted}>{tr("تعذّر تحميل طلبيات النوافذ.", "Couldn't load the window orders.")}</Text>

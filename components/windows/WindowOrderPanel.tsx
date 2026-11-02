@@ -8,14 +8,14 @@ import { LAVIVIANE_COMPANY_ID, buildLavivianeProducts } from "@/constants/lavivi
 import { useCompany } from "@/context/CompanyContext";
 import { useEmployee } from "@/context/EmployeeContext";
 import { Product, useProducts } from "@/context/ProductsContext";
-import { useMyWindow, useWindowOrders } from "@/hooks/useWindows";
+import { useMyWindow, useWindowOrders, useWindowSettings } from "@/hooks/useWindows";
 import { tr, trf } from "@/lib/i18n";
 import { showPlatformAlert } from "@/lib/platformAlert";
 import { getWindowOrder, receiveWindowOrder, sendWindowOrder, subscribeAwaitingReceipt, WindowOrderError } from "@/lib/windowOrders";
 import { DEPT_COLOR } from "@/utils/orderFlow";
 import {
-  canEditOrder, deptsOf, deptStatus, expectedQty, FACTORY_DEPTS, FactoryDept, isFactoryDept, orderStage, riyadhDate, SalesWindow,
-  STAGE_ORDER, WindowOrder, WindowOrderItem,
+  deptsOf, deptStatus, editBlock, expectedQty, FACTORY_DEPTS, FactoryDept, isDayLocked, isFactoryDept, orderDeadline, orderStage,
+  riyadhDate, SalesWindow, STAGE_ORDER, startedDepts, WindowOrder, WindowOrderItem,
 } from "@/utils/windowOrders";
 import { DeptName, deptLabel, StageBadge } from "@/components/windows/windowUi";
 
@@ -49,6 +49,9 @@ export function WindowOrderPanel() {
   // The order being received — can be from an earlier day (late delivery).
   const [receiving, setReceiving] = useState<WindowOrder | null>(null);
   const [awaiting, setAwaiting] = useState<WindowOrder[]>([]);
+  const settings = useWindowSettings();
+  // The order as it was when editing began — guards against two people editing at once.
+  const [baseUpdatedAt, setBaseUpdatedAt] = useState<string | null>(null);
 
   useEffect(() => { setMode("view"); }, [win?.id, date]);
   useEffect(() => {
@@ -68,6 +71,7 @@ export function WindowOrderPanel() {
     setQty(Object.fromEntries((src?.items ?? []).map((i) => [i.productId, i.qty])));
     setNote(src === order ? order?.note ?? "" : "");
     setSearch("");
+    setBaseUpdatedAt(order?.updatedAt ?? null);
     setMode("edit");
   };
 
@@ -82,14 +86,22 @@ export function WindowOrderPanel() {
     if (!win || !lines.length) return;
     setBusy(true);
     try {
-      await sendWindowOrder(companyId, { window: win, date, items: lines, note, by });
+      // Lines of departments that already started can't change: send them exactly as they are.
+      const keep = order ? order.items.filter((i) => lockedDepts.includes(i.department)) : [];
+      const next = [...lines.filter((l) => !lockedDepts.includes(l.department)), ...keep];
+      await sendWindowOrder(companyId, { window: win, date, items: next, note, by, manager: canPickAny, baseUpdatedAt });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
       setMode("view");
     } catch (e) {
       const code = e instanceof WindowOrderError ? e.code : "";
-      showPlatformAlert(tr("تعذّر الإرسال", "Could not send"), code === "locked"
-        ? tr("بدأ المصنع تحضير هذه الطلبية، فلم يعد تعديلها ممكناً. تواصل مع المشرف.", "The factory has started on this order, so it can't be changed. Contact the supervisor.")
-        : tr("تحقق من الاتصال وحاول مجدداً.", "Check the connection and try again."));
+      showPlatformAlert(tr("تعذّر الإرسال", "Could not send"),
+        code === "locked" ? tr("أُرسلت هذه الطلبية من المصنع، فلم يعد تعديلها ممكناً.", "This order has left the factory and can't be changed.")
+          : code === "locked_dept" ? tr("بدأت بعض الأقسام تحضير أصنافها، فلا يمكن تغيير أصناف تلك الأقسام.", "Some departments have started, so their lines can't change.")
+            : code === "locked_day" ? tr("أقفل المصنع طلبيات هذا اليوم. تواصل مع المشرف.", "The factory has locked this day's orders. Contact the supervisor.")
+              : code === "past_cutoff" ? tr("انتهى موعد الطلب لهذا اليوم. تواصل مع المشرف.", "The ordering deadline for this day has passed. Contact the supervisor.")
+                : code === "changed" ? tr("عدّل شخص آخر هذه الطلبية للتو. راجعها ثم أعد الإرسال.", "Someone else just changed this order. Review it and send again.")
+                  : tr("تحقق من الاتصال وحاول مجدداً.", "Check the connection and try again."));
+      if (code === "changed") setMode("view");
     } finally { setBusy(false); }
   };
 
@@ -130,7 +142,11 @@ export function WindowOrderPanel() {
   }
 
   const stage = order ? orderStage(order) : null;
-  const editable = canEditOrder(order);
+  const block = editBlock(order, date, settings, { manager: canPickAny });
+  const editable = !block;
+  const lockedDepts = startedDepts(order);
+  const deadline = new Date(orderDeadline(date, settings.cutoff));
+  const deadlineText = deadline.toLocaleString("ar-SA-u-nu-latn", { timeZone: "Asia/Riyadh", weekday: "long", hour: "numeric", minute: "2-digit" });
   const q = search.trim().toLowerCase();
   const shown = catalog.filter((p) => p.isAvailable !== false && (!q || p.name.toLowerCase().includes(q) || (p.nameEn ?? "").toLowerCase().includes(q) || (p.sku ?? "").toLowerCase().includes(q)));
 
@@ -161,6 +177,13 @@ export function WindowOrderPanel() {
           </View>
         ) : null}
         <Text style={s.muted}>{date}</Text>
+        {isDayLocked(settings, date) ? (
+          <Text style={[s.note, { color: Colors.accent }]}>{tr("🔒 أقفل المصنع طلبيات هذا اليوم — الأرقام نهائية.", "🔒 The factory has locked this day's orders — numbers are final.")}</Text>
+        ) : block === "past_cutoff" ? (
+          <Text style={[s.note, { color: Colors.accent }]}>{trf("انتهى موعد الطلب ({t}). للتعديل تواصل مع المشرف.", "The ordering deadline ({t}) has passed. Contact the supervisor to change it.", { t: deadlineText })}</Text>
+        ) : !order || order.status === "sent" ? (
+          <Text style={s.muted}>{trf("آخر موعد للطلب أو التعديل: {t}", "Order or change by: {t}", { t: deadlineText })}</Text>
+        ) : null}
       </View>
 
       {mode === "view" && awaiting.some((o) => o.id !== order?.id) ? (
@@ -193,8 +216,11 @@ export function WindowOrderPanel() {
             return (
               <View key={d} style={{ gap: 6 }}>
                 <DeptName dept={d} />
+                {lockedDepts.includes(d) ? (
+                  <Text style={[s.muted, { color: Colors.warning }]}>{tr("بدأ القسم التحضير — أصنافه ثابتة.", "This department has started — its lines are fixed.")}</Text>
+                ) : null}
                 {list.map((p) => (
-                  <QtyRow key={p.id} name={p.name} value={qty[p.id] ?? 0} onChange={(v) => setQty((m) => ({ ...m, [p.id]: v }))} />
+                  <QtyRow key={p.id} name={p.name} value={qty[p.id] ?? 0} disabled={lockedDepts.includes(d)} onChange={(v) => setQty((m) => ({ ...m, [p.id]: v }))} />
                 ))}
               </View>
             );
@@ -249,10 +275,12 @@ export function WindowOrderPanel() {
           <Feather name="clipboard" size={26} color={Colors.textMuted} />
           <Text style={s.title}>{tr("لم تُرسل طلبية لهذا اليوم", "No order sent for this day")}</Text>
           <Text style={[s.muted, { textAlign: "center" }]}>{tr("حدّد الكميات التي تحتاجها النافذة من كل قسم، وتصل للمصنع فوراً.", "Set the quantities the window needs from each department; the factory gets it instantly.")}</Text>
-          <View style={[s.rowBetween, { gap: 8 }]}>
-            <Pressable onPress={copyYesterday} style={s.ghost}><Text style={s.ghostTxt}>{tr("نسخ طلبية اليوم السابق", "Copy previous day")}</Text></Pressable>
-            <Pressable onPress={() => startEdit(null)} style={s.primary}><Feather name="plus" size={16} color="#fff" /><Text style={s.primaryTxt}>{tr("إنشاء الطلبية", "Create order")}</Text></Pressable>
-          </View>
+          {editable ? (
+            <View style={[s.rowBetween, { gap: 8 }]}>
+              <Pressable onPress={copyYesterday} style={s.ghost}><Text style={s.ghostTxt}>{tr("نسخ طلبية اليوم السابق", "Copy previous day")}</Text></Pressable>
+              <Pressable onPress={() => startEdit(null)} style={s.primary}><Feather name="plus" size={16} color="#fff" /><Text style={s.primaryTxt}>{tr("إنشاء الطلبية", "Create order")}</Text></Pressable>
+            </View>
+          ) : null}
         </View>
       ) : (
         <View style={s.card}>
@@ -285,7 +313,10 @@ export function WindowOrderPanel() {
           {order.note ? <Text style={s.note}>{order.note}</Text> : null}
           {order.receiveNote ? <Text style={s.note}>{order.receiveNote}</Text> : null}
           {editable ? (
-            <Pressable onPress={() => startEdit(null)} style={s.ghost}><Feather name="edit-2" size={14} color={Colors.primary} /><Text style={s.ghostTxt}>{tr("تعديل الطلبية", "Edit order")}</Text></Pressable>
+            <Pressable onPress={() => startEdit(null)} style={s.ghost}>
+              <Feather name={lockedDepts.length ? "plus-circle" : "edit-2"} size={14} color={Colors.primary} />
+              <Text style={s.ghostTxt}>{lockedDepts.length ? tr("إضافة أو تعديل أصناف الأقسام التي لم تبدأ", "Add or change lines for departments that haven't started") : tr("تعديل الطلبية", "Edit order")}</Text>
+            </Pressable>
           ) : null}
           {order.status === "dispatched" && (order.lateDepts ?? []).length ? (
             <Text style={[s.note, { color: Colors.warning }]}>
@@ -301,7 +332,16 @@ export function WindowOrderPanel() {
   );
 }
 
-function QtyRow({ name, value, onChange }: { name: string; value: number; onChange: (v: number) => void }) {
+function QtyRow({ name, value, onChange, disabled }: { name: string; value: number; onChange: (v: number) => void; disabled?: boolean }) {
+  if (disabled) {
+    return (
+      <View style={[s.line, { opacity: 0.6 }]}>
+        <Feather name="lock" size={12} color={Colors.textMuted} />
+        <Text style={s.lineName} numberOfLines={1}>{name}</Text>
+        <Text style={s.lineQty}>{value ? `× ${value}` : "—"}</Text>
+      </View>
+    );
+  }
   return (
     <View style={[s.line, value > 0 && { backgroundColor: Colors.gold + "0D" }]}>
       <Text style={[s.lineName, value > 0 && { fontWeight: "800" }]} numberOfLines={1}>{name}</Text>

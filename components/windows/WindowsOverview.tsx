@@ -5,12 +5,12 @@ import { ActivityIndicator, Pressable, StyleSheet, Switch, Text, TextInput, View
 import { Colors } from "@/constants/colors";
 import { useCompany } from "@/context/CompanyContext";
 import { useEmployee } from "@/context/EmployeeContext";
-import { useWindowOrders, useWindows } from "@/hooks/useWindows";
+import { useWindowOrders, useWindows, useWindowSettings } from "@/hooks/useWindows";
 import { tr, trf } from "@/lib/i18n";
 import { showPlatformAlert } from "@/lib/platformAlert";
-import { saveWindow } from "@/lib/windowOrders";
+import { saveWindow, saveWindowCutoff, setDayLock } from "@/lib/windowOrders";
 import { DEPT_COLOR } from "@/utils/orderFlow";
-import { deptsOf, deptStatus, orderStage, riyadhDate, SalesWindow, slugWindowId } from "@/utils/windowOrders";
+import { DEFAULT_CUTOFF, deptsOf, deptStatus, isDayLocked, normalizeCutoff, orderStage, riyadhDate, SalesWindow, slugWindowId } from "@/utils/windowOrders";
 import { dispatchWithFeedback, useCanDispatch } from "@/components/windows/DeptWindowOrders";
 import { DeptName, StageBadge } from "@/components/windows/windowUi";
 
@@ -24,6 +24,24 @@ export function WindowsOverview() {
   const date = riyadhDate(new Date(), dayOffset);
   const { orders } = useWindowOrders(date);
   const by = currentEmployee ? `${currentEmployee.name} #${currentEmployee.employeeId}` : "";
+  const settings = useWindowSettings();
+  const isManager = currentEmployee?.role === "admin" || currentEmployee?.role === "branch_supervisor";
+  const locked = isDayLocked(settings, date);
+  const [cutoffDraft, setCutoffDraft] = useState<string | null>(null);
+  const [lockBusy, setLockBusy] = useState(false);
+
+  const toggleLock = async () => {
+    setLockBusy(true);
+    try { await setDayLock(companyId, date, !locked, by); }
+    catch { showPlatformAlert(tr("تعذّر الحفظ", "Couldn't save"), tr("تحقق من الاتصال وحاول مجدداً.", "Check the connection and try again.")); }
+    finally { setLockBusy(false); }
+  };
+
+  const saveCutoff = async () => {
+    if (cutoffDraft === null) return;
+    try { await saveWindowCutoff(companyId, cutoffDraft); setCutoffDraft(null); }
+    catch { showPlatformAlert(tr("تعذّر الحفظ", "Couldn't save"), tr("تحقق من الاتصال وحاول مجدداً.", "Check the connection and try again.")); }
+  };
 
   const rows = useMemo(() => windows.filter((w) => w.active).map((w) => ({ w, o: orders.find((o) => o.windowId === w.id) ?? null })), [windows, orders]);
   const counts = useMemo(() => {
@@ -58,6 +76,32 @@ export function WindowsOverview() {
           <Stat n={counts.dispatched} label={tr("في الطريق", "On the way")} color={Colors.gold} />
           <Stat n={counts.received} label={tr("استُلمت", "Received")} color={Colors.success} />
         </View>
+        {isManager ? (
+          <View style={s.controls}>
+            <Pressable onPress={toggleLock} disabled={lockBusy} style={[s.primary, { backgroundColor: locked ? Colors.textSecondary : Colors.accent }, lockBusy && { opacity: 0.6 }]}>
+              <Feather name={locked ? "unlock" : "lock"} size={15} color="#fff" />
+              <Text style={s.primaryTxt}>{locked ? tr("فتح طلبيات هذا اليوم للتعديل", "Reopen this day's orders") : tr("إقفال طلبيات هذا اليوم — الأرقام نهائية", "Lock this day's orders — numbers final")}</Text>
+            </Pressable>
+            <View style={s.cutoffRow}>
+              <Text style={s.muted}>{tr("آخر موعد للطلب (مساء اليوم السابق)", "Ordering deadline (the evening before)")}</Text>
+              <TextInput
+                style={s.cutoffInput}
+                value={cutoffDraft ?? normalizeCutoff(settings.cutoff ?? DEFAULT_CUTOFF)}
+                onChangeText={setCutoffDraft}
+                placeholder="22:00"
+                maxLength={5}
+                keyboardType="numbers-and-punctuation"
+              />
+              {cutoffDraft !== null ? (
+                <Pressable onPress={saveCutoff} style={[s.primary, { flexGrow: 0, minHeight: 36, paddingHorizontal: 12 }]}>
+                  <Text style={s.primaryTxt}>{tr("حفظ", "Save")}</Text>
+                </Pressable>
+              ) : null}
+            </View>
+          </View>
+        ) : locked ? (
+          <Text style={[s.muted, { color: Colors.accent, fontWeight: "800" }]}>{tr("🔒 طلبيات هذا اليوم مقفلة", "🔒 This day's orders are locked")}</Text>
+        ) : null}
       </View>
 
       {loading ? <ActivityIndicator color={Colors.gold} /> : rows.map(({ w, o }) => {
@@ -175,6 +219,9 @@ function WindowsManager({ windows, companyId }: { windows: SalesWindow[]; compan
 }
 
 const s = StyleSheet.create({
+  controls: { gap: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: Colors.borderLight, paddingTop: 10 },
+  cutoffRow: { flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" },
+  cutoffInput: { width: 76, height: 36, borderRadius: 10, borderWidth: 1, borderColor: Colors.border, textAlign: "center", fontSize: 15, fontWeight: "800", color: Colors.text, backgroundColor: "#fff" },
   card: { backgroundColor: Colors.surface, borderRadius: 18, borderWidth: 1, borderColor: Colors.borderLight, padding: 14, gap: 10 },
   rowBetween: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 },
   big: { fontSize: 18, fontWeight: "900", color: Colors.text, textAlign: "right" },

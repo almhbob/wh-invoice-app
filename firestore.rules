@@ -115,16 +115,72 @@ service cloud.firestore {
       allow write: if isManager(companyId);
     }
 
-    // Each window's daily order from the factory. Staff create and move it along;
-    // only managers may delete one.
-    match /companies/{companyId}/windowOrders/{id} {
+    // Window-order settings (evening cutoff, locked days): everyone reads, managers set.
+    match /companies/{companyId}/windowSettings/{id} {
       allow read: if inCompany(companyId);
-      allow create, update: if inCompany(companyId)
-        && request.resource.data.windowId is string
+      allow write: if isManager(companyId) && id == 'main';
+    }
+
+    // Each window's daily order from the factory. The workflow is enforced here:
+    //   sent → (window edits / departments move their own part) → dispatched
+    //   (dispatchers) → late departments send their part → received (the window).
+    // A received order is final; only the admin may correct it or delete orders.
+    function woShape(id) {
+      return request.resource.data.windowId is string
         && request.resource.data.date is string
         && request.resource.data.status in ['sent', 'dispatched', 'received']
         && id == request.resource.data.windowId + '_' + request.resource.data.date;
-      allow delete: if isManager(companyId);
+    }
+    function factoryRole() {
+      return role() in ['cake', 'halwa', 'mawali', 'chocolate', 'packaging'];
+    }
+    function woManager(companyId) {
+      return inCompany(companyId) && role() in ['admin', 'branch_supervisor', 'dept_supervisor'];
+    }
+    function woDispatcher(companyId) {
+      return woManager(companyId) || (inCompany(companyId) && role() == 'packaging');
+    }
+    function woChanged() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+    // A department moves only its own entry in `depts`.
+    function woOwnDeptOnly() {
+      return woChanged().hasOnly(['depts', 'updatedAt'])
+        && request.resource.data.depts.diff(resource.data.get('depts', {})).affectedKeys().hasOnly([role()]);
+    }
+    function woDayLocked(companyId, date) {
+      return exists(/databases/$(database)/documents/companies/$(companyId)/windowSettings/main)
+        && date in get(/databases/$(database)/documents/companies/$(companyId)/windowSettings/main).data.get('locked', {});
+    }
+    // The window (any non-factory employee) edits its order before dispatch.
+    function woWindowEdit(companyId) {
+      return !factoryRole()
+        && !woChanged().hasAny(['dispatchedAt', 'dispatchedBy', 'receivedAt', 'receivedBy', 'shortageCount', 'lateDepts', 'windowId', 'date'])
+        && !woDayLocked(companyId, request.resource.data.date);
+    }
+
+    match /companies/{companyId}/windowOrders/{id} {
+      allow read: if inCompany(companyId);
+      allow create: if inCompany(companyId) && woShape(id)
+        && request.resource.data.status == 'sent'
+        && !factoryRole()
+        && (woManager(companyId) || !woDayLocked(companyId, request.resource.data.date));
+      allow update: if inCompany(companyId) && woShape(id) && (
+        isAdmin(companyId)
+        || (resource.data.status == 'sent' && request.resource.data.status == 'sent' && (
+              woManager(companyId)
+              || (factoryRole() && woOwnDeptOnly())
+              || woWindowEdit(companyId)))
+        || (resource.data.status == 'sent' && request.resource.data.status == 'dispatched' && woDispatcher(companyId))
+        || (resource.data.status == 'dispatched' && request.resource.data.status == 'dispatched' && (
+              woDispatcher(companyId)
+              || (factoryRole() && role() in resource.data.get('lateDepts', [])
+                  && woChanged().hasOnly(['items', 'lateDepts', 'depts', 'updatedAt']))))
+        || (resource.data.status == 'dispatched' && request.resource.data.status == 'received'
+              && !factoryRole()
+              && woChanged().hasOnly(['status', 'items', 'shortageCount', 'receivedAt', 'receivedBy', 'receiveNote', 'updatedAt']))
+      );
+      allow delete: if isAdmin(companyId);
     }
 
     // Staff files (iqama, passports, salaries) and payroll: company admin only.
@@ -138,7 +194,7 @@ service cloud.firestore {
     // Everything else inside a company (orders, products, counters, settings, sessions, logs…)
     match /companies/{companyId}/{sub}/{docId=**} {
       allow read, write: if inCompany(companyId)
-        && !(sub in ['employees', 'employeeSecrets', 'auditLogs', 'taxProfile', 'windows', 'windowOrders', 'hrWorkers', 'payroll']);
+        && !(sub in ['employees', 'employeeSecrets', 'auditLogs', 'taxProfile', 'windows', 'windowOrders', 'windowSettings', 'hrWorkers', 'payroll']);
     }
 
     // Login throttling state — server only.
