@@ -5,10 +5,11 @@ import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, Text, TextIn
 import { Colors } from "@/constants/colors";
 import { useCompany } from "@/context/CompanyContext";
 import { useHrWorkers, usePayroll } from "@/hooks/useHr";
-import { tr, trf } from "@/lib/i18n";
+import { currentLang, tr, trf } from "@/lib/i18n";
 import { showPlatformAlert } from "@/lib/platformAlert";
 import { deletePayrollLine, generatePayroll, savePayrollLine } from "@/lib/hr";
-import { computeNet, monthKey, PayrollLine, payrollCsv, payrollTotals, shiftMonth, toMoney } from "@/utils/hr";
+import { computeNet, monthKey, PayrollLine, payrollCsv, payrollTotals, payslipText, shiftMonth, toMoney } from "@/utils/hr";
+import { openWhatsApp } from "@/utils/orderFlow";
 import { s } from "@/components/hr/HrStaffPanel";
 
 const sar = (n: number) => `${n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ${tr("ر.س", "SAR")}`;
@@ -26,6 +27,7 @@ export function HrPayrollPanel() {
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState<PayrollLine | null>(null);
   const totals = useMemo(() => payrollTotals(lines), [lines]);
+  const rtl = currentLang() === "ar" || currentLang() === "ur";
   const missing = workers.filter((w) => w.active && !lines.some((l) => l.workerId === w.id)).length;
 
   const generate = async () => {
@@ -50,12 +52,12 @@ export function HrPayrollPanel() {
     <View style={{ gap: 12 }}>
       <View style={s.card}>
         <View style={s.rowBetween}>
-          <Pressable onPress={() => setMonth(shiftMonth(month, 1))} hitSlop={10} disabled={month >= monthKey()}><Feather name="chevron-right" size={22} color={month >= monthKey() ? Colors.border : Colors.text} /></Pressable>
+          <Pressable onPress={() => setMonth(shiftMonth(month, -1))} hitSlop={10}><Feather name={rtl ? "chevron-right" : "chevron-left"} size={22} color={Colors.text} /></Pressable>
           <View style={{ flex: 1, alignItems: "center" }}>
             <Text style={[s.title, { textAlign: "center" }]}>{monthName(month)}</Text>
             <Text style={[s.muted, { textAlign: "center" }]}>{trf("{n} عامل في مسير الرواتب", "{n} workers on the payroll", { n: totals.count })}</Text>
           </View>
-          <Pressable onPress={() => setMonth(shiftMonth(month, -1))} hitSlop={10}><Feather name="chevron-left" size={22} color={Colors.text} /></Pressable>
+          <Pressable onPress={() => setMonth(shiftMonth(month, 1))} hitSlop={10} disabled={month >= monthKey()}><Feather name={rtl ? "chevron-left" : "chevron-right"} size={22} color={month >= monthKey() ? Colors.border : Colors.text} /></Pressable>
         </View>
         <View style={{ flexDirection: "row", gap: 8 }}>
           <Tot label={tr("صافي الرواتب", "Net payroll")} v={sar(totals.net)} c={Colors.text} />
@@ -94,7 +96,23 @@ export function HrPayrollPanel() {
               </Text>
             </View>
             <View style={{ alignItems: "flex-start", gap: 4 }}>
-              <Text style={s.salary}>{sar(l.net)}</Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <Text style={s.salary}>{sar(l.net)}</Text>
+                {(() => {
+                  const phone = workers.find((w) => w.id === l.workerId)?.phone;
+                  if (!phone) return null;
+                  return (
+                    <Pressable
+                      onPress={(e) => { e.stopPropagation?.(); openWhatsApp(phone, payslipText(l, { company: company.name, monthLabel: monthName(month) })); }}
+                      style={[s.waBtn, { width: 30, height: 30 }]}
+                      hitSlop={6}
+                      accessibilityLabel={tr("إرسال قسيمة الراتب على واتساب", "Send the payslip on WhatsApp")}
+                    >
+                      <Feather name="send" size={14} color="#fff" />
+                    </Pressable>
+                  );
+                })()}
+              </View>
               <View style={[s.docChip, { borderColor: (l.status === "paid" ? Colors.success : Colors.accent) + "55", backgroundColor: (l.status === "paid" ? Colors.success : Colors.accent) + "10" }]}>
                 <Text style={[s.docTxt, { color: l.status === "paid" ? Colors.success : Colors.accent }]}>
                   {l.status === "paid" ? (l.method === "transfer" ? tr("مدفوع · تحويل", "Paid · transfer") : tr("مدفوع · نقداً", "Paid · cash")) : tr("غير مدفوع", "Unpaid")}
