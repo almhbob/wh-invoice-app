@@ -14,6 +14,7 @@ import {
   monthlyGross, parseDateInput, recordRenewals, ServiceEndReason,
 } from "@/utils/hr";
 import { riyadhDate } from "@/utils/windowOrders";
+import { HrDateField } from "@/components/hr/HrDateField";
 
 export function docLabel(k: DocKind) {
   return k === "iqama" ? tr("الإقامة", "Iqama") : k === "passport" ? tr("الجواز", "Passport") : k === "health" ? tr("الشهادة الصحية", "Health certificate") : tr("العقد", "Contract");
@@ -202,6 +203,10 @@ function WorkerForm({ worker, onClose, companyId }: { worker: HrWorker; onClose:
     try { await deleteWorker(companyId, worker.id); onClose(); } catch { setErr(tr("تعذّر الحذف.", "Couldn't delete.")); } finally { setBusy(false); }
   };
 
+  const D = (k: string, label: string, presets = true) => (
+    <HrDateField label={label} value={parseDateInput(f[k]) || undefined} onChange={set(k)} presets={presets} disabled={busy} />
+  );
+
   const F = ({ k, label, ph, num, ltr }: { k: string; label: string; ph?: string; num?: boolean; ltr?: boolean }) => (
     <View style={{ flex: 1, minWidth: 140, gap: 4 }}>
       <Text style={s.label}>{label}</Text>
@@ -228,18 +233,18 @@ function WorkerForm({ worker, onClose, companyId }: { worker: HrWorker; onClose:
               {F({ k: "nationality", label: tr("الجنسية", "Nationality") })}
               {F({ k: "phone", label: tr("الجوال", "Phone"), ph: "05XXXXXXXX", ltr: true })}
             </View>
-            <Text style={s.section}>{tr("الوثائق وتواريخ الانتهاء (ميلادي)", "Documents and expiry dates (Gregorian)")}</Text>
+            <Text style={s.section}>{tr("الوثائق وتواريخ الانتهاء", "Documents and expiry dates")}</Text>
             <View style={s.grid}>
               {F({ k: "iqamaNumber", label: tr("رقم الإقامة", "Iqama number"), ph: "2XXXXXXXXX", ltr: true })}
-              {F({ k: "iqamaExpiry", label: tr("انتهاء الإقامة", "Iqama expiry"), ph: "2026-12-31", ltr: true })}
+              {D("iqamaExpiry", tr("انتهاء الإقامة", "Iqama expiry"))}
             </View>
             <View style={s.grid}>
               {F({ k: "passportNumber", label: tr("رقم الجواز", "Passport number"), ltr: true })}
-              {F({ k: "passportExpiry", label: tr("انتهاء الجواز", "Passport expiry"), ph: "2027-06-30", ltr: true })}
+              {D("passportExpiry", tr("انتهاء الجواز", "Passport expiry"))}
             </View>
             <View style={s.grid}>
-              {F({ k: "healthExpiry", label: tr("انتهاء الشهادة الصحية", "Health certificate expiry"), ph: "2026-12-31", ltr: true })}
-              {F({ k: "contractExpiry", label: tr("انتهاء العقد", "Contract expiry"), ph: "2027-01-31", ltr: true })}
+              {D("healthExpiry", tr("انتهاء الشهادة الصحية", "Health certificate expiry"))}
+              {D("contractExpiry", tr("انتهاء العقد", "Contract expiry"))}
             </View>
             <Text style={s.section}>{tr("الراتب الشهري (ر.س)", "Monthly salary (SAR)")}</Text>
             <View style={s.grid}>
@@ -252,7 +257,7 @@ function WorkerForm({ worker, onClose, companyId }: { worker: HrWorker; onClose:
             </View>
             <View style={s.grid}>
               {F({ k: "bankIban", label: tr("الآيبان (اختياري)", "IBAN (optional)"), ph: "SA…", ltr: true })}
-              {F({ k: "startDate", label: tr("تاريخ المباشرة", "Start date"), ph: "2025-01-15", ltr: true })}
+              {D("startDate", tr("تاريخ المباشرة", "Start date"), false)}
             </View>
             {F({ k: "notes", label: tr("ملاحظات", "Notes") })}
             {gratuity ? (
