@@ -8,11 +8,11 @@ import { useCompany } from "@/context/CompanyContext";
 import { useEmployee } from "@/context/EmployeeContext";
 import { useWindowOrders } from "@/hooks/useWindows";
 import { tr, trf } from "@/lib/i18n";
-import { showPlatformAlert } from "@/lib/platformAlert";
-import { dispatchWindowOrder, setDeptProgress, WindowOrderError } from "@/lib/windowOrders";
+import { confirmPlatform, showPlatformAlert } from "@/lib/platformAlert";
+import { dispatchWindowOrder, sendLateDeptPart, setDeptProgress, WindowOrderError } from "@/lib/windowOrders";
 import { DEPT_COLOR } from "@/utils/orderFlow";
-import { deptStatus, deptTotals, DeptLineStatus, FactoryDept, orderStage, readyDeptCount, riyadhDate, WindowOrder } from "@/utils/windowOrders";
-import { StageBadge } from "@/components/windows/windowUi";
+import { deptsOf, deptStatus, deptTotals, DeptLineStatus, FactoryDept, isLateDept, orderStage, readyDeptCount, riyadhDate, WindowOrder } from "@/utils/windowOrders";
+import { deptLabel, StageBadge } from "@/components/windows/windowUi";
 
 const CAN_DISPATCH = new Set(["admin", "branch_supervisor", "dept_supervisor", "packaging"]);
 
@@ -34,12 +34,15 @@ export async function dispatchWithFeedback(companyId: string, o: WindowOrder, by
     }
   };
   if (orderStage(o) === "ready") return go(false);
-  const msg = tr("بعض الأقسام لم تُنهِ تجهيز هذه الطلبية. إرسالها الآن يعني أن النافذة ستستلم الجاهز فقط. متابعة؟", "Some departments haven't finished this order. Dispatching now sends only what's ready. Continue?");
-  if (typeof window !== "undefined" && typeof window.confirm === "function") {
-    if (window.confirm(msg)) await go(true);
-  } else {
-    await go(true);
-  }
+  // Partial dispatch always needs an explicit confirmation (phones included).
+  const late = deptsOf(o.items).filter((d) => deptStatus(o, d) !== "ready").map(deptLabel).join("، ");
+  const ok = await confirmPlatform(
+    tr("إرسال جزئي", "Partial dispatch"),
+    trf("لم تُنهِ هذه الأقسام التجهيز: {d}. ستُرسل الأصناف الجاهزة فقط، وتُسجَّل كميات هذه الأقسام صفراً حتى ترسل نصيبها لاحقاً.", "These departments haven't finished: {d}. Only ready items go now; their quantities are recorded as 0 until they send their part later.", { d: late }),
+    tr("إرسال الجاهز", "Send what's ready"),
+    tr("إلغاء", "Cancel"),
+  );
+  if (ok) await go(true);
 }
 
 /** A factory department's share of the windows' daily orders. */
@@ -59,7 +62,8 @@ export function DeptWindowOrders({ department }: { department: FactoryDept }) {
     [orders, department, isPackaging]
   );
   const open = mine.filter((o) => o.status === "sent");
-  const totals = useMemo(() => isPackaging ? [] : deptTotals(open, department), [open, department, isPackaging]);
+  const late = isPackaging ? [] : mine.filter((o) => isLateDept(o, department));
+  const totals = useMemo(() => isPackaging ? [] : deptTotals([...open, ...late], department), [open, late, department, isPackaging]);
   const color = DEPT_COLOR[department];
 
   const move = async (o: WindowOrder, status: DeptLineStatus) => {
@@ -71,6 +75,19 @@ export function DeptWindowOrders({ department }: { department: FactoryDept }) {
       const code = e instanceof WindowOrderError ? e.code : "";
       showPlatformAlert(tr("تعذّر التحديث", "Could not update"), code === "already_dispatched"
         ? tr("أُرسلت هذه الطلبية للنافذة، ولم يعد تعديلها ممكناً.", "This order has been dispatched and can't be changed.")
+        : tr("تحقق من الاتصال وحاول مجدداً.", "Check the connection and try again."));
+    } finally { setBusy(""); }
+  };
+
+  const sendLate = async (o: WindowOrder) => {
+    setBusy(o.id);
+    try {
+      await sendLateDeptPart(companyId, o.id, department, by);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => undefined);
+    } catch (e) {
+      const code = e instanceof WindowOrderError ? e.code : "";
+      showPlatformAlert(tr("تعذّر الإرسال", "Could not dispatch"), code === "not_late"
+        ? tr("استلمت النافذة الطلبية أو أُرسل هذا الجزء مسبقاً.", "The window already confirmed receipt, or this part was already sent.")
         : tr("تحقق من الاتصال وحاول مجدداً.", "Check the connection and try again."));
     } finally { setBusy(""); }
   };
@@ -131,7 +148,7 @@ export function DeptWindowOrders({ department }: { department: FactoryDept }) {
             const lines = isPackaging ? o.items : o.items.filter((i) => i.department === department);
             const rc = readyDeptCount(o);
             return (
-              <View key={o.id} style={[s.card, o.status !== "sent" && { opacity: 0.75 }]}>
+              <View key={o.id} style={[s.card, o.status !== "sent" && !isLateDept(o, department) && { opacity: 0.75 }]}>
                 <View style={s.rowBetween}>
                   <View style={{ flex: 1 }}>
                     <Text style={s.title}>{o.windowName}</Text>
@@ -161,6 +178,15 @@ export function DeptWindowOrders({ department }: { department: FactoryDept }) {
                         <Feather name="rotate-ccw" size={14} color={Colors.textSecondary} /><Text style={s.ghostTxt}>{tr("تراجع عن «جاهز»", "Undo ready")}</Text>
                       </Pressable>
                     )}
+                  </View>
+                ) : null}
+                {isLateDept(o, department) ? (
+                  <View style={[s.lateBox, { borderColor: Colors.warning + "66" }]}>
+                    <Text style={[s.muted, { color: Colors.warning, fontWeight: "800" }]}>{tr("أُرسلت الطلبية بدون نصيب قسمك — أرسله الآن", "The order left without your part — send it now")}</Text>
+                    <Pressable onPress={() => sendLate(o)} disabled={busy === o.id} style={[s.primary, { backgroundColor: color }]}>
+                      {busy === o.id ? <ActivityIndicator color="#fff" /> : <Feather name="truck" size={15} color="#fff" />}
+                      <Text style={s.primaryTxt}>{tr("جاهز — إرسال نصيبي للنافذة", "Ready — send my part to the window")}</Text>
+                    </Pressable>
                   </View>
                 ) : null}
                 {o.status === "sent" && canDispatch && (isPackaging || stage === "ready") ? (
@@ -196,6 +222,7 @@ const s = StyleSheet.create({
   ghost: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, borderWidth: 1, borderColor: Colors.border, borderRadius: 12, minHeight: 44, paddingHorizontal: 14, flexGrow: 1 },
   ghostTxt: { color: Colors.textSecondary, fontSize: 13, fontWeight: "700" },
   seg: { flexDirection: "row", backgroundColor: Colors.surfaceSecondary, borderRadius: 12, padding: 3 },
+  lateBox: { gap: 8, borderWidth: 1, borderRadius: 12, padding: 10 },
   segBtn: { paddingHorizontal: 14, paddingVertical: 7, borderRadius: 10 },
   segOn: { backgroundColor: Colors.surface },
   segTxt: { fontSize: 13, color: Colors.textSecondary, fontWeight: "700" },

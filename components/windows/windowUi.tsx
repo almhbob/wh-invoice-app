@@ -3,13 +3,19 @@ import { StyleSheet, Text, View } from "react-native";
 
 import { Colors } from "@/constants/colors";
 import { useLang } from "@/context/LanguageContext";
-import { tr } from "@/lib/i18n";
+import { currentLang, tr } from "@/lib/i18n";
+import { t as translate } from "@/constants/translations";
 import { DEPT_COLOR } from "@/utils/orderFlow";
 import { FactoryDept, WindowOrderStage } from "@/utils/windowOrders";
 
 const DEPT_KEY = {
   cake: "deptCakeShort", halwa: "deptHalwaShort", mawali: "deptMawaliShort", chocolate: "deptChocolateShort", packaging: "deptPackagingShort",
 } as const;
+
+/** Department name outside React (alerts, confirmations), in the current language. */
+export function deptLabel(dept: FactoryDept): string {
+  return translate(DEPT_KEY[dept], currentLang());
+}
 
 export function DeptName({ dept, small }: { dept: FactoryDept; small?: boolean }) {
   const { t } = useLang();

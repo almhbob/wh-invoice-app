@@ -40,9 +40,13 @@ export function DepartmentBoard({ department, titleKey, subtitleKey, deniedKey }
   const [tab, setTab] = useState<Tab>("todo");
   const [showBanner, setShowBanner] = useState(false);
   const [view, setView] = useState<"customers" | "windows">("customers");
-  const { orders: windowOrders } = useWindowOrders(riyadhDate());
-  const openWindowOrders = windowOrders.filter((o) => o.status === "sent"
-    && (department === "packaging" || o.items.some((i) => i.department === department) && (o.depts?.[department]?.status ?? "pending") !== "ready")).length;
+  const { orders: woToday } = useWindowOrders(riyadhDate());
+  const { orders: woTomorrow } = useWindowOrders(riyadhDate(new Date(), 1));
+  // Badge counts today's and tomorrow's open window orders, plus parts left behind by a partial dispatch.
+  const openWindowOrders = [...woToday, ...woTomorrow].filter((o) =>
+    (o.status === "sent"
+      && (department === "packaging" || o.items.some((i) => i.department === department) && (o.depts?.[department]?.status ?? "pending") !== "ready"))
+    || (department !== "packaging" && (o.lateDepts ?? []).includes(department) && o.status === "dispatched")).length;
 
   const all = getOrdersForDepartment(department);
   const st = (o: Order) => o.departmentStatuses?.[department] ?? "pending";

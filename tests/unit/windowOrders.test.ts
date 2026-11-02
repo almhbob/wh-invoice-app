@@ -68,3 +68,46 @@ describe("sales windows daily orders", () => {
     expect(slugWindowId("نافذة العليا", [a])).toBe(`${a}2`);
   });
 });
+
+import { dispatchPatch, expectedQty, isLateDept, lateDeptPatch } from "../../utils/windowOrders";
+
+describe("partial dispatch", () => {
+  test("unready departments send 0 and are listed as late", () => {
+    const o = base({ depts: { cake: { status: "ready" }, halwa: { status: "preparing" } } });
+    const p = dispatchPatch(o);
+    expect(p.lateDepts).toEqual(["halwa"]);
+    expect(p.items.find((i) => i.department === "cake")?.sentQty).toBe(4);
+    expect(p.items.find((i) => i.department === "halwa")?.sentQty).toBe(0);
+  });
+
+  test("a fully ready order has no late departments", () => {
+    const p = dispatchPatch(base({ depts: { cake: { status: "ready" }, halwa: { status: "ready" } } }));
+    expect(p.lateDepts).toEqual([]);
+    expect(p.items.every((i) => i.sentQty === i.qty)).toBe(true);
+  });
+
+  test("a late department sends its part afterwards", () => {
+    const sent = base({ depts: { cake: { status: "ready" }, halwa: { status: "pending" } } });
+    const d = dispatchPatch(sent);
+    const dispatched = { ...sent, status: "dispatched" as const, items: d.items, lateDepts: d.lateDepts };
+    expect(isLateDept(dispatched, "halwa")).toBe(true);
+    expect(isLateDept(dispatched, "cake")).toBe(false);
+    const after = lateDeptPatch(dispatched, "halwa");
+    expect(after.lateDepts).toEqual([]);
+    expect(after.items.find((i) => i.department === "halwa")?.sentQty).toBe(10);
+  });
+
+  test("receipt is prefilled with what was sent, so a missing department shows as short", () => {
+    const sent = base({ depts: { cake: { status: "ready" }, halwa: { status: "pending" } } });
+    const items = dispatchPatch(sent).items;
+    expect(items.map(expectedQty)).toEqual(items.map((i) => (i.department === "cake" ? 4 : 0)));
+    const r = receiptDiff(items, {});
+    expect(r.shortageCount).toBe(1);
+    expect(r.shortQty).toBe(10);
+  });
+
+  test("older orders without sentQty expect the ordered amount", () => {
+    expect(expectedQty({ productId: "x", name: "x", department: "cake", qty: 3 })).toBe(3);
+    expect(receiptDiff(base().items, {}).shortageCount).toBe(0);
+  });
+});

@@ -131,3 +131,47 @@ describe("date pickers", () => {
     expect(renewalBase("", "2026-11-02")).toBe("2026-11-02");
   });
 });
+
+import { bankFromIban, isValidSaIban, wpsCsv, wpsRows } from "../../utils/hr";
+
+describe("WPS bank file", () => {
+  const RAJHI = "SA5880000060801016751900";
+  const SNB = "SA8410000000001234567800";
+  test("Saudi IBAN checksum and bank", () => {
+    expect(isValidSaIban(RAJHI)).toBe(true);
+    expect(isValidSaIban("sa58 8000 0060 8010 1675 1900")).toBe(true);
+    expect(isValidSaIban("SA5980000060801016751900")).toBe(false); // wrong check digits
+    expect(isValidSaIban("SA588000006080101675190")).toBe(false);  // too short
+    expect(bankFromIban(RAJHI)?.en).toBe("Al Rajhi Bank");
+    expect(bankFromIban(SNB)?.code).toBe("10");
+  });
+
+  const workers: HrWorker[] = [
+    w({ id: "a", name: "أحمد", iqamaNumber: "2123456789", bankIban: RAJHI, housing: 750 }),
+    w({ id: "b", name: "سعيد", iqamaNumber: "2987654321", bankIban: "" }),
+    w({ id: "c", name: "كريم", iqamaNumber: "2111111111", bankIban: "SA00123" }),
+    w({ id: "d", name: "ماهر", iqamaNumber: "", bankIban: SNB }),
+  ];
+  const line = (workerId: string, name: string): PayrollLine => ({
+    id: `2026-10_${workerId}`, month: "2026-10", workerId, name, basic: 3000, allowances: 1050,
+    additions: 200, deductions: 100, advance: 300, net: 3850, status: "unpaid",
+  });
+
+  test("splits housing, folds additions and advance, flags problems", () => {
+    const { rows, problems } = wpsRows([line("a", "أحمد"), line("b", "سعيد"), line("c", "كريم"), line("d", "ماهر")], workers);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ bankCode: "80", housing: 750, otherEarnings: 500, deductions: 400, net: 3850 });
+    expect(problems.map((p) => p.reason)).toEqual(["missing_iban", "invalid_iban", "missing_id"]);
+  });
+
+  test("CSV keeps IDs as text and adds a total row", () => {
+    const { rows } = wpsRows([line("a", "أحمد")], workers);
+    const csv = wpsCsv(rows, "2026-10", "Laviviane");
+    const lines = csv.replace(/^﻿/, "").split("\n");
+    expect(lines[0]).toStartWith("Employee Name,National ID / Iqama");
+    expect(lines[1]).toContain('"=""2123456789"""');
+    expect(lines[1]).toContain(RAJHI);
+    expect(lines[2]).toStartWith("TOTAL");
+    expect(lines[2]).toContain("3850.00");
+  });
+});

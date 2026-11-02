@@ -295,3 +295,126 @@ export function addMonths(date: string, months: number): string {
 export function renewalBase(current: string | undefined, today: string): string {
   return current && /^\d{4}-\d{2}-\d{2}$/.test(current) ? current : today;
 }
+
+// ── Wage Protection System (WPS) bank file ────────────────────────────────────
+
+/** Saudi bank codes (IBAN characters 5–6). */
+export const SA_BANKS: Record<string, { ar: string; en: string }> = {
+  "05": { ar: "مصرف الإنماء", en: "Alinma Bank" },
+  "10": { ar: "البنك الأهلي السعودي", en: "Saudi National Bank" },
+  "15": { ar: "بنك البلاد", en: "Bank Albilad" },
+  "20": { ar: "بنك الرياض", en: "Riyad Bank" },
+  "30": { ar: "البنك العربي الوطني", en: "Arab National Bank" },
+  "40": { ar: "سامبا", en: "Samba" },
+  "45": { ar: "البنك السعودي الأول", en: "Saudi Awwal Bank" },
+  "50": { ar: "البنك الأول", en: "Alawwal Bank" },
+  "55": { ar: "البنك السعودي الفرنسي", en: "Banque Saudi Fransi" },
+  "60": { ar: "بنك الجزيرة", en: "Bank AlJazira" },
+  "65": { ar: "البنك السعودي للاستثمار", en: "Saudi Investment Bank" },
+  "80": { ar: "مصرف الراجحي", en: "Al Rajhi Bank" },
+};
+
+export function normalizeIban(raw: string | undefined | null): string {
+  return latin(String(raw ?? "")).replace(/[\s-]/g, "").toUpperCase();
+}
+
+/** Saudi IBAN: SA + 22 digits with a valid ISO 13616 mod-97 checksum. */
+export function isValidSaIban(raw: string | undefined | null): boolean {
+  const iban = normalizeIban(raw);
+  if (!/^SA\d{22}$/.test(iban)) return false;
+  const rearranged = iban.slice(4) + iban.slice(0, 4);
+  const digits = rearranged.replace(/[A-Z]/g, (c) => String(c.charCodeAt(0) - 55));
+  let rem = 0;
+  for (const ch of digits) rem = (rem * 10 + Number(ch)) % 97;
+  return rem === 1;
+}
+
+export function bankFromIban(raw: string | undefined | null): { code: string; ar: string; en: string } | null {
+  const iban = normalizeIban(raw);
+  if (!/^SA\d{4}/.test(iban)) return null;
+  const code = iban.slice(4, 6);
+  const bank = SA_BANKS[code];
+  return bank ? { code, ...bank } : { code, ar: "بنك آخر", en: "Other bank" };
+}
+
+export interface WpsRow {
+  name: string;
+  idNumber: string;
+  employeeNumber: string;
+  bankCode: string;
+  bankName: string;
+  iban: string;
+  basic: number;
+  housing: number;
+  otherEarnings: number;
+  deductions: number;
+  net: number;
+}
+
+export interface WpsProblem {
+  name: string;
+  reason: "missing_iban" | "invalid_iban" | "missing_id" | "not_positive";
+}
+
+/**
+ * Builds WPS lines from a month's payroll. Housing is split out of the
+ * allowances using the worker's file; additions go to other earnings and
+ * advance recovery to deductions. Lines that a bank would reject (no or
+ * invalid IBAN, no iqama/ID, net ≤ 0) are returned as problems instead.
+ */
+export function wpsRows(lines: PayrollLine[], workers: HrWorker[]): { rows: WpsRow[]; problems: WpsProblem[] } {
+  const byId = new Map(workers.map((w) => [w.id, w]));
+  const rows: WpsRow[] = [];
+  const problems: WpsProblem[] = [];
+  const r2 = (n: number) => Math.round(n * 100) / 100;
+  for (const l of lines) {
+    const w = byId.get(l.workerId);
+    const iban = normalizeIban(w?.bankIban);
+    const idNumber = latin(String(w?.iqamaNumber ?? "")).replace(/\s/g, "");
+    if (!iban) { problems.push({ name: l.name, reason: "missing_iban" }); continue; }
+    if (!isValidSaIban(iban)) { problems.push({ name: l.name, reason: "invalid_iban" }); continue; }
+    if (!idNumber) { problems.push({ name: l.name, reason: "missing_id" }); continue; }
+    if (!(l.net > 0)) { problems.push({ name: l.name, reason: "not_positive" }); continue; }
+    const housing = Math.min(money(w?.housing), money(l.allowances));
+    const bank = bankFromIban(iban)!;
+    rows.push({
+      name: l.name,
+      idNumber,
+      employeeNumber: w?.employeeId ?? "",
+      bankCode: bank.code,
+      bankName: bank.en,
+      iban,
+      basic: r2(money(l.basic)),
+      housing: r2(housing),
+      otherEarnings: r2(money(l.allowances) - housing + money(l.additions)),
+      deductions: r2(money(l.deductions) + money(l.advance)),
+      net: r2(l.net),
+    });
+  }
+  return { rows, problems };
+}
+
+/**
+ * WPS payroll sheet (CSV, UTF-8 with BOM) with the columns Saudi banks and
+ * Mudad ask for. Amounts use two decimals; ID and IBAN are forced to text
+ * so Excel doesn't turn them into numbers.
+ */
+export function wpsCsv(rows: WpsRow[], month: string, company = ""): string {
+  const head = [
+    "Employee Name", "National ID / Iqama", "Employee Number", "Bank Code", "Bank", "IBAN",
+    "Basic Salary", "Housing Allowance", "Other Earnings", "Deductions", "Net Salary", "Salary Month", "Company",
+  ];
+  const esc = (v: unknown) => {
+    const s = String(v ?? "");
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const text = (s: string) => `="${s}"`; // keep leading zeros / long digit strings intact in Excel
+  const f2 = (n: number) => n.toFixed(2);
+  const body = rows.map((r) => [
+    r.name, text(r.idNumber), r.employeeNumber, text(r.bankCode), r.bankName, r.iban,
+    f2(r.basic), f2(r.housing), f2(r.otherEarnings), f2(r.deductions), f2(r.net), month, company,
+  ]);
+  const total = rows.reduce((s, r) => s + r.net, 0);
+  const footer = ["TOTAL", "", "", "", "", "", "", "", "", "", f2(Math.round(total * 100) / 100), month, company];
+  return "﻿" + [head, ...body, footer].map((r) => r.map(esc).join(",")).join("\n");
+}
