@@ -18,6 +18,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { localDayKey } from "@/utils/dateUtils";
+import { summarizeOrders } from "@/utils/orderMoney";
 import { Colors } from "@/constants/colors";
 import { useEmployee } from "@/context/EmployeeContext";
 import { Order } from "@/context/OrdersContext";
@@ -95,29 +96,18 @@ export function DailyClosingModal({ visible, onClose, orders }: Props) {
     let discountTotal = 0;
 
     for (const order of todayOrders) {
-      const amount = order.totalAmount ?? 0;
-      totalAmount += amount;
-
-      if (order.paymentMethod === "cash") cashAmount += amount;
-      else if (order.paymentMethod === "card") cardAmount += amount;
-      else if (order.paymentMethod === "transfer") transferAmount += amount;
-
       if (order.orderType === "delivery") deliveryCount += 1;
       else pickupCount += 1;
-
-      insuranceTotal += order.insuranceAmount ?? 0;
-
-      if (order.discount) {
-        const { type, value } = order.discount;
-        if (type === "fixed") {
-          discountTotal += value;
-        } else if (type === "percentage") {
-          // amount is already after discount; calculate what was removed
-          const beforeDiscount = value > 0 && value < 100 ? amount / (1 - value / 100) : amount;
-          discountTotal += beforeDiscount - amount;
-        }
-      }
     }
+    // Revenue excludes refundable tray deposits; payment buckets count only
+    // money actually collected, with each deposit in its own payment method.
+    const money = summarizeOrders(todayOrders);
+    totalAmount = money.netSales;
+    cashAmount = money.collected.cash;
+    cardAmount = money.collected.card;
+    transferAmount = money.collected.transfer;
+    insuranceTotal = money.deposits;
+    discountTotal = money.discounts;
 
     return {
       orderCount: todayOrders.length,

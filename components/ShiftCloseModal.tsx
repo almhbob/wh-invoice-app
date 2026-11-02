@@ -18,6 +18,7 @@ import { Colors } from "@/constants/colors";
 import { useOrders } from "@/context/OrdersContext";
 import { useLang } from "@/context/LanguageContext";
 import { fmtCurrency, localDayKey } from "@/utils/dateUtils";
+import { orderNetSales, summarizeOrders } from "@/utils/orderMoney";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -82,31 +83,18 @@ export function ShiftCloseModal({ visible, onClose }: Props) {
     let transferCount  = 0;
 
     for (const order of todayOrders) {
-      const amount = order.totalAmount ?? 0;
-      totalRevenue += amount;
-
-      if (order.paymentMethod === "cash") {
-        cashAmount += amount;
-        cashCount  += 1;
-      } else if (order.paymentMethod === "card") {
-        cardAmount += amount;
-        cardCount  += 1;
-      } else if (order.paymentMethod === "transfer") {
-        transferAmount += amount;
-        transferCount  += 1;
-      }
-
-      if (order.discount) {
-        const { type, value } = order.discount;
-        if (type === "fixed") {
-          totalDiscounts += value;
-        } else if (type === "percentage" && value > 0 && value < 100) {
-          // amount is already post-discount; recover the removed portion
-          const beforeDiscount = amount / (1 - value / 100);
-          totalDiscounts += beforeDiscount - amount;
-        }
-      }
+      if (order.paymentMethod === "cash") cashCount += 1;
+      else if (order.paymentMethod === "card") cardCount += 1;
+      else if (order.paymentMethod === "transfer") transferCount += 1;
     }
+    // Revenue excludes refundable tray deposits; the drawer counts only money
+    // actually collected, with each deposit in its own payment method.
+    const money = summarizeOrders(todayOrders);
+    totalRevenue   = money.netSales;
+    totalDiscounts = money.discounts;
+    cashAmount     = money.collected.cash;
+    cardAmount     = money.collected.card;
+    transferAmount = money.collected.transfer;
 
     const orderCount    = todayOrders.length;
     const avgOrderValue = orderCount > 0 ? totalRevenue / orderCount : 0;
@@ -134,12 +122,12 @@ export function ShiftCloseModal({ visible, onClose }: Props) {
       const existing = map.get(emp.employeeId);
       if (existing) {
         existing.count   += 1;
-        existing.revenue += order.totalAmount ?? 0;
+        existing.revenue += orderNetSales(order);
       } else {
         map.set(emp.employeeId, {
           name:    emp.name,
           count:   1,
-          revenue: order.totalAmount ?? 0,
+          revenue: orderNetSales(order),
         });
       }
     }

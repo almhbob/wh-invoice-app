@@ -1,3 +1,4 @@
+import { orderCollected, orderDiscountAmount, orderNetSales } from "@/utils/orderMoney";
 import { tr } from "@/lib/i18n";
 import { PerformanceReport } from "@/components/PerformanceReport";
 import { Feather } from "@expo/vector-icons";
@@ -346,7 +347,7 @@ function ExportTab({ filtered, filterLbl }: { filtered: ReturnType<typeof useOrd
   }
 
   const productCount = new Set(filtered.flatMap((o) => o.items.map((i) => i.name))).size;
-  const totalRevenue = filtered.reduce((s, o) => s + (o.totalAmount ?? 0), 0);
+  const totalRevenue = filtered.reduce((s, o) => s + orderNetSales(o), 0);
 
   return (
     <View style={{ gap: 0 }}>
@@ -466,20 +467,12 @@ function RevenueTab({
 }) {
   const { t } = useLang();
   const deptMeta = useMemo(() => buildDeptMeta(t), [t]);
-  const totalRevenue = filtered.reduce((s, o) => s + (o.totalAmount ?? 0), 0);
+  const totalRevenue = filtered.reduce((s, o) => s + orderNetSales(o), 0);
   const orderCount   = filtered.length;
   const avgOrder     = orderCount > 0 ? totalRevenue / orderCount : 0;
 
   const totalDiscounts = useMemo(() => {
-    return filtered.reduce((s, o) => {
-      if (!o.discount) return s;
-      if (o.discount.type === "fixed") return s + o.discount.value;
-      if (o.discount.type === "percentage") {
-        const base = (o.totalAmount ?? 0) + o.discount.value;
-        return s + base * (o.discount.value / 100);
-      }
-      return s;
-    }, 0);
+    return filtered.reduce((s, o) => s + orderDiscountAmount(o), 0);
   }, [filtered]);
 
   const byDept = useMemo(() => {
@@ -497,9 +490,10 @@ function RevenueTab({
 
   const byPayment = useMemo(() => {
     const map: Record<string, number> = { cash: 0, card: 0, transfer: 0 };
+    // Money actually collected per method (deposits in their own method)
     filtered.forEach((o) => {
-      const pm = o.paymentMethod ?? "cash";
-      map[pm] = (map[pm] ?? 0) + (o.totalAmount ?? 0);
+      const c = orderCollected(o);
+      map.cash += c.cash; map.card += c.card; map.transfer += c.transfer;
     });
     return map;
   }, [filtered]);
@@ -508,10 +502,10 @@ function RevenueTab({
   const pickupCount   = filtered.filter((o) => o.orderType !== "delivery").length;
   const deliveryRev   = filtered
     .filter((o) => o.orderType === "delivery")
-    .reduce((s, o) => s + (o.totalAmount ?? 0), 0);
+    .reduce((s, o) => s + orderNetSales(o), 0);
   const pickupRev     = filtered
     .filter((o) => o.orderType !== "delivery")
-    .reduce((s, o) => s + (o.totalAmount ?? 0), 0);
+    .reduce((s, o) => s + orderNetSales(o), 0);
 
   const paymentTotal = Object.values(byPayment).reduce((s, v) => s + v, 0);
   const paymentLabels: Record<string, string> = {
@@ -792,7 +786,7 @@ function CashierTab({
       const name = o.cashierEmployee?.name ?? t("repUnknown");
       if (!map[name]) map[name] = { orderCount: 0, revenue: 0 };
       map[name].orderCount++;
-      map[name].revenue += o.totalAmount ?? 0;
+      map[name].revenue += orderNetSales(o);
     });
     return Object.entries(map)
       .map(([name, data]) => ({
@@ -875,7 +869,7 @@ function DeliveryTab({
       : 0;
 
   const deliveryRevenue = deliveryOrders.reduce(
-    (s, o) => s + (o.totalAmount ?? 0),
+    (s, o) => s + orderNetSales(o),
     0
   );
 
@@ -1240,12 +1234,12 @@ export default function ReportsScreen() {
   }
 
   function buildReportText(reportOrders: typeof orders, label: string) {
-    const totalRevenue = reportOrders.reduce((s, o) => s + (o.totalAmount ?? 0), 0);
+    const totalRevenue = reportOrders.reduce((s, o) => s + orderNetSales(o), 0);
     const orderCount   = reportOrders.length;
     const byPayment: Record<string, number> = { cash: 0, card: 0, transfer: 0 };
     reportOrders.forEach((o) => {
-      const pm = o.paymentMethod ?? "cash";
-      byPayment[pm] = (byPayment[pm] ?? 0) + (o.totalAmount ?? 0);
+      const c = orderCollected(o);
+      byPayment.cash += c.cash; byPayment.card += c.card; byPayment.transfer += c.transfer;
     });
     const deliveryCount = reportOrders.filter((o) => o.orderType === "delivery").length;
     const pickupCount   = reportOrders.filter((o) => o.orderType !== "delivery").length;

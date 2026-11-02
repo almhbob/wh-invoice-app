@@ -138,6 +138,8 @@ export interface Order {
   totalAmount?: number;
   paymentMethod?: PaymentMethod;
   discount?: Discount;
+  /** Discount given in riyals (manual discount, capped at the subtotal). Saved since v1.1. */
+  discountAmount?: number;
   imageUri?: string;
   referenceImages?: string[];
   notes?: string;

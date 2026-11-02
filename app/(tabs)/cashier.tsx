@@ -1,4 +1,5 @@
 import { useFocusEffect } from "expo-router";
+import { orderNetSales } from "@/utils/orderMoney";
 import { ProductManagerModal } from "@/components/ProductManagerModal";
 import { ScanBar } from "@/components/ScanBar";
 import { tr } from "@/lib/i18n";
@@ -204,7 +205,7 @@ export default function CashierScreen() {
     () => orders.filter((o) => !o.deleted && localDayKey(o.createdAt) === todayKey),
     [orders, todayKey]
   );
-  const todayTotal = todayOrders.reduce((s, o) => s + (o.totalAmount ?? 0), 0);
+  const todayTotal = todayOrders.reduce((s, o) => s + orderNetSales(o), 0);
 
   const searchResults = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -787,6 +788,7 @@ export default function CashierScreen() {
         amountPaid: paidNum,
         paymentMethod,
         discount: discountData,
+        discountAmount: discountData ? discountAmount : undefined,
         loyalty: loyaltyPhoneKey && loyaltySettings.enabled
           ? {
               key: loyaltyPhoneKey,

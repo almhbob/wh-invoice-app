@@ -1,3 +1,5 @@
+import { orderDiscountAmount, orderNetSales } from "@/utils/orderMoney";
+import { localDayKey } from "@/utils/dateUtils";
 import { PurgeOrdersPanel } from "@/components/PurgeOrdersPanel";
 import { TaxSettingsPanel } from "@/components/TaxSettingsPanel";
 import { HrSection } from "@/components/hr/HrSection";
@@ -744,28 +746,17 @@ function EmployeesSection() {
 function FinancialSection({ orders }: { orders: Order[] }) {
   const { t } = useLang();
   const today = todayStr();
-  const todayOrders = orders.filter((o) => o.createdAt.startsWith(today));
+  const todayOrders = orders.filter((o) => localDayKey(o.createdAt) === today); // createdAt is UTC
 
-  const totalRevenue = orders.reduce((s, o) => s + (o.totalAmount ?? 0), 0);
-  const todayRevenue = todayOrders.reduce((s, o) => s + (o.totalAmount ?? 0), 0);
+  const totalRevenue = orders.reduce((s, o) => s + orderNetSales(o), 0); // excludes refundable deposits
+  const todayRevenue = todayOrders.reduce((s, o) => s + orderNetSales(o), 0);
   const ordersWithTotal = orders.filter((o) => (o.totalAmount ?? 0) > 0);
   const avgOrder = ordersWithTotal.length > 0 ? totalRevenue / ordersWithTotal.length : 0;
   const totalInsurance = orders.reduce((s, o) => s + (o.insuranceAmount ?? 0), 0);
 
   // discount stats
   const ordersWithDiscount = orders.filter((o) => o.discount && o.discount.value > 0);
-  const totalDiscountAmount = orders.reduce((s, o) => {
-    if (!o.discount || o.discount.value <= 0) return s;
-    const subtotalEst = (o.totalAmount ?? 0) + (
-      o.discount.type === "percentage"
-        ? (o.totalAmount ?? 0) / (1 - o.discount.value / 100) - (o.totalAmount ?? 0)
-        : o.discount.value
-    );
-    const discAmt = o.discount.type === "percentage"
-      ? subtotalEst * (o.discount.value / 100)
-      : o.discount.value;
-    return s + discAmt;
-  }, 0);
+  const totalDiscountAmount = orders.reduce((s, o) => s + orderDiscountAmount(o), 0);
 
   // payment method breakdown
   const pmCounts: Record<PaymentMethod, number> = { cash: 0, card: 0, transfer: 0 };
@@ -816,7 +807,7 @@ function FinancialSection({ orders }: { orders: Order[] }) {
 function OperationsSection({ orders }: { orders: Order[] }) {
   const { t } = useLang();
   const today = todayStr();
-  const todayOrders = orders.filter((o) => o.createdAt.startsWith(today));
+  const todayOrders = orders.filter((o) => localDayKey(o.createdAt) === today); // createdAt is UTC
 
   // overall
   const totalAll = orders.length;
@@ -899,7 +890,7 @@ function CashierPerformanceSection({ orders }: { orders: Order[] }) {
         };
       }
       map[key].count++;
-      map[key].revenue += o.totalAmount ?? 0;
+      map[key].revenue += orderNetSales(o);
       map[key].insurance += o.insuranceAmount ?? 0;
     });
     return Object.values(map).sort((a, b) => b.count - a.count);

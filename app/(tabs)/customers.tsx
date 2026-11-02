@@ -1,3 +1,4 @@
+import { orderNetSales } from "@/utils/orderMoney";
 import { tr, trf } from "@/lib/i18n";
 import { AdjustPointsModal, LoyaltySettingsModal } from "@/components/LoyaltyAdminModal";
 import { loyaltyKey, pointsValue, tierFor } from "@/constants/loyalty";
@@ -374,7 +375,7 @@ export default function CustomersScreen() {
       }
       const c = map.get(phone)!;
       c.orders.push(o);
-      c.totalSpent += o.totalAmount ?? 0;
+      c.totalSpent += orderNetSales(o);
       if (o.createdAt > c.lastOrderAt) {
         c.lastOrderAt = o.createdAt;
         c.name = o.customerName;

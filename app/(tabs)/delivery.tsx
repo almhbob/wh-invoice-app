@@ -1,3 +1,4 @@
+import { orderNetSales } from "@/utils/orderMoney";
 import { tr } from "@/lib/i18n";
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
@@ -148,7 +149,7 @@ function StatsHeader({ orders }: { orders: Order[] }) {
   const unassignedCount = orders.filter(isUnassigned).length;
   const readyCount = orders.filter(isReadyForDelivery).length;
   const overdueCount = orders.filter((o) => getUrgency(o) === "overdue").length;
-  const revenue = orders.reduce((s, o) => s + (o.totalAmount ?? 0), 0);
+  const revenue = orders.reduce((s, o) => s + orderNetSales(o), 0);
   const pct = orders.length > 0 ? Math.round((deliveredCount / orders.length) * 100) : 0;
 
   return (

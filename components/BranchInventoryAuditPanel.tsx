@@ -4,6 +4,7 @@ import { Image } from "expo-image";
 import React, { useMemo, useState } from "react";
 import { Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 
+import { localDayKey } from "@/utils/dateUtils";
 import { Colors } from "@/constants/colors";
 import { useCompany } from "@/context/CompanyContext";
 import { useEmployee } from "@/context/EmployeeContext";
@@ -73,7 +74,7 @@ const DEPT_ORDER = ["cake", "halwa", "mawali", "chocolate", "packaging"];
 const STORAGE_PREFIX = "@fawtara_branch_inventory_audit_v1";
 
 function todayISO() {
-  return new Date().toISOString().slice(0, 10);
+  return localDayKey(); // local day, not UTC
 }
 
 function storageKey(companyId: string) {
