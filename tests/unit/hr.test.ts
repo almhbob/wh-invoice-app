@@ -114,3 +114,20 @@ describe("payslip", () => {
     expect(t).not.toContain("سلفة");
   });
 });
+
+import { addMonths, renewalBase } from "../../utils/hr";
+
+describe("date pickers", () => {
+  test("adds months and clamps to the month end", () => {
+    expect(addMonths("2026-11-02", 12)).toBe("2027-11-02");
+    expect(addMonths("2026-01-31", 1)).toBe("2026-02-28");
+    expect(addMonths("2028-02-29", 12)).toBe("2029-02-28");
+    expect(addMonths("2026-10-15", 3)).toBe("2027-01-15");
+    expect(addMonths("bad", 1)).toBe("");
+  });
+  test("renewals extend from the current expiry, else from today", () => {
+    expect(renewalBase("2026-12-31", "2026-11-02")).toBe("2026-12-31");
+    expect(renewalBase(undefined, "2026-11-02")).toBe("2026-11-02");
+    expect(renewalBase("", "2026-11-02")).toBe("2026-11-02");
+  });
+});

@@ -271,3 +271,27 @@ export function payslipText(l: PayrollLine, opts: { company?: string; monthLabel
   ];
   return rows.filter((x, i) => x !== "" || i === 3).join("\n");
 }
+
+// ── Date helpers for the pickers ──────────────────────────────────────────────
+
+/**
+ * Adds whole months to a YYYY-MM-DD date, clamping to the month's last day
+ * (2026-01-31 + 1 month → 2026-02-28). "" when the date is invalid.
+ */
+export function addMonths(date: string, months: number): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  if (!m) return "";
+  const y = +m[1], mo = +m[2] - 1 + months, d = +m[3];
+  const target = new Date(Date.UTC(y, mo, 1));
+  const last = new Date(Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0)).getUTCDate();
+  target.setUTCDate(Math.min(d, last));
+  return target.toISOString().slice(0, 10);
+}
+
+/**
+ * Base for a renewal preset: the current expiry when it is set (renewing
+ * extends from the old expiry), otherwise today.
+ */
+export function renewalBase(current: string | undefined, today: string): string {
+  return current && /^\d{4}-\d{2}-\d{2}$/.test(current) ? current : today;
+}
