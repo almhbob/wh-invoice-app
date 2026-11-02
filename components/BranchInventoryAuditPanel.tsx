@@ -510,7 +510,7 @@ const styles = StyleSheet.create({
   card: { backgroundColor: "#fff", borderRadius: 24, padding: 16, gap: 14, borderWidth: 1, borderColor: Colors.border },
 
   // header
-  headerRow: { flexDirection: "row-reverse", gap: 12, alignItems: "center" },
+  headerRow: { flexDirection: "row", gap: 12, alignItems: "center" },
   iconCircle: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: Colors.primary + "12" },
   title: { fontSize: 17, fontWeight: "900", color: Colors.primary, textAlign: "right" },
   subtitle: { fontSize: 12, color: Colors.textMuted, textAlign: "right", lineHeight: 18 },
@@ -526,18 +526,18 @@ const styles = StyleSheet.create({
   input: { flex: 1, height: 46, borderRadius: 12, borderWidth: 1, borderColor: Colors.border, backgroundColor: Colors.surfaceSecondary, paddingHorizontal: 12, color: Colors.text, fontWeight: "700" },
 
   // search
-  searchRow: { flexDirection: "row-reverse", alignItems: "center", gap: 10, height: 46, borderRadius: 12, borderWidth: 1, borderColor: Colors.border, backgroundColor: Colors.surfaceSecondary, paddingHorizontal: 12 },
+  searchRow: { flexDirection: "row", alignItems: "center", gap: 10, height: 46, borderRadius: 12, borderWidth: 1, borderColor: Colors.border, backgroundColor: Colors.surfaceSecondary, paddingHorizontal: 12 },
   searchInput: { flex: 1, color: Colors.text, fontSize: 13 },
 
   // filter
-  filterRow: { flexDirection: "row-reverse", flexWrap: "wrap", gap: 8 },
+  filterRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   filterChip: { borderRadius: 12, paddingHorizontal: 12, paddingVertical: 7, backgroundColor: Colors.surfaceSecondary, borderWidth: 1, borderColor: Colors.border },
   filterChipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
   filterChipText: { fontSize: 11, color: Colors.textSecondary, fontWeight: "700" },
   filterChipTextActive: { color: "#fff" },
 
   // section header
-  productsHeader: { flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center" },
+  productsHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   sectionTitle: { fontSize: 15, fontWeight: "900", color: Colors.primary, textAlign: "right" },
   smallText: { fontSize: 11, fontWeight: "600", color: Colors.textMuted },
 
@@ -546,16 +546,16 @@ const styles = StyleSheet.create({
 
   // department section header
   deptHeader: {
-    flexDirection: "row-reverse", alignItems: "center", gap: 10,
+    flexDirection: "row", alignItems: "center", gap: 10,
     backgroundColor: Colors.surfaceSecondary,
     paddingHorizontal: 14, paddingVertical: 10,
     borderBottomWidth: 1, borderBottomColor: Colors.border,
   },
-  deptHeaderTitleRow: { flexDirection: "row-reverse", alignItems: "center", gap: 8 },
+  deptHeaderTitleRow: { flexDirection: "row", alignItems: "center", gap: 8 },
   deptHeaderDot: { width: 10, height: 10, borderRadius: 5 },
   deptHeaderTitle: { fontSize: 14, fontWeight: "900" },
   deptHeaderCount: { fontSize: 11, color: Colors.textMuted, fontWeight: "600" },
-  deptHeaderStats: { flexDirection: "row-reverse", gap: 6 },
+  deptHeaderStats: { flexDirection: "row", gap: 6 },
   deptStatChip: { fontSize: 10, fontWeight: "800", paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
 
   // product card
@@ -565,23 +565,23 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: Colors.border,
     backgroundColor: "#fff",
   },
-  productHeader: { flexDirection: "row-reverse", alignItems: "center", gap: 10 },
+  productHeader: { flexDirection: "row", alignItems: "center", gap: 10 },
   productThumb: { width: 44, height: 44, borderRadius: 10 },
   productThumbPlaceholder: { width: 44, height: 44, borderRadius: 10, alignItems: "center", justifyContent: "center" },
   productName: { fontSize: 14, fontWeight: "900", color: Colors.text, textAlign: "right" },
   productMeta: { fontSize: 11, color: Colors.textMuted, textAlign: "right", marginTop: 2 },
-  stockPill: { flexDirection: "row-reverse", alignItems: "center", gap: 5, paddingHorizontal: 9, paddingVertical: 5, borderRadius: 20 },
+  stockPill: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 9, paddingVertical: 5, borderRadius: 20 },
   stockDot: { width: 7, height: 7, borderRadius: 4 },
   stockPillText: { fontSize: 11, fontWeight: "800" },
 
   // audit fields
-  fieldsRow: { flexDirection: "row-reverse", gap: 8 },
+  fieldsRow: { flexDirection: "row", gap: 8 },
   auditField: { flex: 1, borderRadius: 10, borderWidth: 1.5, padding: 6, gap: 4 },
   auditFieldLabel: { fontSize: 9, fontWeight: "800", color: Colors.textMuted, textAlign: "center", textTransform: "uppercase" as const },
   auditFieldInput: { minHeight: 28, color: Colors.primary, fontWeight: "700", padding: 0, fontSize: 14 },
 
   // summary strip
-  summaryStrip: { flexDirection: "row-reverse", backgroundColor: Colors.surfaceSecondary, borderRadius: 12, paddingVertical: 10, paddingHorizontal: 6 },
+  summaryStrip: { flexDirection: "row", backgroundColor: Colors.surfaceSecondary, borderRadius: 12, paddingVertical: 10, paddingHorizontal: 6 },
   summaryItem: { flex: 1, alignItems: "center", gap: 4 },
   summaryLabel: { fontSize: 9, fontWeight: "700", color: Colors.textMuted },
   summaryValue: { fontSize: 14, fontWeight: "900", color: Colors.text },
@@ -601,24 +601,24 @@ const styles = StyleSheet.create({
 
   // actions
   actionsRow: { flexDirection: "row", gap: 10 },
-  primaryBtn: { flex: 2, height: 48, borderRadius: 14, backgroundColor: Colors.primary, flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 8 },
+  primaryBtn: { flex: 2, height: 48, borderRadius: 14, backgroundColor: Colors.primary, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
   primaryBtnText: { color: "#fff", fontSize: 13, fontWeight: "900" },
-  secondaryBtn: { flex: 1, height: 48, borderRadius: 14, backgroundColor: Colors.primary + "10", flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 8 },
+  secondaryBtn: { flex: 1, height: 48, borderRadius: 14, backgroundColor: Colors.primary + "10", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
   secondaryBtnText: { color: Colors.primary, fontSize: 13, fontWeight: "900" },
 
   // history header
-  historyHeader: { flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", marginTop: 4 },
+  historyHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 4 },
 
   // audit history cards
   auditCard: { gap: 8, borderRadius: 16, borderWidth: 1, borderColor: Colors.border, backgroundColor: Colors.surfaceSecondary, padding: 12 },
-  auditTopRow: { flexDirection: "row-reverse", justifyContent: "space-between", gap: 10, alignItems: "center" },
+  auditTopRow: { flexDirection: "row", justifyContent: "space-between", gap: 10, alignItems: "center" },
   auditTitle: { fontSize: 13, fontWeight: "900", color: Colors.primary, textAlign: "right" },
   auditMeta: { fontSize: 10, color: Colors.textMuted, textAlign: "right", marginTop: 2 },
   auditBadge: { borderRadius: 12, paddingHorizontal: 9, paddingVertical: 5 },
   auditBadgeText: { fontSize: 10, fontWeight: "900" },
   auditSummary: { fontSize: 11, color: Colors.textSecondary, textAlign: "right", lineHeight: 18 },
-  auditActions: { flexDirection: "row-reverse", gap: 7 },
-  miniBtn: { flexDirection: "row-reverse", alignItems: "center", gap: 6, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 7, backgroundColor: "#fff", borderWidth: 1, borderColor: Colors.border },
+  auditActions: { flexDirection: "row", gap: 7 },
+  miniBtn: { flexDirection: "row", alignItems: "center", gap: 6, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 7, backgroundColor: "#fff", borderWidth: 1, borderColor: Colors.border },
   miniBtnText: { color: Colors.primary, fontSize: 10, fontWeight: "800" },
   deleteMiniBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: Colors.accent + "10", alignItems: "center", justifyContent: "center" },
 });

@@ -254,7 +254,7 @@ function InfoBox({ label, value, icon }: { label: string; value: string; icon: k
 
 const styles = StyleSheet.create({
   card: { backgroundColor: "#fff", borderRadius: 24, padding: 16, gap: 14, borderWidth: 1, borderColor: Colors.border },
-  headerRow: { flexDirection: "row-reverse", gap: 10, alignItems: "center" },
+  headerRow: { flexDirection: "row", gap: 10, alignItems: "center" },
   iconCircle: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", backgroundColor: Colors.success + "14" },
   headerTextBlock: { flex: 1, gap: 3 },
   title: { fontSize: 18, fontWeight: "900", color: Colors.primary, textAlign: "right" },
@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
   requestChipTitle: { fontSize: 12, fontWeight: "900", color: Colors.primary, textAlign: "right" },
   requestChipSub: { fontSize: 10, fontWeight: "700", color: Colors.textMuted, textAlign: "right" },
   selectedBox: { gap: 12, borderRadius: 18, padding: 12, backgroundColor: "#FAFAF8", borderWidth: 1, borderColor: Colors.border },
-  selectedTopRow: { flexDirection: "row-reverse", justifyContent: "space-between", alignItems: "center", gap: 10 },
+  selectedTopRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 10 },
   selectedTitle: { fontSize: 15, fontWeight: "900", color: Colors.primary, textAlign: "right" },
   selectedMeta: { fontSize: 10, color: Colors.textMuted, textAlign: "right", marginTop: 3, fontWeight: "700" },
   statusBadge: { borderRadius: 14, paddingHorizontal: 9, paddingVertical: 5 },
@@ -280,7 +280,7 @@ const styles = StyleSheet.create({
   infoValue: { fontSize: 10, color: Colors.textSecondary, fontWeight: "800", textAlign: "center", lineHeight: 15 },
   itemsBox: { gap: 7, padding: 10, borderRadius: 14, backgroundColor: "#fff", borderWidth: 1, borderColor: Colors.border },
   sectionTitle: { fontSize: 13, fontWeight: "900", color: Colors.primary, textAlign: "right" },
-  itemRow: { flexDirection: "row-reverse", justifyContent: "space-between", gap: 8, borderBottomWidth: 1, borderBottomColor: Colors.border, paddingBottom: 5 },
+  itemRow: { flexDirection: "row", justifyContent: "space-between", gap: 8, borderBottomWidth: 1, borderBottomColor: Colors.border, paddingBottom: 5 },
   itemName: { flex: 1, fontSize: 11, color: Colors.textSecondary, fontWeight: "800", textAlign: "right" },
   itemQty: { fontSize: 11, color: Colors.primary, fontWeight: "900" },
   moreItems: { fontSize: 10, color: Colors.textMuted, fontWeight: "800", textAlign: "center" },
@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
   summaryTitle: { fontSize: 11, fontWeight: "900", color: Colors.info, textAlign: "right" },
   summaryText: { fontSize: 11, color: Colors.textSecondary, textAlign: "right", lineHeight: 18, fontWeight: "700" },
   actionsRow: { flexDirection: "row", gap: 10 },
-  partialBtn: { flex: 1, minHeight: 44, borderRadius: 14, backgroundColor: Colors.accent, flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 7 },
-  receivedBtn: { flex: 1, minHeight: 44, borderRadius: 14, backgroundColor: Colors.success, flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 7 },
+  partialBtn: { flex: 1, minHeight: 44, borderRadius: 14, backgroundColor: Colors.accent, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7 },
+  receivedBtn: { flex: 1, minHeight: 44, borderRadius: 14, backgroundColor: Colors.success, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7 },
   actionText: { color: "#fff", fontSize: 12, fontWeight: "900" },
 });

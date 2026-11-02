@@ -118,17 +118,17 @@ export function TaxSettingsPanel() {
 
 const s = StyleSheet.create({
   card: { backgroundColor: Colors.surface, borderRadius: 18, borderWidth: 1, borderColor: Colors.borderLight, padding: 16, gap: 8, marginTop: 14 },
-  head: { flexDirection: "row-reverse", alignItems: "center", gap: 10, marginBottom: 4 },
+  head: { flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 4 },
   icon: { width: 34, height: 34, borderRadius: 10, backgroundColor: Colors.primary + "10", alignItems: "center", justifyContent: "center" },
   title: { color: Colors.text, fontSize: 15, fontWeight: "800", textAlign: "right" },
   sub: { color: Colors.textSecondary, fontSize: 12, textAlign: "right", lineHeight: 18 },
   label: { color: Colors.textSecondary, fontSize: 12, fontWeight: "700", textAlign: "right", marginTop: 4 },
   input: { minHeight: 46, borderRadius: 12, borderWidth: 1, borderColor: Colors.border, backgroundColor: "#FAFAF8", paddingHorizontal: 12, color: Colors.text, fontSize: 14 },
   ltr: { textAlign: "left", letterSpacing: 1 },
-  row: { flexDirection: "row-reverse", gap: 10 },
-  note: { flexDirection: "row-reverse", gap: 8, alignItems: "flex-start", backgroundColor: Colors.background, borderRadius: 12, padding: 10, marginTop: 4 },
+  row: { flexDirection: "row", gap: 10 },
+  note: { flexDirection: "row", gap: 8, alignItems: "flex-start", backgroundColor: Colors.background, borderRadius: 12, padding: 10, marginTop: 4 },
   noteTxt: { flex: 1, color: Colors.textSecondary, fontSize: 12, lineHeight: 19, textAlign: "right" },
   err: { color: Colors.accent, fontSize: 12, fontWeight: "700", textAlign: "right" },
-  save: { flexDirection: "row-reverse", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: Colors.primary, borderRadius: 14, minHeight: 48, marginTop: 6 },
+  save: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: Colors.primary, borderRadius: 14, minHeight: 48, marginTop: 6 },
   saveTxt: { color: "#fff", fontSize: 15, fontWeight: "800" },
 });

@@ -87,11 +87,11 @@ const darkC = { bg: "rgba(255,255,255,0.05)", border: "rgba(255,255,255,0.1)", t
 
 const s = StyleSheet.create({
   card: { borderRadius: 16, borderWidth: 1, padding: 12, gap: 10 },
-  row: { flexDirection: "row-reverse", alignItems: "center", gap: 10 },
+  row: { flexDirection: "row", alignItems: "center", gap: 10 },
   badge: { width: 34, height: 34, borderRadius: 11, alignItems: "center", justifyContent: "center" },
   title: { fontSize: 13, fontWeight: "700", textAlign: "right" },
   sub: { fontSize: 11, textAlign: "right" },
-  redeem: { flexDirection: "row-reverse", alignItems: "center", gap: 8, borderWidth: 1, borderRadius: 12, paddingVertical: 9, paddingHorizontal: 10 },
+  redeem: { flexDirection: "row", alignItems: "center", gap: 8, borderWidth: 1, borderRadius: 12, paddingVertical: 9, paddingHorizontal: 10 },
   redeemTxt: { flex: 1, fontSize: 12, fontWeight: "700", textAlign: "right" },
   note: { fontSize: 11, textAlign: "right" },
   earn: { fontSize: 11, fontWeight: "700", textAlign: "right" },

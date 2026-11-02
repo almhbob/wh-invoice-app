@@ -51,7 +51,7 @@ export function StageBadge({ stage }: { stage: WindowOrderStage }) {
 }
 
 const st = StyleSheet.create({
-  row: { flexDirection: "row-reverse", alignItems: "center", gap: 6 },
+  row: { flexDirection: "row", alignItems: "center", gap: 6 },
   dot: { width: 8, height: 8, borderRadius: 4 },
   label: { fontSize: 13, fontWeight: "900", color: Colors.textSecondary },
   small: { fontSize: 12, fontWeight: "700", color: Colors.text },

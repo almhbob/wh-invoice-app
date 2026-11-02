@@ -57,12 +57,12 @@ export function HrPayrollPanel() {
           </View>
           <Pressable onPress={() => setMonth(shiftMonth(month, -1))} hitSlop={10}><Feather name="chevron-left" size={22} color={Colors.text} /></Pressable>
         </View>
-        <View style={{ flexDirection: "row-reverse", gap: 8 }}>
+        <View style={{ flexDirection: "row", gap: 8 }}>
           <Tot label={tr("صافي الرواتب", "Net payroll")} v={sar(totals.net)} c={Colors.text} />
           <Tot label={tr("مدفوع", "Paid")} v={sar(totals.paid)} c={Colors.success} />
           <Tot label={trf("متبقٍ ({n})", "Unpaid ({n})", { n: totals.unpaidCount })} v={sar(totals.unpaid)} c={totals.unpaid ? Colors.accent : Colors.textMuted} />
         </View>
-        <View style={{ flexDirection: "row-reverse", gap: 8, flexWrap: "wrap" }}>
+        <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
           {missing > 0 ? (
             <Pressable onPress={generate} disabled={busy} style={[s.addBtn, { flexGrow: 1, justifyContent: "center" }, busy && { opacity: 0.6 }]}>
               {busy ? <ActivityIndicator color="#fff" /> : <Feather name="file-plus" size={15} color="#fff" />}

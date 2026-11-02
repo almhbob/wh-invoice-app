@@ -63,7 +63,7 @@ export function HrReminderHost() {
 
 const st = StyleSheet.create({
   wrap: { position: "absolute", left: 0, right: 0, bottom: 90, alignItems: "center", paddingHorizontal: 12, zIndex: 9998 },
-  toast: { width: "100%", maxWidth: 560, flexDirection: "row-reverse", alignItems: "center", gap: 10, backgroundColor: Colors.primary, borderRadius: 18, paddingHorizontal: 14, paddingVertical: 12, shadowColor: "#000", shadowOpacity: 0.25, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 12 },
+  toast: { width: "100%", maxWidth: 560, flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: Colors.primary, borderRadius: 18, paddingHorizontal: 14, paddingVertical: 12, shadowColor: "#000", shadowOpacity: 0.25, shadowRadius: 20, shadowOffset: { width: 0, height: 8 }, elevation: 12 },
   icon: { width: 36, height: 36, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.08)", alignItems: "center", justifyContent: "center" },
   title: { color: "#fff", fontSize: 14, fontWeight: "800", textAlign: "right" },
   body: { color: "rgba(255,255,255,0.7)", fontSize: 12, textAlign: "right" },

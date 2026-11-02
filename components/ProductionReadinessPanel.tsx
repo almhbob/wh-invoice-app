@@ -78,12 +78,12 @@ export function ProductionReadinessPanel() {
 
 const styles = StyleSheet.create({
   container: { gap: 10, backgroundColor: "#fff", borderRadius: 18, padding: 16, borderWidth: 1, borderColor: "rgba(0,0,0,0.06)" },
-  head: { flexDirection: "row-reverse", alignItems: "center", gap: 10 },
+  head: { flexDirection: "row", alignItems: "center", gap: 10 },
   iconBox: { width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center" },
   title: { fontSize: 17, fontWeight: "900", color: Colors.primary, textAlign: "right" },
   subtitle: { fontSize: 12, color: Colors.textMuted, textAlign: "right", marginTop: 2 },
   checkCard: { gap: 6, padding: 11, borderRadius: 14, backgroundColor: "#FAFAF8", borderWidth: 1, borderColor: Colors.border },
-  checkHead: { flexDirection: "row-reverse", alignItems: "center", gap: 7 },
+  checkHead: { flexDirection: "row", alignItems: "center", gap: 7 },
   checkTitle: { fontSize: 13, fontWeight: "900", color: Colors.text, textAlign: "right" },
   checkDesc: { fontSize: 11, color: Colors.textMuted, textAlign: "right", lineHeight: 17 },
   action: { fontSize: 11, fontWeight: "800", textAlign: "right", lineHeight: 17 },

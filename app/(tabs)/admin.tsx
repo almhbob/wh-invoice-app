@@ -590,7 +590,7 @@ function EmployeesSection() {
                   {salesWindows.some((w) => w.active) ? (
                     <>
                       <Text style={styles.formLabel}>{tr("نافذة البيع (الفرع)", "Sales window (branch)")}</Text>
-                      <View style={{ flexDirection: "row-reverse", flexWrap: "wrap", gap: 6 }}>
+                      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 6 }}>
                         {[{ id: "", name: tr("بدون نافذة", "No window") }, ...salesWindows.filter((w) => w.active)].map((w) => (
                           <TouchableOpacity
                             key={w.id || "none"}
