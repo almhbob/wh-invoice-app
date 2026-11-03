@@ -8,6 +8,28 @@
 <meta property="og:title" content="فوترة — من الطلب إلى التسليم في نظام واحد" />
 <meta property="og:description" content="كاشير، أقسام تحضير، تتبع طلب للعميل، ولاء، وفاتورة ضريبية مبسطة. لمحلات الحلويات والكيك." />
 <meta name="theme-color" content="#141414" />
+<link rel="canonical" href="https://fotra-dv1.pages.dev/join" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://fotra-dv1.pages.dev/join" />
+<meta property="og:locale" content="ar_SA" />
+<meta property="og:site_name" content="فوترة" />
+<meta name="twitter:card" content="summary" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@graph":[
+ {"@type":"SoftwareApplication","name":"فوترة","applicationCategory":"BusinessApplication","operatingSystem":"Web, iOS, Android",
+  "description":"نظام كاشير وطلبات لمحلات الحلويات والكيك: أقسام تحضير، تتبع طلب للعميل، ولاء، وفاتورة ضريبية مبسطة.",
+  "offers":[
+   {"@type":"Offer","name":"الأساسية","price":"149","priceCurrency":"SAR"},
+   {"@type":"Offer","name":"الأعمال","price":"349","priceCurrency":"SAR"},
+   {"@type":"Offer","name":"المتقدمة","price":"799","priceCurrency":"SAR"}]},
+ {"@type":"FAQPage","mainEntity":[
+  {"@type":"Question","name":"هل أحتاج أجهزة خاصة لاستخدام فوترة؟","acceptedAnswer":{"@type":"Answer","text":"لا. يعمل النظام من المتصفح على الجوال أو التابلت أو كمبيوتر الكاشير بدون تثبيت. قارئ الباركود اختياري، ويمكن استخدام كاميرا الجوال أو إدخال رقم المنتج يدوياً."}},
+  {"@type":"Question","name":"هل يصدر فوترة فاتورة ضريبية؟","acceptedAnswer":{"@type":"Answer","text":"نعم، يصدر فاتورة ضريبية مبسطة برمز QR بصيغة هيئة الزكاة والضريبة والجمارك."}},
+  {"@type":"Question","name":"هل أدفع شيئاً خلال التجربة؟","acceptedAnswer":{"@type":"Answer","text":"لا. لا نطلب بيانات دفع لطلب التجربة، وبعد انتهائها تختار الباقة المناسبة أو تتوقف، ويمكن إلغاء الاشتراك في أي وقت."}},
+  {"@type":"Question","name":"من يملك بيانات محلي؟","acceptedAnswer":{"@type":"Answer","text":"البيانات ملك للمحل، ويستطيع المسؤول تصديرها أو حذفها من لوحة الإدارة. رموز دخول الموظفين تُحفظ مشفّرة."}}
+ ]}
+]}
+</script>
 <style>
 @font-face{font-family:"Plex";src:url(/brand-fonts/PlexArabic-Regular.woff) format("woff");font-weight:100 449;font-display:swap}
 @font-face{font-family:"Plex";src:url(/brand-fonts/PlexArabic-Medium.woff) format("woff");font-weight:450 549;font-display:swap}
@@ -77,7 +99,35 @@ textarea{min-height:84px;resize:vertical}
 footer{background:var(--ink);color:#9a9a96;font-size:13px;padding:28px 0}
 footer .wrap{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
 footer a{color:#ddd;text-decoration:none;margin-inline-start:16px}
+.trust{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:18px;color:#BDBDB8;font-size:13px}
+.trust span::before{content:"✓ ";color:var(--ember-l);font-weight:800}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;counter-reset:s}
+.step{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:22px;position:relative}
+.step::before{counter-increment:s;content:counter(s);display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;background:var(--ink);color:#fff;font-weight:800;margin-bottom:10px}
+.step h3{font-size:17px;margin-bottom:4px}
+.step p{color:var(--muted);font-size:14px}
+.plan .btn{margin-top:auto}
+.btn-ink{background:var(--ink);color:#fff}
+.btn-line{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.faq{display:grid;gap:10px}
+.faq details{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 18px}
+.faq summary{cursor:pointer;font-weight:700;list-style:none}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";float:left;color:var(--ember);font-weight:800}
+.faq details[open] summary::after{content:"–"}
+.faq p{color:var(--muted);font-size:14px;margin-top:8px}
+.more{grid-column:1/-1;border:1px dashed var(--line);border-radius:14px;padding:12px 14px}
+.more summary{cursor:pointer;font-weight:700;font-size:14px;color:var(--ink2)}
+.more .inner{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:12px}
+.more .inner .full{grid-column:1/-1}
+.micro{grid-column:1/-1;text-align:center;font-size:12px;color:var(--muted)}
+.sticky{position:fixed;inset-inline:0;bottom:0;z-index:20;background:rgba(20,20,20,.96);padding:10px 16px calc(10px + env(safe-area-inset-bottom));display:none}
+.sticky a{display:flex;width:100%}
 @media (max-width:860px){
+  .steps{grid-template-columns:1fr}
+  .more .inner{grid-template-columns:1fr}
+  .sticky.show{display:block}
+  body.has-sticky footer{padding-bottom:84px}
   .hero{grid-template-columns:1fr;padding-top:36px;padding-bottom:48px}
   h1{font-size:32px}
   .grid3,.plans{grid-template-columns:1fr}
@@ -96,11 +146,14 @@ footer a{color:#ddd;text-decoration:none;margin-inline-start:16px}
   <div class="wrap hero">
     <div>
       <div class="kicker">لمحلات الحلويات والكيك والشوكولاتة</div>
-      <h1>من لحظة الطلب إلى التسليم، كل شيء في نظام واحد.</h1>
-      <p class="lead">الكاشير يسجّل الطلب، والأقسام تستلمه وتحدّث مراحل التحضير، والعميل يتابعه من رابط على جواله. مع نقاط ولاء، وفاتورة ضريبية مبسطة، وتقارير أداء.</p>
+      <h1>لا طلب يضيع، ولا كيكة تتأخر عن موعدها.</h1>
+      <p class="lead">الكاشير يسجّل الطلب مرة واحدة، فيصل لكل قسم نصيبه فوراً، ويتابع العميل تجهيزه من رابط على جواله. بدون أوراق، وبدون اتصالات «وين وصل طلبي؟».</p>
       <div class="hero-actions">
-        <a class="btn btn-ember" href="#start">ابدأ التجربة المجانية</a>
+        <a class="btn btn-ember" href="#start" data-cta="hero">ابدأ تجربتك المجانية</a>
         <a class="btn btn-ghost" href="#plans">الباقات والأسعار</a>
+      </div>
+      <div class="trust">
+        <span>بدون بطاقة دفع</span><span>بدون تثبيت</span><span>فاتورة ضريبية برمز QR</span><span>إلغاء في أي وقت</span>
       </div>
     </div>
     <div class="ticket" aria-hidden="true">
@@ -129,6 +182,18 @@ footer a{color:#ddd;text-decoration:none;margin-inline-start:16px}
   </div>
 </section>
 
+<section style="padding-top:0">
+  <div class="wrap">
+    <h2>تبدأ في ثلاث خطوات</h2>
+    <p class="sub">بدون إعداد معقّد ولا أجهزة جديدة.</p>
+    <div class="steps">
+      <div class="step"><h3>اطلب التجربة</h3><p>أربع خانات فقط: اسم المحل واسمك وجوالك ومدينتك.</p></div>
+      <div class="step"><h3>نجهّز حسابك</h3><p>نتواصل معك لإضافة أقسامك ومنتجاتك وموظفيك، ونشرح النظام لفريقك.</p></div>
+      <div class="step"><h3>فريقك يبدأ</h3><p>كل موظف يدخل بحسابه من جواله أو جهاز الكاشير، وتتابع كل شيء من لوحة واحدة.</p></div>
+    </div>
+  </div>
+</section>
+
 <section id="plans" style="padding-top:0">
   <div class="wrap">
     <h2>باقات واضحة، بدون رسوم مخفية</h2>
@@ -139,19 +204,36 @@ footer a{color:#ddd;text-decoration:none;margin-inline-start:16px}
         <div class="price">149 <small>ر.س / شهر</small></div>
         <div class="trial">تجربة مجانية 7 أيام</div>
         <ul><li>فرع واحد · حتى 5 مستخدمين</li><li>كاشير وأقسام تحضير</li><li>توصيل وإرجاع وتلف</li></ul>
+        <a class="btn btn-line" href="#start" data-plan="starter">ابدأ بالأساسية</a>
       </div>
       <div class="plan hot">
         <div class="name">الأعمال <span class="tag" style="background:#141414;color:#F2A27A">الأكثر طلباً</span></div>
         <div class="price">349 <small>ر.س / شهر</small></div>
         <div class="trial">تجربة مجانية 14 يوماً</div>
         <ul><li>حتى 3 فروع · 25 مستخدماً</li><li>ولاء العملاء والمخزون</li><li>تقارير أداء متقدمة</li></ul>
+        <a class="btn btn-ink" href="#start" data-plan="business">ابدأ بالأعمال</a>
       </div>
       <div class="plan">
         <div class="name">المتقدمة</div>
         <div class="price">799 <small>ر.س / شهر</small></div>
         <div class="trial">تجربة مجانية 30 يوماً</div>
         <ul><li>حتى 20 فرعاً · 100 مستخدم</li><li>معرض وطلبات أونلاين</li><li>دومين خاص ودعم تقني</li></ul>
+        <a class="btn btn-line" href="#start" data-plan="enterprise">ابدأ بالمتقدمة</a>
       </div>
+    </div>
+  </div>
+</section>
+
+<section id="faq" style="padding-top:0">
+  <div class="wrap">
+    <h2>أسئلة شائعة</h2>
+    <p class="sub">إذا عندك سؤال آخر، اكتبه في الملاحظات ونرد عليك.</p>
+    <div class="faq">
+      <details><summary>هل أحتاج أجهزة خاصة؟</summary><p>لا. يعمل النظام من المتصفح على الجوال أو التابلت أو كمبيوتر الكاشير بدون تثبيت. قارئ الباركود اختياري، ويمكن استخدام كاميرا الجوال أو إدخال رقم المنتج يدوياً.</p></details>
+      <details><summary>هل يصدر فاتورة ضريبية؟</summary><p>نعم، فاتورة ضريبية مبسطة برمز QR بصيغة هيئة الزكاة والضريبة والجمارك. تبقى بياناتك الضريبية المسجلة في النظام مسؤوليتك.</p></details>
+      <details><summary>هل أدفع شيئاً خلال التجربة؟</summary><p>لا. لا نطلب بيانات دفع لطلب التجربة. بعد انتهائها تختار الباقة المناسبة أو تتوقف، ويمكن إلغاء الاشتراك في أي وقت.</p></details>
+      <details><summary>من يملك بيانات محلي؟ وهل هي آمنة؟</summary><p>البيانات ملك للمحل، ويستطيع المسؤول تصديرها أو حذفها من لوحة الإدارة. كل موظف يدخل بحسابه ورمزه، ورموز الدخول تُحفظ مشفّرة.</p></details>
+      <details><summary>موظفيني لا يتكلمون العربية، هل يناسبهم؟</summary><p>نعم. واجهة الموظفين متوفرة بالعربية والإنجليزية والأردية والهندية والبنغالية.</p></details>
     </div>
   </div>
 </section>
@@ -166,6 +248,7 @@ footer a{color:#ddd;text-decoration:none;margin-inline-start:16px}
       <div><label for="ownerName">اسمك</label><input id="ownerName" name="ownerName" maxlength="60" autocomplete="name" required /></div>
       <div><label for="phone">رقم الجوال</label><input id="phone" name="phone" inputmode="tel" dir="ltr" placeholder="05XXXXXXXX" maxlength="20" autocomplete="tel" required /></div>
       <div><label for="city">المدينة</label><input id="city" name="city" maxlength="40" autocomplete="address-level2" required /></div>
+      <details class="more"><summary>تفاصيل إضافية (اختياري) — تساعدنا نجهّز حسابك أسرع</summary><div class="inner">
       <div><label for="shopType">نوع النشاط</label>
         <select id="shopType" name="shopType"><option value="sweets">حلويات</option><option value="cakes">كيك</option><option value="bakery">مخبز</option><option value="chocolate">شوكولاتة</option><option value="cafe">مقهى</option><option value="other">أخرى</option></select></div>
       <div><label for="branches">عدد الفروع</label>
@@ -174,10 +257,12 @@ footer a{color:#ddd;text-decoration:none;margin-inline-start:16px}
         <select id="plan" name="plan"><option value="unsure">لم أقرر بعد</option><option value="starter">الأساسية · 149</option><option value="business">الأعمال · 349</option><option value="enterprise">المتقدمة · 799</option></select></div>
       <div><label for="email">البريد الإلكتروني (اختياري)</label><input id="email" name="email" type="email" dir="ltr" maxlength="120" autocomplete="email" /></div>
       <div class="full"><label for="notes">ملاحظات (اختياري)</label><textarea id="notes" name="notes" maxlength="500" placeholder="مثلاً: عندنا طلبات كيك مناسبات كثيرة ونحتاج تنظيم الكتابة"></textarea></div>
+      </div></details>
       <input class="hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" />
       <label class="consent full"><input type="checkbox" id="consent" /> <span>أوافق على <a href="/terms" target="_blank">الشروط</a> وعلى استخدام بياناتي للتواصل معي بشأن التجربة وفق <a href="/privacy" target="_blank">سياسة الخصوصية</a>.</span></label>
       <div id="msg" class="msg full" role="alert"></div>
-      <button class="btn btn-ember full" id="send" type="submit">إرسال الطلب</button>
+      <button class="btn btn-ember full" id="send" type="submit">احجز تجربتي المجانية</button>
+      <p class="micro">بدون بطاقة دفع · نتواصل معك على جوالك لتجهيز حسابك</p>
     </form>
 
     <div id="done" class="done" role="status">
@@ -188,6 +273,8 @@ footer a{color:#ddd;text-decoration:none;margin-inline-start:16px}
     </div>
   </div>
 </section>
+
+<div class="sticky" id="sticky"><a class="btn btn-ember" href="#start">ابدأ تجربتك المجانية — بدون بطاقة دفع</a></div>
 
 <footer>
   <div class="wrap">
@@ -205,12 +292,31 @@ footer a{color:#ddd;text-decoration:none;margin-inline-start:16px}
   var plan = q.get("plan"); if (plan && document.querySelector('#plan option[value="' + plan.replace(/[^a-z]/g, "") + '"]')) document.getElementById("plan").value = plan;
 
   var f = document.getElementById("f"), msg = document.getElementById("msg"), send = document.getElementById("send");
+  // Plan buttons pick the plan in the form (and show it in the optional block).
+  document.querySelectorAll("[data-plan]").forEach(function (a) {
+    a.addEventListener("click", function () {
+      document.getElementById("plan").value = a.getAttribute("data-plan");
+      var more = document.querySelector(".more"); if (more) more.open = true;
+    });
+  });
+  if (plan) { var m = document.querySelector(".more"); if (m) m.open = true; }
+  // Sticky CTA on phones: shown once the hero button scrolls away, hidden over the form.
+  var sticky = document.getElementById("sticky"), heroCta = document.querySelector('[data-cta="hero"]'), start = document.getElementById("start");
+  if (sticky && heroCta && start && "IntersectionObserver" in window) {
+    var heroGone = false, formSeen = false;
+    var sync = function () { var on = heroGone && !formSeen; sticky.classList.toggle("show", on); document.body.classList.toggle("has-sticky", on); };
+    new IntersectionObserver(function (e) { heroGone = !e[0].isIntersecting; sync(); }).observe(heroCta);
+    new IntersectionObserver(function (e) { formSeen = e[0].isIntersecting; sync(); }, { rootMargin: "0px 0px -30% 0px" }).observe(start);
+  }
   var labels = { shopName: "اسم المحل", ownerName: "اسمك", phone: "رقم الجوال (يبدأ بـ 05)", city: "المدينة", email: "البريد الإلكتروني", consent: "الموافقة على الشروط" };
   function v(id) { return document.getElementById(id).value.trim(); }
   function phoneOk(p) { var d = p.replace(/\D/g, "").replace(/^00966/, "0").replace(/^966/, "0"); return /^05\d{8}$/.test(d); }
   function showErr(fields) {
     document.querySelectorAll(".err").forEach(function (e) { e.classList.remove("err"); });
     fields.forEach(function (k) { var el = document.getElementById(k); if (el && k !== "consent") el.classList.add("err"); });
+    // An error in the collapsed optional block must be visible.
+    var more = document.querySelector(".more");
+    if (more && fields.some(function (k) { return more.contains(document.getElementById(k)); })) more.open = true;
     msg.className = "msg full bad";
     msg.textContent = "راجع: " + fields.map(function (k) { return labels[k] || k; }).join("، ");
   }
@@ -246,7 +352,7 @@ footer a{color:#ddd;text-decoration:none;margin-inline-start:16px}
         if (res.s === 429 && res.j.whatsapp) done(res.j.whatsapp);
       })
       .catch(function () { msg.className = "msg full bad"; msg.textContent = "تعذّر الاتصال. تحقق من الإنترنت وحاول مجدداً."; })
-      .finally(function () { send.disabled = false; send.textContent = "إرسال الطلب"; });
+      .finally(function () { send.disabled = false; send.textContent = "احجز تجربتي المجانية"; });
   });
 })();
 </script>
