@@ -30,7 +30,7 @@ export function fmtTime(iso: string): string {
 }
 
 export function fmtCurrency(n: number): string {
-  return n.toLocaleString("ar-SA", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ر.س";
+  return n.toLocaleString("ar-SA-u-nu-latn", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ر.س";
 }
 
 /**

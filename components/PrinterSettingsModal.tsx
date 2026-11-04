@@ -477,7 +477,7 @@ const SUPPORTED_PRINTERS = [
 ];
 
 function buildTestHtml(): string {
-  const now = new Date().toLocaleString("ar-SA");
+  const now = new Date().toLocaleString("ar-SA-u-nu-latn");
   return `<!DOCTYPE html><html dir="rtl"><head><meta charset="utf-8">
   <style>
     @page { size: 80mm auto; margin: 3mm; }

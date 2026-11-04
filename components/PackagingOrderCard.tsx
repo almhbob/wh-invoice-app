@@ -37,14 +37,14 @@ const STATUS_CONFIG: Record<
 };
 
 function fmtCurrency(n: number) {
-  return n.toLocaleString("ar-SA", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ر.س";
+  return n.toLocaleString("ar-SA-u-nu-latn", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ر.س";
 }
 
 function fmtTime(str: string) {
   if (!str) return "";
   if (str.includes("T")) {
     const d = new Date(str);
-    return d.toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit" });
+    return d.toLocaleTimeString("ar-SA-u-nu-latn", { hour: "2-digit", minute: "2-digit" });
   }
   return str;
 }
@@ -53,7 +53,7 @@ function fmtDate(str: string) {
   if (!str) return "";
   if (str.includes("T")) {
     const d = new Date(str);
-    return d.toLocaleDateString("ar-SA");
+    return d.toLocaleDateString("ar-SA-u-nu-latn");
   }
   return str;
 }

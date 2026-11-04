@@ -7,7 +7,7 @@ import { DEMO_INVENTORY_ITEMS, DEMO_LOYALTY_CUSTOMERS, DEMO_SHIFT_SUMMARIES, inv
 import { POS_REPLACEMENT_POSITIONING_AR, POS_REPLACEMENT_SUITE, suiteCompletionPercent } from "@/constants/posReplacementSuite";
 
 function fmt(n: number) {
-  return n.toLocaleString("ar-SA", { maximumFractionDigits: 2 });
+  return n.toLocaleString("ar-SA-u-nu-latn", { maximumFractionDigits: 2 });
 }
 
 function Metric({ icon, title, value, color }: { icon: any; title: string; value: string | number; color: string }) {

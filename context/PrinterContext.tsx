@@ -92,7 +92,7 @@ export function buildTestReceiptBytes(): Uint8Array {
     ESCPOS.BOLD_OFF,
     enc.encode("--------------------------------\n"),
     enc.encode("Test Print OK ✓\n"),
-    enc.encode(`${new Date().toLocaleString("ar-SA")}\n`),
+    enc.encode(`${new Date().toLocaleString("ar-SA-u-nu-latn")}\n`),
     enc.encode("--------------------------------\n"),
     enc.encode("\n\n\n"),
     ESCPOS.CUT_FULL,

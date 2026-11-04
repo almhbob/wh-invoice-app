@@ -5,7 +5,7 @@ import { BlurView } from "expo-blur";
 import { Image } from "expo-image";
 import { Tabs, useRouter, usePathname } from "expo-router";
 import { SymbolView } from "expo-symbols";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   Modal,
   Platform,
@@ -117,6 +117,8 @@ function LogoHeader({ titleKey, accentColor, isDesktop }: LogoHeaderProps) {
   const { currentEmployee } = useEmployee();
   const { lang, toggleLang, t } = useLang();
   const [showSelector, setShowSelector] = useState(false);
+  const { width: winW } = useWindowDimensions();
+  const compact = winW < 440; // phones: avatar only, so the page title is not cut off
   const isRTL = lang === "ar" || lang === "ur";
   const LANG_NEXT: Record<string, string> = { ar: "EN", en: "اردو", ur: "हि", hi: "বাং", bn: "ع" };
   const tenantBrand = TENANT_BRANDS[company.id] ?? {
@@ -159,16 +161,23 @@ function LogoHeader({ titleKey, accentColor, isDesktop }: LogoHeaderProps) {
             </TouchableOpacity>
           )}
           {!isDesktop && (
-            <TouchableOpacity style={styles.empBtn} onPress={() => setShowSelector(true)} activeOpacity={0.8}>
+            <TouchableOpacity
+              style={[styles.empBtn, compact && currentEmployee ? styles.empBtnCompact : null]}
+              onPress={() => setShowSelector(true)}
+              activeOpacity={0.8}
+              accessibilityLabel={currentEmployee ? `${currentEmployee.name} #${currentEmployee.employeeId}` : t("loginBtn")}
+            >
               {currentEmployee ? (
                 <>
                   <View style={[styles.empAvatar, { backgroundColor: ROLE_COLORS[currentEmployee.role] ?? Colors.primaryLight }]}>
                     <Text style={styles.empAvatarText}>{currentEmployee.name.charAt(0)}</Text>
                   </View>
-                  <View style={styles.empTextBlock}>
-                    <Text style={styles.empName} numberOfLines={1}>{currentEmployee.name}</Text>
-                    <Text style={styles.empId}>#{currentEmployee.employeeId}</Text>
-                  </View>
+                  {!compact && (
+                    <View style={styles.empTextBlock}>
+                      <Text style={styles.empName} numberOfLines={1}>{currentEmployee.name}</Text>
+                      <Text style={styles.empId}>#{currentEmployee.employeeId}</Text>
+                    </View>
+                  )}
                 </>
               ) : (
                 <>
@@ -178,7 +187,16 @@ function LogoHeader({ titleKey, accentColor, isDesktop }: LogoHeaderProps) {
               )}
             </TouchableOpacity>
           )}
-          <View style={[styles.screenBadge, { backgroundColor: accentColor ?? tenantBrand.accent }]}>
+          <View
+            style={[
+              styles.screenBadge,
+              compact && { maxWidth: 150 },
+              // an ink accent would vanish on the ink header: use a glass chip instead
+              (accentColor ?? tenantBrand.accent) === tenantBrand.primary
+                ? styles.screenBadgeGlass
+                : { backgroundColor: accentColor ?? tenantBrand.accent },
+            ]}
+          >
             <Text style={styles.screenBadgeText} numberOfLines={1}>{titleKey}</Text>
           </View>
         </View>
@@ -494,8 +512,7 @@ function BarItem({ label, icon, sf, active, accent, badge, onPress }: {
   const iconColor = active ? accent : Colors.textSecondary;
   return (
     <TouchableOpacity style={styles.barItem} onPress={onPress} activeOpacity={0.7}>
-      {active && <View style={[styles.activePill, { backgroundColor: accent }]} />}
-      <View style={styles.barIconWrap}>
+      <View style={[styles.barIconWrap, active && { backgroundColor: accent + "1F" }]}>
         {isIOS && sf ? <SymbolView name={sf as any} tintColor={iconColor} size={22} /> : <Feather name={icon as any} size={22} color={iconColor} />}
         {badge && <Feather name={badge === "▲" ? "chevron-up" : "chevron-down"} size={11} color={iconColor} style={styles.arrowBadge} />}
       </View>
@@ -506,7 +523,7 @@ function BarItem({ label, icon, sf, active, accent, badge, onPress }: {
 
 // ── Root layout ────────────────────────────────────────────────────────────────
 
-const SCREEN_META: Record<string, { titleKey: string; accent: string }> = {
+const SCREEN_META: Record<string, { titleKey: string; accent: string; icon?: string }> = {
   home:             { titleKey: "titleLiveOrders", accent: Colors.primary },
   cashier:          { titleKey: "titleCashier",   accent: Colors.gold },
   halwa:            { titleKey: "titleHalwa",      accent: Colors.halwa },
@@ -531,12 +548,22 @@ const SCREEN_META: Record<string, { titleKey: string; accent: string }> = {
   settings:         { titleKey: "tabSettings",      accent: Colors.primary },
 };
 
+const READABLE_SCREENS = new Set([
+  "archive", "reports", "customers", "delivery", "tracking", "online", "driver", "trays",
+  "admin", "settings", "branches", "branch-inventory", "branch-orders",
+]);
+
+const SCREEN_ICONS: Record<string, string> = {
+  home: "activity", cashier: "file-text", archive: "archive", reports: "pie-chart", developer: "code", settings: "sliders",
+};
+
 function useScreenMeta(pathname: string, t: (k: TranslationKey) => string) {
   const key = Object.keys(SCREEN_META).find((k) => pathname.includes(k)) ?? "cashier";
   const meta = SCREEN_META[key];
   const rawKey = meta.titleKey;
   const title = rawKey.startsWith("title") || rawKey.startsWith("tab") ? t(rawKey as TranslationKey) : rawKey;
-  return { title, accent: meta.accent };
+  const icon = SCREEN_ICONS[key] ?? [...DEPT_TABS, ...MORE_TABS].find((d) => d.name === key)?.icon ?? "circle";
+  return { title, accent: meta.accent, icon };
 }
 
 export default function TabLayout() {
@@ -548,7 +575,14 @@ export default function TabLayout() {
   const isRTL = lang === "ar" || lang === "ur";
   const isDesktop = Platform.OS === "web" && width >= 768;
   const navigate = useCallback((name: string) => { router.navigate(`/(tabs)/${name}` as any); }, [router]);
-  const { title: screenTitle, accent: screenAccent } = useScreenMeta(pathname, t);
+  const { title: screenTitle, accent: screenAccent, icon: screenIcon } = useScreenMeta(pathname, t);
+  // 220 = sidebar width; keep reading screens at most ~1240px wide
+  const readablePad = Math.max(0, Math.floor((width - 220 - 1240) / 2));
+  const todayLabel = useMemo(() => {
+    try {
+      return new Date().toLocaleDateString(lang === "ar" || lang === "ur" ? "ar-SA-u-ca-gregory-nu-latn" : "en-GB", { weekday: "long", day: "numeric", month: "long" });
+    } catch { return ""; }
+  }, [lang]);
 
   const screens = (
     <>
@@ -587,11 +621,25 @@ export default function TabLayout() {
           <LiveAlertsHost />
           <HrReminderHost />
           <View style={[ds.contentHeader, ds.rowLTR]}>
-            <View style={[ds.contentBadge, { backgroundColor: screenAccent }]}>
-              <Text style={ds.contentBadgeText}>{screenTitle}</Text>
+            <View style={[ds.contentIcon, { backgroundColor: screenAccent + "18" }]}>
+              <Feather name={screenIcon as any} size={17} color={screenAccent === Colors.primary ? Colors.gold : screenAccent} />
             </View>
+            <Text style={ds.contentTitle} numberOfLines={1}>{screenTitle}</Text>
+            <View style={{ flex: 1 }} />
+            {todayLabel ? <Text style={ds.contentDate} numberOfLines={1}>{todayLabel}</Text> : null}
           </View>
-          <Tabs tabBar={() => <></>} screenOptions={{ headerShown: false }}>
+          <Tabs
+            tabBar={() => <></>}
+            screenOptions={({ route }) => ({
+              headerShown: false,
+              // Reading/management screens get a centred column on wide monitors;
+              // the cashier, live board and department boards keep the full width.
+              sceneStyle: {
+                backgroundColor: Colors.background,
+                paddingHorizontal: READABLE_SCREENS.has(route.name) ? readablePad : 0,
+              },
+            })}
+          >
             {screens}
           </Tabs>
         </View>
@@ -636,6 +684,7 @@ const styles = StyleSheet.create({
   langBtn: { width: 32, height: 32, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.15)", borderWidth: 1, borderColor: "rgba(255,255,255,0.3)", alignItems: "center", justifyContent: "center" },
   langBtnText: { color: "#fff", fontSize: 12, fontWeight: "800" },
   empBtn: { flexDirection: "row", alignItems: "center", gap: 7, backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 22, paddingHorizontal: 10, paddingVertical: 6, borderWidth: 1, borderColor: "rgba(255,255,255,0.2)", maxWidth: 124, flexShrink: 1 },
+  empBtnCompact: { paddingHorizontal: 3, paddingVertical: 3 },
   empAvatar: { width: 26, height: 26, borderRadius: 13, alignItems: "center", justifyContent: "center" },
   empAvatarText: { color: "#fff", fontSize: 12, fontWeight: "800" },
   empTextBlock: { flex: 1 },
@@ -643,6 +692,7 @@ const styles = StyleSheet.create({
   empId: { color: "rgba(255,255,255,0.7)", fontSize: 10 },
   loginText: { color: "rgba(255,255,255,0.85)", fontSize: 11, fontWeight: "600" },
   screenBadge: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20, flexShrink: 1, maxWidth: 120 },
+  screenBadgeGlass: { backgroundColor: "rgba(255,255,255,0.12)", borderWidth: 1, borderColor: "rgba(255,255,255,0.22)" },
   screenBadgeText: { color: "#fff", fontSize: 11, fontWeight: "700" },
   goldLine: { height: 1, opacity: 0.9 },
   bar: { flexDirection: "row", borderTopWidth: StyleSheet.hairlineWidth, zIndex: 100, overflow: "hidden" },
@@ -650,8 +700,8 @@ const styles = StyleSheet.create({
   webBar: { position: "relative", left: 0, right: 0 },
   barItem: { flex: 1, alignItems: "center", justifyContent: "center", paddingTop: 6, gap: 3, position: "relative" },
   activePill: { position: "absolute", top: 0, width: 24, height: 3, borderBottomLeftRadius: 3, borderBottomRightRadius: 3 },
-  barIconWrap: { flexDirection: "row", alignItems: "center", gap: 2 },
-  arrowBadge: { marginTop: 6 },
+  barIconWrap: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 2, minWidth: 52, height: 30, paddingHorizontal: 12, borderRadius: 15 },
+  arrowBadge: { marginTop: 2 },
   barLabel: { fontSize: 11, fontWeight: "600", color: Colors.textSecondary, letterSpacing: 0.1, paddingHorizontal: 2 },
   sheetBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)" },
   sheetContainer: { backgroundColor: "#fff", borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingTop: 12, paddingHorizontal: 16, shadowColor: "#000", shadowOffset: { width: 0, height: -4 }, shadowOpacity: 0.12, shadowRadius: 16, elevation: 20 },
@@ -689,10 +739,12 @@ const ds = StyleSheet.create({
   langLabel: { color: "rgba(255,255,255,0.55)", fontSize: 12, fontWeight: "700", flex: 1 },
   langCurrent: { color: "rgba(255,255,255,0.25)", fontSize: 10 },
   contentHeader: {
-    paddingHorizontal: 20, paddingVertical: 10,
+    alignItems: "center", gap: 10,
+    paddingHorizontal: 24, paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: "rgba(0,0,0,0.08)",
     backgroundColor: "#fff",
   },
-  contentBadge: { borderRadius: 20, paddingHorizontal: 14, paddingVertical: 6, alignSelf: "flex-start" },
-  contentBadgeText: { color: "#fff", fontSize: 12, fontWeight: "800" },
+  contentIcon: { width: 34, height: 34, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  contentTitle: { fontSize: 18, fontWeight: "800", color: Colors.text, letterSpacing: -0.2, flexShrink: 1 },
+  contentDate: { fontSize: 12, fontWeight: "600", color: Colors.textSecondary },
 });

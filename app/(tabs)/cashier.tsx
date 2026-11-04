@@ -76,10 +76,10 @@ const DEPT_DISPLAY_ORDER: Department[] = ["cake", "halwa", "chocolate", "mawali"
 
 // ── Checkout date/time chip builders (desktop POS panel) ──────────────────────
 
-const LOCALE_MAP: Record<string, string> = { ar: "ar-SA", en: "en", ur: "ur", hi: "hi", bn: "bn" };
+const LOCALE_MAP: Record<string, string> = { ar: "ar-SA-u-nu-latn", en: "en", ur: "ur", hi: "hi", bn: "bn" };
 
 function buildCheckoutDays(lang: string) {
-  const locale = LOCALE_MAP[lang] ?? "ar-SA";
+  const locale = LOCALE_MAP[lang] ?? "ar-SA-u-nu-latn";
   const today = new Date(); today.setHours(0,0,0,0);
   const dayFmt = new Intl.DateTimeFormat(locale, { weekday: "long" });
   const dateFmt = new Intl.DateTimeFormat(locale, { day: "numeric", month: "long" });
@@ -91,7 +91,7 @@ function buildCheckoutDays(lang: string) {
   });
 }
 function buildCheckoutTimes(lang: string) {
-  const locale = LOCALE_MAP[lang] ?? "ar-SA";
+  const locale = LOCALE_MAP[lang] ?? "ar-SA-u-nu-latn";
   const out: { display: string; value: string }[] = [];
   const timeFmt = new Intl.DateTimeFormat(locale, { hour: "numeric", minute: "2-digit", hour12: true });
   for (let h = 8; h <= 23; h++) {
@@ -614,7 +614,7 @@ export default function CashierScreen() {
     <div>الرقم الضريبي: <b style="letter-spacing:0.5px">${esc(taxProfile.vatNumber)}</b></div>
     ${taxProfile.crNumber ? `<div>السجل التجاري: ${esc(taxProfile.crNumber)}</div>` : ""}
     ${taxProfile.address ? `<div>${esc(taxProfile.address)}</div>` : ""}
-    <div>تاريخ الإصدار: ${issuedAt.toLocaleDateString("ar-SA")} ${issuedAt.toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit" })}</div>
+    <div>تاريخ الإصدار: ${issuedAt.toLocaleDateString("ar-SA-u-nu-latn")} ${issuedAt.toLocaleTimeString("ar-SA-u-nu-latn", { hour: "2-digit", minute: "2-digit" })}</div>
   </div>` : "";
     const vatHtml = taxOn && order.totalAmount ? `
       <div style="display:flex;justify-content:space-between;font-size:10px;margin:3px 0"><span>الإجمالي قبل الضريبة</span><span>${vb.totalWithoutVat.toFixed(2)} ر.س</span></div>
@@ -692,7 +692,7 @@ export default function CashierScreen() {
 
   <hr class="divider-solid" style="margin-top:8px">
   <div class="footer">
-    شكراً لثقتكم · طُبع بتاريخ ${new Date().toLocaleDateString("ar-SA")}
+    شكراً لثقتكم · طُبع بتاريخ ${new Date().toLocaleDateString("ar-SA-u-nu-latn")}
   </div>
 </body>
 </html>`;
@@ -883,7 +883,7 @@ export default function CashierScreen() {
         <View style={styles.todayStripDivider} />
         <View style={styles.todayStripLeft}>
           <Text style={[styles.todayStripCount, { color: Colors.success }]}>
-            {todayTotal.toLocaleString("ar-SA", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+            {todayTotal.toLocaleString("ar-SA-u-nu-latn", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
           </Text>
           <Text style={styles.todayStripLabel}>{t("cashierTodaySAR")}</Text>
         </View>
@@ -893,7 +893,7 @@ export default function CashierScreen() {
             <View style={styles.todayStripLeft}>
               <Feather name="moon" size={11} color="rgba(255,255,255,0.6)" />
               <Text style={styles.todayStripLastShiftTime}>
-                {new Date(lastClosed.closedAt).toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit" })}
+                {new Date(lastClosed.closedAt).toLocaleTimeString("ar-SA-u-nu-latn", { hour: "2-digit", minute: "2-digit" })}
               </Text>
               <Text style={styles.todayStripLabel}>{t("shiftLastClosed")}</Text>
             </View>

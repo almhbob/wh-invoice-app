@@ -16,7 +16,7 @@ import { t as translate } from "@/constants/translations";
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 const LOCALE_MAP: Record<Lang, string> = {
-  ar: "ar-SA",
+  ar: "ar-SA-u-nu-latn",
   en: "en",
   ur: "ur",
   hi: "hi",

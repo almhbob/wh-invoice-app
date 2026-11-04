@@ -28,7 +28,7 @@ const DEPT_CYCLE: Record<Department, Department> = {
 function clock(iso: string, lang: string) {
   const d = new Date(iso);
   if (isNaN(d.getTime())) return iso.length > 10 ? iso.slice(11, 16) : iso;
-  return d.toLocaleTimeString(lang === "ar" ? "ar-SA" : "en-GB", { hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleTimeString(lang === "ar" ? "ar-SA-u-nu-latn" : "en-GB", { hour: "2-digit", minute: "2-digit" });
 }
 
 /**
