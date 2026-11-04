@@ -66,7 +66,7 @@ const DEPT_COLORS: Record<string, string> = {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function fmtCurrency(n: number) {
-  return n.toLocaleString("ar-SA", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " " + tr("ر.س", "SAR");
+  return n.toLocaleString("ar-SA-u-nu-latn", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " " + tr("ر.س", "SAR");
 }
 function isDelivered(o: Order) { return o.deliveryStatus === "delivered"; }
 function isUnassigned(o: Order) { return !o.deliveryDriver?.employeeId && !isDelivered(o); }

@@ -32,7 +32,7 @@ interface Props {
 
 
 function formatDateAr(): string {
-  return new Date().toLocaleDateString("ar-SA", {
+  return new Date().toLocaleDateString("ar-SA-u-nu-latn", {
     weekday: "long",
     year: "numeric",
     month: "long",
@@ -41,7 +41,7 @@ function formatDateAr(): string {
 }
 
 function formatTimeAr(): string {
-  return new Date().toLocaleTimeString("ar-SA", {
+  return new Date().toLocaleTimeString("ar-SA-u-nu-latn", {
     hour: "2-digit",
     minute: "2-digit",
   });

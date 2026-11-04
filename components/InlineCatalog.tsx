@@ -7,6 +7,7 @@ import React, { useMemo, useState, useCallback } from "react";
 import {
   FlatList,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -72,7 +73,13 @@ function ProductTile({
   return (
     <View style={[styles.tile, !product.isAvailable && { opacity: 0.45 }]}>
       {/* Image / placeholder */}
-      <View style={[styles.tileImgBox, { borderTopColor: accentColor }]}>
+      <Pressable
+        style={styles.tileImgBox}
+        onPress={product.isAvailable ? onAdd : undefined}
+        disabled={!product.isAvailable}
+        accessibilityRole="button"
+        accessibilityLabel={product.name}
+      >
         {product.imageUri ? (
           <Image source={{ uri: product.imageUri }} style={styles.tileImg} contentFit="cover" />
         ) : (
@@ -85,12 +92,15 @@ function ProductTile({
             <Text style={styles.tileQtyBadgeText}>{qty}</Text>
           </View>
         )}
-      </View>
+      </Pressable>
 
       {/* Info */}
       <View style={styles.tileInfo}>
         <Text style={styles.tileName} numberOfLines={2}>{product.name}</Text>
-        <Text style={[styles.tileCat, { color: accentColor }]} numberOfLines={1}>{categoryLabel}</Text>
+        <View style={styles.tileCatRow}>
+          <View style={[styles.tileCatDot, { backgroundColor: accentColor }]} />
+          <Text style={styles.tileCat} numberOfLines={1}>{categoryLabel}</Text>
+        </View>
         <Text style={styles.tilePrice}>{product.price.toFixed(2)} ر.س</Text>
       </View>
 
@@ -109,11 +119,11 @@ function ProductTile({
           </View>
         ) : (
           <TouchableOpacity
-            style={[styles.tileAddBtn, { backgroundColor: accentColor }]}
+            style={styles.tileAddBtn}
             onPress={onAdd}
             activeOpacity={0.82}
           >
-            <Feather name="plus" size={14} color="#fff" />
+            <Feather name="plus" size={14} color={Colors.gold} />
             <Text style={styles.tileAddText}>إضافة</Text>
           </TouchableOpacity>
         )
@@ -387,10 +397,10 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     backgroundColor: "#fff",
-    borderRadius: 12,
+    borderRadius: 14,
     overflow: "hidden",
-    borderWidth: 1.5,
-    borderColor: "#EDE5DC",
+    borderWidth: 1,
+    borderColor: Colors.border,
     shadowColor: "#161616",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
@@ -398,9 +408,9 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   tileImgBox: {
-    height: 100,
+    height: 104,
     position: "relative",
-    borderTopWidth: 3,
+    backgroundColor: Colors.surfaceSecondary,
   },
   tileImg: {
     width: "100%",
@@ -436,9 +446,21 @@ const styles = StyleSheet.create({
     color: Colors.text,
     lineHeight: 16,
   },
+  tileCatRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  tileCatDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
   tileCat: {
+    flexShrink: 1,
     fontSize: 10,
     fontWeight: "600",
+    color: Colors.textSecondary,
   },
   tilePrice: {
     fontSize: 13,
@@ -456,7 +478,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 4,
     paddingVertical: 4,
-    backgroundColor: "#F9F6F2",
+    backgroundColor: Colors.background,
   },
   tileQtyBtn: {
     padding: 4,
@@ -477,20 +499,21 @@ const styles = StyleSheet.create({
     gap: 4,
     margin: 8,
     marginTop: 2,
-    borderRadius: 8,
-    paddingVertical: 7,
+    borderRadius: 10,
+    paddingVertical: 8,
+    backgroundColor: Colors.surfaceSecondary,
   },
   tileAddText: {
     fontSize: 12,
-    fontWeight: "700",
-    color: "#fff",
+    fontWeight: "800",
+    color: Colors.text,
   },
   tileUnavailable: {
     margin: 8,
     marginTop: 2,
     borderRadius: 8,
     paddingVertical: 7,
-    backgroundColor: "#F0EAE2",
+    backgroundColor: Colors.surfaceSecondary,
     alignItems: "center",
   },
   tileUnavailableText: {

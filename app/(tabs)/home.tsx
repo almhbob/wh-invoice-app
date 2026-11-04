@@ -13,6 +13,7 @@ import {
   Text,
   View,
   useWindowDimensions,
+  Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -42,13 +43,13 @@ function overallStatus(order: Order): "pending" | "in_progress" | "done" | "canc
 }
 
 function fmtClock(d: Date) {
-  return d.toLocaleTimeString("ar-SA", { hour: "2-digit", minute: "2-digit", hour12: true });
+  return d.toLocaleTimeString("ar-SA-u-nu-latn", { hour: "2-digit", minute: "2-digit", hour12: true });
 }
 function fmtSecs(d: Date) {
-  return d.toLocaleTimeString("ar-SA", { second: "2-digit", hour12: false });
+  return d.toLocaleTimeString("ar-SA-u-nu-latn", { second: "2-digit", hour12: false });
 }
 function fmtDate(d: Date) {
-  return d.toLocaleDateString("ar-SA", { weekday: "long", day: "numeric", month: "long" });
+  return d.toLocaleDateString("ar-SA-u-nu-latn", { weekday: "long", day: "numeric", month: "long" });
 }
 
 // ── Dept meta for cashier tracker (built at runtime with t()) ──────────────────
@@ -377,7 +378,8 @@ export default function HomeScreen() {
   const go = (route: string) => router.navigate(`/(tabs)/${route}` as any);
 
   // Layout math
-  const SIDEBAR_W = winW >= 768 ? 220 : 0;
+  const hasSidebar = Platform.OS === "web" && winW >= 768; // matches the tabs layout's desktop sidebar
+  const SIDEBAR_W = hasSidebar ? 220 : 0;
   const INFO_W    = isWide ? 300 : 0;
   const PAD       = isWide ? 28 : 16;
   const GAP       = isWide ? 14 : 10;
@@ -389,7 +391,7 @@ export default function HomeScreen() {
   const empColor = ROLE_COLOR[currentEmployee?.role ?? ""] ?? Colors.gold;
   const greeting = now.getHours() < 12 ? t("homeGreetMorning") : t("homeGreetEvening");
   const firstName = currentEmployee?.name;
-  const locale = lang === "ar" ? "ar-SA" : "en-US";
+  const locale = lang === "ar" ? "ar-SA-u-nu-latn" : "en-US";
   const fmtNum = (n: number) => n.toLocaleString(locale);
   const total = Math.max(todayOrders.length, 1);
 
@@ -566,7 +568,8 @@ export default function HomeScreen() {
           {/* Info panel */}
           <LinearGradient colors={[Colors.espressoDeep, Colors.espressoMid, Colors.espressoSoft]} style={[s.infoPanel, { width: INFO_W }]} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }}>
             <ScrollView contentContainerStyle={s.infoPanelContent} showsVerticalScrollIndicator={false}>
-              {isLavi ? (
+              {/* With the desktop sidebar the logo, signed-in user and clock are already on screen */}
+              {!hasSidebar && (isLavi ? (
                 <View style={s.laviWrap}>
                   <Image source={{ uri: "/laviviane-logo.png" }} style={s.laviLogo} contentFit="contain" />
                 </View>
@@ -577,16 +580,16 @@ export default function HomeScreen() {
                   </View>
                   <Text style={s.brandName} numberOfLines={2}>{company.name}</Text>
                 </View>
-              )}
+              ))}
 
-              <LinearGradient colors={["transparent", Colors.gold + "80", "transparent"]} style={s.goldRule} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} />
+              {!hasSidebar && <LinearGradient colors={["transparent", Colors.gold + "80", "transparent"]} style={s.goldRule} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} />}
 
               <View style={s.empSection}>
                 <View style={s.liveRow}>
                   <View style={s.liveDot} />
                   <Text style={s.liveTxt}>{t("onlineNow")}</Text>
                 </View>
-                {currentEmployee ? (
+                {hasSidebar ? null : currentEmployee ? (
                   <View style={s.empCard}>
                     <View style={[s.empAvatar, { backgroundColor: empColor + "25", borderColor: empColor }]}>
                       <Text style={[s.empAvatarTxt, { color: empColor }]}>{currentEmployee.name.charAt(0)}</Text>
@@ -620,11 +623,13 @@ export default function HomeScreen() {
                 </View>
               )}
 
-              <View style={s.clockSection}>
-                <Text style={s.clockTime}>{fmtClock(now)}</Text>
-                <Text style={s.clockSecs}>{fmtSecs(now)}</Text>
-                <Text style={s.clockDate}>{fmtDate(now)}</Text>
-              </View>
+              {!hasSidebar && (
+                <View style={s.clockSection}>
+                  <Text style={s.clockTime}>{fmtClock(now)}</Text>
+                  <Text style={s.clockSecs}>{fmtSecs(now)}</Text>
+                  <Text style={s.clockDate}>{fmtDate(now)}</Text>
+                </View>
+              )}
             </ScrollView>
           </LinearGradient>
         </View>

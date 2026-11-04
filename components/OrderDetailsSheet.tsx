@@ -52,7 +52,7 @@ const STATUS_TXT = {
 function fmtTime(iso: string, lang: string) {
   const d = new Date(iso);
   if (isNaN(d.getTime())) return iso;
-  return d.toLocaleString(lang === "ar" ? "ar-SA" : "en-GB", { weekday: "short", hour: "2-digit", minute: "2-digit", day: "numeric", month: "short" });
+  return d.toLocaleString(lang === "ar" ? "ar-SA-u-nu-latn" : "en-GB", { weekday: "short", hour: "2-digit", minute: "2-digit", day: "numeric", month: "short" });
 }
 
 export function OrderDetailsSheet({ orderId, visible, onClose }: { orderId: string | null; visible: boolean; onClose: () => void }) {

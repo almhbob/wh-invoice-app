@@ -64,7 +64,7 @@ function todayStr() {
 }
 
 function fmtCurrency(n: number) {
-  return n.toLocaleString("ar-SA", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ر.س";
+  return n.toLocaleString("ar-SA-u-nu-latn", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " ر.س";
 }
 
 const ROLE_COLORS: Record<EmployeeRole, string> = {
@@ -1605,7 +1605,7 @@ function PriceRequestsSection() {
             ) : null}
 
             <Text style={styles.priceReqBy}>
-              {t("adminRequestBy")} {req.requestedBy.name} • {new Date(req.createdAt).toLocaleDateString("ar-SA")}
+              {t("adminRequestBy")} {req.requestedBy.name} • {new Date(req.createdAt).toLocaleDateString("ar-SA-u-nu-latn")}
             </Text>
 
             <View style={styles.priceReqActions}>

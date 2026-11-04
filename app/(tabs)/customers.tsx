@@ -102,7 +102,7 @@ function upcomingOccasions(customers: Customer[], days = 21): Occasion[] {
 
 function fmtCurrency(n: number) {
   return (
-    n.toLocaleString("ar-SA", {
+    n.toLocaleString("ar-SA-u-nu-latn", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }) + " " + tr("ر.س", "SAR")
@@ -627,7 +627,7 @@ export default function CustomersScreen() {
                     const tier = tierFor(acc.lifetimeSpent ?? 0, loyalty);
                     return (
                       <Text style={styles.custPoints}>
-                        ★ {Math.max(0, Math.floor(acc.points ?? 0)).toLocaleString("ar-SA")} {tr("نقطة", "pts")} · {tier.name}
+                        ★ {Math.max(0, Math.floor(acc.points ?? 0)).toLocaleString("ar-SA-u-nu-latn")} {tr("نقطة", "pts")} · {tier.name}
                       </Text>
                     );
                   })()}

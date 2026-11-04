@@ -83,7 +83,7 @@ export function LeadsPanel() {
                 <View style={[s.pill, { backgroundColor: st.color + "18" }]}><Text style={[s.pillTxt, { color: st.color }]}>{st.label}</Text></View>
               </View>
               <Text style={s.meta}>{l.ownerName} · {l.city} · {TYPE[l.shopType] ?? l.shopType} · فروع {l.branches} · باقة {PLAN[l.plan] ?? l.plan}</Text>
-              <Text style={s.meta}>{l.phone}{l.email ? ` · ${l.email}` : ""} · {new Date(l.createdAt).toLocaleString("ar-SA")}{l.utm?.source ? ` · ${l.utm.source}` : ""}</Text>
+              <Text style={s.meta}>{l.phone}{l.email ? ` · ${l.email}` : ""} · {new Date(l.createdAt).toLocaleString("ar-SA-u-nu-latn")}{l.utm?.source ? ` · ${l.utm.source}` : ""}</Text>
               {l.notes ? <Text style={s.notes}>{l.notes}</Text> : null}
               <View style={s.actions}>
                 <Pressable style={s.wa} onPress={() => contact(l)}><Feather name="message-circle" size={14} color="#fff" /><Text style={s.waTxt}>واتساب</Text></Pressable>

@@ -125,7 +125,7 @@ export function PurgeOrdersPanel() {
                 <View style={s.counts}>
                   {busy === "count" || !counts ? <ActivityIndicator color={Colors.accent} /> : (
                     <>
-                      <Text style={s.countBig}>{total.toLocaleString("ar-SA")}</Text>
+                      <Text style={s.countBig}>{total.toLocaleString("ar-SA-u-nu-latn")}</Text>
                       <Text style={s.checkHint}>{tr("سجل سيُحذف نهائياً", "records will be permanently deleted")}</Text>
                     </>
                   )}

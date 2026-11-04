@@ -23,12 +23,12 @@ import { fmtDate, fmtDateTime } from "@/utils/dateUtils";
 
 import { t as t_, type Lang, type TranslationKey } from "@/constants/translations";
 
-const LOCALE_MAP: Record<string, string> = { ar: "ar-SA", en: "en", ur: "ur", hi: "hi", bn: "bn" };
+const LOCALE_MAP: Record<string, string> = { ar: "ar-SA-u-nu-latn", en: "en", ur: "ur", hi: "hi", bn: "bn" };
 
 function formatDateLocale(iso: string, lang: Lang): string {
   if (!iso) return t_("dateFilterPicker", lang);
   const d = new Date(iso + "T12:00:00");
-  return new Intl.DateTimeFormat(LOCALE_MAP[lang] || "ar-SA", {
+  return new Intl.DateTimeFormat(LOCALE_MAP[lang] || "ar-SA-u-nu-latn", {
     weekday: "long", day: "numeric", month: "long", year: "numeric",
   }).format(d);
 }

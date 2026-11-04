@@ -27,7 +27,7 @@ import { useShift } from "@/context/ShiftContext";
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
 function formatCurrency(amount: number): string {
-  return amount.toLocaleString("ar-SA", {
+  return amount.toLocaleString("ar-SA-u-nu-latn", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
@@ -35,7 +35,7 @@ function formatCurrency(amount: number): string {
 
 function formatDateAr(isoString: string): string {
   try {
-    return new Date(isoString).toLocaleDateString("ar-SA", {
+    return new Date(isoString).toLocaleDateString("ar-SA-u-nu-latn", {
       weekday: "long",
       year: "numeric",
       month: "long",
@@ -48,7 +48,7 @@ function formatDateAr(isoString: string): string {
 
 function formatTimeAr(isoString: string): string {
   try {
-    return new Date(isoString).toLocaleTimeString("ar-SA", {
+    return new Date(isoString).toLocaleTimeString("ar-SA-u-nu-latn", {
       hour: "2-digit",
       minute: "2-digit",
     });

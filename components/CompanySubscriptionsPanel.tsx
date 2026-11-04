@@ -18,7 +18,7 @@ import {
 import { pickAndUploadImage, pickAndUploadWebFile } from "@/lib/uploadFiles";
 
 function price(n: number) {
-  return `${n.toLocaleString("ar-SA")} ر.س`;
+  return `${n.toLocaleString("ar-SA-u-nu-latn")} ر.س`;
 }
 
 function Pill({ text, color }: { text: string; color: string }) {
