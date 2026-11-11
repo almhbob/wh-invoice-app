@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 import { signInWithCustomToken, signOut } from "firebase/auth";
 
@@ -95,6 +96,20 @@ async function fetchStatusOnce(timeoutMs: number): Promise<StatusResult> {
 
 const STATUS_ATTEMPTS_MS = [6000, 9000, 12000];
 
+// The last time the server confirmed secure login. When the shop's internet is
+// down the status check cannot succeed, but a device that already signed in with
+// a server token keeps its Firebase session and can go on working offline; only
+// new sign-ins need the server. This never enables the legacy flow.
+const LAST_SECURE_KEY = "@fawtara_auth_secure_confirmed_v1";
+
+function deviceOffline() {
+  return Platform.OS === "web" && typeof navigator !== "undefined" && navigator.onLine === false;
+}
+
+async function wasSecureBefore(): Promise<boolean> {
+  try { return (await AsyncStorage.getItem(LAST_SECURE_KEY)) === "1"; } catch { return false; }
+}
+
 /**
  * A phone on a weak connection (or inside WhatsApp's in-app browser) can miss the
  * first status check. Retry a few times before failing closed, and never cache a
@@ -103,12 +118,24 @@ const STATUS_ATTEMPTS_MS = [6000, 9000, 12000];
 export function getSecureAuthMode(): Promise<SecureAuthMode> {
   if (!modePromise) {
     const attempt = (async (): Promise<SecureAuthMode> => {
+      // Offline: don't make the cashier wait ~30s for checks that cannot succeed.
+      if (deviceOffline() && (await wasSecureBefore())) return "secure";
       for (let i = 0; i < STATUS_ATTEMPTS_MS.length; i++) {
         const r = await fetchStatusOnce(STATUS_ATTEMPTS_MS[i]);
-        if (r === "secure") return "secure";
-        if (r === "not_configured") return fallbackAuthMode();
+        if (r === "secure") {
+          AsyncStorage.setItem(LAST_SECURE_KEY, "1").catch(() => undefined);
+          return "secure";
+        }
+        if (r === "not_configured") {
+          AsyncStorage.removeItem(LAST_SECURE_KEY).catch(() => undefined);
+          return fallbackAuthMode();
+        }
+        if (deviceOffline()) break;
         if (i < STATUS_ATTEMPTS_MS.length - 1) await new Promise((ok) => setTimeout(ok, 800 * (i + 1)));
       }
+      // Unreachable (no internet, or the check timed out): keep secure mode on a device
+      // where it was confirmed before, so a signed-in session continues offline.
+      if (await wasSecureBefore()) return "secure";
       return fallbackAuthMode();
     })();
     modePromise = attempt.then((m) => {

@@ -1,6 +1,13 @@
 import { getApp, getApps, initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getFirestore, initializeFirestore } from "firebase/firestore";
+import {
+  getFirestore,
+  initializeFirestore,
+  memoryLocalCache,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+  type FirestoreSettings,
+} from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
 // Firebase client config is public; authorization is enforced by server-issued
@@ -72,9 +79,39 @@ export const auth = getAuth(app);
 // ignoreUndefinedProperties: optional fields (price, note, …) left undefined in
 // nested objects otherwise make addDoc/updateDoc throw synchronously and the
 // write never reaches Firestore.
-function createDb() {
+//
+// On the web the cache lives in IndexedDB: data already seen opens without a
+// connection, and writes made offline (department status changes, window
+// orders, settings…) survive a reload or a closed tab and are sent when the
+// connection returns. Several tabs of the app share one cache. Browsers
+// without IndexedDB (some private modes) fall back to the in-memory cache.
+function webCanPersist() {
+  if (typeof window === "undefined") return false;
   try {
-    return initializeFirestore(app, { ignoreUndefinedProperties: true });
+    return typeof window.indexedDB !== "undefined" && window.indexedDB !== null;
+  } catch {
+    return false;
+  }
+}
+
+function createDb() {
+  const base: FirestoreSettings = { ignoreUndefinedProperties: true };
+  try {
+    if (webCanPersist()) {
+      try {
+        return initializeFirestore(app, {
+          ...base,
+          localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+        });
+      } catch (err) {
+        // Only an "already initialized" error should reach the outer catch.
+        if ((err as { code?: string })?.code !== "failed-precondition") {
+          return initializeFirestore(app, { ...base, localCache: memoryLocalCache() });
+        }
+        throw err;
+      }
+    }
+    return initializeFirestore(app, base);
   } catch {
     // Already initialized (e.g. fast refresh) — reuse the existing instance.
     return getFirestore(app);

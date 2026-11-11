@@ -16,6 +16,14 @@ export default function Root({ children }: PropsWithChildren) {
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <ScrollViewStyleReset />
+        {/* Offline shell: lets the app open without internet (see public/sw.js). Not on local dev servers. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `if ("serviceWorker" in navigator && !/^(localhost|127\\.|\\[::1\\])/.test(location.hostname)) {
+  window.addEventListener("load", function () { navigator.serviceWorker.register("/sw.js").catch(function () {}); });
+}`,
+          }}
+        />
         <style
           dangerouslySetInnerHTML={{
             __html: `
