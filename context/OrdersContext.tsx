@@ -26,7 +26,7 @@ import React, {
 import { useCompany } from "@/context/CompanyContext";
 import { localDayKey } from "@/utils/dateUtils";
 import { db } from "@/lib/firebase";
-import { Alert } from "react-native";
+import { Alert, Platform } from "react-native";
 import { t as t_ } from "@/constants/translations";
 import { uploadUriToFirebaseStorage } from "@/lib/uploadFiles";
 import { isProductionDone, newTrackingCode, OrderEvent } from "@/utils/orderFlow";
@@ -304,6 +304,11 @@ async function claimCounterNumber(companyId: string): Promise<number> {
   return next;
 }
 
+/** True when the browser reports no network (native: unknown, treated as online). */
+function isDeviceOffline(): boolean {
+  return Platform.OS === "web" && typeof navigator !== "undefined" && navigator.onLine === false;
+}
+
 const isRemoteUri = (uri?: string) => !!uri && /^https?:\/\//.test(uri);
 
 export function OrdersProvider({ children }: { children: React.ReactNode }) {
@@ -552,13 +557,7 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
       const current = serverRef.current.find((o) => o.id === id);
       if (!current) return;
       setServerOrders((prev) => prev.map((o) => (o.id === id ? local(o) : o)));
-      try {
-        const payload: Record<string, unknown> = { ...remote(current), companyId, updatedAt: new Date().toISOString() };
-        // A damaged (map-shaped) timeline is rewritten whole instead of appended to.
-        if (eventsRepairRef.current.has(id) && "events" in payload) payload.events = local(current).events ?? [];
-        await updateDoc(orderDoc(id), deepClean(payload));
-        eventsRepairRef.current.delete(id);
-      } catch (err) {
+      const reportFailure = (err: unknown) => {
         console.warn("Firestore order update failed:", (err as { code?: string })?.code ?? err);
         const code = (err as { code?: string })?.code;
         Alert.alert(
@@ -568,6 +567,30 @@ export function OrdersProvider({ children }: { children: React.ReactNode }) {
             : "تحقق من الاتصال بالإنترنت ثم أعد المحاولة."
         );
         setServerOrders((prev) => prev.map((o) => (o.id === id ? current : o)));
+      };
+      const payload: Record<string, unknown> = { ...remote(current), companyId, updatedAt: new Date().toISOString() };
+      // A damaged (map-shaped) timeline is rewritten whole instead of appended to.
+      if (eventsRepairRef.current.has(id) && "events" in payload) payload.events = local(current).events ?? [];
+      let write: Promise<void>;
+      try {
+        write = updateDoc(orderDoc(id), deepClean(payload)).then(() => { eventsRepairRef.current.delete(id); });
+      } catch (err) {
+        // invalid data throws synchronously, before anything is queued
+        reportFailure(err);
+        throw err;
+      }
+      if (isDeviceOffline()) {
+        // Offline the promise only settles once the server answers. The change is
+        // already applied locally and queued in Firestore's cache (kept across
+        // reloads on the web), so don't leave the button spinning: report a
+        // rejection whenever it comes back.
+        write.catch(reportFailure);
+        return;
+      }
+      try {
+        await write;
+      } catch (err) {
+        reportFailure(err);
         throw err;
       }
     },
